@@ -1,0 +1,108 @@
+name: Require green CI
+description: >
+  Poll until a set of required push-triggered workflows are green for a given
+  commit, or fail if any of them failed/were cancelled (or never ran, unless
+  absent_is_failure is 'false'). Extracted from release.yml's require_green_ci
+  job so release.yml and the docs workflow share one gate implementation.
+  The calling job needs `permissions: actions: read` (and the default
+  GITHUB_TOKEN's repo scope) for the `gh api` calls below to see workflow runs.
+
+inputs:
+  required_workflows:
+    description: >
+      Newline-separated workflow file paths (e.g. .github/workflows/foo.yml)
+      that must have a green push-triggered run for `sha` on `branch`. Kept
+      explicit by callers on purpose: "all runs were green" is vacuously true
+      when no run exists at all.
+    required: true
+  sha:
+    description: Commit SHA to check.
+    required: true
+  branch:
+    description: Branch the push-triggered runs must be on.
+    default: 'main'
+  absent_is_failure:
+    description: >
+      'true' (default): a required workflow that never ran for this commit is
+      a failure -- use this when the commit is guaranteed to trigger every
+      required workflow (e.g. a release tag on main). 'false': a workflow that
+      never ran is treated as passing -- use this when some required workflows
+      have `paths:` filters and an ordinary commit may legitimately not
+      trigger them.
+    default: 'true'
+  poll_timeout_minutes:
+    default: '330'
+  poll_interval_seconds:
+    default: '60'
+
+runs:
+  using: composite
+  steps:
+    - name: Require CI to be green
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        SHA: ${{ inputs.sha }}
+        BRANCH: ${{ inputs.branch }}
+        REQUIRED: ${{ inputs.required_workflows }}
+        ABSENT_IS_FAILURE: ${{ inputs.absent_is_failure }}
+        POLL_TIMEOUT_MINUTES: ${{ inputs.poll_timeout_minutes }}
+        POLL_INTERVAL_SECONDS: ${{ inputs.poll_interval_seconds }}
+      run: |
+        set -uo pipefail
+
+        deadline=$(( $(date +%s) + POLL_TIMEOUT_MINUTES * 60 ))
+        while :; do
+          runs=$(gh api --paginate \
+            "repos/$REPO/actions/runs?head_sha=$SHA&event=push&branch=$BRANCH&per_page=100" \
+            --jq '.workflow_runs[]' | jq -s '.')
+
+          pending=0 bad=0 total=0 summary=""
+          while IFS= read -r wf; do
+            [ -n "$wf" ] || continue
+            total=$((total + 1))
+            # The same commit can have several runs of one workflow (a re-run
+            # of the merge, say), so take the newest; run ids are monotonic.
+            read -r status conclusion url <<<"$(jq -r --arg p "$wf" '
+              [.[] | select(.path == $p)] | sort_by(.id) | last
+              | if . == null then "absent - -"
+                else "\(.status) \(.conclusion // "-") \(.html_url)" end' <<<"$runs")"
+
+            case "$status:$conclusion" in
+              completed:success) state="ok" ;;
+              absent:*)
+                if [ "$ABSENT_IS_FAILURE" = "true" ]; then
+                  state="never ran"; bad=$((bad + 1))
+                else
+                  state="not triggered"
+                fi
+                ;;
+              completed:*)       state="$conclusion"; bad=$((bad + 1)) ;;
+              *)                 state="$status"; pending=$((pending + 1)) ;;
+            esac
+            summary+="  $(printf '%-12s' "$state") ${wf##*/}  ${url}"$'\n'
+          done <<<"$REQUIRED"
+
+          # A failed or cancelled run will not become green by waiting.
+          if [ "$bad" -gt 0 ]; then
+            printf '%s' "$summary"
+            echo "::error::$BRANCH's CI for $SHA is not green -- $bad required workflow(s) failed, were cancelled, or never ran."
+            exit 1
+          fi
+
+          if [ "$pending" -eq 0 ]; then
+            printf '%s' "$summary"
+            echo "$BRANCH's CI for $SHA is green across all $total required workflows."
+            break
+          fi
+
+          if [ "$(date +%s)" -ge "$deadline" ]; then
+            printf '%s' "$summary"
+            echo "::error::timed out after ${POLL_TIMEOUT_MINUTES}m waiting for $pending workflow(s) on $SHA."
+            exit 1
+          fi
+
+          echo "waiting on $pending workflow(s) for $SHA..."
+          sleep "$POLL_INTERVAL_SECONDS"
+        done

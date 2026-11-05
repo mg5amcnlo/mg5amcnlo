@@ -3,7 +3,7 @@ c      written by the UFO converter
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       SUBROUTINE COUP()
-
+      USE MODEL_OBJECT
       IMPLICIT NONE
       DOUBLE PRECISION PI, ZERO
       LOGICAL READLHA
@@ -60,7 +60,7 @@ C
       END
 
       SUBROUTINE UPDATE_AS_PARAM()
-
+      USE MODEL_OBJECT
       IMPLICIT NONE
 
       DOUBLE PRECISION PI, ZERO
@@ -104,6 +104,7 @@ C
 
       SUBROUTINE UPDATE_AS_PARAM2(MU_R2,AS2 )
 
+      USE MODEL_OBJECT
       IMPLICIT NONE
 
       DOUBLE PRECISION PI

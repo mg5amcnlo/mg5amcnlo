@@ -5,7 +5,10 @@ runs:
   using: composite
   steps:
     - name: Set cache key
-      run: echo "CACHE_KEY=pip-numpy-$ImageOS" >> $GITHUB_ENV
+      # ImageOS is only set on GitHub-hosted runners; on a self-hosted one
+      # (cern1, alma10) key on the distribution instead, so it never restores
+      # a numpy built for the ubuntu image.
+      run: echo "CACHE_KEY=pip-numpy-${ImageOS:-$(. /etc/os-release && echo $ID$VERSION_ID)}" >> $GITHUB_ENV
       shell: bash
 
     # Generation-suffixed keys: see the comment in restore_heptools.
@@ -18,6 +21,14 @@ runs:
           ${{ env.CACHE_KEY }}
 
     - run: |
+        # meson+ninja from the system: apt on the ubuntu image; on a
+        # self-hosted runner (no sudo) they must be preinstalled
+        # (dnf install meson ninja-build on alma10), else pip installs them below.
+        if command -v apt-get > /dev/null; then
+          sudo apt install meson ninja-build
+        elif ! command -v meson > /dev/null || ! command -v ninja > /dev/null; then
+          echo "::warning::meson/ninja not installed on this runner, falling back to pip"
+        fi
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/pip-packages" >> $GITHUB_ENV
         echo "$HOME/.cache/pip-packages/bin" >> $GITHUB_PATH
         # Install meson+ninja if missing (numpy 2.x f2py requires meson as build backend).
@@ -30,9 +41,9 @@ runs:
         # Use direct path because GITHUB_PATH additions don't take effect in the same step
         F2PY_BIN="$HOME/.cache/pip-packages/bin/f2py"
         if [ -x "$F2PY_BIN" ]; then
-          echo "f2py_compiler = $F2PY_BIN" >> input/mg5_configuration.txt
+          echo "f2py_compiler = $F2PY_BIN" >> input/mg7_configuration.txt
         else
           pip install --target "$HOME/.cache/pip-packages" --upgrade numpy
-          echo "f2py_compiler = $F2PY_BIN" >> input/mg5_configuration.txt
+          echo "f2py_compiler = $F2PY_BIN" >> input/mg7_configuration.txt
         fi
       shell: bash

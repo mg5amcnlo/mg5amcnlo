@@ -371,7 +371,7 @@ void PSDrawXmString(Display *display, Drawable w, XmFontList font, XmString msg,
         anchor = PS_RIGHT;
     }
     
-    /* Convert the string to a C style stle string and call PSDrawString */
+    /* Convert the string to a C style style string and call PSDrawString */
     XmStringGetLtoR(msg, XmSTRING_DEFAULT_CHARSET, &ansiMsg);
     PSDrawString(display, w, gc, fs, adjX, adjY, anchor, ansiMsg);
     XtFree(ansiMsg);
@@ -444,7 +444,7 @@ void PSDrawArcs(Display *display, Drawable w, GC gc,
 
     for(j=0, arc=arcs; j<nArcs; j++, arc++) {
     	if (arc->width != arc->height) {
-    	    fprintf(stderr, "PSDrawArcs doesn't yet support eliptical arcs\n");
+            fprintf(stderr, "PSDrawArcs doesn't yet support elliptical arcs\n");
     	    return;
     	}
         fprintf(PSFile,"%d %d %d %d %d xarc\n", x_X2PS(arc->x + arc->width/2),
@@ -467,7 +467,7 @@ void PSFillArcs(Display *display, Drawable w, GC gc,
 
     for(j=0, arc=arcs; j<nArcs; j++, arc++) {
     	if (arc->width != arc->height) {
-    	    fprintf(stderr, "PSDrawArcs doesn't yet support eliptical arcs\n");
+            fprintf(stderr, "PSDrawArcs doesn't yet support elliptical arcs\n");
     	    return;
     	}
         fprintf(PSFile,"%d %d %d %d %d fillarc\n",

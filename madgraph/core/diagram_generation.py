@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -24,11 +24,13 @@ from __future__ import absolute_import
 
 import array
 import copy
+import fractions
 import itertools
 import logging
 
 import madgraph
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_algebra as color_algebra
 import madgraph.various.misc as misc
 import madgraph.fks.fks_tag as fks_tag
 from madgraph import InvalidCmd, MadGraph5Error
@@ -38,6 +40,91 @@ if madgraph.ordering:
     set = misc.OrderedSet
 
 class NoDiagramException(InvalidCmd): pass
+
+#===============================================================================
+# Interference of two amplitude sets: 'left [LIxtree=QCD] right' (loop-induced
+# times tree, see loop_diagram_generation) and 'left [treextree] right'
+#===============================================================================
+INTERFERENCE_ORDER = base_objects.INTERFERENCE_ORDER
+# Output formats able to select squared split orders, hence to return the
+# interference alone (the others would give |A_left + A_right|^2): the Fortran
+# ones (GET_MATRIX) and the madmatrix ones (mg7, and standalone for the C++
+# matrix element), whose color sum pairs the amplitude split orders on every
+# backend, CPU and GPU (PR #244)
+TREE_INTERFERENCE_FORMATS = ['madevent', 'standalone_fortran', 'mg7',
+                             'standalone']
+
+def register_interference_order(model):
+    """Add the hidden coupling order tagging the right-hand amplitudes of an
+    interference process to the model, in memory and idempotently. Its
+    hierarchy is 0, so that the WEIGHTED order of every diagram is unchanged,
+    and no interaction carries it."""
+
+    if INTERFERENCE_ORDER not in model.get('order_hierarchy'):
+        model.get('order_hierarchy')[INTERFERENCE_ORDER] = 0
+    coupling_orders = model.get('coupling_orders')
+    if INTERFERENCE_ORDER not in coupling_orders:
+        coupling_orders.add(INTERFERENCE_ORDER)
+
+def prepare_interference_process(procdef):
+    """Complete the ProcessDefinition of an interference process
+    ('left [LIxtree=QCD] right' or 'left [treextree] right', see
+    MadGraphCmd.extract_interference_process) before its generation:
+
+    - the hidden order INTERFERENCE_ORDER is registered in the model;
+    - the left-hand process gets the squared-order constraint INTERF^2==1
+      and INTERF as split order, so that only the products of a left-hand
+      amplitude with a right-hand one are kept, also in the generated code;
+    - the right-hand process gets, when none is given, the minimal WEIGHTED
+      order exactly as 'generate <right-hand process>' would.
+
+    The right-hand diagrams themselves are generated per subprocess, with the
+    legs of that subprocess: Amplitude.add_interference_diagrams (treextree)
+    and LoopAmplitude.set_interference_trees (LIxtree)."""
+
+    mode = procdef.get_interference_mode()
+    if not mode:
+        return
+    if any(value < 0 for value in procdef.get('squared_orders').values()):
+        raise InvalidCmd("Negative squared-order constraints are not "
+                         "supported for %s interference processes." % mode)
+    model = procdef.get('model')
+    register_interference_order(model)
+
+    squared_orders = dict(procdef.get('squared_orders'))
+    squared_orders[INTERFERENCE_ORDER] = 1
+    procdef.set('squared_orders', squared_orders)
+    sqorders_types = dict(procdef.get('sqorders_types'))
+    sqorders_types[INTERFERENCE_ORDER] = '=='
+    procdef.set('sqorders_types', sqorders_types)
+    if INTERFERENCE_ORDER not in procdef.get('split_orders'):
+        procdef.set('split_orders',
+                    list(procdef.get('split_orders')) + [INTERFERENCE_ORDER])
+
+    right = procdef.get('interference_process')
+    if not right.get('orders') and not right.get('born_sq_orders'):
+        right.set('orders', MultiProcess.find_optimal_process_orders(right))
+    right.check_expansion_orders()
+
+def specialise_interference_process(process):
+    """The right-hand process of an interference subprocess, with the
+    external legs of that subprocess. It is also stored back in the
+    subprocess, which then shows the tree process it interferes with."""
+
+    right = process.get('interference_process')
+    legs = base_objects.LegList([copy.copy(leg) for leg in process.get('legs')])
+    if isinstance(right, base_objects.ProcessDefinition):
+        right_process = right.get_process_with_legs(legs)
+    else:
+        # already specialised to these legs (regeneration)
+        right_process = copy.copy(right)
+        right_process.set('legs', legs)
+    right_process.set('interference_mode', '')
+    right_process.set('interference_process', None)
+    # the process number is the one of the whole (left-hand) definition
+    right_process.set('id', 0)
+    process.set('interference_process', right_process)
+    return right_process
 
 #===============================================================================
 # DiagramTag mother class
@@ -429,6 +516,435 @@ class DiagramTagChainLink(object):
     __repr__ = __str__
 
 #===============================================================================
+# Unrolling of quartic vertices into pairs of cubic vertices
+#===============================================================================
+
+class UnrollDiagramTag(DiagramTag):
+    """DiagramTag which keeps every external leg distinct.
+
+    The default DiagramTag deliberately identifies identical final state
+    particles, which is what is wanted when comparing different processes. To
+    recognise a diagram inside its own amplitude we need the leg numbers, so
+    that e.g. the t- and u-channel of g g > g g do not collide."""
+
+    @staticmethod
+    def link_from_leg(leg, model):
+        return [((leg.get('id'), leg.get('number')), leg.get('number'))]
+
+
+def get_unrollable_quartic_vertices(model):
+    """Find the quartic interactions which factorise into two cubic ones.
+
+    A quartic vertex qualifies when its four legs carry the same
+    self-conjugate particle and each of its colour structures is a product of
+    two structure constants sharing a single summed index -- the four gluon
+    vertex being the canonical example. Such a colour structure splits the
+    four colour indices into two pairs, and that splitting is precisely the
+    one produced by two cubic vertices joined by an internal line.
+
+    Returns {quartic_id: (cubic_id, pairings)} where pairings[icolor] is the
+    pair of 2-tuples of colour index positions separated by the summed index.
+    """
+
+    try:
+        return model._unrollable_quartic_vertices
+    except AttributeError:
+        pass
+
+    # Cubic candidates: three identical legs with a single f(0,1,2) structure
+    cubic_by_pdg = {}
+    for inter in model.get('interactions'):
+        parts = inter.get('particles')
+        if len(parts) != 3:
+            continue
+        pdgs = misc.make_unique([p.get_pdg_code() for p in parts])
+        if len(pdgs) != 1:
+            continue
+        color = inter.get('color')
+        if len(color) != 1 or len(color[0]) != 1:
+            continue
+        if not isinstance(color[0][0], color_algebra.f) or \
+           sorted(color[0][0]) != [0, 1, 2]:
+            continue
+        cubic_by_pdg[pdgs[0]] = inter.get('id')
+
+    res = {}
+    for inter in model.get('interactions'):
+        parts = inter.get('particles')
+        if len(parts) != 4:
+            continue
+        pdgs = misc.make_unique([p.get_pdg_code() for p in parts])
+        if len(pdgs) != 1 or pdgs[0] not in cubic_by_pdg:
+            continue
+        pairings = []
+        for col_str in inter.get('color'):
+            pairing = _f_pair_split(col_str)
+            if pairing is None:
+                break
+            pairings.append(pairing)
+        else:
+            if pairings:
+                res[inter.get('id')] = (cubic_by_pdg[pdgs[0]], pairings)
+
+    try:
+        model._unrollable_quartic_vertices = res
+    except AttributeError:
+        pass
+    return res
+
+
+def _f_pair_split(col_str):
+    """If col_str is f(..)*f(..) with a single shared summed index and the
+    four remaining indices being 0,1,2,3, return the two pairs of external
+    colour index positions it separates, otherwise None."""
+
+    if len(col_str) != 2 or not all(isinstance(obj, color_algebra.f)
+                                    for obj in col_str):
+        return None
+    shared = [i for i in col_str[0] if i in col_str[1]]
+    if len(shared) != 1 or shared[0] >= 0:
+        return None
+    pairs = tuple(tuple(sorted(i for i in obj if i != shared[0]))
+                  for obj in col_str)
+    if sorted(pairs[0] + pairs[1]) != [0, 1, 2, 3]:
+        return None
+    return pairs
+
+
+def glued_vertices(diagram):
+    """Vertices of the diagram with the trailing identity vertex glued into
+    the one before it.
+
+    The identity vertex only states that its two legs are the two ends of one
+    and the same line, so it is dropped once the diagram is complete, by
+    handing that line to the vertex before it. Until that is done the same
+    diagram can be written in several ways, and comparing two of them is
+    meaningless. Returns None when there is nothing to glue."""
+
+    vertices = diagram.get('vertices')
+    if len(vertices) <= 1 or vertices[-1].get('id') != 0:
+        return None
+
+    vertices = copy.copy(vertices)
+    lastvx = vertices.pop()
+    nexttolastvertex = copy.copy(vertices.pop())
+    legs = copy.copy(nexttolastvertex.get('legs'))
+    ntlnumber = legs[-1].get('number')
+    lastleg = [leg for leg in lastvx.get('legs')
+               if leg.get('number') != ntlnumber][0]
+    # Reset onshell in case we have forbidden s-channels
+    if lastleg.get('onshell') == False:
+        lastleg.set('onshell', None)
+    # Replace the last leg of nexttolastvertex
+    legs[-1] = lastleg
+    nexttolastvertex.set('legs', legs)
+    vertices.append(nexttolastvertex)
+    return vertices
+
+
+def get_unrollable_cubic_ids(model):
+    """Interaction ids of the cubic vertices a factorisable quartic vertex
+    unrolls into -- the three gluon vertex for the four gluon one."""
+
+    return frozenset(cubic_id for cubic_id, pairings in
+                     get_unrollable_quartic_vertices(model).values())
+
+
+def colour_index_order(vertex, is_last, model):
+    """Return the vertex legs in the order in which color_amp.ColorBasis maps
+    them onto the colour indices of the interaction.
+
+    This mirrors ColorBasis.add_vertex: the outgoing leg of an internal
+    vertex is flipped to its antiparticle and moved to the front, then the
+    legs are sorted following the particle order of the interaction. Note
+    that the sorting can move the outgoing leg away from the front again, so
+    its position is returned along with the legs.
+
+    Returns (legs, outgoing_position), the position being None for the last
+    vertex of a diagram, or None if the vertex does not match its
+    interaction."""
+
+    inter = model.get_interaction(vertex.get('id'))
+    if inter is None:
+        return None
+
+    legs = vertex.get('legs')
+    entries = []
+    for index, leg in enumerate(legs):
+        part = model.get('particle_dict')[leg.get('id')]
+        outgoing = index == len(legs) - 1 and not is_last
+        entries.append((leg, part.get_anti_pdg_code() if outgoing
+                        else part.get_pdg_code(), outgoing))
+
+    if not is_last:
+        entries.insert(0, entries.pop(-1))
+
+    ordered = []
+    for pdg in [p.get_pdg_code() for p in inter.get('particles')]:
+        for index, entry in enumerate(entries):
+            if entry[1] == pdg:
+                ordered.append(entries.pop(index))
+                break
+        else:
+            return None
+
+    out_position = None
+    for index, entry in enumerate(ordered):
+        if entry[2]:
+            out_position = index
+
+    return [entry[0] for entry in ordered], out_position
+
+
+def split_quartic_vertex(vertex, is_last, pairing, cubic_id, model):
+    """Replace a quartic vertex by the two cubic vertices that the given
+    colour structure factorises into, joined by a new internal line."""
+
+    ordered, out_position = colour_index_order(vertex, is_last, model)
+    first, second = pairing
+    if not is_last and out_position in first:
+        # the pair the outgoing leg does not belong to is the one replaced by
+        # the new internal line
+        first, second = second, first
+
+    combined = sorted([ordered[i] for i in first],
+                      key=lambda leg: leg.get('number'))
+    new_leg = base_objects.Leg({
+        'id': combined[0].get('id'),
+        'number': min(leg.get('number') for leg in combined),
+        'state': len([l for l in combined if not l.get('state')]) != 1,
+        'from_group': True})
+
+    first_vx = base_objects.Vertex({
+        'legs': base_objects.LegList(combined + [new_leg]),
+        'id': cubic_id})
+    if is_last:
+        rest = sorted([ordered[i] for i in second] + [new_leg],
+                      key=lambda leg: leg.get('number'))
+    else:
+        # the outgoing leg has to stay last
+        rest = sorted([ordered[i] for i in second if i != out_position] +
+                      [new_leg], key=lambda leg: leg.get('number')) + \
+               [ordered[out_position]]
+    second_vx = base_objects.Vertex({'legs': base_objects.LegList(rest),
+                                     'id': cubic_id})
+
+    return [first_vx, second_vx]
+
+
+# Placeholder standing for the single summed index of a factorisable quartic
+# colour structure, which is not a leg of the vertex.
+_SUMMED = 'summed'
+
+
+def reroot_diagram(diagram, root, model):
+    """Return the same diagram decomposed around another final vertex.
+
+    A diagram is a tree, and which of its vertices is written last decides
+    which internal lines become currents: everything on the far side of the
+    final vertex is built up as a wavefunction, while the final vertex only
+    produces an amplitude. Re-rooting therefore changes which currents exist
+    without changing the diagram -- same vertices, same lines, same physics --
+    which is what lets a quartic current find the cubic current it has to be
+    summed with.
+
+    root is the index of the vertex to end on. Returns None if the diagram
+    does not decompose into a tree, which should not happen.
+    """
+
+    vertices = diagram.get('vertices')
+    last = len(vertices) - 1
+    if root == last:
+        return diagram
+
+    # Split every vertex into the external legs it holds and the internal
+    # lines it shares with another vertex. A line is recognised by its number
+    # being live, since a vertex reuses the smallest incoming number for the
+    # leg it produces.
+    live = {}
+    externals = [[] for _ in vertices]
+    lines = []
+    for i, vertex in enumerate(vertices):
+        incoming = vertex.get('legs') if i == last else vertex.get('legs')[:-1]
+        for leg in incoming:
+            producer = live.pop(leg.get('number'), None)
+            if producer is None:
+                externals[i].append(leg)
+            else:
+                lines.append((producer, i,
+                              vertices[producer].get('legs')[-1]))
+        if i != last:
+            live[vertex.get('legs')[-1].get('number')] = i
+    if live:
+        return None
+
+    neighbours = {}
+    line_of = {}
+    for producer, consumer, leg in lines:
+        neighbours.setdefault(producer, []).append(consumer)
+        neighbours.setdefault(consumer, []).append(producer)
+        line_of[(producer, consumer)] = (leg, True)
+        line_of[(consumer, producer)] = (leg, False)
+
+    # Walk out from the new root so that every vertex is emitted after the
+    # ones now feeding it.
+    order = []
+    parent = {root: None}
+    def visit(node):
+        for other in neighbours.get(node, []):
+            if other == parent[node]:
+                continue
+            parent[other] = node
+            visit(other)
+        order.append(node)
+    visit(root)
+    if len(order) != len(vertices):
+        return None
+
+    produced = {}
+    res = base_objects.VertexList()
+    for node in order:
+        incoming = list(externals[node])
+        for other in neighbours.get(node, []):
+            if other != parent[node]:
+                incoming.append(produced[other])
+        legs = base_objects.LegList(incoming)
+        if node != root:
+            leg, forwards = line_of[(node, parent[node])]
+            part = model.get('particle_dict')[leg.get('id')]
+            outgoing = base_objects.Leg({
+                # the line keeps its particle if it already pointed this way,
+                # and is flipped when the re-rooting reverses it
+                'id': leg.get('id') if forwards or part.get('self_antipart')
+                      else -leg.get('id'),
+                'number': min(l.get('number') for l in incoming),
+                'state': len([l for l in incoming
+                              if not l.get('state')]) != 1,
+                'from_group': True})
+            produced[node] = outgoing
+            legs.append(outgoing)
+        res.append(base_objects.Vertex({'legs': legs,
+                                        'id': vertices[node].get('id')}))
+
+    return base_objects.Diagram({'vertices': res})
+
+
+def diagram_colour_signature(diagram, model, color_chain, unrollable):
+    """Canonical signature of the colour string of one colour structure choice.
+
+    Returns (key, coeff), where key identifies the product of colour objects
+    up to the antisymmetry of the structure constants and coeff collects the
+    resulting sign together with the rational prefactors. Two contributions
+    sharing a key have proportional colour factors and can be summed, the
+    relative weight being the ratio of their coeff.
+
+    Every line is labelled by the set of external legs it separates rather
+    than by its leg number, so that the signature can be compared between
+    diagrams which number their internal lines differently. Returns None when
+    the colour structure is not of a supported form.
+    """
+
+    vertices = diagram.get('vertices')
+    last = len(vertices) - 1
+
+    # A leg number is reused by the vertex which produces it, so an external
+    # leg is one consumed while no internal line of that number is alive.
+    alive = {}
+    externals = []
+    for i, vertex in enumerate(vertices):
+        legs = vertex.get('legs')
+        incoming = legs if i == last else legs[:-1]
+        for leg in incoming:
+            if alive.pop(leg.get('number'), None) is None:
+                externals.append(leg.get('number'))
+        if i != last:
+            alive[legs[-1].get('number')] = True
+    externals = frozenset(externals)
+    if not externals:
+        return None
+    reference = min(externals)
+
+    def normalise(side):
+        """Root independent label of the line splitting side from its rest."""
+        return side if reference not in side else externals - side
+
+    factors = []
+    coeff = fractions.Fraction(1, 1)
+    imaginary = False
+    live = {}
+    for i, vertex in enumerate(vertices):
+        inter = model.get_interaction(vertex.get('id'))
+        if inter is None:
+            return None
+        order = colour_index_order(vertex, i == last, model)
+        if order is None:
+            return None
+        ordered, out_position = order
+        sides = [None] * len(ordered)
+        below = frozenset()
+        # the outgoing leg is only known once all the incoming ones are read,
+        # since a vertex reuses the smallest incoming leg number for it
+        for pos in range(len(ordered)):
+            if pos == out_position:
+                continue
+            number = ordered[pos].get('number')
+            side = live.pop(number, None)
+            if side is None:
+                side = frozenset([number])
+            sides[pos] = side
+            below = below | side
+        if out_position is not None:
+            # the outgoing leg carries everything that is not below it
+            sides[out_position] = externals - below
+            live[ordered[out_position].get('number')] = below
+
+        labels = dict(enumerate(normalise(side) for side in sides))
+        if vertex.get('id') in unrollable:
+            pairing = unrollable[vertex.get('id')][1][color_chain[i]]
+            labels[_SUMMED] = normalise(sides[pairing[0][0]] |
+                                        sides[pairing[0][1]])
+
+        if not inter.get('color'):
+            continue
+        col_str = inter.get('color')[color_chain[i]]
+        coeff *= col_str.coeff
+        imaginary ^= col_str.is_imaginary
+        for obj in col_str:
+            try:
+                indices = [labels[j if j >= 0 else _SUMMED] for j in obj]
+            except KeyError:
+                return None
+            if isinstance(obj, color_algebra.f):
+                # totally antisymmetric: sort and keep track of the parity
+                order = sorted(range(len(indices)),
+                               key=lambda k: sorted(indices[k]))
+                coeff *= _permutation_sign(order)
+                indices = [indices[k] for k in order]
+            factors.append((obj.__class__.__name__,
+                            tuple(tuple(sorted(index)) for index in indices)))
+
+    return (tuple(sorted(factors)), imaginary), coeff
+
+
+def _permutation_sign(order):
+    """Signature of a permutation given as a list of positions."""
+
+    sign = 1
+    seen = [False] * len(order)
+    for start in range(len(order)):
+        if seen[start]:
+            continue
+        length = 0
+        pos = start
+        while not seen[pos]:
+            seen[pos] = True
+            pos = order[pos]
+            length += 1
+        if length % 2 == 0:
+            sign = -sign
+    return sign
+
+#===============================================================================
 # Amplitude
 #===============================================================================
 class Amplitude(base_objects.PhysicsObject):
@@ -436,6 +952,13 @@ class Amplitude(base_objects.PhysicsObject):
     Initialize with a process, then call generate_diagrams() to
     generate the diagrams for the amplitude
     """
+
+    # Interaction ids of the cubic vertices which the seed rule forbids to
+    # share a line, see generate_diagrams. Empty -- so the rule is inactive --
+    # unless madgraph.merge_quartic_vertices is set.
+    seed_forbidden_cubic_ids = frozenset()
+    # Links recorded while the seed was expanded, see expand_seed_diagrams
+    quartic_unroll_tags = {}
 
     def default_setup(self):
         """Default values for all properties"""
@@ -446,12 +969,13 @@ class Amplitude(base_objects.PhysicsObject):
         # two incoming particles interchanged has been generated
         self['has_mirror_process'] = False
 
-    def __init__(self, argument=None):
-        """Allow initialization with Process"""
+    def __init__(self, argument=None, diagram_filter=False):
+        """Allow initialization with Process; the diagrams are then generated,
+        selected by diagram_filter (see apply_user_filter) if it is set"""
         if isinstance(argument, base_objects.Process):
             super(Amplitude, self).__init__()
             self.set('process', argument)
-            self.generate_diagrams()
+            self.generate_diagrams(diagram_filter=diagram_filter)
         elif argument != None:
             # call the mother routine
             super(Amplitude, self).__init__(argument)
@@ -514,7 +1038,7 @@ class Amplitude(base_objects.PhysicsObject):
         return self.get('process').get_ninitial()
 
     def has_loop_process(self):
-        """ Returns wether this amplitude has a loop process."""
+        """ Returns whether this amplitude has a loop process."""
         
         return self.get('process').get('perturbation_couplings')
 
@@ -581,8 +1105,7 @@ class Amplitude(base_objects.PhysicsObject):
            "particles are missing in model: %s" %  model.get('particles')
 
         assert model.get('interactions'), \
-               "interactions are missing in model" 
-                  
+               "interactions are missing in model"
 
         res = base_objects.DiagramList()
         # First check that the number of fermions is even
@@ -601,14 +1124,14 @@ class Amplitude(base_objects.PhysicsObject):
            len([leg for leg in legs if leg.is_outgoing_fermion(model)]):
             if not returndiag:
                 self['diagrams'] = res
-                raise InvalidCmd('The number of of incoming/outcoming fermions are different')
+                raise InvalidCmd('The numbers of incoming/outgoing fermions are different')
             else:
                 return False, res
 
         # Finally check that charge (conserve by all interactions) of the process
         #is globally conserve for this process.
         for charge in model.get('conserved_charge'):
-            total = 0
+            totals = set([0.0])
             for leg in legs:
                 part = model.get('particle_dict')[leg.get('id')]
                 try:
@@ -618,13 +1141,17 @@ class Amplitude(base_objects.PhysicsObject):
                         value = getattr(part, charge)
                     except AttributeError:
                         value = 0
-                        
-                if (leg.get('id') != part['pdg_code']) != leg['state']:
-                    total -= value
-                else:
-                    total += value
 
-            if abs(total) > 1e-10:
+                values = value if isinstance(value, tuple) else (value,)
+                signed_values = []
+                for val in values:
+                    if (leg.get('id') != part['pdg_code']) != leg['state']:
+                        signed_values.append(-float(val))
+                    else:
+                        signed_values.append(float(val))
+                totals = set(round(prev + val, 12) for prev in totals for val in signed_values)
+
+            if not any(abs(total) <= 1e-10 for total in totals):
                 if not returndiag:
                     self['diagrams'] = res
                     raise InvalidCmd('No %s conservation for this process ' % charge)
@@ -665,6 +1192,23 @@ class Amplitude(base_objects.PhysicsObject):
         max_multi_to1 = max([len(key) for key in \
                              model.get('ref_dict_to1').keys()])
 
+        # Seed rule: when the quartic vertices are to be put back afterwards
+        # by unrolling (see unroll_quartic_vertices), generate only the
+        # diagrams unrolling cannot produce. Unrolling a quartic vertex always
+        # yields two cubic vertices sharing the line which replaced it, so a
+        # diagram can be reconstructed exactly when two of its cubic vertices
+        # share a line -- and the seed is what is left over.
+        # Left off for a decay chain, whose identity vertex is kept rather
+        # than glued in, and for loop amplitudes, whose diagram set is not the
+        # one the unrolling reasons about. 'auto' also leaves it off below
+        # merge_quartic_min_legs, where it is measured to buy nothing.
+        self.seed_forbidden_cubic_ids = frozenset()
+        if madgraph.merge_quartic_vertices and not self.has_loop_process() \
+           and not process.get('is_decay_chain') \
+           and (madgraph.merge_quartic_vertices != 'auto' or
+                len(process.get('legs')) >= madgraph.merge_quartic_min_legs):
+            self.seed_forbidden_cubic_ids = get_unrollable_cubic_ids(model)
+
 
         # Reduce the leg list and return the corresponding
         # list of vertices
@@ -704,6 +1248,10 @@ class Amplitude(base_objects.PhysicsObject):
             for vertex_list in reduced_leglist:
                 res.append(self.create_diagram(base_objects.VertexList(vertex_list)))
 
+        # Put back the diagrams the seed rule left out
+        if self.seed_forbidden_cubic_ids:
+            res = self.expand_seed_diagrams(res)
+
         # Record whether or not we failed generation before required
         # s-channel propagators are taken into account
         failed_crossing = not res
@@ -720,7 +1268,7 @@ class Amplitude(base_objects.PhysicsObject):
             lastvx = -1
             # For decay chain processes, there is an "artificial"
             # extra vertex corresponding to particle 1=1, so we need
-            # to exclude the two last vertexes.
+            # to exclude the two last vertices.
             if is_decay_proc: lastvx = -2
             ninitial = len([leg for leg in process.get('legs') if leg.get('state') == False])
             # Check required s-channels for each list in required_s_channels
@@ -805,34 +1353,35 @@ class Amplitude(base_objects.PhysicsObject):
         # in this way. We shall do this only if the diagrams are not asked to
         # be returned, as it is the case for NLO because it this case the
         # interference are not necessarily among the diagrams generated here only.
-        if not returndiag and len(res)>0:
+        # 'left [treextree] right': the squared-order constraints are about
+        # the products with the right-hand diagrams, added at the end (see
+        # add_interference_diagrams); only the amplitude-level constraints of
+        # this (left-hand) process apply here
+        treextree = not returndiag and \
+                         process.get_interference_mode() == 'treextree'
+        if treextree:
+            for name, (value, operator) in \
+                                  process.get('constrained_orders').items():
+                res.filter_constrained_orders(name, value, operator)
+        elif not returndiag and len(res)>0:
             res = self.apply_squared_order_constraints(res)
 
         if diagram_filter:
-            res = self.apply_user_filter(res)
+            res = self.apply_user_filter(res, diagram_filter)
+
+        # 4 gluon specials demo (dedicated aloha not implemented yet)
+        #if True:
+        #    misc.sprint('apply 4 gluon specials')
+        #    #res = self.apply_4gluon_specials(res)
 
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
             for diagram in res:
-                vertices = diagram.get('vertices')
-                if len(vertices) > 1 and vertices[-1].get('id') == 0:
-                    # Need to "glue together" last and next-to-last
-                    # vertex, by replacing the (incoming) last leg of the
-                    # next-to-last vertex with the (outgoing) leg in the
-                    # last vertex
-                    vertices = copy.copy(vertices)
-                    lastvx = vertices.pop()
-                    nexttolastvertex = copy.copy(vertices.pop())
-                    legs = copy.copy(nexttolastvertex.get('legs'))
-                    ntlnumber = legs[-1].get('number')
-                    lastleg = [leg for leg in lastvx.get('legs') if leg.get('number') != ntlnumber][0]
-                    # Reset onshell in case we have forbidden s-channels
-                    if lastleg.get('onshell') == False:
-                        lastleg.set('onshell', None)
-                    # Replace the last leg of nexttolastvertex
-                    legs[-1] = lastleg
-                    nexttolastvertex.set('legs', legs)
-                    vertices.append(nexttolastvertex)
+                # "glue together" last and next-to-last vertex, by replacing
+                # the (incoming) last leg of the next-to-last vertex with the
+                # (outgoing) leg in the last vertex
+                vertices = glued_vertices(diagram)
+                if vertices is not None:
                     diagram.set('vertices', vertices)
 
         if res and not returndiag:
@@ -847,12 +1396,65 @@ class Amplitude(base_objects.PhysicsObject):
             pertur = sorted(self.get('process')['perturbation_couplings'])[0]
         self.get('process').get('legs').sort(pert=pertur)
 
+        if treextree:
+            res = self.add_interference_diagrams(res, diagram_filter)
+
         # Set diagrams to res if not asked to be returned
         if not returndiag:
            self['diagrams'] = res
            return not failed_crossing
         else:
            return not failed_crossing, res
+
+    def add_interference_diagrams(self, left_diagrams, diagram_filter=False):
+        """For an interference process 'left [treextree] right', add to the
+        diagrams of this (left-hand) process those of the right-hand process
+        with the same external legs, each tagged with one unit of the hidden
+        order INTERFERENCE_ORDER, and apply the squared-order constraints of
+        the process to the whole list: with INTERF^2==1 (see
+        prepare_interference_process) only the products of a left-hand and a
+        right-hand diagram, 2 Re(A_left A_right^*), contribute. All diagrams of
+        both sides are kept as integration channels. A user diagram filter
+        ('--diagram_filter') applies to both sides. Returns the new diagram
+        list, empty if either side has no diagram."""
+
+        process = self.get('process')
+        register_interference_order(process.get('model'))
+        right_process = specialise_interference_process(process)
+
+        right_diagrams = base_objects.DiagramList()
+        if left_diagrams:
+            right_amplitude = Amplitude()
+            right_amplitude.set('process', right_process)
+            try:
+                right_amplitude.generate_diagrams(diagram_filter=diagram_filter)
+                right_diagrams = right_amplitude.get('diagrams')
+            except InvalidCmd:
+                pass
+        if not left_diagrams or not right_diagrams:
+            logger.info("No diagram for %s: no interference with %s." % (
+                (right_process if left_diagrams else process).nice_string(
+                                                               prefix=False),
+                (process if left_diagrams else right_process).nice_string(
+                                                               prefix=False)))
+            return base_objects.DiagramList()
+
+        for diagram in right_diagrams:
+            orders = dict(diagram.get('orders'))
+            orders[INTERFERENCE_ORDER] = 1
+            diagram.set('orders', orders)
+
+        res = base_objects.DiagramList(list(left_diagrams) + list(right_diagrams))
+        while True:
+            new_res = res.apply_positive_sq_orders(res,
+                                          process.get('squared_orders'),
+                                          process.get('sqorders_types'))
+            if len(new_res) == len(res):
+                break
+            res = new_res
+        logger.info("Interference of %d with %d diagrams (%d contributing)" %
+                    (len(left_diagrams), len(right_diagrams), len(res)))
+        return res
 
     def apply_squared_order_constraints(self, diag_list):
         """Applies the user specified squared order constraints on the diagram
@@ -902,27 +1504,25 @@ class Amplitude(base_objects.PhysicsObject):
 
         return res
 
-    def apply_user_filter(self, diag_list):
-        """Applies the user specified squared order constraints on the diagram
-        list in argument."""
+    def apply_user_filter(self, diag_list, diagram_filter=True):
+        """Applies the user diagram filter on the diagram list in argument.
+        diagram_filter is either a function remove_diag(diag, model) provided
+        by a plugin (--diagram_filter=PLUGINNAME) or True to use the one of
+        PLUGIN/user_filter.py."""
 
-        if True:
+        if callable(diagram_filter):
+            # function provided by a plugin (--diagram_filter=PLUGINNAME)
+            remove_diag = diagram_filter
+        elif diagram_filter is True:
             remove_diag = misc.plugin_import('user_filter', 
                                              'user filter required to be defined in PLUGIN/user_filter.py with the function remove_diag(ONEDIAG) which returns True if the diagram has to be removed',
                                              fcts=['remove_diag'])
         else:
-            #example and simple tests
-            def remove_diag(diag, model=None):
-                for vertex in diag['vertices']: #last 
-                    if vertex['id'] == 0: #special final vertex
-                        continue 
-                    if vertex['legs'][-1]['number'] < 3: #this means T-channel
-                        if abs(vertex['legs'][-1]['id']) <6:
-                            return True
-                return False                
+            raise MadGraph5Error('Invalid diagram filter %r: expected True or '
+                                 'a function remove_diag(diag, model).' % (diagram_filter,))
 
         res = diag_list.__class__()                
-        nb_removed = 0 
+        nb_removed = 0
         model = self['process']['model'] 
         for diag in diag_list:
             if remove_diag(diag, model):
@@ -935,6 +1535,263 @@ class Amplitude(base_objects.PhysicsObject):
             
         return res
 
+    def expand_seed_diagrams(self, seed):
+        """Put back the diagrams the seed rule left out of the generation.
+
+        A seed diagram stands for itself and for every diagram obtained by
+        replacing any subset of its quartic vertices by the pair of cubic
+        vertices one of their colour structures factorises into. Several seeds
+        reach the same diagram, hence the dedup, and the result is the full
+        diagram set again -- same diagrams, same count, so nothing
+        user-visible moves.
+
+        What the detour buys is the decomposition: an unrolled diagram is the
+        seed with one vertex taken apart, so it is rooted exactly like the
+        diagram it has to be summed with and shares every current except the
+        one being summed.
+
+        Also records the link between a quartic contribution and the diagram
+        it unrolls to, see get_quartic_unroll_links.
+        """
+
+        model = self.get('process').get('model')
+        unrollable = get_unrollable_quartic_vertices(model)
+        ninitial = self.get_ninitial()
+
+        def canonical_tag(diagram):
+            return str(UnrollDiagramTag(diagram, model, ninitial))
+
+        res = base_objects.DiagramList()
+        seen = set()
+        tag_of = []
+        last_seen = {}
+        clock = [0]
+
+        def touch(tag):
+            # A diagram is placed at its *last* discovery, so that it lands
+            # after every seed which can reach it -- and so after every
+            # quartic current which can be summed into it. Seeing it again
+            # only moves it later, it is never generated twice.
+            clock[0] += 1
+            last_seen[tag] = clock[0]
+
+        self.quartic_unroll_tags = {}
+        todo = []
+        for diagram in seed:
+            # The identity vertex is glued in right away rather than at the
+            # end of generate_diagrams. Until it is, the same diagram has
+            # several spellings and comparing two of them is meaningless, and
+            # a quartic vertex sitting just before it is not yet the last one
+            # -- which is what decides how its colour structures are indexed.
+            vertices = glued_vertices(diagram)
+            if vertices is not None:
+                diagram = self.create_diagram(vertices)
+            tag = canonical_tag(diagram)
+            seen.add(tag)
+            touch(tag)
+            res.append(diagram)
+            tag_of.append(tag)
+            todo.append((diagram, tag))
+
+        # Unrolling is confluent, so taking the diagrams it produces through
+        # the same treatment adds nothing to the set -- but it does give the
+        # link for the quartic vertices they have left.
+        cursor = 0
+        while cursor < len(todo):
+            diagram, own_tag = todo[cursor]
+            cursor += 1
+            vertices = diagram.get('vertices')
+            positions = [i for i, vertex in enumerate(vertices)
+                         if vertex.get('id') in unrollable]
+            if not positions:
+                continue
+            # None leaves the vertex alone, the other entries are the colour
+            # structures carrying a coupling, as kept by ColorBasis.colorize
+            allowed = [[None] + sorted(misc.make_unique(
+                [key[0] for key in model.get_interaction(
+                    vertices[p].get('id')).get('couplings')]))
+                       for p in positions]
+
+            for keys in itertools.product(*allowed):
+                choice = dict((position, key) for position, key
+                              in zip(positions, keys) if key is not None)
+                if not choice:
+                    continue
+                unrolled = self.unrolled_diagram(diagram, choice, unrollable)
+                tag = canonical_tag(unrolled)
+                touch(tag)
+                if tag not in seen:
+                    seen.add(tag)
+                    res.append(unrolled)
+                    tag_of.append(tag)
+                    todo.append((unrolled, tag))
+                if len(choice) == len(positions):
+                    chain = tuple(choice.get(i, 0)
+                                  for i in range(len(vertices)))
+                    self.quartic_unroll_tags[(own_tag, chain)] = tag
+
+        order = sorted(range(len(res)), key=lambda i: (last_seen[tag_of[i]], i))
+        if madgraph.merge_quartic_vertices == 'slots':
+            # Reversed, each diagram lands at its *first* discovery instead.
+            # That keeps far fewer currents alive -- 199 slots against 259 at
+            # seven gluons -- at the price of the current sums, since a target
+            # then comes before the quartic currents which feed it. The trade
+            # a gpu wants, where the wavefunction store is per thread.
+            order.reverse()
+        return base_objects.DiagramList([res[i] for i in order])
+
+    def get_quartic_unroll_links(self, diaglist=None):
+        """Return {(diagram index, colour chain): target index} recorded while
+        the seed was expanded, resolved against the diagram list as it stands.
+
+        This is the same map as the one unroll_quartic_vertices reconstructs
+        from the colour algebra, but obtained for free: the two diagrams are
+        one and the same seed unrolled differently. Empty when the diagrams
+        were not generated from a seed."""
+
+        if not self.quartic_unroll_tags:
+            return {}
+
+        model = self.get('process').get('model')
+        if diaglist is None:
+            diaglist = self.get('diagrams')
+        ninitial = self.get_ninitial()
+        index = dict((str(UnrollDiagramTag(diagram, model, ninitial)), i)
+                     for i, diagram in enumerate(diaglist))
+
+        res = {}
+        for (seed_tag, chain), tag in self.quartic_unroll_tags.items():
+            if seed_tag in index and tag in index:
+                res[(index[seed_tag], chain)] = index[tag]
+        return res
+
+    def unroll_quartic_vertices(self, diaglist=None):
+        """Link every quartic vertex contribution to the cubic diagram it
+        merges with.
+
+        Each colour structure of an unrollable quartic vertex (see
+        get_unrollable_quartic_vertices) splits its four legs into two pairs,
+        which is exactly what two cubic vertices joined by an internal line
+        do. Replacing every quartic vertex of a diagram by that pair of cubic
+        vertices therefore turns it into a diagram already present in the
+        amplitude, and the two carry the same colour factor up to a rational
+        coefficient. Their amplitudes can hence be summed before the colour
+        algebra is applied.
+
+        Returns {(diagram_index, colour_chain): (target_index, coeff)} where
+        colour_chain follows the convention of color_amp.ColorBasis.colorize
+        (one colour structure index per vertex) and the amplitude of the
+        source is coeff times a contribution to the target diagram. Diagrams
+        without any quartic vertex are left out.
+
+        To line the result up with HelasAmplitude, call this on the
+        *reconstructed* amplitude, HelasMatrixElement.get_base_amplitude(),
+        and not on the amplitude the matrix element was built from. That is
+        the one helas_objects itself colorizes, and the vertex order of the
+        reconstructed diagrams -- hence the position of a colour structure
+        index inside the chain -- can differ from the generated ones. The two
+        happen to agree up to six gluons and start to differ at seven.
+        """
+
+        model = self.get('process').get('model')
+        if diaglist is None:
+            diaglist = self.get('diagrams')
+
+        unrollable = get_unrollable_quartic_vertices(model)
+        if not unrollable:
+            return {}
+
+        quartic_positions = []
+        for diag in diaglist:
+            quartic_positions.append([i for i, vx in
+                                      enumerate(diag.get('vertices'))
+                                      if vx.get('id') in unrollable])
+        if not any(quartic_positions):
+            return {}
+
+        ninitial = self.get_ninitial()
+        # Diagrams free of quartic vertices are the possible merge targets
+        target_index = {}
+        for i, diag in enumerate(diaglist):
+            if quartic_positions[i]:
+                continue
+            target_index[str(UnrollDiagramTag(diag, model, ninitial))] = i
+
+        res = {}
+        for i, diag in enumerate(diaglist):
+            positions = quartic_positions[i]
+            if not positions:
+                continue
+            # only the colour structures which carry a coupling contribute,
+            # matching what color_amp.ColorBasis.colorize keeps
+            allowed = [sorted(misc.make_unique(
+                [key[0] for key in model.get_interaction(
+                    diag.get('vertices')[p].get('id')).get('couplings')]))
+                       for p in positions]
+            for keys in itertools.product(*allowed):
+                choice = dict(zip(positions, keys))
+                unrolled = self.unrolled_diagram(diag, choice, unrollable)
+                try:
+                    target = target_index[
+                        str(UnrollDiagramTag(unrolled, model, ninitial))]
+                except KeyError:
+                    # No cubic partner: the merge is not available, which can
+                    # happen when the partner was removed by a diagram filter
+                    # or by a forbidden s-channel.
+                    continue
+                chain = tuple(choice.get(p, 0)
+                              for p in range(len(diag.get('vertices'))))
+                source_sig = diagram_colour_signature(diag, model, chain,
+                                                      unrollable)
+                target_chain = (0,) * len(diaglist[target].get('vertices'))
+                target_sig = diagram_colour_signature(diaglist[target], model,
+                                                      target_chain, unrollable)
+                if source_sig is None or target_sig is None or \
+                   source_sig[0] != target_sig[0]:
+                    continue
+                res[(i, chain)] = (target, source_sig[1] / target_sig[1])
+
+        return res
+
+    def unrolled_diagram(self, diagram, choice, unrollable):
+        """Return a copy of diagram where the quartic vertices listed in
+        choice (position -> colour structure index) have been replaced by the
+        two cubic vertices that colour structure factorises into."""
+
+        model = self.get('process').get('model')
+        vertices = base_objects.VertexList()
+        for i, vertex in enumerate(diagram.get('vertices')):
+            if i not in choice:
+                vertices.append(vertex)
+                continue
+            cubic_id, pairings = unrollable[vertex.get('id')]
+            vertices.extend(split_quartic_vertex(
+                vertex, i == len(diagram.get('vertices')) - 1,
+                pairings[choice[i]], cubic_id, model))
+
+        return base_objects.Diagram({'vertices': vertices})
+
+    def apply_4gluon_specials(self, diag_list):
+
+        res = diag_list.__class__()
+        for diag in diag_list:
+            keep = True
+            for vertex in diag.get('vertices'):
+                if [21,21,21] == [abs(leg.get('id')) for leg in vertex.get('legs')]:
+                    misc.sprint([hasattr(leg, 'g3') for leg in vertex.get('legs')])
+                    if any([hasattr(leg, 'g3') for leg in vertex.get('legs')]):
+                        keep = False
+                        break
+                    else:
+                        vertex.get('legs')[-1].g3 = True
+                        misc.sprint([hasattr(leg, 'g3') for leg in vertex.get('legs')])
+                if [21,21] == [abs(leg.get('id')) for leg in vertex.get('legs')]:
+                    if all([hasattr(leg, 'g3') for leg in vertex.get('legs')]):
+                        keep = False
+                        break
+            if keep:
+                res.append(diag)
+        return res
 
 
     def create_diagram(self, vertexlist):
@@ -958,9 +1815,14 @@ class Amplitude(base_objects.PhysicsObject):
                 [ copy.copy(leg) for leg in legs ])
 
     def reduce_leglist(self, curr_leglist, max_multi_to1, ref_dict_to0,
-                       is_decay_proc = False, coupling_orders = None):
+                       is_decay_proc = False, coupling_orders = None,
+                       cubic_legs = frozenset()):
         """Recursive function to reduce N LegList to N-1
            For algorithm, see doc for generate_diagrams.
+
+           cubic_legs holds the numbers of the legs of curr_leglist which were
+           produced by a vertex the seed rule keeps apart, and is only ever
+           non-empty when that rule is active.
         """
 
         # Result variable which is a list of lists of vertices
@@ -993,6 +1855,8 @@ class Amplitude(base_objects.PhysicsObject):
                               vertex_id in vertex_ids]
             # Check for coupling orders. If orders < 0, skip vertex
             for final_vertex in final_vertices:
+                if self.joins_two_cubics(final_vertex, cubic_legs):
+                    continue
                 if self.reduce_orders(coupling_orders, model,
                                       [final_vertex.get('id')]) != False:
                     res.append([final_vertex])
@@ -1030,13 +1894,24 @@ class Amplitude(base_objects.PhysicsObject):
                 # Some coupling order < 0
                 continue
 
+            # Seed rule: drop the combinations putting two of the cubic
+            # vertices to be kept apart on the same line
+            if any(self.shares_line_with_cubic(vertex.get('id'),
+                                               vertex.get('legs')[:-1],
+                                               cubic_legs)
+                   for vertex in leg_vertex_tuple[1]):
+                continue
+
             # This is where recursion happens
             # First, reduce again the leg part
             reduced_diagram = self.reduce_leglist(leg_vertex_tuple[0],
                                                   max_multi_to1,
                                                   ref_dict_to0,
                                                   is_decay_proc,
-                                                  new_coupling_orders)
+                                                  new_coupling_orders,
+                                                  self.mark_cubic_legs(\
+                                                      cubic_legs,
+                                                      leg_vertex_tuple[1]))
             # If there is a reduced diagram
             if reduced_diagram:
                 vertex_list_list = [list(leg_vertex_tuple[1])]
@@ -1045,6 +1920,49 @@ class Amplitude(base_objects.PhysicsObject):
                 res.extend(expanded_list)
 
         return res
+
+    def shares_line_with_cubic(self, vertex_id, incoming, cubic_legs):
+        """True when vertex_id is one of the cubic vertices the seed rule
+        keeps apart and one of the lines coming in was produced by another
+        one of them."""
+
+        if not self.seed_forbidden_cubic_ids or \
+           vertex_id not in self.seed_forbidden_cubic_ids:
+            return False
+        return any(leg.get('number') in cubic_legs for leg in incoming)
+
+    def joins_two_cubics(self, vertex, cubic_legs):
+        """True when the vertex closing the diagram puts two of the cubic
+        vertices the seed rule keeps apart on the same line.
+
+        The closing vertex is either a real n->0 interaction, whose incoming
+        lines are simply the legs left over, or the identity vertex, which
+        states that its two legs are the two ends of one and the same line --
+        and that line joins the two vertices which produced them."""
+
+        if not self.seed_forbidden_cubic_ids:
+            return False
+        legs = vertex.get('legs')
+        if vertex.get('id'):
+            return self.shares_line_with_cubic(vertex.get('id'), legs,
+                                               cubic_legs)
+        return all(leg.get('number') in cubic_legs for leg in legs)
+
+    def mark_cubic_legs(self, cubic_legs, vertices):
+        """Update the set of leg numbers standing for a line produced by one
+        of the cubic vertices the seed rule keeps apart.
+
+        A number is dropped as soon as the line is consumed, since a vertex
+        reuses the smallest number coming in for the leg it produces."""
+
+        if not self.seed_forbidden_cubic_ids:
+            return cubic_legs
+        consumed = frozenset(leg.get('number') for vertex in vertices
+                             for leg in vertex.get('legs')[:-1])
+        produced = frozenset(vertex.get('legs')[-1].get('number')
+                             for vertex in vertices if vertex.get('id') in \
+                             self.seed_forbidden_cubic_ids)
+        return (cubic_legs - consumed) | produced
 
     def reduce_orders(self, coupling_orders, model, vertex_id_list):
         """Return False if the coupling orders for any coupling is <
@@ -1259,6 +2177,7 @@ class Amplitude(base_objects.PhysicsObject):
                                     'from_group':True}),
                    vert_id)\
                   for leg_id, vert_id in leg_vert_ids]
+        
 
         return mylegs
                           
@@ -1521,7 +2440,7 @@ class DecayChainAmplitude(Amplitude):
         return misc.make_unique(decay_ids)
     
     def has_loop_process(self):
-        """ Returns wether this amplitude has a loop process."""
+        """ Returns whether this amplitude has a loop process."""
         return self['amplitudes'].has_any_loop_process()
     
     def get_amplitudes(self):
@@ -1577,10 +2496,10 @@ class MultiProcess(base_objects.PhysicsObject):
         
     def __init__(self, argument=None, collect_mirror_procs = False,
                  ignore_six_quark_processes = [], optimize=False,
-                 loop_filter=None, diagram_filter=None):
+                 loop_filter=None, diagram_filter=None, merge_crossing=False):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList
-        optimize allows to use param_card information. (usefull for 1-.N)"""
+        optimize allows to use param_card information. (useful for 1-.N)"""
 
         if isinstance(argument, base_objects.ProcessDefinition):
             super(MultiProcess, self).__init__()
@@ -1599,7 +2518,8 @@ class MultiProcess(base_objects.PhysicsObject):
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
         self['use_numerical'] = optimize
         self['loop_filter'] = loop_filter
-        self['diagram_filter'] = diagram_filter # only True/False so far
+        self['diagram_filter'] = diagram_filter # True (PLUGIN/user_filter.py) or a plugin function
+        self['merge_crossing'] = merge_crossing
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1648,7 +2568,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('ignore_six_quark_processes'),
                                        self['use_numerical'],
                                        loop_filter=self['loop_filter'],
-                                       diagram_filter=self['diagram_filter']))
+                                       diagram_filter=self['diagram_filter'],
+                                       merge_crossing=self['merge_crossing']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1667,7 +2588,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                   ignore_six_quark_processes = [],
                                   use_numerical=False,
                                   loop_filter=None,
-                                  diagram_filter=False):
+                                  diagram_filter=False,
+                                  merge_crossing=False):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1716,7 +2638,7 @@ class MultiProcess(base_objects.PhysicsObject):
         polids = [tuple(leg['polarization'])  for leg in process_definition['legs'] \
                  if leg['state'] == True]
 
-        masses = {id: model.get_particle(id).get('mass')  for leg in process_definition['legs'] for id in leg['ids']} 
+        masses = {id: model.get_particle(abs(id)).get('mass')  for leg in process_definition['legs'] for id in leg['ids']} 
 
         # keep track of the 'is_tagged' property of the legs if needed
         try:
@@ -1746,9 +2668,23 @@ class MultiProcess(base_objects.PhysicsObject):
                                         'is_tagged': tag}) \
                         for id, isleg, tag in zip(prod, islegs_orig, istags)]
             else:
+                def get_flavor(beamid,id):
+                    flavor = []
+                    if abs(id) in model.get('merged_particles'):
+                        for f in islegs_orig[beamid]['flavor']:
+                            # multi-particle store the flavor for many id -> need to filter the one we are looking at
+                            # (same merged group AND same particle/antiparticle
+                            # sign: in `define qa = u d~` the u belongs to the
+                            # Q leg and the d~ to the Qx one)
+                            if abs(f) in model.get('merged_particles')[abs(id)] \
+                                    and f * id > 0:
+                                flavor.append(-1*f)
+                    return flavor
+
                 islegs = [\
-                        base_objects.Leg({'id':id, 'state': False, 
+                        base_objects.Leg({'id':id, 'state': False,
                                           'polarization': islegs_orig[i]['polarization'],
+                                          'flavor': get_flavor(i,id),
                                           'onium': islegs_orig[i]['onium'],
                                           'offshell': islegs_orig[i]['offshell']}) \
                     for i,id in enumerate(prod)]
@@ -1769,8 +2705,25 @@ class MultiProcess(base_objects.PhysicsObject):
 
             red_fsidlist = set()
 
+            def get_fs_flavor(id, fsleg):
+                flavor = []
+                if abs(id) in model.get('merged_particles'):
+                    for f in fsleg['flavor']:
+                        # multi-particle store the flavor for many id -> need to filter the one we are looking at
+                        # (same merged group AND same particle/antiparticle sign)
+                        if abs(f) in model.get('merged_particles')[abs(id)] \
+                                and f * id > 0:
+                            flavor.append(f)
+                return flavor
+
             for prod in itertools.product(*fsids):
-                tag = zip(prod, polids)
+                # The per-leg flavor restriction is part of the tag: with
+                # `define l+ = u d~` / `define l- = u~ d`, (Q, Qx) restricted to
+                # (u, u~) and (Qx, Q) restricted to (d~, d) are NOT permutations
+                # of each other even though their merged ids are.
+                fsflavors = [tuple(sorted(get_fs_flavor(id, fsleg)))
+                             for id, fsleg in zip(prod, fslegs)]
+                tag = zip(prod, polids, fsflavors)
                 tag = sorted(tag)
                 # Remove double counting between final states
                 if tuple(tag) in red_fsidlist:
@@ -1780,10 +2733,11 @@ class MultiProcess(base_objects.PhysicsObject):
                 # Generate leg list for process
                 leg_list = [copy.copy(leg) for leg in islegs]
                 
-                if not fstags:   
+                if not fstags: 
                     leg_list.extend([\
-                            base_objects.Leg({'id':id, 'state': True, 
+                            base_objects.Leg({'id':id, 'state': True,
                                               'polarization': fsleg['polarization'],
+                                              'flavor': get_fs_flavor(id, fsleg),
                                               'onium': fsleg['onium'],
                                               'offshell': fsleg['offshell']}) \
                             for id, fsleg in zip(prod, fslegs)])
@@ -1849,13 +2803,23 @@ class MultiProcess(base_objects.PhysicsObject):
                     mirror_proc = \
                               array.array('i', [fast_proc[1], fast_proc[0]] + \
                                           list(fast_proc[2:]))
-                    try:
-                        mirror_amp = \
-                               amplitudes[non_permuted_procs.index(mirror_proc)]
-                    except Exception:
-                        # Didn't find any mirror process
-                        pass
-                    else:
+                    # The mirror flag means "the same matrix element with
+                    # the beams swapped", so the per-leg flavor restrictions
+                    # of the two beams must swap as well: with `define qa =
+                    # u d~` and `define qb = u~ d`, the mirror of Q Qx > z
+                    # [u u~] is u~ u, not the requested Qx Q > z [d~ d].
+                    mirror_amp = None
+                    for iproc, other_proc in enumerate(non_permuted_procs):
+                        if other_proc != mirror_proc:
+                            continue
+                        other_legs = amplitudes[iproc].get('process').get('legs')
+                        swapped = [other_legs[1], other_legs[0]] + \
+                                  list(other_legs[2:])
+                        if all(sorted(l1.get('flavor')) == sorted(l2.get('flavor'))
+                               for l1, l2 in zip(legs, swapped)):
+                            mirror_amp = amplitudes[iproc]
+                            break
+                    if mirror_amp is not None:
                         # Mirror process found
                         mirror_amp.set('has_mirror_process', True)
                         logger.info("Process %s added to mirror process %s" % \
@@ -1865,10 +2829,13 @@ class MultiProcess(base_objects.PhysicsObject):
                         
                 # Check for successful crossings, unless we have specified
                 # properties that break crossing symmetry
+                # (an interference process carries a right-hand process with
+                # its own s-channel constraints: no reuse by crossing either)
                 if not process.get('required_s_channels') and \
                    not process.get('forbidden_onsh_s_channels') and \
                    not process.get('forbidden_s_channels') and \
-                   not process.get('is_decay_chain') and not diagram_filter:
+                   not process.get('is_decay_chain') and not diagram_filter \
+                   and not process.get_interference_mode():
                     try:
                         crossed_index = success_procs.index(sorted_legs)
                         # The relabeling of legs for loop amplitudes is cumbersome
@@ -1881,18 +2848,28 @@ class MultiProcess(base_objects.PhysicsObject):
                         # No crossing found, just continue
                         pass
                     else:
-                        # Found crossing - reuse amplitude
-                        amplitude = MultiProcess.cross_amplitude(\
-                            amplitudes[crossed_index],
-                            process,
-                            permutations[crossed_index],
-                            permutation)
-                        amplitudes.append(amplitude)
-                        success_procs.append(sorted_legs)
-                        permutations.append(permutation)
-                        non_permuted_procs.append(fast_proc)
-                        logger.info("Crossed process found for %s, reuse diagrams." % \
-                                    process.base_string())
+                        # merge_crossing relies on the merged matrix element
+                        # covering every crossing; with a per-leg flavor
+                        # restriction it does not (z > Qx Q [d~ d] from
+                        # `define l+ = u d~` is no crossing of z > Q Qx
+                        # [u u~] flavor-wise), so keep such a process.
+                        if not merge_crossing or \
+                                any(l.get('flavor') for l in legs):
+                            # Found crossing - reuse amplitude
+                            amplitude = MultiProcess.cross_amplitude(\
+                                amplitudes[crossed_index],
+                                process,
+                                permutations[crossed_index],
+                                permutation)
+                            amplitudes.append(amplitude)
+                            success_procs.append(sorted_legs)
+                            permutations.append(permutation)
+                            non_permuted_procs.append(fast_proc)
+                            logger.info("Crossed process found for %s, reuse diagrams." % \
+                                        process.base_string())
+                        else:
+                            logger.info("Crossed process found for %s, do not generate diagrams." % \
+                                        process.base_string())
                         continue
                     
                 # Create new amplitude
@@ -2014,7 +2991,11 @@ class MultiProcess(base_objects.PhysicsObject):
         hierarchy = list(hierarchydef.items())
         hierarchy.sort()
         for key, value in hierarchydef.items():
-            if value>1:
+            # an order of hierarchy 0 (like the hidden INTERFERENCE_ORDER)
+            # does not enter WEIGHTED
+            if value == 0:
+                continue
+            elif value>1:
                 tmp.append('%s*%s' % (value,key))
             else:
                 tmp.append('%s' % key)
@@ -2022,7 +3003,7 @@ class MultiProcess(base_objects.PhysicsObject):
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
         while max_order_now < max_WEIGHTED_order:
-            logger.info("Trying coupling order WEIGHTED<=%d: WEIGTHED IS %s" % (max_order_now, wgtdef))
+            logger.info("Trying coupling order WEIGHTED<=%d: WEIGHTED IS %s" % (max_order_now, wgtdef))
 
             oldloglevel = logger.level
             logger.setLevel(logging.WARNING)
@@ -2214,4 +3195,3 @@ def expand_list_list(mylist):
 
 
     return res
-

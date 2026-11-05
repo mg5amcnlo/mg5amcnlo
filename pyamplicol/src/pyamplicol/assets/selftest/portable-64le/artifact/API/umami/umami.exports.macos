@@ -1,0 +1,9 @@
+_umami_get_meta
+_umami_supported_inputs
+_umami_required_inputs
+_umami_supported_outputs
+_umami_initialize
+_umami_set_parameter
+_umami_get_parameter
+_umami_matrix_element
+_umami_free

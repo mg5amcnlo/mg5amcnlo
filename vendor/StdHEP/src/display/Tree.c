@@ -344,7 +344,7 @@ static void ConstraintDestroy(w)
   * make all this widget's sub-nodes sub-nodes of the parent.
   */
   /* This could break, since XtDestroyWidget will sometimes remove a 
-     supernode before this contraint has the opportunity to act. 
+     supernode before this constraint has the opportunity to act.
      For now, there will be no rearrangement of the tree upon removal 
      of a node... */
  

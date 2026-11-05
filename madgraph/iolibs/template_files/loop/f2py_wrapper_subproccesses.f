@@ -6,7 +6,7 @@ C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
       CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
+      CALL SETPARA(PATH)  !first call to set up the parameters
       RETURN
       END
 
@@ -26,6 +26,55 @@ CF2PY intent(in) :: value
       SUBROUTINE UPDATE_ALL_COUP()
       IMPLICIT NONE
       call f77_update_all_coup()
+      RETURN
+      END
+
+
+      SUBROUTINE SET_FIXED_EXTRA_SCALE(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY logical, intent(in) :: new_value
+      LOGICAL NEW_VALUE
+      call f77_set_fixed_extra_scale(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MUE_OVER_REF(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_mue_over_ref(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MUE_REF_FIXED(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_mue_ref_fixed(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_MAXJETFLAVOR(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY integer, intent(in) :: new_value
+      INTEGER NEW_VALUE
+      call f77_set_maxjetflavor(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_ASMZ(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY double precision, intent(in) :: new_value
+      DOUBLE PRECISION NEW_VALUE
+      call f77_set_asmz(new_value)
+      RETURN
+      END
+
+      SUBROUTINE SET_NLOOP(NEW_VALUE)
+      IMPLICIT NONE
+CF2PY integer, intent(in) :: new_value
+      INTEGER NEW_VALUE
+      call f77_set_nloop(new_value)
       RETURN
       END
 
@@ -131,6 +180,7 @@ CF2PY DOUBLE PRECISION, INTENT(IN) :: P(0:3, NEXTERNAL)
       RETURN
       END
 
+## if(has_density) {
       SUBROUTINE %(f2py_prefix)sPY_GET_DENSITY(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2, INTER, N_CHANGING, N_COMB, NPDG)
 
 CF2PY double precision, intent(in) :: p
@@ -157,5 +207,6 @@ CF2PY integer, intent(hide), depend(pdgs) :: NPDG = len(pdgs)
 
       RETURN
       END
+## }
 
 C     GET_ALL_INTER is not present, it can be added but is not practical to use outside of the main framework because of the way JAMPL_ALL is computed.

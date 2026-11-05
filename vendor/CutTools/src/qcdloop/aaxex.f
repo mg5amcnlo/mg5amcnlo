@@ -172,7 +172,7 @@
 *  #[ need D-functions till d-level=(level-1):
 	dl=level-1
 *
-*	go trough the 5 different cancellation patterns
+*	go through the 5 different cancellation patterns
 *
 	if ( awrite ) then
 	   print *,'     '

@@ -1,11 +1,19 @@
 #************************************************************
-#*                        MadGraph 5                        *
+#*                         MadGraph7                        *
 #*                                                          *
-#*                *                       *                 *
-#*                  *        * *        *                   *
-#*                    * * * * 5 * * * *                     *
-#*                  *        * *        *                   *
-#*                *                       *                 *
+#*                        ..........                        *
+#*                      @          ....                     *
+#*                    @               ...                   *
+#*                  @    M         M    .                   *
+#*                 @     MM       MM    ..                  *
+#*                 .     M  M   M  M  ..                    *
+#*                 ..    M   M M   M ..                     *
+#*                  .    M    M    M.                       *
+#*                  ...                   7777777           *
+#*                    ....                     7            *
+#*                       .................... 7             *
+#*                                           7              *
+#*                                          7               *
 #*                                                          *
 #*                                                          *
 #*    The MadGraph Development Team - Please visit us at    *
@@ -13,15 +21,15 @@
 #*                                                          *
 #************************************************************
 #*                                                          *
-#*               Command File for MadGraph 5                *
+#*                Command File for MadGraph7                *
 #*                                                          *
 #*     run as ./bin/mg5  filename                           *
 #*                                                          *
 #************************************************************
 import model sm
 # Define multiparticle labels
-define p = g u c d s u~ c~ d~ s~
-define j = g u c d s u~ c~ d~ s~
+define p = g _quark _anti_quark
+define j = g _quark _anti_quark
 define l+ = e+ mu+
 define l- = e- mu-
 define vl = ve vm vt

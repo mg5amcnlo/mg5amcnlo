@@ -123,7 +123,7 @@ class Particle(UFOBaseClass):
         elif spin == 5:
             return 'double'
         elif spin == -1:
-            return 'dashed' #            return 'dotted' ## not suported yet
+            return 'dashed' #            return 'dotted' ## not supported yet
         else:
             return 'dashed' # not supported yet
 
@@ -251,8 +251,8 @@ class Coupling(UFOBaseClass):
         return self.pole(0)
 
     def pole(self, x):
-        """ the self.value attribute can be a dictionary directly specifying the Laurent serie using normal
-        parameter or just a string which can possibly contain CTparameter defining the Laurent serie."""
+        """ the self.value attribute can be a dictionary directly specifying the Laurent series using normal
+        parameter or just a string which can possibly contain CTparameter defining the Laurent series."""
         
         if isinstance(self.value,dict):
             if -x in list(self.value.keys()):
@@ -276,10 +276,10 @@ class Coupling(UFOBaseClass):
                    # HSS, 5/11/2012
                    CTparam = CTparam + [param,]
                    numbermatch = numbermatch + [numberOfMatches,]
-                   # raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the 			   # couplings values."+param.name+" "+self.name+" "+CTparam.name
+                   # raise UFOError, "UFO does not yet support more than one occurrence of CTParameters in the 			   # coupling values."+param.name+" "+self.name+" "+CTparam.name
                    # HSS
            #elif numberOfMatches>1:
-               #raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the #couplings values."+param.name
+               #raise UFOError, "UFO does not yet support more than one occurrence of CTParameters in the #coupling values."+param.name
            # HSS
 
         if not CTparam:

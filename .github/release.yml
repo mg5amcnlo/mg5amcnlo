@@ -1,0 +1,16 @@
+# Configures GitHub's "Generate release notes" button (used when drafting a
+# release) to group PRs by label instead of listing them in one flat list.
+changelog:
+  categories:
+    - title: Breaking changes
+      labels:
+        - breaking-change
+    - title: New features
+      labels:
+        - enhancement
+    - title: Bug fixes
+      labels:
+        - bug
+    - title: Other changes
+      labels:
+        - "*"

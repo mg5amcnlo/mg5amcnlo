@@ -96,7 +96,7 @@
 *	    ipi^2/   \						     /	*
 *									*
 *	following the five four-point-function method in ....		*
-*	As an extra the five fourpoint function Di are also reurned	*
+*	As an extra the five fourpoint function Di are also returned	*
 *									*
 *	Input:	xpi = m_i^2	   (real)  i=1,6			*
 *		xpi = p_i.p_i	   (real)  i=7,12 (note: B&D metric)	*
@@ -241,7 +241,7 @@
 		    else
 			ier1 = ier0
 *
-*			rotate to calculable posistion
+*			rotate to calculable position
 *
 			call ffrot4(irota,del2s,xqi4,dqiqj4,qiDqj4,xpi4,
      +				dpipj4,piDpj4,5,itype,ier0)

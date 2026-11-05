@@ -10,10 +10,10 @@
       common/c_born_hel/helicities
       double precision helicity_orders(1,16)
       common/c_born_hel_split/helicity_orders
-      request%%helicities=.true.
+      request%helicities=.true.
       call mc_born_local(p,request,result)
-      helicities=result%%helicities
-      helicity_orders=result%%helicity_orders
+      helicities=result%helicities
+      helicity_orders=result%helicity_orders
       ans=sum(helicities)
       end
       SUBROUTINE PICKHELICITYMC(P,GOODHEL,HEL,IHEL_OUT,VOL)

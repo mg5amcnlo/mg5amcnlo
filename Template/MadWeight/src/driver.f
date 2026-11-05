@@ -152,7 +152,7 @@ c     initialization of the variables in the loops
          enddo
       enddo
 
-c     Remove the (apriori) pointless permuation!
+c     Remove the (apriori) pointless permutation!
       config_pos = 1
       call GET_PERM_WEIGHT()
       call get_min_perm() ! this also order the permutation
@@ -810,9 +810,9 @@ C      end
       do j=1, nb_tf
         perm_value(i,j) = 0d0 ! sum of fct
         perm_error(i,j) = 0d0 ! sum of fct**2
-        perm_value_it(i,j) = 0d0   ! weigthed sum on iteration result
+        perm_value_it(i,j) = 0d0   ! weighted sum on iteration result
         perm_error_it(i,j) = 0d0   ! sum (1/sigma**2)
-        tf_value_it(j) = 0d0       ! weigthed sum on iteration result for all perm
+        tf_value_it(j) = 0d0       ! weighted sum on iteration result for all perm
         tf_error_it(j) = 0d0       ! sum (1/sigma**2) all perm
       enddo
         nb_point_by_perm(i) = 0

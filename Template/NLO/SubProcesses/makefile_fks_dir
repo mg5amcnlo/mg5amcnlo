@@ -21,7 +21,7 @@ endif
 
 NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)
 
-# Uncomment the line below to compile with MadLoop without setting the environnement 
+# Uncomment the line below to compile with MadLoop without setting the environment
 # variables 'by hand'
 # NLOLIBS= -L. -lMadLoop -L$(LIBDIR) -lcts
 LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lgammaUPC -lcernlib $(llhapdf)
@@ -44,6 +44,12 @@ ifneq ("$(wildcard born_support.f)","")
     LIBS += $(BORN_SUPPORT_LIB)
     BORN_SUPPORT_OBJECTS = born_support.o mc_native_context.o mc_native_runtime.o mc_native_props.o
     BORN_SUPPORT_EWSUD_OBJECTS = born_support.o
+    BORN_SUPPORT_REWEIGHT_OBJECTS = boost_to_frame.o
+    ifeq ($(shell uname -s),Darwin)
+        BORN_SUPPORT_REWEIGHT_GC = -Wl,-dead_strip
+    else
+        BORN_SUPPORT_REWEIGHT_GC = -Wl,--gc-sections
+    endif
 endif
 
 ifneq ("$(wildcard ../../Source/RUNNING)","")
@@ -73,8 +79,8 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 rescale_alpha_tagged.o						\
 	 fks_Sij.o $(fastjetfortran_madfks) fks_singular.o		\
 	 montecarlocounter.o mcatnlo_delta_scales.o herwig7_scales.o		\
-	 boostwdir2.o cluster.o splitorders_stuff.o reweight_xsec.o	\
-	 get_color.o iproc_map.o sudakov.o  				\
+	 boostwdir2.o boost_to_frame.o cluster.o splitorders_stuff.o reweight_xsec.o	\
+	 iproc_map.o sudakov.o  				\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(pineappl_interface) weight_lines.o mint_module.o virtual_approximation.o \
 	 virtual_surrogate.o polfit.o
@@ -103,8 +109,15 @@ POLES= $(RUN) check_poles.o BinothLHA.o write_event.o handling_lhe_events.o
 # Files for check_sudakov
 EWSUD= $(RUN) check_sudakov.o BinothLHA.o
 
-EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD) 
+EWSUDSA = sa_ewsudakov.o sub_f2py_ewsudakov.o $(FILESSUD)
 EWSUDLIB = $(FILESSUD)
+
+# Files for the FKS Born building-block standalone (output standalone_fortran --fks).
+# The driver embeds its own get_lo2_orders, so the EW-Sudakov object
+# chain is deliberately left out to keep the link minimal.
+FKSSA = check_sa_fks.o born.o sborn_sf.o				\
+	$(patsubst %.f,%.o,$(wildcard b_sf_???.f))			\
+	splitorders_stuff.o orderstags_glob.o $(BORN_SUPPORT_EWSUD_OBJECTS)
 
 # Files for check_sudakov_angle2
 EWSUD2= $(RUN) check_sudakov_angle2.o BinothLHA.o
@@ -120,9 +133,9 @@ RWGFILES=fks_phase_space_data.o FKSParams.o reweight_xsec_events.o handling_lhe_
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
 	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
-	get_color.o iproc_map.o chooser_functions.o 		\
+	iproc_map.o chooser_functions.o 		\
 	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
-	weight_lines.o orderstags_glob.o $(BORN_SUPPORT_OBJECTS) born.o sborn_sf.o extra_cnt_wrapper.o
+	weight_lines.o orderstags_glob.o $(BORN_SUPPORT_OBJECTS) $(BORN_SUPPORT_REWEIGHT_OBJECTS) born.o sborn_sf.o extra_cnt_wrapper.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
@@ -157,9 +170,12 @@ check_sudakov: $(EWSUD) $(libmadloop)
 	$(FC) -o check_sudakov $(EWSUD) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_sudakov
 
-ewsudakov_sa: $(EWSUDSA) 
+ewsudakov_sa: $(EWSUDSA)
 	$(FC) -o ewsudakov_sa $(EWSUDSA) $(LINKLIBS)  $(LDFLAGS)
 	strip ewsudakov_sa
+
+check_fks: $(FKSSA) $(BORN_SUPPORT_LIB)
+	$(FC) $(FFLAGS) -o check_fks $(FKSSA) $(LINKLIBSSUD) $(BORN_SUPPORT_LINK) $(LDFLAGS)
 
 $(LIBDIR)/libdhelas.$(dylibext):
 	$(MAKE) -C "$(LIBDIR)/../Source/DHELAS" shared
@@ -193,7 +209,7 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	strip madevent_mintFO
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
-	$(FC) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
+	$(FC) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS) $(BORN_SUPPORT_REWEIGHT_GC)
 	rm handling_lhe_events.o
 	strip reweight_xsec_events
 
@@ -203,7 +219,7 @@ libMadLoop.a:
 # Each reader and writer of the active point needs the module interface.
 # Keep this below executable targets so it does not change the default goal.
 add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
-    check_poles.o check_sudakov.o check_sudakov_angle2.o cluster.o cuts.o \
+    boost_to_frame.o check_poles.o check_sudakov.o check_sudakov_angle2.o cluster.o cuts.o \
     driver_mintFO.o driver_mintMC.o ewsudakov_functions_dummy.o \
     fks_Sij.o fks_singular.o genps_fks.o genps_fks_sampling.o \
     genps_fks_radiation.o initial_recoil.o \
@@ -252,6 +268,23 @@ test_soft_col_limits.o: mint_module.o
 madfks_plot.o: mint_module.o
 write_event.o: mint_module.o
 check_poles.o: mint_module.o
+genps_fks_sampling.o: mint_module.o
+
+# Direct standalone object builds also need the typed HELAS interface.
+# Discover its consumers so classic exports without ALOHA_OBJECT stay valid.
+ALOHA_MODULE_USERS = $(patsubst %.f,%.o,$(shell grep -il '^[[:space:]]*use[[:space:]]*aloha_object' *.f))
+$(ALOHA_MODULE_USERS): $(LIBDIR)aloha_object.mod
+
+$(LIBDIR)aloha_object.mod: ../../Source/DHELAS/aloha_functions.f
+	$(MAKE) -C ../../Source/DHELAS aloha_functions.o
+	@test -f ../../Source/DHELAS/aloha_object.mod || $(MAKE) -B -C ../../Source/DHELAS aloha_functions.o
+	cp -f ../../Source/DHELAS/aloha_object.mod $@
+
+# Offline reweighting uses the framed Born helper, but not the bridge's
+# virtual and real-ME wrappers. Keep their unresolved dependencies out of
+# that executable while retaining every helper reachable from sborn_frame.
+boost_to_frame.o: FFLAGS += -ffunction-sections
+
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym
@@ -266,7 +299,7 @@ endif
 ifneq ("$(wildcard mc_native_context.f90)","")
 mc_native_context.o: $(LIBDIR)mc_born_types.mod $(LIBDIR)mc_born_support.mod
 mc_native_context.o: FFLAGS += -ffree-line-length-none
-mc_native_runtime.o mc_native_props.o real_me_chooser.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o: mc_native_context.o
+mc_native_runtime.o mc_native_props.o real_me_chooser.o chooser_functions.o genps_fks.o setcuts.o fks_singular.o driver_mintMC.o weight_lines.o iproc_map.o cluster.o boost_to_frame.o: mc_native_context.o
 mc_native_runtime.o: FFLAGS += -ffixed-line-length-none
 
 # Native metadata dimensions are shared by all runtime COMMON declarations.

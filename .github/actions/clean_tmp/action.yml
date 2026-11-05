@@ -1,0 +1,29 @@
+name: Clean /tmp
+description: >
+  Removes everything the runner user owns in /tmp (self-hosted runners only).
+  The alma10 machines (cern1-5) have a 20 GB disk with only 8 GB of /tmp
+  scratch, and /tmp persists between jobs: what one job leaves there (process
+  dirs, tempfile.mkdtemp trees of failed tests, ...) fills the next one's.
+  Use it right after the checkout and again as the last step with
+  `if: always()`. One runner per machine, so nothing else is using these files.
+  Fails (before any test runs) when /tmp itself is missing or not writable:
+  the tests cannot work then, and the machine needs fixing as root.
+runs:
+  using: composite
+  steps:
+    - if: runner.environment == 'self-hosted'
+      shell: bash
+      run: |
+        if [ ! -d /tmp ] || [ ! -w /tmp ]; then
+          echo "::error::/tmp is missing or not writable on $RUNNER_NAME ($(hostname)): the machine needs fixing as root"
+          ls -ld /tmp || true
+          grep ' /tmp ' /proc/self/mountinfo || true
+          exit 1
+        fi
+        df -h /tmp
+        # Tests can leave read-only trees behind: make them writable first.
+        find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" \
+          -exec chmod -R u+w {} + -exec rm -rf {} + 2>/dev/null || true
+        left=$(find /tmp -mindepth 1 -maxdepth 1 -user "$(id -u)" 2>/dev/null | wc -l)
+        [ "$left" -eq 0 ] || echo "::warning::$left entries in /tmp could not be removed"
+        df -h /tmp

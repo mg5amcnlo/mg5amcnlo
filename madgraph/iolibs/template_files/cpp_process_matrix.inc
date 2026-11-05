@@ -11,6 +11,9 @@ std::complex<double> jamp[ncolor];
 // Calculate color flows
 %(jamp_lines)s
 
+// Calculate channel weights
+%(amp2_lines)s
+
 // Sum and square the color flows to get the matrix element
 double matrix = 0;
 int cf_index = 0;
@@ -25,7 +28,7 @@ for(int i=0;i < ncolor; i++){
 
 // Store the leading color flows for choice of color
 for(int i=0;i < ncolor; i++)
-    jamp2[%(proc_number)d][i] += real(jamp[i]*conj(jamp[i]));
+    jamp2[i] += real(jamp[i]*conj(jamp[i]));
     
 return matrix;
 }

@@ -45,7 +45,7 @@ c-----
 
       DOUBLE PRECISION FUNCTION SumDot(P1,P2,dsign)
 c************************************************************************
-c     Invarient mass of 2 particles
+c     Invariant mass of 2 particles
 c************************************************************************
       IMPLICIT NONE
 c
@@ -210,7 +210,7 @@ c-----
 
       double precision function DJ(p1,p2)
 c***************************************************************************
-c     Uses Durham algorythm to calculate the y value for two partons
+c     Uses Durham algorithm to calculate the y value for two partons
 c     If collision type is hh, hadronic jet measure is used
 c       y_{ij} = 2min[p_{i,\perp}^2,p_{j,\perp}^2]/S
 c                  (cosh(\eta_i-\eta_j)-cos(\phi_1-\phi_2))
@@ -236,7 +236,7 @@ c
 c-----
 c  Begin Code
 c-----
-      if ((lpp(1).ne.1).and.(lpp(2).ne.1)) then
+      if ((abs(lpp(1)).ne.1).and.(abs(lpp(2)).ne.1)) then
          p1a = dsqrt(p1(1)**2+p1(2)**2+p1(3)**2)
          p2a = dsqrt(p2(1)**2+p2(2)**2+p2(3)**2)
          if (p1a*p2a .ne. 0d0) then
@@ -278,7 +278,7 @@ c$$$      write(*,*) 'dj = ',dj
       
       double precision function PYDJ(p1,p2)
 c***************************************************************************
-c     Uses Durham algorythm to calculate the y value for two partons
+c     Uses Durham algorithm to calculate the y value for two partons
 c     If collision type is hh, hadronic jet measure is used
 c       y_{ij} = 2min[p_{i,\perp}^2,p_{j,\perp}^2]/S
 c                  (cosh(\eta_i-\eta_j)-cos(\phi_1-\phi_2))
@@ -309,7 +309,7 @@ c-----
       
       double precision function DJ1(p1,p2)
 c***************************************************************************
-c     Uses single-sided Durham algorythm to calculate the y value for 
+c     Uses single-sided Durham algorithm to calculate the y value for
 c     parton radiated off non-parton
 c     If collision type is hh, hadronic jet measure is used
 c       y_{ij} = 2min[p_{i,\perp}^2,p_{j,\perp}^2]/S
@@ -361,7 +361,7 @@ c     write(*,*) 'dj = ',dj
       
       double precision function DJB(p1)
 c***************************************************************************
-c     Uses kt algorythm to calculate the y value for one parton
+c     Uses kt algorithm to calculate the y value for one parton
 c       y_i    = p_{i,\perp}^2/S
 c***************************************************************************
       implicit none

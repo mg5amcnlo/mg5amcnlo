@@ -3901,8 +3901,8 @@ C*NS  INTEGER MAXWRD,TREMAX,BUKMAX,PARENT,COORD
       TERMNL=.FALSE.
       IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
       IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
-      CALL SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,PARTN(ENTRE
-     1E),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
+      CALL HW6_SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,
+     1PARTN(ENTREE),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
       TREE(4,ENTREE)=-ITREE
       IF(TERMNL) RETURN
       PNODES=PNODES+1
@@ -3931,8 +3931,8 @@ C*NS  INTEGER MAXWRD,TREMAX,BUKMAX,PARENT,COORD
       UMINUS(JTREE)=PARTN(PARENT)
  30   IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
       IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
-      CALL SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,PARTN(ENTRE
-     1E),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
+      CALL HW6_SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,
+     1PARTN(ENTREE),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
       TREE(4,ENTREE)=-ITREE
       IF(.NOT.(.NOT.TERMNL)) GOTO 50
       IF(JTREE.GE.0) GOTO 40
@@ -3984,8 +3984,8 @@ C*NS  INTEGER MAXWRD,TREMAX,BUKMAX,PARENT,COORD
       UMINUS(-JTREE)=PARTN(PARENT)
  110  IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
       IRBUC=IBUC-(MAXWRD*(ENTBUC-1))
-      CALL SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,PARTN(ENTRE
-     1E),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
+      CALL HW6_SPLIT(NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,ITREE,
+     1PARTN(ENTREE),BUCKTS(MAXWRD*(ENTBUC-1)+1),IRBUC)
       TREE(4,ENTREE)=-ITREE
       IF(.NOT.(.NOT.TERMNL)) GOTO 130
       IF(JTREE.LE.0) GOTO 120
@@ -4165,8 +4165,12 @@ C*NS  INTEGER MAXWRD,TREMAX,BUKMAX,PARENT,COORD
       END
 *CMZ :          04/09/93  17.07.27  by  Jonathan Butterworth
 *-- Author :
-      SUBROUTINE SPLIT (NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,DISCRM,PART
-     1N,BUCKTS,IRBUC)
+C--MG5aMC patch: renamed from SPLIT, which became an intrinsic
+C  subroutine in Fortran 2023 -- gfortran >= 16 resolved the CALLs
+C  in RECPARZ against the intrinsic and rejected them.  The
+C  continuations were re-wrapped to stay inside column 72.
+      SUBROUTINE HW6_SPLIT (NDIM,UMINUS,UPLUS,FLOBD,FUPBD,TERMNL,
+     1DISCRM,PARTN,BUCKTS,IRBUC)
       INTEGER NDIM, DISCRM, IRBUC
       LOGICAL TERMNL
       REAL FLOBD, FUPBD, PARTN
@@ -5062,7 +5066,7 @@ C     Set defaults
 C     Minimum PT of the secondary scatters
       PTJIM=2.5
 
-C     Defualt debug level to lowest.
+C     Default debug level to lowest.
       JMBUG=0
 
 C     Number of attempts to regenerate a scatter which
@@ -5552,7 +5556,7 @@ c     Restore the photon/hadron probability.
 C -------------------------------------------------------------
 C   Purpose: The kernel for the integral over PT,X1,X2
 C            The integral goes from pt2tmp -> ptmax2.
-C            When using this function in the initialsation,
+C            When using this function in the initialisation,
 C            pt2tmp == ptmin**2 and ptmax2 = the kinematic limit.
 C            Otherwise they are the pt2 of the current
 C            hard scatter and of the last, respectively.
@@ -5673,7 +5677,7 @@ C --------------------------------------------------------------------------
       JMS=2.D0*(EBEAM1*EBEAM2+PBEAM1*PBEAM2)
 
 C     Demand that there's enough energy to produce at least a
-C     pair of quarks. We can do this seperately for each subprocess
+C     pair of quarks. We can do this separately for each subprocess
 C     based upon their final state masses, but this will do for now.
       IF (PT2+RMASS(1)**2.GT.(X1*X2*YGAMMA*JMS)/4.D0) THEN
         VETO = .TRUE.

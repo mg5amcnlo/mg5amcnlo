@@ -9,7 +9,7 @@ c     ncall          Number of times to evaluate the function/iteration
 c     itmax          Max number of iterations
 c     itmin          Min number of iterations
 c     dsig           Function to be integrated
-c     ninvar         Number of invarients to keep grids on (s,t,u, s',t' etc)
+c     ninvar         Number of invariants to keep grids on (s,t,u, s',t' etc)
 c     nconfigs       Number of different pole configurations 
 c     VECSIZE_USED   Number of events in parallel out of VECSIZE_MEMMAX
 c                    (NB this is the #events handled by the cudacpp bridge,
@@ -38,7 +38,9 @@ c
       integer itmax_adjust
 
 c      integer imirror, iproc, iconf
-      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP) 
+      integer imirror_vec(NB_WARP), iproc, ICONF_VEC(NB_WARP)
+      integer IFLAV_VEC(NB_WARP) 
+      integer dummyflavor
       integer ivec              ! position of the event in the vector (max is VECSIZE_MEMMAX, loops go over VECSIZE_USED)
       integer ilock             !  position of the event in the current warp (max is WARP_SIZE)
       integer iwarp               ! position of the current warp (max is NB_WARP)
@@ -94,6 +96,11 @@ c      common /to_fx/   fx
 
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
+c     refine last iteration decided before it was run (sample_put_point)
+      logical last_it
+      double precision last_uref, last_ufix, last_lumi, last_goal, last_xnorm
+      common /to_refine_last/ last_uref, last_ufix, last_lumi, last_goal,
+     &     last_xnorm, last_it
 
       integer th_nunwgt
       double precision th_maxwgt
@@ -166,6 +173,7 @@ c      maxcfig=nconfigs
 c
 c     Main Integration Loop
 c
+      dummyflavor = 0
       ievent = 0
       iter = 1
       ivec = 0
@@ -208,7 +216,10 @@ c               all_wgt(i) = all_wgt(i)*fx
                endif
 
                if (VECSIZE_USED.le.1) then
-                  all_fx(1) = dsig(all_p, all_wgt,0)
+                  ! 0  is used as flavor index to indicate that none has been
+                  ! set (yet) the handling depends group_subprocess/flavor
+                  dummyflavor = 0 ! important to reset since dsig can overwrite it
+                  all_fx(1) = dsig(all_p,dummyflavor, all_wgt,0)
                   ivec=0
                   ilock=0
                   iwarp=1 
@@ -225,23 +236,28 @@ c                 need to restore common block
                   cuts_orient(:) = all_cuts_orient(:, i)
                   call prepare_grouping_choice(all_p(1,i), all_wgt(i),i.eq.(iwarp-1)*WARP_SIZE+1)
                enddo
-               call select_grouping(imirror_vec(iwarp), iproc, iconf_vec(iwarp), all_wgt, iwarp)
+               call store_grouping_choice(iwarp)
+               if (ivec.lt.VECSIZE_USED)then
+                  cycle
+               endif
+c              all warps of the vector share the subprocess (iproc)
+c              while the configuration, flavour and orientation are chosen per warp
+               call select_grouping_vec(imirror_vec, iflav_vec, iproc, iconf_vec, all_wgt, VECSIZE_USED)
 c              events failing the cuts in the selected beam orientation do not contribute
+               do iwarp=1, VECSIZE_USED/WARP_SIZE
                if (imirror_vec(iwarp).eq.1.or.imirror_vec(iwarp).eq.2) then
                   do i=(iwarp-1)*WARP_SIZE+1, iwarp*warp_size
                      if (.not.all_cuts_orient(imirror_vec(iwarp),i)) all_wgt(i)=0d0
                   enddo
                endif
-               if (ivec.lt.VECSIZE_USED)then
-                  cycle
-               endif
+               enddo
 c              reset variable for the next grid               
                ivec = 0
                ilock = 0
                iwarp =1
                
                call dsig_vec(all_p, all_wgt, all_xbk, all_q2fact, all_cm_rap,
-     &                          iconf_vec, iproc, imirror_vec, all_fx,VECSIZE_USED)
+     &                          iconf_vec, iproc, iflav_vec, imirror_vec, all_fx,VECSIZE_USED)
 
                 do i=1, VECSIZE_USED
 c                 need to restore common block                  
@@ -260,7 +276,7 @@ c     write(*,*) i, all_wgt(i), fx, all_wgt(i)*fx
                   all_wgt(i) = all_wgt(i)*all_fx(i)
               enddo
                do i =1, VECSIZE_USED
-c     if last paremeter is true -> allow grid update so only for a full page
+c     if last parameter is true -> allow grid update so only for a full page
                   lastbin(:) = all_lastbin(:,i)
                   if (all_wgt(i) .ne. 0d0) kevent=kevent+1
 c                  write(*,*) 'put point in sample kevent', kevent, 'allow_update', ivec.eq.VECSIZE_USED                   
@@ -330,6 +346,17 @@ c      nun = n_unwgted()
          chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
       enddo
       chi2 = chi2/2d0   !Since using only last 3, n-1=2
+c     A refine job whose last iteration was decided before it was run reports
+c     that iteration alone, as its events are normalised to it: the
+c     (x/sigma)^2 average of the last iterations is biased low when their
+c     weights are heavy-tailed (an iteration that caught a large weight gets
+c     a larger error estimate, hence a smaller weight in the average)
+      if (last_it) then
+         tmean = xmean(cur_it-1)
+         trmean = xrmean(cur_it-1)
+         tsigma = xsigma(cur_it-1)
+         chi2 = 0d0
+      endif
       write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
       write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
@@ -340,11 +367,11 @@ c      nun = n_unwgted()
       write(*,'(a)') '-------------------------------------------------'
       write(*,'(a)') '---------------------------'
 
-      if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
+      if (nun .lt. 0) nun=-nun   !Case when wrote maximum number allowed
       if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
 c     JA 02/2011 Added twgt to results.dat to allow event generation in
 c     first iteration for gridpack runs
-C     OM 02/2015 Added maxwgt (target of the secondary unweight) to allow splitted
+C     OM 02/2015 Added maxwgt (target of the secondary unweight) to allow split
 C        generation of event.
       if (icor .eq. 0) then
          write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5,i9)')tmean,tsigma, 0.0,
@@ -361,6 +388,7 @@ c      do i=1,cur_it-1
       enddo
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
       else
@@ -370,181 +398,20 @@ c     Write out MadLoop statistics, if any
          write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c        Write out MadLoop statistics, if any
          call output_run_statistics(66)
+         call output_subprocess_weights(66)
          flush(66)
          close(66, status='KEEP')
 
       endif
 c
-c     Now let's check to see if we got all of the events we needed
-c     if not, will give it another try with 5 iterations to set
-c     the grid, and 4 more to try and get the appropriate number of 
-c     unweighted events.
+c     The job stops here: the retry with a fresh grid that followed was
+c     disabled long ago (it only rewrote the same results.dat)
 c
       write(*,*) "Status",accur, cur_it, itmax
-      if (accur .ge. 0d0 .or. cur_it .gt. itmax+3) then
-        return
-      endif
-c     Check for neventswritten and chi2 (JA 8/17/11 lumi*mean xsec)
-      if (neventswritten .gt. -accur*tmean .and. chi2 .lt. 10d0) then
+      if (accur .lt. 0d0 .and. cur_it .le. itmax+3 .and.
+     &     neventswritten .gt. -accur*tmean .and. chi2 .lt. 10d0) then
          write(*,*) "We found enough events",neventswritten, -accur*tmean
-         return
       endif
-      
-c
-c     Need to start from scratch. This is clunky but I'll just
-c     remove the grid, so we are clean
-c
-      goto 200
-      write(*,*) "Trying w/ fresh grid"
-      stop 1 
-      open(unit=25,file='ftn25',status='unknown',err=102)
-      write(25,*) ' '
- 102  close(25)
-
-c
-c     First few iterations will allow the grid to adjust
-c
-c
-c     Reset counters
-c
-      ievent = 0
-      kevent = 0
-      nzoom = 0
-      xzoomfact = 1d0
-
-      ncall = ncall*4 ! / 2**(itmax-2)
-      write(*,*) "Starting w/ ncall = ", ncall
-      itmax = 8
-      call sample_init(ndim,ncall,itmax,ninvar,nconfigs,VECSIZE_USED)
-      do i=1,itmax
-         xmean(i)=0d0
-         xsigma(i)=0d0
-      enddo
-      wgt = 0d0
-      call clear_events
-      call set_peaks
-c
-c     Main Integration Loop
-c
-      iter = 1
-c      itmax = 8
-      itmax_adjust = 5
-      use_cut = 2  !Start adjusting grid
-      do while(iter .le. itmax)
-         if (iter .gt. itmax_adjust .and. use_cut .ne. 0) then
-            use_cut=0           !Fix grid
-            write(*,*) 'Fixing grid'
-         endif
-c
-c     Get integration point
-c
-         call sample_get_config(wgt,iter,ipole)
-         if (iter .le. itmax) then
-            ievent=ievent+1
-            call x_to_f_arg(ndim,ipole,mincfig,maxcfig,ninvar,wgt,x,p)
-            if (pass_point(p)) then
-               xzoomfact = 1d0
-               fx = dsig(p,wgt,0) !Evaluate function
-               if (xzoomfact .gt. 0d0) then
-                  wgt = wgt*fx*xzoomfact
-               else
-                  wgt = -xzoomfact
-               endif
-               if (wgt .gt. 0d0) call graph_point(p,wgt) !Update graphs
-            else
-               fx =0d0
-               wgt=0d0
-            endif
-            
-            if (nzoom .le. 0) then
-               call sample_put_point(wgt,x(1),iter,ipole,.true.) !Store result
-            else
-               nzoom = nzoom -1
-               ievent=ievent-1
-            endif
-         endif
-         if (wgt .gt. 0d0) kevent=kevent+1    
-199   enddo
-c
-c     All done
-c
-200   open(unit=66,file='results.dat',status='unknown')
-      i=1
-      do while(xmean(i) .ne. 0 .and. i .lt. cur_it)
-         i=i+1
-      enddo
-      cur_it = i
-c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
-      itsum = min(max(itmin,cur_it-1),3)
-      i = cur_it - itsum
-      if (i .gt. 0) then
-      tmean = 0d0
-      trmean = 0d0
-      tsigma = 0d0
-      tdem = 0d0
-      do while (xmean(i) .ne. 0 .and. i .lt. cur_it)
-         tmean = tmean+xmean(i)*xmean(i)**2/xsigma(i)**2
-         trmean = trmean+xrmean(i)*xmean(i)**2/xsigma(i)**2
-         tdem = tdem+xmean(i)**2/xsigma(i)**2
-         tsigma = tsigma + xmean(i)**2/ xsigma(i)**2
-         i=i+1
-      enddo
-      tmean = tmean/tsigma
-      trmean = trmean/tsigma
-      tsigma= tmean/sqrt(tsigma)
-c      nun = n_unwgted()
-c
-c     tjs 8/7/2007
-c
-      nun = neventswritten
-
-      chi2 = 0d0
-      do i = cur_it-itsum,cur_it-1
-         chi2 = chi2+(xmean(i)-tmean)**2/xsigma(i)**2
-      enddo
-      chi2 = chi2/2d0   !Since using only last 3, n-1=2
-      write(*,'(a)') '-------------------------------------------------'
-      write(*,'(a)') '---------------------------'
-      write(*,'(a,i3,a,e12.4)') ' Results Last ',itsum,
-     $     ' iters: Integral = ',trmean
-      write(*,'(21x,a,e12.4)') 'Abs integral = ',tmean
-      write(*,'(25x,a,e12.4)') 'Std dev = ',tsigma
-      write(*,'(17x,a,f12.4)') 'Chi**2 per DoF. =',chi2
-      write(*,'(a)') '-------------------------------------------------'
-      write(*,'(a)') '---------------------------'
-
-      if (nun .lt. 0) nun=-nun   !Case when wrote maximun number allowed
-      if (chi2 .gt. 1) tsigma=tsigma*sqrt(chi2)
-c     JA 02/2011 Added twgt to results.dat to allow event generation in
-c     first iteration for gridpack runs +02/2015 maxwgt 
-      if (icor .eq. 0) then
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5, i9)')tmean,tsigma,0.0,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean, 
-     &    maxwgt, th_maxwgt, th_nunwgt
-      else
-         write(66,'(3e12.5,2i9,i5,i9,e10.3,e12.5,3e13.5,i9)')tmean,0.0,tsigma,
-     &     kevent, nw, cur_it-1, nun, nun/max(tmean,1d-99), twgt,trmean,
-     &    maxwgt, th_maxwgt, th_nunwgt
-      endif
-c      do i=1,cur_it-1
-      do i=cur_it-itsum,cur_it-1
-         write(66,'(i4,5e15.5)') i,xmean(i),xsigma(i),xeff(i),xwmax(i),xrmean(i)
-      enddo
-c     Write out MadLoop statistics, if any
-      call output_run_statistics(66)      
-      flush(66)
-      close(66, status='KEEP')
-      else
-         open(unit=66,file='results.dat',status='unknown')
-         write(66,'(3e12.5,2i9,i5,i9,5e10.3,i9)')0.,0.,0.,kevent,nw,
-     &     1,0,0.,0.,0.,0.,0.,0
-         write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
-c        Write out MadLoop statistics, if any
-         call output_run_statistics(66)
-         flush(66)
-         close(66, status='KEEP')
-
-      endif      
 
       end
 
@@ -655,7 +522,7 @@ c
       elseif (xmean(1) .ge. 1e1) then     !Use pico barns
          scale=1d0
          cpref='(pb)'
-      else                               !Use fempto
+      else                               !Use femto
          scale=1d+3
          cpref='(fb)'
       endif
@@ -689,6 +556,57 @@ c     $     ntot/1000,'</th><th align=right>',teff,'</th></tr>'
  48   format(a,a,a,a)
  49   format(a)
  50   format(a)
+      end
+
+
+
+      subroutine output_subprocess_weights(outUnit)
+c***********************************************************************
+c     Appends per-leshouche-row relative weights to the results.dat file
+c     as an XML block.  The weights are set by the grouped DSIG function
+c     (super_auto_dsig_group_v4.inc) via the DSIG_RELSPROC common block.
+c     When no grouped subprocess is present, NREL_SPROC_STORE stays 0
+c     and nothing is written.
+c***********************************************************************
+      implicit none
+c
+c     Arguments
+c
+      integer outUnit
+c
+c     Local
+c
+      integer i
+      double precision relsum, relout
+c
+c     Global: common block shared with the grouped DSIG function
+c
+      INTEGER NREL_SPROC_STORE
+      DOUBLE PRECISION REL_SPROC_STORE(1024)
+      COMMON /DSIG_RELSPROC/ NREL_SPROC_STORE, REL_SPROC_STORE
+      DATA NREL_SPROC_STORE /0/
+
+      if (NREL_SPROC_STORE.gt.0) then
+c       Write fractions of the total.  The grouped DSIG path already stores
+c       normalised weights (sum = 1) so this is a no-op there; the
+c       non-grouped path accumulates raw per-group sums that need it.  The
+c       common block is left untouched (idempotent across repeated calls
+c       and safe if accumulation continues afterwards).
+        relsum = 0d0
+        do i=1,NREL_SPROC_STORE
+          relsum = relsum + REL_SPROC_STORE(i)
+        enddo
+        write(outUnit,'(A)') '<subprocess_weights>'
+        do i=1,NREL_SPROC_STORE
+          if (relsum.gt.0d0) then
+            relout = REL_SPROC_STORE(i)/relsum
+          else
+            relout = REL_SPROC_STORE(i)
+          endif
+          write(outUnit,'(E20.10)') relout
+        enddo
+        write(outUnit,'(A)') '</subprocess_weights>'
+      endif
       end
 
 
@@ -811,7 +729,7 @@ c         write(*,*) 'Too many dimensions dim > invar',dim,invar
 c         stop
 c      endif
       if (p4 .gt. maxinvar) then
-         write(*,*) 'Too many invarients requested from Sample()',p4
+         write(*,*) 'Too many invariants requested from Sample()',p4
          stop
       endif
       if (p5 .gt. maxconfigs) then
@@ -829,7 +747,7 @@ c         stop
          print*,'Using h-tuple random number sequence.'
       elseif (ituple .eq. 2) then
          print*,'Using Sobel quasi-random number sequence.'
-         write(*,*) 'Sorry cant use sobel'
+         write(*,*) 'Sorry, cannot use Sobol'
          stop
 c         call isobel(dim)
       else
@@ -837,10 +755,10 @@ c         call isobel(dim)
       endif
 c
 c     See if need mapping between dimensions in different configurations
-c     (ie using s,t,u type invarients)
+c     (ie using s,t,u type invariants)
 c
       if (Minvar(1,1) .eq. -1) then
-         print*,'No invarient mapping defined, using 1 to 1.'
+         print*,'No invariant mapping defined, using 1 to 1.'
          do i=1,configs
             do j=1,dim
                Minvar(j,i) = j+(i-1)*dim
@@ -965,7 +883,7 @@ c
 c
 c     Local
 c
-      integer i,k
+      integer i
       integer ngu, ngd
 c
 c     Global
@@ -1017,20 +935,16 @@ c
             do i=1,ngd-1
 c               grid(2,i,j) = ((1d0-a)/(xo-a))**(1d0-dble(i)/dble(ngd))
                grid(2,ngd-i,j) = xo-(grid(2,ngd+i,j)-xo)
-               if (grid(2,ngd-i,j) .lt. -1d0) then
-                  write(*,*) 'Error grid set too low',grid(2,ngd-i,j)
-                  do k=1,ng
-                     write(*,*) k,grid(2,k,j)
-                  enddo
-                  stop
-               endif
             enddo
 c
-c     tjs, ja 2/25/11
-c     Make sure sample all the way down to zero only if minimum positive
-c     
-            if (grid(2,1,j) .gt. 0) grid(2,1,j) = 0d0
-c            write(*,*) "Adjusted bin 1 to zero"
+c     The mirrored bins must stay inside [xgmin, xo]: otherwise use
+c     equal bins (a bin below xgmin has a negative width)
+c
+            if (grid(2,1,j) .le. xgmin) then
+               do i=1,ngd-1
+                  grid(2,i,j) = xgmin + (xo-xgmin)*dble(i)/dble(ngd)
+               enddo
+            endif
 
          elseif (itype .eq. 2) then
             do i=2,ng-1
@@ -1240,7 +1154,7 @@ C     Local variables
 c     
 c      Begin code
 c
-C     Fetch a random number bewteen 0.0 and 1.0
+C     Fetch a random number between 0.0 and 1.0
 c     The fourth argument is not used and therefore a dummy
       dummy = 0
       call ntuple(rdm,0.0d0,1.0d0,dummy,iconfig)
@@ -1300,12 +1214,25 @@ c
 
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole        ,swidth        ,bwjac
+c     dimension sampled with the Breit-Wigner map with 1/s tails (myamp.f)
+      logical bwtail(maxinvar)
+      common/to_bwtail/bwtail
+      double precision      swinlo(maxinvar),swinhi(maxinvar),swinc(maxinvar)
+      common/to_bw_window/  swinlo        ,swinhi        ,swinc
 
       integer nzoom
       double precision  tx(1:3,maxinvar)
       common/to_xpoints/tx, nzoom
 
+      logical tsoft(maxinvar)
+      common/to_tsoft/tsoft
+c     set by one_tree (genps.f) around the sampling of a t-chain invariant
+c     mass, the mass of the system left after the first t-channel emissions
+      logical msoft
+      common/to_msoft/msoft
+      double precision tsr, tsrho
       data ddum/maxdim*0d0/
+      data msoft/.false./
       data icount/0/
       data it_warned/0/
 
@@ -1375,6 +1302,26 @@ c            ddum(j) = tx(2,j)                 !Use last value
          stop
       endif
 
+c     t-channel invariant: denser sampling near the large-|t| edge of the
+c     range allowed for this point (density (1-a)+a/(2 sqrt(1-r)) in its
+c     relative position r)
+      if (tsoft(Minvar(j,ipole)) .and. xbin_max .gt. xbin_min
+     &     .and. nzoom .le. 0) then
+         call tsoft_map((ddum(j)-xbin_min)/(xbin_max-xbin_min),tsr,tsrho)
+         ddum(j) = xbin_min + tsr*(xbin_max-xbin_min)
+         wgt = wgt/tsrho
+      endif
+c     t-chain invariant mass: denser sampling near its threshold (r -> 0),
+c     with the density of tsoft_map mirrored. The threshold moves with the
+c     other variables, so the grid cannot follow it: in p p > w+ w+ j j
+c     QCD=0 the large weights sat there (r ~ 0.04), and in VBF H the
+c     extreme weights (up to 2000x) disappear with it
+      if (msoft .and. xbin_max .gt. xbin_min .and. nzoom .le. 0) then
+         call tsoft_map(1d0-(ddum(j)-xbin_min)/(xbin_max-xbin_min),
+     &        tsr,tsrho)
+         ddum(j) = xbin_min + (1d0-tsr)*(xbin_max-xbin_min)
+         wgt = wgt/tsrho
+      endif
       im = ddum(j)
       if (im.ge.ng)then
          im = ng -1
@@ -1405,7 +1352,16 @@ c         write(*,*) "pole, width",ij,spole(ij),swidth(ij)
          if (swidth(ij) .gt. 0d0) then
 c            write(*,*) 'Tranpole called',ij,swidth(ij)
             y = x                             !Takes uniform y and returns
+            if (spole(ij).gt.0d0.and.swinhi(ij).gt.0d0) then
+               call transpole_win(spole(ij),swidth(ij),swinlo(ij),
+     &              swinhi(ij),swinc(ij),y,x,wgt)
+            else
+            if (bwtail(ij)) then
+            call transpole_tail(spole(ij),swidth(ij),y,x,wgt) !B.W. with 1/s tails
+            else
             call transpole(spole(ij),swidth(ij),y,x,wgt) !x on BW pole or 1/x 
+            endif
+            endif
          endif
       endif
 c
@@ -1477,6 +1433,9 @@ c
       common /to_random/ituple
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole        ,swidth        ,bwjac
+c     dimension sampled with the Breit-Wigner map with 1/s tails (myamp.f)
+      logical bwtail(maxinvar)
+      common/to_bwtail/bwtail
 
 c-----
 c  Begin Code
@@ -1550,6 +1509,8 @@ c     &        dble(xbin_max-xbin_min),bwjac
       cur_it = i
 c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
       itsum = min(max(itmin,cur_it-1),3)
+c     (the refine can ask for this after itmin-1 iterations)
+      itsum = min(itsum,cur_it-1)
       i = cur_it - itsum
       tmean = 0d0
       trmean = 0d0
@@ -1577,7 +1538,7 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin
 C
 C     Subroutine to take care of the update of the discrete grids
 C     (used for helicity and the matrix<i> choice in the grouped case
-C     as implented in the DiscreteSampler module.
+C     as implemented in the DiscreteSampler module.
 C
       subroutine add_entry_to_discrete_dimensions(wgt)
       use DiscreteSampler
@@ -1633,7 +1594,7 @@ c       that they shouldn't be added here.
 C
 C     Subroutine to take care of the update of the discrete grids
 C     (used for helicity and the matrix<i> choice in the grouped case
-C     as implented in the DiscreteSampler module.
+C     as implemented in the DiscreteSampler module.
 C
       subroutine update_discrete_dimensions()
       use DiscreteSampler
@@ -1700,6 +1661,7 @@ c
 c
 c     Local
 c
+      integer dummyflavor
       integer i, j, k, knt, nun,itsum
       double precision vol,xnmin,xnmax,tot,xdum,tmp1,chi2tmp
       double precision rc, dr, xo, xn, x(maxinvar), dum(ng-1)
@@ -1780,12 +1742,48 @@ c      common /to_fx/   fx
       common/to_mconfig2/psect          ,alpha
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole        ,swidth        ,bwjac
+c     dimension sampled with the Breit-Wigner map with 1/s tails (myamp.f)
+      logical bwtail(maxinvar)
+      common/to_bwtail/bwtail
+      double precision      swinlo(maxinvar),swinhi(maxinvar),swinc(maxinvar)
+      common/to_bw_window/  swinlo        ,swinhi        ,swinc
       
       integer                   neventswritten
       common /to_eventswritten/ neventswritten
 
       integer            lastbin(maxdim)
       common /to_lastbin/lastbin
+
+c     Refine: last iteration decided before it is run, stopped at the requested
+c     luminosity. last_uref is the per-job unweighting maximum weight of the
+c     latest store_events, in units of twgt; last_ufix the one of the iteration
+c     that took the decision, used to count (last_lumi) and to unweight the
+c     events of the last iteration; last_xnorm the mean of the last iteration,
+c     to which its events are normalised.
+      logical last_it
+      double precision last_uref, last_ufix, last_lumi, last_goal, last_xnorm
+      common /to_refine_last/ last_uref, last_ufix, last_lumi, last_goal,
+     &     last_xnorm, last_it
+c     last_on: this job adapts its grid from scratch (normal refine); jobs that
+c     start from a stored grid (gridpack, MadSpin decays) keep the old stop rule
+      logical last_stop, last_on
+      integer last_min
+      save last_on, last_min
+      integer last_size
+      double precision last_cap
+      parameter (last_cap=8d0) ! largest last iteration, in units of the deciding one
+      double precision nun_last, cap_last
+      double precision last_cap_ow
+c     largest last iteration with max_overweight_truncation set: its stricter
+c     maximum weight needs more points, and the iteration stops at its goal
+c     anyway, so the cap is only a bound
+      parameter (last_cap_ow=200d0)
+c     events of this iteration at the maximum weight set by
+c     max_overweight_truncation (set in run.inc, see store_events in unwgt.f)
+      double precision last_nref
+      common /to_refine_lastn/ last_nref
+      double precision max_overweight_truncation
+      common/to_overweight/max_overweight_truncation
 
       data prb/maxprb*1d0/
       data fprb/maxfprb*1d0/
@@ -1797,9 +1795,15 @@ c-----
 
       if (first_time) then
          first_time = .false.
+         last_it = .false.
+         last_on = use_cut .ne. 0 .and. use_cut .ne. -2
+         last_ufix = 0d0
+         last_xnorm = 0d0
+         last_lumi = 0d0
+         last_goal = 0d0
          twgt_it = 0d0
          twgt1 = 0d0       !
-         iavg = 0         !Vars for averging to increase err estimate
+         iavg = 0         !Vars for averaging to increase err estimate
          navg = 1      !
          wmax1= 99d99
          wmax = -1d0
@@ -1808,7 +1812,7 @@ c-----
          sigma = 0d0
          chi2 = 0d0
          non_zero = 0
-         vol = 1d0 / dble(events * itm)
+         vol = 1d0 / (dble(events) * dble(itm))
          knt = events
 
          do i=1,maxconfigs
@@ -1829,9 +1833,9 @@ c-----
 c        Add the current point to the DiscreteSamplerGrid
          call add_entry_to_discrete_dimensions(wgt)
          if (kn.eq.0.and.(iteration.eq.1.or.use_cut.eq.-2)) then
-            ! ensure that all cumulative variable are at zero (usefull for reset)
+            ! ensure that all cumulative variable are at zero (useful for reset)
             twgt1 = 0d0         !
-            iavg = 0            !Vars for averging to increase err estimate
+            iavg = 0            !Vars for averaging to increase err estimate
             navg = 1            !
             wmax1= 99d99
             wmax = -1d0
@@ -1840,7 +1844,7 @@ c        Add the current point to the DiscreteSamplerGrid
             sigma = 0d0
             chi2 = 0d0
             non_zero = 0
-            vol = 1d0 / dble(events * itm)
+            vol = 1d0 / (dble(events) * dble(itm))
             knt = events
             do i=1,maxconfigs
                psect(i)=0d0
@@ -1866,6 +1870,10 @@ c        Add the current point to the DiscreteSamplerGrid
             non_zero = non_zero + 1
             mean = mean + dabs(wgt)
             rmean = rmean + wgt
+c           expected number of unweighted events of this point: a large weight
+c           counts at most once, so it cannot end the last iteration early
+            if (last_it .and. twgt .gt. 0d0) last_lumi = last_lumi
+     &           + min(1d0, dabs(wgt)/twgt/last_ufix)
             if (.true. ) then
 c               psect(ipole)=psect(ipole)+wgt*wgt/alpha(ipole)  !Ohl 
 c               psect(ipole)=1d0                 !Not doing multi_config
@@ -1915,8 +1923,19 @@ c
                if (j .gt. 0) then
                   if (swidth(j) .gt. 0d0) then
                      ddumb=0d0
+                     if (spole(j).gt.0d0.and.swinhi(j).gt.0d0) then
+                        call untranspole_win(spole(j),swidth(j),
+     &                    swinlo(j),swinhi(j),swinc(j),point(j),point(j),
+     &                    ddumb)
+                     else
+                     if (bwtail(j)) then
+                     call untranspole_tail(spole(j),swidth(j),
+     &                    point(j),point(j),ddumb)
+                     else
                      call untranspole(spole(j),swidth(j),
      &                    point(j),point(j),ddumb)
+                     endif
+                     endif
                      if (point(j) .lt. 0d0) then
                         print*,'Warning point<0',j,point(j)
                      endif
@@ -1945,8 +1964,9 @@ c         write(*,*) 'allow_update', allow_update, 'nb_pass_cuts', nb_pass_cuts,
            endif
         endif
         endif
-         if (allow_update.and.(non_zero .ge. events .or. (kn .gt. 200*events .and.
-     $        non_zero .gt. 5))) then
+         if (allow_update.and.(non_zero .ge. events .or. (dble(kn) .gt. 200d0*dble(events) .and.
+     $        non_zero .gt. 5) .or. (last_it .and. last_lumi .ge. last_goal
+     $        .and. non_zero .ge. last_min))) then
 
 c          # special mode where we store information to combine them
            if(use_cut.eq.-2)then
@@ -2003,6 +2023,10 @@ c               vol = 1d0/(knt*itm)
                sigma = (sigma/vol/vol - knt*mean*mean)
      .              / dble(knt-1) / dble(knt)
             endif
+c           a constant integrand (e.g. a 2-body decay) can give a variance
+c           exactly zero (or negative by rounding): floor it at the
+c           numerical precision to keep mean**2/sigma finite
+            sigma = max(sigma, (1d-14*mean)**2, 1d-300)
 
             tmean = tmean + mean * (mean**2 / sigma)
             trmean = trmean + rmean * (mean**2 / sigma)
@@ -2096,7 +2120,7 @@ c------
 c    Here we will double the number of events requested for the next run
 c-----
  23         events = 2 * events
-            vol = 1d0/dble(events*itm)
+            vol = 1d0/(dble(events)*dble(itm))
             knt = events
             if (use_cut.ne.-2) then
                twgt = mean / (dble(itm)*dble(events))
@@ -2275,7 +2299,7 @@ c            enddo
 c            close(26)
 
 c     Update weights in dsig (needed for subprocess group mode)
-            xdum=dsig(0,0,2)
+            xdum=dsig(0,dummyflavor,0,2)
 c
 c     Add test to see if we have achieved desired accuracy 
 c     Allow minimum itmin iterations
@@ -2330,13 +2354,20 @@ c 122              close(22)
 c
 c New check to see if we need to keep integrating this one or not.
 c
-            if (cur_it .gt. itmin .and. accur .lt. 0d0) then  !Check luminocity
+c     (from iteration itmin-1 on: the last iteration can then be iteration itmin)
+            if ((cur_it .gt. itmin .or. (cur_it .eq. itmin .and.
+     &           cur_it .gt. 2 .and. last_on)) .and.
+     &           accur .lt. 0d0) then  !Check luminocity
 c
 c             Lets get the actual number instead 
 c             tjs 5/22/2007
 c
 c               nun = n_unwgted()
 c               write(*,*) 'Estimated events',nun, accur
+c     the events of a refine last iteration are normalised to its own mean
+c     (the job result combines several iterations and would rescale them all
+c     when that one contains a large weight)
+               if (last_it) last_xnorm = xmean(cur_it-1)
                if (use_cut.eq.-2) then
                   call store_events(force_max_wgt, .False.)
                else
@@ -2351,6 +2382,7 @@ c     Calculate chi2 for last few iterations (ja 03/11)
                tsigmat = 0d0
 c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
                itsum = min(max(itmin,cur_it-1),3)
+               itsum = min(itsum,cur_it-1)
                do i=cur_it-itsum,cur_it-1
                   tmeant = tmeant+xmean(i)*xmean(i)**2/xsigma(i)**2
                   tsigmat = tsigmat + xmean(i)**2/ xsigma(i)**2
@@ -2363,8 +2395,60 @@ c     Use the last 3 iterations or cur_it-1 if cur_it-1 >= itmin but < 3
                chi2tmp = chi2tmp/2d0  !Since using only last 3, n-1=2
 c     JA 8/17/2011 Redefined -accur as lumi, so nevents is -accur*cross section
                write(*,*) "Checking number of events",-accur*tmeant,nun,' chi2: ',chi2tmp
-c     Check nun and chi2 (ja 03/11)
-               if (nun .gt. -accur*tmeant .and. chi2tmp .lt. 10d0)then   
+c     The iteration whose events are kept is decided before it is run.
+c     Stopping after the first iteration that reaches the request (as done
+c     before) keeps an iteration only if its own weights are small: one that
+c     catches a rare large weight has a larger unweighting maximum, hence
+c     fewer events, and was replaced by the next one, which biased the tails
+c     of the distributions low. Instead, once an iteration shows that the
+c     request is within reach (last_cap times its points at most), the next
+c     iteration is the last one: it runs on the grid adapted from this one
+c     (no further grid update happens) until its number of unweighted events
+c     at this iteration's maximum weight reaches the request (plus three
+c     standard deviations, so that the job does not end short); its events
+c     are unweighted against that same maximum weight and kept whatever they
+c     contain. Jobs that start from a stored grid (last_on false: gridpack,
+c     MadSpin decays) keep the previous rule.
+c     The request is counted with this iteration's own mean, the estimate the
+c     job reports and normalises the last iteration with: the (x/sigma)^2
+c     average tmeant is biased low with heavy-tailed weights. The decision is
+c     only taken if the next iteration can run (cur_it is its index here).
+               last_stop = last_it
+c     with max_overweight_truncation set (store_events), the reach is counted
+c     at the maximum weight the last iteration will use, not at this one's
+               nun_last = dble(nun)
+               cap_last = last_cap
+               if (max_overweight_truncation .gt. 0d0) then
+                  nun_last = last_nref
+                  cap_last = last_cap_ow
+               endif
+               if (last_on .and. .not. last_it .and. cur_it .gt. 2
+     &              .and. cur_it .le. itm
+     &              .and. nun_last .gt. 0d0 .and.
+     &              last_uref .gt. 0d0 .and.
+     &              -accur*xmean(cur_it-1) .le. cap_last*nun_last) then
+                  last_it = .true.
+                  last_ufix = last_uref
+                  last_lumi = 0d0
+                  last_goal = -accur*xmean(cur_it-1)
+     &                 + 3d0*sqrt(-accur*xmean(cur_it-1))
+c     room for up to cap_last times the points of this iteration (events was
+c     already doubled for the next one): redo twgt, vol and knt for that size.
+c     It runs at least the usual (doubled) number of points, so that its
+c     cross-section is never less precise than before. The size stays below
+c     1e9 points: events, kn and knt are default integers
+                  last_min = events
+                  last_size = int(min(cap_last*dble(events/2), 1d9))
+                  last_size = max(last_size, last_min)
+                  twgt = twgt*dble(events)/dble(last_size)
+                  events = last_size
+                  vol = 1d0/(dble(events)*dble(itm))
+                  knt = events
+                  write(*,*) 'Next iteration is the last one: stop it at ',
+     &                 last_goal, ' unweighted events'
+               endif
+               if (last_stop .or. (.not. last_on .and.
+     &              nun .gt. -accur*tmeant .and. chi2tmp .lt. 10d0)) then
                   tmean = tmean / tsigma
                   if (cur_it .gt. 2) then
                      chi2 = (chi2/tmean/tmean-tsigma)/dble(cur_it-2)
@@ -2493,6 +2577,7 @@ c 23   close(22)
       write(66,'(i4,5e15.5)') 1,0.,0.,0.,0.,0.
 c     Write out MadLoop statistics, if any
       call output_run_statistics(66)
+      call output_subprocess_weights(66)
       flush(66)
       close(66, status='KEEP')
 
@@ -2590,17 +2675,33 @@ c
       common /data_grid/ grid
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole        ,swidth        ,bwjac
+c     dimension sampled with the Breit-Wigner map with 1/s tails (myamp.f)
+      logical bwtail(maxinvar)
+      common/to_bwtail/bwtail
+      double precision      swinlo(maxinvar),swinhi(maxinvar),swinc(maxinvar)
+      common/to_bw_window/  swinlo        ,swinhi        ,swinc
 c
 c     Data
 c
       data spole,swidth/maxinvar*0d0,maxinvar*0d0/
+      data bwtail/maxinvar*.false./
+      data swinlo,swinhi,swinc/maxinvar*0d0,maxinvar*0d0,maxinvar*1d0/
 c-----
 c  Begin Code
 c-----
       bwjac = 1d0
       if (j .gt. 0) then
          if (swidth(j) .gt. 0d0) then
+            if (spole(j).gt.0d0.and.swinhi(j).gt.0d0) then
+               call untranspole_win(spole(j),swidth(j),swinlo(j),
+     &              swinhi(j),swinc(j),x,y,bwjac)
+            else
+            if (bwtail(j)) then
+            call  untranspole_tail(spole(j),swidth(j),x,y,bwjac)
+            else
             call  untranspole(spole(j),swidth(j),x,y,bwjac)
+            endif
+            endif
          else
             x=y
          endif
@@ -2769,4 +2870,22 @@ C     LOCAL
       end
 
 
-
+      subroutine tsoft_map(s, r, rho)
+c**********************************************************************
+c     Position r in [0,1] of a t-channel invariant inside the range allowed
+c     for this point, from s uniform: density rho(r) = (1-a) + a/(2 sqrt(1-r)),
+c     which adds points near the large-|t| edge (r -> 1). That edge moves
+c     with the other variables, so the fixed bins of the grid cannot follow
+c     it: in u u~ > e+ e- g g, the large weights of the channels with two
+c     emissions from one quark line sat there (hard wide-angle gluon pair).
+c     The inverse is closed form: q = sqrt(1-r) solves
+c     (1-a) q^2 + a q + (s-1) = 0.
+c**********************************************************************
+      implicit none
+      double precision s, r, rho, q, a
+      parameter (a=0.5d0)
+      q = (-a + sqrt(a*a + 4d0*(1d0-a)*max(0d0,1d0-s)))/(2d0*(1d0-a))
+      q = min(max(q,1d-300),1d0)
+      r = 1d0 - q*q
+      rho = (1d0-a) + a/(2d0*q)
+      end

@@ -25,7 +25,7 @@ def fuse_f77_files(list_input,output):
         return 0
     
     if output in list_input:
-        print('output file cann\'t have the same name than an input file')
+        print('output file can\'t have the same name as an input file')
         return 0
 
 #initialisation
@@ -42,7 +42,7 @@ def fuse_f77_files(list_input,output):
             if line=="":
                 break
             if Pattern.search(line):
-                #detect new subroutine -> update write permision
+                #detect new subroutine -> update write permission
                 if Pattern.search(line).groups('name') in subroutine_name:
                     routine_already_exist=True
                 else:
@@ -246,7 +246,7 @@ def mod_auto_dsig(input_file,output_file,new_rel_pos):
     file_in=open(input_file,'r')
     file_out=open(output_file,'w')
 
-    ##part concerning the Transfert weight to add in file
+    ##part concerning the Transfer weight to add in file
     transfert_text="""
          call transfer_fct(PP(0,1),TWGT)
          If (twgt .lt. 10d0 .and. twgt .ge. 0d0) then

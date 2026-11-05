@@ -411,7 +411,7 @@ c find the jets
             is_a_j(i)=.false.
          endif
       enddo
-c If we do not require a mimimum jet energy, there's no need to apply
+c If we do not require a minimum jet energy, there's no need to apply
 c jet clustering and all that.
       if (ptj.ne.0d0.or.ptgmin.ne.0d0) then
 c Put all (light) QCD partons in momentum array for jet clustering.
@@ -529,7 +529,7 @@ c     INPUT:
 c     input momenta:               pQCD(0:3,nexternal), energy is 0th component
 c     number of input momenta:     nQCD
 c     radius parameter:            rfj
-c     minumum jet pt:              sycut
+c     minimum jet pt:              sycut
 c     jet algorithm:               palg, 1.0=kt, 0.0=C/A, -1.0 = anti-kt
 c
 c     OUTPUT:
@@ -1224,7 +1224,7 @@ c-----
 
       DOUBLE PRECISION FUNCTION invm2_04(P1,P2,dsign)
 c************************************************************************
-c     Invarient mass of 2 particles
+c     Invariant mass of 2 particles
 c************************************************************************
       IMPLICIT NONE
 c

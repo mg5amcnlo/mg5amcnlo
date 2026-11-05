@@ -37,7 +37,7 @@ c identically for generation, inverse projection and the lepton chart.
      &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
      &     ,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt
      &     ,pass)
-      use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks,xij_aor
+      use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks,xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
 c arguments
@@ -224,6 +224,13 @@ c Collinear limit of <ij>/[ij]. See innerp3.m.
 c The term O(srt(1-y)) is formally correct but may be numerically large
 c Set it to zero
          xij_aor=resAoR0
+         xij_kperp(0)=0d0
+         xij_kperp(1)=cos(phi_i_fks)
+         xij_kperp(2)=sin(phi_i_fks)
+         xij_kperp(3)=0d0
+         call rotate_invar(xij_kperp,xij_kperp,
+     &     costh_mother_fks,sinth_mother_fks,
+     &     cosphi_mother_fks,sinphi_mother_fks)
       endif
 c
 c Phase-space factor for (xii,yij,phii)
@@ -247,7 +254,7 @@ c
       subroutine generate_momenta_massless_final_inverse(xp,xi_i_fks
      $     ,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,sqrtshat,i_fks
      $     ,j_fks)
-      use fks_phase_space_data, only: xinorm_ev,xij_aor
+      use fks_phase_space_data, only: xinorm_ev,xij_aor,xij_kperp
       ! TODO: probably need xiimax as argument, to update the prefactors.
       use mc_native_context, only: native_mapping
       implicit none
@@ -348,6 +355,13 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     th_mother_fks,costh_mother_fks,sinth_mother_fks,
      &     phi_mother_fks,cosphi_mother_fks,sinphi_mother_fks)
       xij_aor=-exp( 2*ximag*(phi_mother_fks+phi_i_fks) )
+      xij_kperp(0)=0d0
+      xij_kperp(1)=cos(phi_i_fks)
+      xij_kperp(2)=sin(phi_i_fks)
+      xij_kperp(3)=0d0
+      call rotate_invar(xij_kperp,xij_kperp,
+     &     costh_mother_fks,sinth_mother_fks,
+     &     cosphi_mother_fks,sinphi_mother_fks)
       end subroutine generate_momenta_massless_final_inverse
 
 
@@ -890,7 +904,7 @@ c Asymmetric initial-state event projection, retained for shower matching.
 c Only the emitting beam changes fraction: x_j=bar{x}_j/(1-xi).
 c All hard final momenta undergo the same light-cone Lorentz map. Its
 c soft and emitter-collinear limits leave the underlying Born unchanged.
-      use fks_phase_space_data, only: xij_aor
+      use fks_phase_space_data, only: xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
       integer icountevts,i_fks,j_fks,idir,i
@@ -994,6 +1008,10 @@ c The plus/minus components below are relative to the emitting beam.
       if(icountevts.eq.-100.or.
      &     (icountevts.eq.1.and.xij_aor.eq.0))then
          xij_aor=-exp(2*idir*ximag*phi_i_fks)
+         xij_kperp(0)=0d0
+         xij_kperp(1)=cos(phi_i_fks)
+         xij_kperp(2)=sin(phi_i_fks)
+         xij_kperp(3)=0d0
       endif
 c Lorentz invariance preserves the hard phase-space measure. The 1/z
 c is the Bjorken Jacobian; the FKS weight convention supplies xi later.
@@ -1005,7 +1023,7 @@ c xiimax/xinorm also feed the finite FKS endpoint logarithms.
       subroutine generate_momenta_initial_symmetric(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,
      $     phi_i_fks,xp,x,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,
      $     pass)
-      use fks_phase_space_data,only: tau_lower_bound,xij_aor
+      use fks_phase_space_data,only: tau_lower_bound,xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
 c arguments
@@ -1289,6 +1307,10 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     (icountevts.eq.1.and.xij_aor.eq.0) )then
          resAoR0=-exp( 2*idir*ximag*phi_i_fks )
          xij_aor=resAoR0
+         xij_kperp(0)=0d0
+         xij_kperp(1)=cos(phi_i_fks)
+         xij_kperp(2)=sin(phi_i_fks)
+         xij_kperp(3)=0d0
       endif
 c
 c Phase-space factor for (xii,yij,phii) * (tau,ycm)
@@ -1319,7 +1341,7 @@ c Use the same run-level choice for the event and every counterevent.
 
       subroutine generate_momenta_initial_inverse_asymmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,
      $     sqrtshat,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
-      use fks_phase_space_data, only: xinorm_ev,xij_aor
+      use fks_phase_space_data, only: xinorm_ev,xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
       integer i_fks,j_fks,idir,i,iborn
@@ -1416,12 +1438,16 @@ c when undoing a large Born rapidity. Its mass is supplied by the model.
       p_born(3,2)=-p_born(0,2)
       xpswgt=abs(xpswgt*shat/(4d0*pi)**3/z)
       xij_aor=-exp(2*idir*ximag*phi_i_fks)
+      xij_kperp(0)=0d0
+      xij_kperp(1)=cos(phi_i_fks)
+      xij_kperp(2)=sin(phi_i_fks)
+      xij_kperp(3)=0d0
       end subroutine generate_momenta_initial_inverse_asymmetric
 
 
       subroutine generate_momenta_initial_inverse_symmetric(xp,xi_i_fks,y_ij_fks,phi_i_fks,p_born,x,xjac,xpswgt,shat,
      $     sqrtshat,i_fks,j_fks,stot,tau,ycm,xbjrk,tau_born,ycm_born,xbjrk_born)
-      use fks_phase_space_data,only: xinorm_ev,tau_lower_bound,xij_aor
+      use fks_phase_space_data,only: xinorm_ev,tau_lower_bound,xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
       double precision pi,stiny,zero,ctiny
@@ -1615,12 +1641,16 @@ c     Use xp in the reduced frame (a.k.a. tilde frame) to get the Born momenta.
       xpswgt=abs(xpswgt)
 
       xij_aor=-exp( 2*idir*ximag*phi_i_fks )
+      xij_kperp(0)=0d0
+      xij_kperp(1)=cos(phi_i_fks)
+      xij_kperp(2)=sin(phi_i_fks)
+      xij_kperp(3)=0d0
       end subroutine generate_momenta_initial_inverse_symmetric
 
 
       subroutine generate_momenta_initial_noevpr(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,
      $     xp,x,shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,srec,pass)
-      use fks_phase_space_data,only: tau_Born_lower_bound,xij_aor
+      use fks_phase_space_data,only: tau_Born_lower_bound,xij_aor,xij_kperp
       use mc_native_context, only: native_mapping
       implicit none
 c arguments
@@ -1795,6 +1825,10 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     (icountevts.eq.1.and.xij_aor.eq.0) )then
          resAoR0=-exp( 2*idir*ximag*phi_i_fks )
          xij_aor=resAoR0
+         xij_kperp(0)=0d0
+         xij_kperp(1)=cos(phi_i_fks)
+         xij_kperp(2)=sin(phi_i_fks)
+         xij_kperp(3)=0d0
       endif
 c
 c Phase-space factor for (xii,yij,phii) * (tau,ycm)

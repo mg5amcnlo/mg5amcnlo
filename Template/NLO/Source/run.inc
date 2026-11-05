@@ -45,6 +45,14 @@ c
       double precision    ebeam(2), xbk(2),q2fact(2)
       common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 c
+c     Rest frame in which the matrix-elements are evaluated (polarization).
+c     Bit n of frame_id is set for each leg n listed in me_frame; see
+c     mapid() and boost_to_me_frame() in boost_to_frame.f. The default
+c     me_frame=[1,2] gives frame_id=6, which means "no boost".
+c
+      integer frame_id
+      common/to_frame_me/frame_id
+c
 c     BW treatment
 c      
       double precision    bwcutoff
@@ -68,6 +76,10 @@ c
 c Born spreading of the Born contribution in S events
       logical                 born_spreading
       common /cBornSpreading/ born_spreading
+
+c     Real-diagram integration channels, enabled only for 0 < x0 < 1
+      double precision real_channels_x0
+      common /c_real_channels_x0/ real_channels_x0
 
 c
 c     Reweight info

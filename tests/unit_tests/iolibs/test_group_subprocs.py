@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -338,6 +338,74 @@ class SubProcessGroupTest(unittest.TestCase):
             #new_diags_for_config.append(diags)
         #print 'diagram_maps = ',new_diagram_maps
         #print 'diags_for_config = ',new_diags_for_config
+
+    def test_group_polarizations_not_combined(self):
+        """Two processes which differ only by a polarization restriction must
+        keep their own subprocess group -- and their own P directory.
+
+        This is the LO counterpart of
+        testFKSHelasObjects.test_fks_helas_multi_process_polarizations_not_combined.
+        'add process' normally hands the second process a new id, which enters
+        both the matrix element tag and the grouping key, so the two survive
+        by accident; pinning the id explicitly (which is ordinary usage, it is
+        how the run card addresses a group) removed that accident:
+
+            generate    p p > t t~{+} @1
+            add process p p > t t~{-} @1
+            output madevent
+
+        used to write out P1_gg_ttxR and P1_qq_ttxR only, the '{-}' half
+        having been merged away by helas_objects.IdentifyMETag, which does not
+        look at the polarization of the external legs.  Making the tag carry
+        it splits the matrix elements; the grouping key has to carry it too,
+        or the two matrix elements land in one group, get summed with the same
+        PDF inside a single DSIGPROC (which just rebuilds the unpolarized
+        cross section) and are written into the one directory named after
+        whichever came first.
+        """
+
+        amplitudes = diagram_generation.AmplitudeList()
+        for pol in ([1], [-1]):
+            my_multi_leglist = base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [21, 2, -2], 'state': False}),
+                base_objects.MultiLeg({'ids': [21, 2, -2], 'state': False}),
+                base_objects.MultiLeg({'ids': [2], 'state': True}),
+                base_objects.MultiLeg({'ids': [-2], 'state': True,
+                                       'polarization': pol})])
+            # the same 'id' for both, as '@1' on both lines gives
+            my_process_definition = base_objects.ProcessDefinition({
+                'legs': my_multi_leglist,
+                'model': self.mymodel,
+                'orders': {'QED': 0},
+                'id': 1})
+            my_multiprocess = diagram_generation.MultiProcess({
+                'process_definitions':
+                base_objects.ProcessDefinitionList([my_process_definition])})
+            amplitudes.extend(my_multiprocess.get('amplitudes'))
+
+        # 3 amplitudes (gg, uu~ and u~u initiated) for each polarization
+        self.assertEqual(len(amplitudes), 6)
+
+        groups = group_subprocs.SubProcessGroup.group_amplitudes(amplitudes,
+                                                                 "madevent")
+
+        # four P directories, not two: the R and L halves of both the gg and
+        # the qq initial state
+        self.assertEqual(sorted(group.get('name') for group in groups),
+                         ['gg_qqL', 'gg_qqR', 'qq_qqL', 'qq_qqR'])
+
+        for group in groups:
+            expected = -1 if group.get('name').endswith('L') else 1
+            for me in group.get('matrix_elements'):
+                # every process of the group restricts the outgoing u~ ...
+                for process in me.get('processes'):
+                    self.assertEqual(process.get('legs')[-1].\
+                                     get('polarization'), [expected])
+                # ... and so does the helicity matrix it will write out: the
+                # column of the last leg holds that one helicity only
+                self.assertEqual(set(helicities[3] for helicities in \
+                                     me.get_helicity_matrix()),
+                                 set([expected]))
 
     def test_find_process_classes_and_mapping_diagrams(self):
         """Test the find_process_classes and find_mapping_diagrams function."""

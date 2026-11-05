@@ -241,10 +241,28 @@ then
     exit -1
   fi
   [ -x "$PYTHIA8LOCATION/bin/pythia8-config" ] || chmod +x "$PYTHIA8LOCATION/bin/pythia8-config"
-  read HEPMCINCLIB <<< $("$PYTHIA8LOCATION/bin/pythia8-config" --hepmc2)
+  # HEPMCVERSION and HEPMCINCLIB come from banner.dat (shower_card:
+  # hepmc_format); without them, use the HepMC2 setup of Pythia8
+  if [ -z "$HEPMCVERSION" ]; then
+    HEPMCVERSION=2
+    read HEPMCINCLIB <<< $("$PYTHIA8LOCATION/bin/pythia8-config" --hepmc2)
+  fi
 else
   PY8VER="8.1"
   echo ' USING PYTHIA 8.1xy'
+fi
+if [ "$HEPMCVERSION" == "3" ]
+then
+  if [ $PY8VER != "8.3" ]
+  then
+    echo "HepMC3 (hepmc_format in the shower_card) requires Pythia 8.3, stopping run"
+    exit -1
+  fi
+  echo ' USING HEPMC3'
+  HEPMCINCLIB="$HEPMCINCLIB -DHEPMC3"
+  HEPMCFIOMAKE="HEPMCFIO="
+else
+  HEPMCFIOMAKE="HEPMCFIO=-lHepMCfio"
 fi
 
 if [ "$PY8UTI" != "" ]
@@ -270,11 +288,11 @@ if [ $PY8VER == "8.3" ]; then cp -rf $PYTHIA8LOCATION/share/Pythia8/xmldoc $this
 PY8UTIMAKE="PY8UTI="$PY8UTI
 FORFILEMAKE="FORFILE="$PY8UTI
 HEPMCMAKE="HEPMCINCLIB="$HEPMCINCLIB
-LGFORTRANMAKE="LIBGFORTRAN=-lgfortran"
 
-if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
-if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
-if [ $PY8VER == "8.3" ]; then make Pythia83 "$PY8UTIMAKE" "$FORFILEMAKE" "$LGFORTRANMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
+# LIBGFORTRAN (the gfortran runtime) is found by the Makefile itself
+if [ $PY8VER == "8.1" ]; then make Pythia8 "$PY8UTIMAKE" "$FORFILEMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE"; fi
+if [ $PY8VER == "8.2" ]; then make Pythia82 "$PY8UTIMAKE" "$FORFILEMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE"; fi
+if [ $PY8VER == "8.3" ]; then make Pythia83 "$PY8UTIMAKE" "$FORFILEMAKE" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$HEPMCMAKE" "$HEPMCFIOMAKE"; fi
 
 cd $thisdir
 if [ ! -f $thisdir/Pythia8.exe ]

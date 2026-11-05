@@ -15,22 +15,22 @@
       POW=0
       SELECT CASE(ACTIVE_CONTEXT)
       CASE(1)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 2
-      PMASS( -1,   2)  = ABS(MDL_MT)
-      PWIDTH( -1,   2) = ABS(MDL_WT)
-      POW( -1,   2) = 1
-      PMASS( -1,   3)  = ABS(MDL_MT)
-      PWIDTH( -1,   3) = ABS(MDL_WT)
-      POW( -1,   3) = 1
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 2
+        PMASS( -1,   2)  = ABS(MDL_MT)
+        PWIDTH( -1,   2) = ABS(MDL_WT)
+        POW( -1,   2) = 1
+        PMASS( -1,   3)  = ABS(MDL_MT)
+        PWIDTH( -1,   3) = ABS(MDL_WT)
+        POW( -1,   3) = 1
       CASE(2)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 2
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 2
       CASE(3)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 2
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 2
       END SELECT
       END

@@ -39,7 +39,7 @@ c
 *									*
 *	Output	crr	(complex)	R modulo factors pi^2/12	*
 *		ipi12	(integer)	these factors			*
-*		ier	(intger)	0=ok, 1=num prob, 2=error	*
+*		ier	(integer)	0=ok, 1=num prob, 2=error	*
 *									*
 *	Calls:	ffxli2,(test: ffzxdl),dfflo1,zxfflg			*
 *									*
@@ -338,7 +338,7 @@ c
 *		crr(6) = 0
 	    elseif ( iclas1 .eq. 2 ) then
 *
-*		we tranformed to 1-x for both dilogs
+*		we transformed to 1-x for both dilogs
 *
 		if ( abs(xx1p) .lt. xloss ) then
 		    xlog1 = dfflo1(xx1p,ier)

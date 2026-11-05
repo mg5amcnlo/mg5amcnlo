@@ -1,0 +1,50 @@
+name: Install LHAPDF PDF set
+description: >
+  Make an LHAPDF PDF grid available to the mg7 (madspace) runtime and export
+  LHAPDF_DATA_PATH so it is found. The mg7 runtime reads the grid file directly
+  (mg7/launch.py: ms.PdfGrid on $LHAPDF_DATA_PATH/<set>/<set>_0000.dat), so it
+  only needs the grid data -- not the LHAPDF C++ library and not a pre-baked
+  HEPTools cache. The set is installed with the lhapdf-management pip package
+  into a cached, writable directory, so the download happens at most once.
+
+inputs:
+  pdfset:
+    description: Name of the LHAPDF set to install
+    required: false
+    # NNPDF23_lo_as_0130_qed on purpose: this action's only consumer is
+    # check_xsec_processes_mg7.yml, whose ~40 reference cross-sections are
+    # pinned to that set (_REFERENCE_PDF, written into every run_card.toml).
+    # It is deliberately NOT the mg7 run_card default, which is now
+    # NNPDF40MC_lo_as_01180 and comes from the heptools cache.
+    default: NNPDF23_lo_as_0130_qed
+
+runs:
+  using: composite
+  steps:
+    # Writable data dir, exported so every later step (and the tests) resolve the
+    # grid via $LHAPDF_DATA_PATH. GITHUB_ENV persists to subsequent steps,
+    # including the install step below.
+    - name: Set LHAPDF_DATA_PATH
+      shell: bash
+      run: echo "LHAPDF_DATA_PATH=$HOME/.cache/lhapdf_data" >> "$GITHUB_ENV"
+
+    # Cache the downloaded grid (~26 MB for NNPDF23) so we only hit the CERN
+    # server on the first run for a given set.
+    - name: Cache PDF grid
+      id: cache-pdf
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/lhapdf_data
+        key: lhapdf-data-${{ inputs.pdfset }}
+
+    # lhapdf-management honours $LHAPDF_DATA_PATH (set above) as the install
+    # location. `update --init` creates the data dir and pulls the set index;
+    # `install` downloads and unpacks the grid.
+    - name: Install PDF set via lhapdf-management (on cache miss)
+      if: steps.cache-pdf.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        python3 -m pip install lhapdf-management
+        mkdir -p "$LHAPDF_DATA_PATH"
+        lhapdf-management update --init
+        lhapdf-management install "${{ inputs.pdfset }}"

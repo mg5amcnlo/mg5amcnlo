@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -152,6 +152,7 @@ class MECmdShell(IOTests.IOTestManager):
         open('%s/Cards/shower_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/shower_card_default.dat %s/Cards/shower_card.dat'% (self.path, self.path))
 
+        self.set_parton_shower('HERWIG6')
         os.system('rm -rf %s/RunWeb' % self.path)
         os.system('rm -rf %s/Events/run_*' % self.path)
         self.do('generate_events -f')
@@ -263,6 +264,27 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
 
+
+    def set_parton_shower(self, shower):
+        """Pin parton_shower in the run card.
+
+        These tests used to inherit whatever the default was and, for the
+        non-default showers, rewrite it with a literal replace of 'HERWIG6'.
+        Both broke the day the default changed: the HERWIG6 ones started
+        showering with something else, and the replaces silently became no-ops,
+        so those tests quietly stopped testing the shower they are named for.
+        Setting it explicitly is immune to that.
+        """
+
+        path = '%s/Cards/run_card.dat' % self.path
+        with open(path) as handle:
+            card = handle.read()
+        card, count = re.subn(r'^(\s*)\S+(\s*=\s*parton_shower)',
+                              r'\g<1>%s\g<2>' % shower, card, flags=re.M)
+        self.assertEqual(count, 1,
+                         'could not set parton_shower in %s' % path)
+        with open(path, 'w') as handle:
+            handle.write(card)
 
     def generate_production(self):
         """production"""
@@ -430,6 +452,7 @@ class MECmdShell(IOTests.IOTestManager):
         Also check the splitting of the shower for bot hep and top output"""
 
         self.generate_production()
+        self.set_parton_shower('HERWIG6')
         # to check that the cleaning of files work well
         os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
         self.do('quit')
@@ -512,8 +535,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.generate_production()
 
         #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
+        self.set_parton_shower('PYTHIA6PT')
         self.do('generate_events -f')        
         
         # test the lhe event file exists
@@ -540,8 +562,7 @@ class MECmdShell(IOTests.IOTestManager):
         cmd = os.getcwd()
         self.generate('e+ e- > t t~ [real=QCD]', 'sm')
         #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
+        self.set_parton_shower('PYTHIA6PT')
         #self.do('generate_events -f')        
         self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'generate_events -f')
 
@@ -550,6 +571,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test the param_card created is correct"""
         
         self.generate_production()
+        self.set_parton_shower('HERWIG6')
         self.do('generate_events aMC@NLO -f')
         
         # test the lhe event file exists
@@ -572,6 +594,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         #change splitevent generation
+        self.set_parton_shower('HERWIG6')
         card = open('%s/Cards/run_card.dat' % self.path).read()
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace(' -1 = nevt_job', ' 1000 = nevt_job'))
         self.do('generate_events aMC@NLO -fp')        
@@ -592,8 +615,7 @@ class MECmdShell(IOTests.IOTestManager):
         
         self.generate_production()
         #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6Q'))
+        self.set_parton_shower('PYTHIA6Q')
         
         self.do('generate_events aMC@NLO -f')        
         

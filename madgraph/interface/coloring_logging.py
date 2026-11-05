@@ -1,9 +1,12 @@
 from __future__ import absolute_import
 import logging
+import os
 # method to add color to a logging.info add a second argument:
 # '$MG:BOLD'
 # '$MG:color:RED'
 
+# Set by ./bin/madgraph --plain 
+NO_COLOR = bool(os.environ.get('MG7_NO_COLOR'))
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = list(range(8))
 
@@ -63,17 +66,28 @@ class ColorFormatter(logging.Formatter):
         
 
         record.args = tuple(new_args)
+        message   = logging.Formatter.format(self, record)
+        if not message:
+            return message
+        message = message.replace('$BR', '\n')
+
+        if NO_COLOR:
+            for token in ('$_BOLD', '$_RESET', '$RESET', '$BOLD', '$COLOR'):
+                message = message.replace(token, '')
+            for k in COLORS:
+                message = message.replace('$' + k, '') \
+                             .replace('$BG' + k, '') \
+                             .replace('$BG-' + k, '')
+            return message
+
         if bold_specified:
             color = BOLD_SEQ
             color_specified = True
         else:
             color     = COLOR_SEQ % (30 + color_choice)
-        message   = logging.Formatter.format(self, record)
-        if not message:
-            return message
         # if some need to be applied no matter what:
-        message = message.replace('$_BOLD', BOLD_SEQ).replace('$_RESET', RESET_SEQ).replace('$BR','\n')
-        
+        message = message.replace('$_BOLD', BOLD_SEQ).replace('$_RESET', RESET_SEQ)
+
         # for the conditional one
         if '$RESET' not in message:
             message +=  '$RESET'

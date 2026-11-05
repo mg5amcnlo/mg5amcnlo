@@ -1,12 +1,12 @@
 #
 ################################################################################
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -29,6 +29,13 @@ import madgraph.various.misc as misc
 from madgraph import MadGraph5Error
 from madgraph import InvalidCmd
 logger = logging.getLogger('madgraph.loop_diagram_generation')
+
+#===============================================================================
+# Interference of a loop-induced amplitude with tree-level ones (LIxtree): see
+# the helpers in diagram_generation, shared with the tree x tree case
+#===============================================================================
+INTERFERENCE_ORDER = base_objects.INTERFERENCE_ORDER
+register_interference_order = diagram_generation.register_interference_order
 
 def ldg_debug_info(msg,val, force=False):
     # This subroutine has typically quite large DEBUG info.
@@ -64,7 +71,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # This is in principle equal to self['born_diagram']==[] but it can be 
         # that for some reason the born diagram can be generated but do not
         # contribute.
-        # This will decide wether the virtual is squared against the born or
+        # This will decide whether the virtual is squared against the born or
         # itself.
         self['has_born'] = True
         # This where the structures obtained for this amplitudes are stored
@@ -75,12 +82,17 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # subsequent diagram generation runs.
         self.lcutpartemployed=[]
 
-    def __init__(self, argument=None, loop_filter=None):
+    def __init__(self, argument=None, loop_filter=None, diagram_filter=False,
+                                                    loop_diagram_filter=False):
         """Allow initialization with Process.
         If loop_filter is not None, then it will be applied to all subsequent
-        diagram generation from this LoopAmplitude."""
+        diagram generation from this LoopAmplitude.
+        diagram_filter (--diagram_filter) is applied to the Born diagrams and,
+        loop_diagram_filter to the loop diagrams, see generate_diagrams."""
         
         self.loop_filter = loop_filter
+        self.diagram_filter = diagram_filter
+        self.loop_diagram_filter = loop_diagram_filter
         
         if isinstance(argument, base_objects.Process):
             super(LoopAmplitude, self).__init__()
@@ -592,8 +604,19 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 res.append('%s=*'%order)
         return ','.join(res)
 
-    def generate_diagrams(self, loop_filter=None, diagram_filter=None):
+    def generate_diagrams(self, loop_filter=None, diagram_filter=None,
+                                                    loop_diagram_filter=None):
         """ Generates all diagrams relevant to this Loop Process """
+
+        # Without argument, use the filters given at initialization (separately
+        # for the Born and the loop diagrams); a --diagram_filter given here
+        # applies to both
+        if diagram_filter is None:
+            diagram_filter = self.diagram_filter
+            if loop_diagram_filter is None:
+                loop_diagram_filter = self.loop_diagram_filter
+        elif loop_diagram_filter is None:
+            loop_diagram_filter = diagram_filter
 
         # Description of the algorithm to guess the leading contribution.
         # The summed weighted order of each diagram will be compared to 
@@ -612,7 +635,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         #  12, 10, 8 and 6
         # So, now we take the largest weighted order at born level, 4, and add two
         # times the largest weight in the hierarchy among the order for which we
-        # consider loop perturbation, in this case 2*2 wich gives us a 
+        # consider loop perturbation, in this case 2*2 which gives us a
         # target_weighted_order of 8. based on this we will now keep all born 
         # contributions and exclude the NLO contributions (QED=6) and (QED=4,QCD=2)        
         
@@ -633,7 +656,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         user_orders=copy.copy(self['process']['orders'])
         # First generate the born diagram if the user asked for it
         if self['process']['has_born']:
-            bornsuccessful = self.generate_born_diagrams()
+            bornsuccessful = self.generate_born_diagrams(diagram_filter)
             ldg_debug_info("# born diagrams after first generation",\
                                                      len(self['born_diagrams']))
         else:
@@ -758,6 +781,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
             self['process']['orders'].update(user_orders)
             return False
 
+        # 'left [LIxtree=QCD] right': the tree-level amplitudes of the
+        # right-hand process, interfered with the loop-induced ones
+        if self['process'].get_interference_mode() == 'LIxtree':
+            self.set_interference_trees()
+
         # We add here the UV renormalization contribution built in
         # LoopUVCTDiagram. It is done before the squared order selection because
         # it is possible that some UV-renorm. diagrams are removed as well.
@@ -865,17 +893,32 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if not self['process']['has_born'] and not self['loop_diagrams']:
             self['process']['squared_orders'].clear()
             self['process']['squared_orders'].update(user_squared_orders)
+            # nothing left to interfere with the trees of a LIxtree process
+            # (they would otherwise keep this amplitude alive)
+            self['loop_UVCT_diagrams'] = base_objects.DiagramList()
             return False
 
 
         # Discard diagrams which are zero because of Furry theorem
         self.remove_Furry_loops(model,self['structure_repository'])
        
+        # Filter selected with --diagram_filter (the Born diagrams were already
+        # filtered at generation)
+        if loop_diagram_filter:
+            self['loop_diagrams'] = self.apply_user_filter(
+                                 self['loop_diagrams'], loop_diagram_filter)
+
         # Apply here some user-defined filter.
         # For expert only, you can edit your own filter by modifying the
         # user_filter() function which by default does nothing but in which you
         # will find examples of common filters.
         self.user_filter(model,self['structure_repository'], filter=loop_filter)
+
+        # LIxtree: the filters above may have removed every loop that some
+        # interfering trees were paired with; such trees no longer contribute
+        # to the interference and are dropped
+        if self['process'].get_interference_mode() == 'LIxtree':
+            self.drop_orphan_interference_trees()
 
         # Set the necessary UV/R2 CounterTerms for each loop diagram generated
         self.set_LoopCT_vertices()
@@ -900,7 +943,11 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Give some info about the run
         nLoopDiag = 0
         nCT={'UV':0,'R2':0}
+        nInterferenceTrees = 0
         for ldiag in self['loop_UVCT_diagrams']:
+            if ldiag['UVCT_orders'].get(INTERFERENCE_ORDER):
+                nInterferenceTrees += 1
+                continue
             nCT[ldiag['type'][:2]]+=len(ldiag['UVCT_couplings'])
         for ldiag in self['loop_diagrams']:
             nLoopDiag+=1
@@ -917,7 +964,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
         logger.info("Contributing diagrams generated: "+\
           "%d Born, %d%s loops, %d R2, %d UV"%(len(self['born_diagrams']),
                     len(self['loop_diagrams']),'(+%d)'%nLoopsIdentified \
-                            if nLoopsIdentified>0 else '' ,nCT['R2'],nCT['UV']))
+                            if nLoopsIdentified>0 else '' ,nCT['R2'],nCT['UV'])+\
+          (", %d interfering tree%s" % (nInterferenceTrees,
+            's' if nInterferenceTrees > 1 else '') if nInterferenceTrees else ''))
         
         ldg_debug_info("#Diags after filtering",len(self['loop_diagrams']))
         ldg_debug_info("# of different structures identified",\
@@ -981,7 +1030,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
     def print_split_order_infos(self):
         """This function is solely for monitoring purposes. It reports what are
         the coupling order combination which are obtained with the diagram 
-        genarated and among those which ones correspond to those selected by 
+        generated and among those which ones correspond to those selected by
         the process definition and which ones are the extra combinations which
         comes as a byproduct of the computation of the desired one. The typical
         example is that if you ask for d d~ > u u~ QCD^2==2 [virt=QCD, QED],
@@ -1029,9 +1078,16 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                                            key=lambda el: el[1])
         
         
+        # the hidden INTERFERENCE_ORDER is not printed
+        shown = [i for i, order in enumerate(sorted_hierarchy[:-1])
+                                               if order != INTERFERENCE_ORDER]
+        def SO_string(SO):
+            return '(%s,W%d)' % (','.join('%d' % SO[i] for i in shown), SO[-1])
+
         logger.debug("Coupling order combinations considered:"+\
-                                            " (%s)"%','.join(sorted_hierarchy))
-        
+                    " (%s)"%','.join([sorted_hierarchy[i] for i in shown] +
+                                                                 ['WEIGHTED']))
+
         # Now check what is left
         born_considered = []
         loop_considered = []
@@ -1069,14 +1125,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
             if len(considered)==0:
                 logger.debug(" > %s : None"%name)
             else:
-                logger.debug(" > %s : %s"%(name,' '.join(['(%s,W%d)'%(
-                            ','.join(list('%d'%s for s in c[:-1])),c[-1]) 
-                                                         for c in considered])))
-            
+                logger.debug(" > %s : %s"%(name,' '.join(
+                                        [SO_string(c) for c in considered])))
+
             if len(extra)!=0:
-                logger.debug(" > %s (not selected but available): %s"%(name,' '.
-                    join(['(%s,W%d)'%(','.join(list('%d'%s for s in e[:-1])),
-                                                       e[-1]) for e in extra])))
+                logger.debug(" > %s (not selected but available): %s"%(name,
+                                    ' '.join([SO_string(e) for e in extra])))
                 
         # In case it is needed, the considered orders are returned 
         # (it is used by some of the unit tests)
@@ -1086,11 +1140,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
                [sqSO for sqSO in loop_sqSOs if sqSO not in loop_considered])
                   
 
-    def generate_born_diagrams(self):
+    def generate_born_diagrams(self, diagram_filter=False):
         """ Generates all born diagrams relevant to this NLO Process """
 
         bornsuccessful, self['born_diagrams'] = \
-                       diagram_generation.Amplitude.generate_diagrams(self,True)
+                       diagram_generation.Amplitude.generate_diagrams(self,True,
+                                                  diagram_filter=diagram_filter)
         
         return bornsuccessful
 
@@ -1204,6 +1259,76 @@ class LoopAmplitude(diagram_generation.Amplitude):
         return totloopsuccessful
 
 
+    def set_interference_trees(self):
+        """For an interference process 'left [LIxtree=QCD] right', generate
+        the tree-level diagrams of the right-hand process with the external
+        legs of this (loop-induced) process, and store them among the
+        'loop_UVCT_diagrams': like a UV counterterm, a tree diagram is a
+        loop-less amplitude that the loop amplitudes are squared against.
+        Each one carries one unit of the hidden order INTERFERENCE_ORDER in
+        its 'UVCT_orders' and a unit 'UVCT_couplings' factor, so that the
+        squared-order constraint INTERF^2==1 (see
+        prepare_interference_process) keeps 2 Re(A_loop A_tree^*) only.
+        Returns the number of tree diagrams added (0 if the right-hand
+        process has none for these legs, in which case the squared-order
+        selection then discards this subprocess)."""
+
+        process = self['process']
+        model = process.get('model')
+        register_interference_order(model)
+        tree_process = diagram_generation.specialise_interference_process(process)
+
+        try:
+            tree_amplitude = diagram_generation.Amplitude(tree_process)
+            tree_diagrams = tree_amplitude.get('diagrams')
+        except (InvalidCmd, diagram_generation.NoDiagramException):
+            tree_diagrams = []
+
+        for diagram in tree_diagrams:
+            tree = loop_base_objects.LoopUVCTDiagram({
+                            'vertices': copy.deepcopy(diagram.get('vertices'))})
+            tree.set('type', 'UVtree')
+            tree.set('UVCT_couplings', [1])
+            tree.set('UVCT_orders', {INTERFERENCE_ORDER: 1})
+            tree.calculate_orders(model)
+            self['loop_UVCT_diagrams'].append(tree)
+
+        if not tree_diagrams:
+            logger.info("No tree-level diagram of %s: no interference."
+                        % tree_process.nice_string(prefix=False))
+        ldg_debug_info("#Interfering tree diagrams", len(tree_diagrams))
+        return len(tree_diagrams)
+
+    def drop_orphan_interference_trees(self):
+        """Remove the interfering trees of a LIxtree process (see
+        set_interference_trees) of which no remaining loop diagram forms a
+        product passing the squared-order constraints. The squared-order
+        selection keeps a tree as long as one loop partner exists, but the loop
+        filters applied after it (Furry, wave-function corrections, vanishing
+        tadpoles, perturbative orders, user loop filter) can remove that
+        partner. Returns the number of trees removed."""
+
+        squared_orders = dict((order, value) for order, value in
+                              self['process']['squared_orders'].items()
+                              if value >= 0)
+        sqorders_types = copy.copy(self['process'].get('sqorders_types'))
+        if 'WEIGHTED' not in sqorders_types:
+            sqorders_types['WEIGHTED'] = '<='
+        kept = base_objects.DiagramList()
+        removed = 0
+        for diagram in self['loop_UVCT_diagrams']:
+            if not diagram['UVCT_orders'].get(INTERFERENCE_ORDER) or \
+                   any(diagram.pass_squared_order_constraints(loop,
+                                          squared_orders, sqorders_types)
+                       for loop in self['loop_diagrams']):
+                kept.append(diagram)
+            else:
+                removed += 1
+        self['loop_UVCT_diagrams'] = kept
+        if removed:
+            ldg_debug_info("#Orphan interfering trees removed", removed)
+        return removed
+
     def set_Born_CT(self):
         """ Scan all born diagrams and add for each all the corresponding UV 
         counterterms. It creates one LoopUVCTDiagram per born diagram and set
@@ -1232,7 +1357,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                    inter.get('loop_particles')==[[]]):
                 UVCTvertex_interactions.append(inter)
         
-        # Temporarly give the tagging order 'UVCT_SPECIAL' to those interactions
+        # Temporarily give the tagging order 'UVCT_SPECIAL' to those interactions
         self['process']['model'].get('order_hierarchy')['UVCT_SPECIAL']=0
         self['process']['model'].get('coupling_orders').add('UVCT_SPECIAL')
         for inter in UVCTvertex_interactions:
@@ -1509,7 +1634,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                             CT_added[trackingKeyLoopPart].append(CTID)
                         except KeyError:
                             CT_added[trackingKeyLoopPart] = [CTID, ]
-            # Now make sure that the CT vertices added are cannonically ordered
+            # Now make sure that the CT vertices added are canonically ordered
             # (using coupling names and color and lorenz strings)
             # This plays a role when doing comparisons for potential merging of 
             # identical processes (i.e. Identical HelasMatrixElement where only 
@@ -1572,7 +1697,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                     # We have candidate
                     depths=(looplegs[0]['depth'],looplegs[1]['depth'])
                     if (0 in depths) and (-1 not in depths) and depths!=(0,0):   
-                        # Check that the PDG of the outter particle in the 
+                        # Check that the PDG of the outer particle in the
                         # wavefunction renormalization bubble is equal to the
                         # one of the inner particle.
                         continue
@@ -1635,7 +1760,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
     def check_squared_orders(self, sq_order_constrains, user_squared_orders=None):
         """ Filters the diagrams according to the constraints on the squared
-            orders in argument and wether the process has a born or not. """
+            orders in argument and whether the process has a born or not. """
 
         diagRef=base_objects.DiagramList()
         AllLoopDiagrams=base_objects.DiagramList(self['loop_diagrams']+\
@@ -1690,7 +1815,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                                         diagRef,{neg_order:target_order},
                                         {neg_order:sqorders_types[neg_order]})
     
-            # If there is no Born, then the situation is completely analoguous
+            # If there is no Born, then the situation is completely analogous
             # to the tree level case since it is simply Loop*Loop
             else:
                 AllLoopDiagrams, target_order = \

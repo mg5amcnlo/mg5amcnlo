@@ -51,7 +51,7 @@ class DoubleFortranList(FortranList):
                 
 
 class RAMBOError(Exception):
-    """ A Error class for RAMBO routine """
+    """ An Error class for RAMBO routine """
     pass
 
 def RAMBO(N,ET,XM):

@@ -1,0 +1,129 @@
+name: systematic cross-section tests (mg7)
+
+# Regression test that MadGraph7 reproduces the reference cross-sections
+# recorded in tests/acceptance_tests/check_xsec_processes_reference.json.
+#
+# The tests live in the test_manager.py framework
+# (tests/acceptance_tests/test_check_xsec_processes_mg7.py): one
+# unittest.TestCase with a test_<section>_<id>_mg7 method per process. This
+# workflow launches them through test_manager.py, one job per section, so the
+# exact same tests can also be run locally, e.g.
+#     ./tests/test_manager.py test_ttx_decay_.*_mg7 -pA -t0
+#
+# For every process the framework generates it, runs the mg7 (madspace)
+# integrator with the run_card.toml defaults (fixed scale mu = 91.188 GeV,
+# e_cm = 13000 GeV, NNPDF23_lo_as_0130_qed) and compares the resulting
+# cross-section to the reference. A run passes only if, for every process in
+# the section, the relative difference stays below `tolerance` plus 3 times the
+# combined MC error (MG7_XSEC_NSIGMA): with 10k events the MC error is ~0.25%.
+
+on:
+  push:
+    # All branches, no tags: a release tag points at a commit that already
+    # ran this suite when it was pushed to main, and release.yml gates on
+    # that main run rather than re-testing the same tree. '**' is needed
+    # over '*' so branch names containing a slash still match.
+    branches:
+      - '**'
+    paths-ignore:
+      - 'docs/**'
+#      - '.github/**'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'running cross section check test'
+        required: true
+      tolerance:
+        description: 'Max allowed relative difference (e.g. 0.01 = 1%)'
+        required: false
+        default: '0.01'
+      events:
+        description: 'Events per process (reference used 1M; reduced here for CI)'
+        required: false
+        default: '10000'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Read by tests/acceptance_tests/test_check_xsec_processes_mg7.py. The
+  # `|| 'default'` fallback covers push/PR triggers where inputs are absent.
+  MG7_XSEC_TOLERANCE: ${{ inputs.tolerance || '0.01' }}
+  MG7_XSEC_EVENTS: ${{ inputs.events || '10000' }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  # Build madspace once (content-addressed cache), shared by every section job.
+  # The build logic lives in the build_madspace composite action so it stays in
+  # sync with acceptancetest_mg7.yml.
+  build_madspace:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_madspace
+
+  check_xsec_processes:
+    needs: build_madspace
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == true
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each job runs every process in the selected section and fails if any
+        # process exceeds the tolerance.
+        # decay_cuts: [phasespace] cut_decays false/true on decay chains
+        section: [3jets, ttx1j, ttx2j, ttx_decay, dy1j, dy2j, decay_cuts]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/install_madspace
+      - uses: ./.github/actions/restore_heptools_core
+      - uses: ./.github/actions/restore-pip-cache
+      # Provides the NNPDF23 grid + LHAPDF_DATA_PATH the mg7 runtime needs.
+      - uses: ./.github/actions/install_lhapdf_pdfset
+      - name: run systematic cross-section test (${{ matrix.section }})
+        env:
+          MG7_XSEC_RESULTS_DIR: ${{ github.workspace }}/xsec_results/${{ matrix.section }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          mkdir -p "$MG7_XSEC_RESULTS_DIR"
+          ./tests/test_manager.py "test_${{ matrix.section }}_.*_mg7" -pA -t0 -l INFO
+
+      # Runs even if the test step above failed, so a crashed/timed-out
+      # section still contributes whatever per-process results it managed to
+      # record before dying.
+      - name: upload cross-section results (${{ matrix.section }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xsec-results-${{ matrix.section }}
+          path: xsec_results/${{ matrix.section }}/*.json
+          if-no-files-found: warn
+
+  xsec_summary:
+    needs: check_xsec_processes
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == true)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: download cross-section results
+        uses: actions/download-artifact@v5
+        with:
+          pattern: xsec-results-*
+          path: xsec_results
+          merge-multiple: true
+      - name: build job summary
+        run: |
+          python3 .github/scripts/build_xsec_summary.py \
+            tests/acceptance_tests/check_xsec_processes_reference.json \
+            xsec_results \
+            --tolerance "${{ inputs.tolerance || '0.01' }}" \
+            --events "${{ inputs.events || '10000' }}" \
+            >> "$GITHUB_STEP_SUMMARY"

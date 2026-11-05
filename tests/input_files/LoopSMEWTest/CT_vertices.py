@@ -35,7 +35,7 @@ V_R23G = CTVertex(name = 'V_R23G',
 
 # The CT Vertex below is the one written by hand from the expression in the QCD R2 paper
 # This implementation seems to yield correct result for g g > g g but not for g g > g g g  and g g > g g g g
-# or anytime one of the outter gluon of the vertex is offshell.
+# or anytime one of the outer gluon of the vertex is offshell.
 
 # Keep in mind that Delta8(a,b) is 1/2 Tr(a,b)
 # I am still puzzled by the normalization factors.
@@ -61,7 +61,7 @@ V_R23G = CTVertex(name = 'V_R23G',
 #              type = 'R2')
 
 # The CT Vertex below is the one written automatically by FR
-# Gives the same result as above for g g > g g but not as soon as one of the outter gluon is offshell.
+# Gives the same result as above for g g > g g but not as soon as one of the outer gluon is offshell.
 
 V_R2RGA = CTVertex(name = 'V_R2RGA',
                    type = 'R2',

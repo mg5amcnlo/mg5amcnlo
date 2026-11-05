@@ -1,4 +1,5 @@
       program madspin
+      use model_object 
       implicit none
 
 C---  integer    n_max_cg
@@ -36,12 +37,26 @@ c      integer mapconfig(0:lmaxconfigs)
       double precision M_PROD, M_FULL
       logical notpass
       integer counter,mode,nbpoints, counter2, counter3
+      integer flavor_index_prod, flavor_index_full
+      integer GET_FLAVOR_INDEX, GET_FLAVOR_INDEX_PROD
+      integer FLAVOR(NEXTERNAL)
+      integer FLAVOR_PROD(NEXTERNAL_PROD)
       double precision mean, variance, maxweight,weight,std
       double precision temp
       double precision Pprod(0:3,nexternal_prod)
 
       integer nb_mc_masses, indices_mc_masses(nexternal)
       double precision values_mc_masses(nexternal)
+
+c     Variables for the per-flavor maxweight loop (mode=1)
+c     MAX_COMPAT_FLAVS must match the Python-side guard in get_max_weight_from_fortran.
+      integer MAX_COMPAT_FLAVS
+      parameter (MAX_COMPAT_FLAVS=500)
+      integer nflavs_compat
+      integer compat_flav_idx(MAX_COMPAT_FLAVS)
+      double precision rel_brs_compat(MAX_COMPAT_FLAVS)
+      integer FLAVOR_TMP(NEXTERNAL)
+      double precision M_full_tmp, weight_tmp
 
       ! variables to keep track of the vegas numbers for the production part
       logical keep_inv(-nexternal:-1),no_gen
@@ -118,16 +133,30 @@ c      enddo
  
 1     continue
       maxBW=0d0
-      read(*,*) mode,  BWcut, Ecollider, temp, frame_id, 
-     $   beampol(1),beampol(2)
- 
+      read(*,*) mode,  BWcut, Ecollider, temp, frame_id,
+     &          beampol(1), beampol(2),
+     &          flavor_index_prod, flavor_index_full
+
+      call GET_FLAVOR_MS_FULL(flavor_index_full, FLAVOR)
+      call GET_FLAVOR_MS_PROD(flavor_index_prod, FLAVOR_PROD)
+c     Bridge MadSpin's flavor index (its own enumeration) to the matrix
+c     element's flavor index.  The full/production MEs enumerate flavors
+c     differently (and more finely) than MadSpin, so passing MadSpin's index
+c     straight to SMATRIX/SMATRIX_PROD selects the wrong ME flavor -- often
+c     giving |M|=0, so the unweighting loop never accepts and spins forever.
+c     Resolve via the ME's own forward lookup on the FLAVOR array instead.
+      if (mode.ge.1 .and. mode.le.3) then
+        flavor_index_full = GET_FLAVOR_INDEX(FLAVOR)
+        flavor_index_prod = GET_FLAVOR_INDEX_PROD(FLAVOR_PROD)
+      endif
+
 
       if (mode.eq.1) then    ! calculate the maximum weight
          nbpoints=int(temp)
       elseif (mode.eq.2) then
          maxweight=temp      ! unweight decay config   
       elseif (mode.eq.3) then
-         continue      ! just retrun the value of M_full   
+         continue      ! just return the value of M_full
       else
            write(*,*) ranu,ranc,rancd,rancm,iranmr,jranmr
          call flush()
@@ -177,7 +206,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccc
       amp2(i)=0d0
       enddo
       call coup()
-      CALL SMATRIX_PROD(P,M_PROD)
+      CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
 c      write(*,*) 'M_prod ', M_prod
 cccccccccccccccccccccccccccccccccccccccccccccccccccc
 c   IV. select one topology                        c
@@ -218,6 +247,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c        max_m=0d0
 c        max_jac=0d0
 
+c       Read compatible full-ME flavor groups and their BR factors from Python.
+c       Python sends: nflavs_compat lines of (flavor_index, br_factor).
+        read(*,*) nflavs_compat
+        do k=1, nflavs_compat
+           read(*,*) compat_flav_idx(k), rel_brs_compat(k)
+        enddo
+
         counter2=0
         counter3=0
         do i=1,nbpoints
@@ -244,7 +280,7 @@ c           enddo
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do k=-nexternal_prod+2,-1
                 do j=1,2
@@ -263,58 +299,27 @@ c           enddo
            cycle
            endif
           
-           call  boost_to_frame(pfull, frame_id, P2)
-           call SMATRIX(P2,M_full)
-
+c          Compute M_prod from boosted production momenta.
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
+c          Boost the full-event momenta, then loop over all compatible
+c          full-ME flavor groups.  For each group j:
+c            weight_tmp = M_full(j) * jac / M_prod / br_factor(j)
+c          The global maximum G is returned; Python then recovers the
+c          per-flavor maxweight as G * br_factor(j).
+           call  boost_to_frame(pfull, frame_id, P2)
+           do k=1, nflavs_compat
+              call GET_FLAVOR_MS_FULL(compat_flav_idx(k), FLAVOR_TMP)
+              call SMATRIX(P2,GET_FLAVOR_INDEX(FLAVOR_TMP),M_full_tmp)
+              weight_tmp=M_full_tmp*jac/M_prod/rel_brs_compat(k)
+              if (weight_tmp.gt.maxweight) then
+                maxweight=weight_tmp
+              endif
+           enddo
 
-
-           weight=M_full*jac/M_prod
-           if (weight.gt.maxweight) then
-            maxweight=weight
-c            max_m=M_full
-c            max_jac=jac
-c            do k =1,nexternal
-c            do j=0,3
-c            max_mom(j,k)=pfull(j,k)
-c            enddo
-c            enddo
-           endif
-c           mean=mean+weight
-c           variance=variance+weight**2
         enddo
-c        mean=mean/real(nbpoints)   
-c        variance=variance/real(nbpoints)-mean**2
-c        std=sqrt(variance)
-        write (*,*) maxweight   ! ,mean,std  
-c        write (*,*) 'max_m',max_m 
-c        write (*,*) 'max_jac', jac
-c        write (*,*) 'Extrenal masses'
-c        do k=1,nexternal
-c        write(*,*) dot(max_mom(0,k), max_mom(0,k))
-c        enddo
-c        do j=0,3
-c          pw1(j)=max_mom(j,4)+max_mom(j,5)
-c          pt1(j)=pw1(j)+max_mom(j,3)
-c          pw2(j)=max_mom(j,7)+max_mom(j,8)
-c          pt2(j)=pw2(j)+max_mom(j,6)
-c          pt2g(j)=pt2(j)+max_mom(j,9)
-c        enddo
- 
-c        write (*,*) 'm45', sqrt(2D0*dot(max_mom(0,4),max_mom(0,5))) 
-c        write (*,*) 'm78', sqrt(2d0*dot(max_mom(0,7),max_mom(0,8))) 
-c        write (*,*) 'mt1', sqrt(dot(pt1,pt1)) 
-c        write (*,*) 'mt2', sqrt(dot(pt2,pt2)) 
-c        write (*,*) 'mt2g', sqrt(dot(pt2g,pt2g)) 
-c        write (*,*) 'm9', sqrt(dot(max_mom(0,9),max_mom(0,9))) 
-c        write (*,*) 'shat', sqrt(2D0*dot(max_mom(0,2),max_mom(0,1))) 
-c        write(*,*)  (max_mom(j,1), j=0,3)
-c        write(*,*)  (max_mom(j,2), j=0,3)
-c        write(*,*)  (pt1(j), j=0,3)
-c        write(*,*)  (pt2(j), j=0,3)
-c        write(*,*)  (max_mom(j,9), j=0,3)
+        write (*,*) maxweight
         call flush()
         goto 1
       endif
@@ -355,7 +360,7 @@ c        initialize the helicity amps
                do k=1,n_max_cg
                  amp2(k)=0d0
                enddo
-               CALL SMATRIX_PROD(P,M_PROD)
+               CALL SMATRIX_PROD(P,flavor_index_prod,M_PROD)
                call get_config(iconfig)
                do i=-nexternal_prod+2,-1
                 do j=1,2
@@ -375,11 +380,11 @@ c        initialize the helicity amps
            endif
 
            call  boost_to_frame(pfull, frame_id, P2)
-           call SMATRIX(P2,M_full)
+           call SMATRIX(P2,flavor_index_full,M_full)
 
 
            call  boost_to_frame_prod(pprod, frame_id,nexternal_prod, P2)
-           call SMATRIX_PROD(P2,M_prod)
+           call SMATRIX_PROD(P2,flavor_index_prod,M_prod)
 
 
            weight=M_full*jac/M_prod
@@ -444,7 +449,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
            call generate_momenta_conf(jac,x,itree,qmass,qwidth,pfull,pprod,map_external2res) 
            if (jac.lt.0d0) cycle
            notpass=.false.
-           call SMATRIX(pfull,M_full)
+           call SMATRIX(pfull,flavor_index_full,M_full)
 
            write(*,*) M_full
         enddo
@@ -454,6 +459,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 2     continue
       end
+
+      include 'flavor_ms.inc'
 
       subroutine get_helicity_ID(iconfig)
       implicit none
@@ -541,6 +548,7 @@ c     common
 
 
       subroutine set_parameters(p,Ecollider)
+      use model_object 
       implicit none
 
       double precision ZERO
@@ -621,6 +629,7 @@ c Make sure have enough mass for external particles
 
 
       subroutine merge_itree(itree,qmass,qwidth,  p_ext,mapext2res)
+      use model_object 
       implicit none
       !include 'genps.inc'
       include 'coupl.inc'
@@ -714,7 +723,7 @@ c Set one_body to true if it s a 2->1 process at the Born (i.e. 2->2 for the n+1
 c      write(*,*) 'ns_channel ',ns_channel 
 c      write(*,*) 'nt_channel ',nt_channel 
 
-      ! first fill the new itree for the the legs in the decay part
+      ! first fill the new itree for the legs in the decay part
       do i=-(ns_channel_decay),-1       
          itree_full(1,i) = idecay(1,i)
          itree_full(2,i) = idecay(2,i)
@@ -813,7 +822,7 @@ c
 c        MODIF March 5, 2014 (P.A.) 
 c        overwrite last t-channel invariant to avoid numerical unstabilities
 c        This is crucial if the last t-channel propa is connected to two massless particles
-c        (one inital + one final particles) which are colinear -> t ~ 0
+c        (one initial + one final particle) which are collinear -> t ~ 0
 c        Indeed, in that case the extraction of t in the previous loop may return a positive 
 c        value: in that case, the code will always fail to generate momenta !!!
 
@@ -1055,7 +1064,7 @@ c     STEP 1: generate the initial momenta
 
 c      write(*,*) 'nbranch' 
 c      write(*,*) nbranch 
-      ! P.A.: Shat needs to be generated accoding to a BW distribution
+      ! P.A.: Shat needs to be generated according to a BW distribution
       smax=min(stot*0.99D0,(qmass(-nbranch+1)+BWcut*qwidth(-nbranch+1))**2 )
       smin=max(0.1d0,(qmass(-nbranch+1)-BWcut*qwidth(-nbranch+1))**2 )
       xm02=qmass(-nbranch+1)**2
@@ -1695,7 +1704,7 @@ c
       p1(2) = pt*sin(phi)
 c
       call rotxxx(p1,pa_cms,p1)          !Rotate back to pa_cms frame
-      call boostx(p1,ptot,p1)            !boost back to lab fram
+      call boostx(p1,ptot,p1)            !boost back to lab frame
       do i=0,3
          pr(i)=pa(i)-p1(i)               !Return remainder of momentum
       enddo
@@ -1920,35 +1929,30 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
       DOUBLE PRECISION P2(0:3,NEXTERNAL)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id
 
       integer ids(nexternal)
-      integer i,j
-      Pboost(0)= 0d0
-      Pboost(1)= 0d0
-      Pboost(2)= 0d0
-      Pboost(3)= 0d0
+      integer i
 
 c     uncompress
       call mapid(frame_id, ids)
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal
-       if (ids(i).eq.1)then
-c             write (999,*) (Pboost(j), j=0,3)
-            do j=0,3
-                   Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3
-          Pboost(j) = -1 * Pboost(j)
-      enddo
-       
-c              write (999,*) (Pboost(j), j=0,3)
+c     The events come in the lab frame. A single boost from there to the
+c     selected particles would not reach the frame madevent, madspace and
+c     aMC@NLO use (Wigner rotation); a boost along z then a transverse one
+c     does, from any frame along the beam. See get_me_frame_boosts in
+c     Template/Common/Source/impose_frame_rest.f.
+      call get_me_frame_boosts(ids, nexternal, nincoming, p1, qz, qt)
       do i=1, nexternal
-         call boostx(p1(0,i), pboost, p2(0,i))
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
+
+c     A single selected particle has to end up *exactly* at rest, not at
+c     rest to rounding: HELAS switches quantisation axis at exactly zero
+c     three-momentum. Same routine, and same reason, as the LO and NLO
+c     templates use -- see Template/Common/Source/impose_frame_rest.f.
+      call impose_frame_rest(ids, nexternal, p2)
       return
       end
 
@@ -1993,35 +1997,27 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,*)
       DOUBLE PRECISION P2(0:3,*)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id, nexternal_prod
 
       integer ids(nexternal_prod)
-      integer i,j
-      Pboost(0)= 0d0
-      Pboost(1)= 0d0
-      Pboost(2)= 0d0
-      Pboost(3)= 0d0
+      integer i
 
 c     uncompress
       call mapid_prod(frame_id, ids,nexternal_prod)
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal_prod
-       if (ids(i).eq.1)then
-c             write (999,*) (Pboost(j), j=0,3)
-            do j=0,3
-                   Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3
-          Pboost(j) = -1 * Pboost(j)
+c     same frame as boost_to_frame above
+      call get_me_frame_boosts(ids, nexternal_prod, nincoming, p1,
+     &     qz, qt)
+      do i=1, nexternal_prod
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
 
-c              write (999,*) (Pboost(j), j=0,3)
-      do i=1, nexternal_prod
-         call boostx(p1(0,i), pboost, p2(0,i))
-      enddo
+c     A single selected particle has to end up *exactly* at rest, not at
+c     rest to rounding: HELAS switches quantisation axis at exactly zero
+c     three-momentum. Same routine, and same reason, as the LO and NLO
+c     templates use -- see Template/Common/Source/impose_frame_rest.f.
+      call impose_frame_rest(ids, nexternal_prod, p2)
       return
       end
 
@@ -2053,7 +2049,6 @@ c         write(*,*) 'cluster.f: uncompressed code ',i,' is ',ids(i)
 
       return
       end
-
 
 
 

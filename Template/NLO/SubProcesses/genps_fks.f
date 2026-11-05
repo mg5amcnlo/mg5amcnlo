@@ -4,7 +4,8 @@ c Public phase-space stages and their private implementation. Compiler
 c interfaces come from contained procedures, not repeated declarations.
 c Sampling and radiation kernels live in their own lower-level modules.
       use fks_born_sampling, only: generate_momenta_born,
-     $     initialize_born_chart,generate_tau_y_wrapper
+     $     initialize_born_chart,generate_tau_y_wrapper,
+     $     sample_real_channel
       use fks_radiation_maps, only: generate_momenta_massless_final,
      $     generate_momenta_massive_final,generate_momenta_initial,
      $     generate_momenta_massless_final_inverse,
@@ -24,7 +25,8 @@ c Sampling and radiation kernels live in their own lower-level modules.
      $     sample_fks_born_point,generate_fks_radiation,
      $     generate_born_contribution,generate_born_event,
      $     generate_real_phase_space,generate_prepared_fks_point,
-     $     generate_momenta,generate_native_momenta,invert_fks_radiation
+     $     generate_momenta,generate_native_momenta,invert_fks_radiation,
+     $     generate_momenta_real_channels
 
 c A reusable Born point is an input to radiation generation. Its
 c sampling measure and provenance remain independent of any radiation
@@ -91,6 +93,7 @@ c differ from the soft Born. Their availability is recorded explicitly.
          logical :: has_collinear_born=.false.
          logical :: has_reduced_born=.false.
          double complex :: spin_phase=(0d0,0d0)
+         double precision :: spin_transverse(0:3)=0d0
          double precision :: radiation_energies(3)=0d0
          integer :: solution_sign=0
          logical :: no_counterevents=.true.,event_projection=.true.
@@ -233,6 +236,22 @@ c agrees. Otherwise sample a new one, including the coupled lepton map.
       if(timing_sampled)call timing_leave(timing_phase_space)
       return
       end subroutine generate_real_phase_space
+
+
+      subroutine generate_momenta_real_channels(ndim,iconfig,
+     &     representative_sector,x,p,wgt)
+c The complete real-tree channel has no Born chart or FKS endpoints.
+c Reset the same typed active data as radiation generation before sampling.
+      implicit none
+      include 'timing_variables.inc'
+      integer ndim,iconfig,representative_sector
+      double precision x(99),p(0:3,nexternal),wgt
+      if(timing_sampled)call timing_enter(timing_phase_space)
+      call reset_fks_kinematics()
+      call sample_real_channel(ndim,iconfig,representative_sector,
+     &     x,p,wgt)
+      if(timing_sampled)call timing_leave(timing_phase_space)
+      end subroutine generate_momenta_real_channels
 
 
       subroutine initialize_fks_phase_space(iconfig)
@@ -655,7 +674,7 @@ c unused by the current sector. Negative values are validity sentinels.
      $     p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,xi_hat_ev => xi_i_hat_ev,
      $     xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,sqrtshat_cnt,shat_cnt,
      $     tau_ev,ycm_ev,tau_cnt,ycm_cnt,xi_max_ev => xiimax_ev,xi_max_cnt => xiimax_cnt,
-     $     xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,veckn_ev,
+     $     xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,xij_kperp,veckn_ev,
      $     veckbarn_ev,xp0jfks,solution_sign => isolsign,no_counterevents => nocntevents,
      $     ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
 c Start a fresh real/endpoint result. Preserve the supplied Born point
@@ -693,6 +712,7 @@ c absent endpoints cannot inherit data from a previous radiation trial.
       xi_norm_ev=0d0
       xi_norm_cnt=0d0
       spin_phase=(0d0,0d0)
+      xij_kperp=0d0
       veckn_ev=0d0
       veckbarn_ev=0d0
       xp0jfks=0d0
@@ -1567,7 +1587,7 @@ c a direct inversion in the lab would use a different transverse basis.
      $     y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,
      $     xi_hat_ev => xi_i_hat_ev,xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,
      $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xi_max_ev => xiimax_ev,
-     $     xi_max_cnt => xiimax_cnt,xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,
+     $     xi_max_cnt => xiimax_cnt,xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,xij_kperp,
      $     veckn_ev,veckbarn_ev,xp0jfks,solution_sign => isolsign,no_counterevents => nocntevents,
      $     tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound,ybst_til_tolab,ybst_til_tocm,
      $     sqrtshat,shat
@@ -1628,6 +1648,7 @@ c generation frame also for massive solutions with no counterevents.
       point%p_born_l=p_born_l
       point%p_born_ev=p_born_ev
       point%spin_phase=spin_phase
+      point%spin_transverse=xij_kperp
       point%radiation_energies(1)=veckn_ev
       point%radiation_energies(2)=veckbarn_ev
       point%radiation_energies(3)=xp0jfks
@@ -1674,7 +1695,7 @@ c generation frame also for massive solutions with no counterevents.
      $     y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,
      $     xi_hat_ev => xi_i_hat_ev,xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,
      $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xi_max_ev => xiimax_ev,
-     $     xi_max_cnt => xiimax_cnt,xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,
+     $     xi_max_cnt => xiimax_cnt,xi_norm_ev => xinorm_ev,xi_norm_cnt => xinorm_cnt,spin_phase => xij_aor,xij_kperp,
      $     veckn_ev,veckbarn_ev,xp0jfks,solution_sign => isolsign,no_counterevents => nocntevents,
      $     tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound,ybst_til_tolab,ybst_til_tocm,
      $     sqrtshat,shat
@@ -1732,6 +1753,7 @@ c routine does not change process, shower, colour, PDF or coupling state.
       p_born_l=point%p_born_l
       p_born_ev=point%p_born_ev
       spin_phase=point%spin_phase
+      xij_kperp=point%spin_transverse
       veckn_ev=point%radiation_energies(1)
       veckbarn_ev=point%radiation_energies(2)
       xp0jfks=point%radiation_energies(3)

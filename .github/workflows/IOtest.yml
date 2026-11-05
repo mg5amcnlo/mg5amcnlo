@@ -1,0 +1,208 @@
+# Workflow for IOTests - tests that compare generated output files against
+# reference files. Collected from unittest.yml and acceptancetest.yml.
+
+name: running IOTests
+on:
+  push:
+    # All branches, no tags: a release tag points at a commit that already
+    # ran this suite when it was pushed to main, and release.yml gates on
+    # that main run rather than re-testing the same tree. '**' is needed
+    # over '*' so branch names containing a slash still match.
+    branches:
+      - '**'
+    paths-ignore:
+      - 'docs/**'
+#      - '.github/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'running IOTests'
+        required: true
+
+env:
+  commitmsg: ${{ github.event.head_commit.message }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # IOTests from unit tests (no HEP tools cache required)
+  # ---------------------------------------------------------------------------
+
+  # IOTest framework self-tests (from unittest_2)
+
+
+  IOtest_bundle_1:
+    # former jobs, run one after the other: IOtest_iotest_examples
+    #   IOtest_fks IOtest_fd_gauge IOtest_export
+    #   IOtest_unit_proc IOtest_ewsudakov
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+
+      # ---- IOtest_iotest_examples ----
+      - name: "IOtest_iotest_examples: test IOTest framework examples"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_IOTestWrappedWithSetUP testIO_MyHandwrittenIOTest testIO_MyCustomNameIOTestWithPathRegExpr testIO_MyCustomNameIOTestWrapped testIO_MyCustomNameIOTestWrappedWithReturnPath testIO_MySimpleIOTestWrapped -t0
+
+      # ---- IOtest_fks ----
+      # FKS exporter IOTests (from unittest_18_1 and unittest_18_2)
+      - name: "IOtest_fks: test FKS IO tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_test_pptt_fks_loonly testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_ppw_fksall testIO_test_tdecay_fksreal testIO_test_wprod_fksew -t0
+
+      # ---- IOtest_fd_gauge ----
+      # FD gauge output reference files (fortran DHELAS + madmatrix HelAmps)
+      - name: "IOtest_fd_gauge: test FD gauge output IO tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_FDgauge_standalone_fortran testIO_FDgauge_madmatrix -pA -t0
+
+      # ---- IOtest_export ----
+      # Export v4 and Python matrix element IOTests (from unittest_21, unittest_22, unittest_23)
+      - name: "IOtest_export: test export IO tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_sqso_uux_uuxuuxx testIO_export_matrix_element_v4_madevent_group testIO_export_matrix_element_v4_madevent_nogroup testIO_export_matrix_element_v4_standalone testIO_get_python_matrix_methods testIO_DJR_histograms -t0
+
+      # ---- IOtest_unit_proc ----
+      # Loop unit proc output IOTest (from unittest_28)
+      - name: "IOtest_unit_proc: test unit proc output IO test"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_UnitProcOutputIOTests -t0
+
+      # ---- IOtest_ewsudakov ----
+      # EW Sudakov IOTests (from unittest_33)
+      - name: "IOtest_ewsudakov: test EW Sudakov IO tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
+
+  # Loop squared-order IOTest – needs UFO model cache (from unittest_29)
+  IOtest_loop_sqso:
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+      - uses: ./.github/actions/restore_ufomodel
+      - name: test loop squared order IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py testIO_Loop_sqso_uux_ddx -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
+
+  IOtest_bundle_2:
+    # former jobs, run one after the other: IOtest_acceptance_proc
+    #   IOtest_matchbox
+    # Each keeps its own steps, run even when an earlier one failed.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      # ---- IOtest_acceptance_proc ----
+      # ---------------------------------------------------------------------------
+      # IOTests from acceptance tests (HEP tools cache required)
+      # ---------------------------------------------------------------------------
+      # Acceptance and unit proc output IOTests (from acceptancetest_0)
+      - name: "IOtest_acceptance_proc: test acceptance proc output IO tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_AcceptanceProcOutputIOTests -pA -t0 -l INFO
+            ./tests/test_manager.py testIO_UnitProcOutputIOTests -pA -t0 -l INFO
+
+      # ---- IOtest_matchbox ----
+      # MatchBox output IOTest (from acceptancetest_77)
+      - name: "IOtest_matchbox: test MatchBox output IO test"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
+            ./tests/test_manager.py testIO_MatchBoxOutput -pA -t0 -l INFO
+
+
+  IOtest_bundle_3:
+    # former jobs, run one after the other: IOtest_TIR IOtest_loop_induced
+    # Each keeps its own steps, run even when an earlier one failed.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/restore_all
+
+      # ---- IOtest_TIR ----
+      # TIR output IOTest (from acceptancetest_70)
+      - name: "IOtest_TIR: test TIR output IO test"
+        if: ${{ !cancelled() }}
+        run: |
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
+            ./tests/test_manager.py testIO_TIR_output -pA -t0 -l INFO
+
+      # ---- IOtest_loop_induced ----
+      # Loop-induced ([noborn=]) standalone output IOTest. Added with its goldens
+      # in PR #81 but never wired into CI, so PR #82's template changes left the
+      # goldens stale unnoticed.
+      - name: "IOtest_loop_induced: test loop-induced standalone output IO test"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/work/mg5amcnlo/mg5amcnlo/HEPTools/lib
+            ./tests/test_manager.py testIO_loop_induced_standalone_output -pA -t0 -l INFO
+
+
+  # Gnuplot histogram output IOTest (from acceptancetest_100)
+  IOtest_gnuplot:
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean_tmp
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+      - name: test gnuplot histogram output IO test
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py testIO_gnuplot_histo_output -pA -t0 -l INFO
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp

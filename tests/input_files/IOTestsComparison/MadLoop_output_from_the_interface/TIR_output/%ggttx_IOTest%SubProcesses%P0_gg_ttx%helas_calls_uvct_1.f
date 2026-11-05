@@ -3,6 +3,7 @@ C
 C     Modules
 C     
       USE ML5_0_POLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
 C     
       IMPLICIT NONE
 C     
@@ -37,6 +38,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER I,J,K
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
       COMPLEX*16 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
 
       LOGICAL DUMMYFALSE
@@ -74,9 +77,8 @@ C
 
       COMPLEX*16 AMP(NBORNAMPS)
       COMMON/ML5_0_AMPS/AMP
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_W/W
-
       COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,
      $ -1:NLOOPWAVEFUNCS)
       COMPLEX*16 PL(0:3,-1:NLOOPWAVEFUNCS)
@@ -97,27 +99,27 @@ C      if true.
       ENDIF
 
 C     Amplitude(s) for UVCT diagram with ID 40
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(2,80))
+      CALL FFV1_0(W(4),W(3),W(5),GC_5,AMPL(2,80))
       AMPL(2,80)=AMPL(2,80)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 41
-      CALL FFV1_0(W(1,4),W(1,3),W(1,5),GC_5,AMPL(1,81))
+      CALL FFV1_0(W(4),W(3),W(5),GC_5,AMPL(1,81))
       AMPL(1,81)=AMPL(1,81)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
      $ *UVWFCT_T_0)
 C     Amplitude(s) for UVCT diagram with ID 42
-      CALL FFV1_0(W(1,4),W(1,6),W(1,2),GC_5,AMPL(2,82))
+      CALL FFV1_0(W(4),W(6),W(2),GC_5,AMPL(2,82))
       AMPL(2,82)=AMPL(2,82)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 43
-      CALL FFV1_0(W(1,4),W(1,6),W(1,2),GC_5,AMPL(1,83))
+      CALL FFV1_0(W(4),W(6),W(2),GC_5,AMPL(1,83))
       AMPL(1,83)=AMPL(1,83)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
      $ *UVWFCT_T_0)
 C     Amplitude(s) for UVCT diagram with ID 44
-      CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMPL(2,84))
+      CALL FFV1_0(W(7),W(3),W(2),GC_5,AMPL(2,84))
       AMPL(2,84)=AMPL(2,84)*(4.0D0*UVWFCT_G_1_1EPS+2.0D0
      $ *UVWFCT_B_0_1EPS)
 C     Amplitude(s) for UVCT diagram with ID 45
-      CALL FFV1_0(W(1,7),W(1,3),W(1,2),GC_5,AMPL(1,85))
+      CALL FFV1_0(W(7),W(3),W(2),GC_5,AMPL(1,85))
       AMPL(1,85)=AMPL(1,85)*(2.0D0*UVWFCT_G_1+2.0D0*UVWFCT_G_2+2.0D0
      $ *UVWFCT_T_0)
 C     At this point, all UVCT amps needed for (QCD=6), i.e. of split

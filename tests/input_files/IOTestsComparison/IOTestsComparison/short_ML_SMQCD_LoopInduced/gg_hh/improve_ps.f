@@ -75,8 +75,8 @@ C     ----------
 
 C     ERROR CODES CONVENTION
 C     
-C     1         ::  None physical PS point input
-C     100-1000  ::  Error in the origianl method for restoring
+C     1         ::  Nonphysical PS point input
+C     100-1000  ::  Error in the original method for restoring
 C      precision
 C     1000-9999 ::  Error when restoring precision ala PSMC
 C     

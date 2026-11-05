@@ -69,7 +69,7 @@ c
       COMMON/TO_LHEFORMAT/lhe_version,clusinfo
 
 c     
-C     Controls wheter to perform Monte-Carlo sampling over grouped subprocesses
+C     Controls whether to perform Monte-Carlo sampling over grouped subprocesses
 C
       logical MC_grouped_subproc
       common/to_MC_grouped_subproc/MC_grouped_subproc
@@ -111,6 +111,11 @@ c
 
        double precision small_width_treatment
        common/narrow_width/small_width_treatment
+
+c      fraction of the cross-section the overweight events of the refine may
+c      carry (negative: maximum weight from the 99% quantile, see store_events)
+       double precision max_overweight_truncation
+       common/to_overweight/max_overweight_truncation
 
        double precision tmin_for_channel
        integer sde_strat ! 1 means standard single diagram enhancement strategy,

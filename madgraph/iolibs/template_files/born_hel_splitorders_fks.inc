@@ -100,6 +100,8 @@ C
       common/c_nfksprocess/nfksprocess
       double precision wgt_hel(NSQAMPSO, max_bhel)
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL
+      LOGICAL CHECK_BORN_AMPS, BORN_CHECKS_AMPS
+      COMMON /C_BORN_AMPS_CHECK/ CHECK_BORN_AMPS, BORN_CHECKS_AMPS
 C ----------
 C BEGIN CODE
 C ----------
@@ -114,6 +116,10 @@ C ----------
          enddo
       else
          write(*,*) 'Error in sborn_hel_splitorders: this should be called only with calculatedborn = true'
+         stop
+      endif
+      if (check_born_amps) then
+         write(*,*) 'Error in sborn_hel_splitorders: the Born must be called again first'
          stop
       endif
       DO I=0,NSQAMPSO

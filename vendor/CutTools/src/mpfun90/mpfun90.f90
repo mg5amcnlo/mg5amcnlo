@@ -624,7 +624,7 @@ subroutine mpcbrt (a, b, mpnw)
 
 !    X_{k+1} = X_k + (1 - X_k^3 * A^2) * X_k / 3
 
-!   where the muliplication () * X_k is performed with only half of the
+!   where the multiplication () * X_k is performed with only half of the
 !   normal level of precision.  These iterations are performed with a
 !   maximum precision level MPNW that is dynamically changed, doubling with
 !   each iteration.  The final iteration is performed as follows (this is
@@ -2739,7 +2739,7 @@ subroutine mpsqrt (a, b, mpnw)
 
 !    X_{k+1} = X_k + 0.5 * (1 - X_k^2 * A) * X_k
 
-!   where the muliplication () * X_k is performed with only half of the
+!   where the multiplication () * X_k is performed with only half of the
 !   normal level of precision.  These iterations are performed with a
 !   maximum precision level MPNW that is dynamically changed, doubling with
 !   each iteration.  The final iteration is performed as follows (this is
@@ -4780,7 +4780,7 @@ end subroutine
 
 subroutine mpcsub (l, a, b, c, mpnw)
 
-!   This subracts the MPC numbers A and B and returns the MPC difference in
+!   This subtracts the MPC numbers A and B and returns the MPC difference in
 !   C.  L is the offset between real and imaginary parts in A, B and C.  L
 !   must be at least MPNW + 4.  Debug output starts with MPIDB = 9.
 
@@ -5681,7 +5681,7 @@ subroutine mpdivx (a, b, c, mpnw)
 
 !    X_{k+1} = X_k + (1 - X_k * B) * X_k
 
-!   where the muliplication () * X_k is performed with only half of the
+!   where the multiplication () * X_k is performed with only half of the
 !   normal level of precision.  These iterations are performed with a
 !   maximum precision level MPNW that is dynamically changed, doubling with
 !   each iteration.  The final iteration is performed as follows (this is
@@ -7066,7 +7066,7 @@ subroutine mpangx (x, y, pi, a, mpnw)
 
 !   Max SP space for A: MPNW + 4 cells.
 
-!   This routine employs a complex arithmetic version of the MPLOGX alogirthm.
+!   This routine employs a complex arithmetic version of the MPLOGX algorithm.
 
 double precision cpi, t1
 parameter (cpi = 3.141592653589793d0)

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -47,7 +47,7 @@ def import_model(model_path, mgme_dir = MG4DIR, absolute=True, web=True):
     except Exception as error:
         if not web:
             raise
-        import models.import_ufo as import_ufo
+        import madgraph.models.import_ufo as import_ufo
         if model_path_old.endswith('_v4'):
             found = import_ufo.import_model_from_db(model_path_old, local_dir=True)
         else:
@@ -168,7 +168,7 @@ def read_particles_v4(fsock):
             values = line.split()
             if len(values) != 9:
                 # Not the right number tags on the line
-                raise ValueError("Unvalid initialization string:" + line)
+                raise ValueError("Invalid initialization string:" + line)
             else:
                 try:
                     mypart.set('name', values[0].lower())
@@ -478,7 +478,7 @@ class ProcCardv4Reader(object):
 
     
     def analyze_v4_proc_card(self, fsock):
-        """read the file and fullfill the variable with mg4 line"""
+        """read the file and fill the variable with mg4 line"""
         
         proc_card = fsock.read()
 
@@ -704,7 +704,7 @@ class ProcessInfo(object):
                                                                  particles_name)
             line = line[:pos_sforbid]
             
-        # Deal with decay chains, returns lines whitout the decay (and treat 
+        # Deal with decay chains, returns lines without the decay (and treat
         #the different decays.
         if '(' in line:
             line = self.treat_decay_chain(line, particles_name)

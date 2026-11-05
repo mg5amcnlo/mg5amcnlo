@@ -211,7 +211,7 @@ c
 c     This subroutine gets the value of gen_point (PT,phi or y) 
 c     from uniform variable x and gives the jacobian of the transformation. 
 c     If uniform = false, gen_point is generated according to a Breit Wigner
-c     arount c_point,  with width gam.
+c     around c_point,  with width gam.
 c
 c     input : c_point : central value
 c             gam : associated width
@@ -473,7 +473,7 @@ c     lower bound
 
       Double Precision function  Breit_Wigner_for_part(MG_num,M,W)
 C-------------------------------------------------------
-C     Retruns the Breit-Wigner weight for resonance MG_num              
+C     Returns the Breit-Wigner weight for resonance MG_num
 C-------------------------------------------------------
       implicit none
 C

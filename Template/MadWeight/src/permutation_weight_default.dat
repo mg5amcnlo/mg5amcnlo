@@ -5,7 +5,7 @@ c
 c     Need to contain TWO functions:                                                       cc                   
 c           - weight_perm_global                                                           cc
 c           - weight_perm_BW  (associate to a given propagator                             cc
-c    The total wieght is the product of those weight. The permuation below a given         cc
+c    The total weight is the product of those weight. The permutation below a given         cc
 c           relative cutoff are not consider for the integration.                          cc
 c    The default function consist in a simple breit-wigner with an effective width dependingc
 c            on the width of the transfer functions.                                        c

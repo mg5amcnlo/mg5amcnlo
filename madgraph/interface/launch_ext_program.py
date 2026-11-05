@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -16,16 +16,20 @@
 
 from __future__ import absolute_import
 import logging
+import math
 import os
 import pydoc
+import re
 import subprocess
 import time
 start=time.time()
 import madgraph.iolibs.files as files
 import madgraph.interface.madevent_interface as me_cmd
+import madgraph.interface.common_run_interface as common_run
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_mod
+import madgraph.interface.extended_cmd as extended_cmd
 import sys
 
 #from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -70,7 +74,7 @@ class ExtLauncher(object):
         self.cmd_int.me_dir = self.running_dir
         if self.cards:
             common_run_interface.CommonRunCmd.ask_edit_card_static(self.cards,
-                             mode='fixed', plot=False,
+                             mode='fixed',
                              timeout=0, ask=self.cmd_int.ask, force=self.force)
              
         #for card in self.cards:
@@ -80,7 +84,7 @@ class ExtLauncher(object):
 
         
     def prepare_run(self):
-        """ aditional way to prepare the run"""
+        """ additional way to prepare the run"""
         pass
     
     def launch_program(self):
@@ -182,6 +186,15 @@ class MadLoopLauncher(ExtLauncher):
         else:
             super(MadLoopLauncher,self).treat_input_file(filename,default,msg)
 
+    def uses_density(self):
+        """True if the output was written with 'output ... --density=...'.
+        The command options are not available here, so they are read back
+        from the proc_card (the only place they are recorded), through
+        ProcCard which joins the lines older versions wrapped."""
+
+        proc_card = banner_mod.ProcCard(pjoin(self.card_dir, 'proc_card_mg5.dat'))
+        return 'density' in proc_card.get_output_options()
+
     def launch_program(self):
         """launch the main program"""
         evaluator = process_checks.LoopMatrixElementTimer
@@ -230,16 +243,8 @@ class MadLoopLauncher(ExtLauncher):
                 MadLoopparam.set('DoubleCheckHelicityFilter', False)
                 MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
 
-                #This is not optimal at all but I don't think I have access to the command options here. The code only passes here for standalone mode
-                UseDensity = False
-                with open(os.path.join(self.card_dir, 'proc_card_mg5.dat'), 'r') as proc_card:
-                    for line in proc_card:
-                        if '--density' in line:
-                            UseDensity = True
-                            break
-
                 #for the density mode, we use HelicityFilterLevel = 0 because the use of symmetry of HelicityFilterLevel = 2 does not work for JAMP interferences
-                if UseDensity:
+                if self.uses_density():
                     MadLoopparam.set('HelicityFilterLevel', 0)
                     MadLoopparam.write(os.path.join(self.card_dir, 'MadLoopParams.dat'))
                     logger.warning("WARNING: With the density mode, HelicityFilterLevel must be set to 0. It is currently set to 0.")
@@ -442,88 +447,465 @@ class SALauncher(ExtLauncher):
     def launch_program(self):
         """launch the main program"""
         sub_path = os.path.join(self.running_dir, 'SubProcesses')
-        for path in os.listdir(sub_path):
+        for path in sorted(os.listdir(sub_path)):
             if path.startswith('P') and \
                                    os.path.isdir(os.path.join(sub_path, path)):
                 cur_path =  os.path.join(sub_path, path)
                 # make
                 misc.compile(cwd=cur_path, mode='unknown')
                 # check
-                subprocess.call(['./check'], cwd=cur_path)
+                timings = getattr(self, 'timings', 0)
+                if timings and int(timings) > 0:
+                    nb_run = int(getattr(self, 'nb_run', 1))
+                    if nb_run == 0:
+                        # --nb_run=0: good-helicity check mode. Evaluate each
+                        # flavor `timings` times (so the good-helicity filter is
+                        # exercised) and print ./check's matrix-element values
+                        # instead of a timing table.
+                        self._run_goodhel_check(cur_path, int(timings))
+                    else:
+                        self._run_with_timings(cur_path, int(timings), nb_run)
+                else:
+                    subprocess.call(['./check'], cwd=cur_path)
 
-class MWLauncher(ExtLauncher):
-    """ A class to launch a simple Standalone test """
-    
-    
+    def _run_goodhel_check(self, cur_path, nb_try):
+        """Evaluate every flavor nb_try times and print the resulting
+        matrix-element values, with no timing summary.
+
+        Here "every flavor" means every distinct external-flavor assignment the
+        merged matrix element serves: when light quarks/leptons are grouped into
+        merged particles, a single subprocess covers several physical flavor
+        combinations (e.g. u u~ > u u~, d d~ > d d~, ...), enumerated by the
+        flavor index. ./check is invoked with unique_flavor=0 so it loops over
+        all of them, calling SMATRIX nb_try times each (so the good-helicity
+        filter is exercised), and prints the final matrix-element evaluation
+        (with its PDG label) for each. A non-merged process simply has one
+        flavor.
+
+        Parameters
+        ----------
+        cur_path : str
+            Path to the subprocess directory containing the compiled ./check.
+        nb_try : int
+            Number of SMATRIX calls per flavor (the --timings value).
+        """
+        logger.info('Good-helicity check: %d SMATRIX call(s) per flavor '
+                    '(printing matrix-element values, no timing table)' % nb_try)
+        subprocess.call(['./check', '1000', str(nb_try), '0'], cwd=cur_path)
+
+    def _run_with_timings(self, cur_path, nb_try, nb_run):
+        """Run timing analysis for each flavor and print a summary table.
+
+        Parameters
+        ----------
+        cur_path : str
+            Path to the subprocess directory containing the compiled ./check binary.
+        nb_try : int
+            Number of SMATRIX calls per flavor per run (passed as arg2 to ./check).
+        nb_run : int
+            Number of independent timing repetitions used to build statistics.
+        """
+        # Discover the number of flavors and their PDG codes by running once
+        # with nb_try=1 and unique_flavor=0 (all flavors).
+        try:
+            proc = subprocess.Popen(['./check', '1000', '1', '0'],
+                                    cwd=cur_path,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE)
+            stdout, _ = proc.communicate()
+            if isinstance(stdout, bytes):
+                stdout = stdout.decode('utf-8', errors='replace')
+        except OSError:
+            logger.error('Could not run ./check for flavor discovery')
+            return
+
+        # Parse "PDG ..." lines to collect flavor PDG tuples
+        pdg_per_flavor = []
+        for line in stdout.splitlines():
+            stripped = line.strip()
+            if stripped.upper().startswith('PDG'):
+                pdg_per_flavor.append(stripped[3:].strip())
+        nflavors = len(pdg_per_flavor)
+        if nflavors == 0:
+            logger.warning('No flavors detected in ./check output; skipping timing.')
+            return
+
+        logger.info('Timing %d flavor(s), %d SMATRIX calls/run, %d run(s)'
+                    % (nflavors, nb_try, nb_run))
+
+        # Time each flavor individually
+        results = []
+        for flav_idx in range(1, nflavors + 1):
+            run_times = []
+            for _ in range(nb_run):
+                t0 = time.time()
+                subprocess.call(['./check', '1000', str(nb_try), str(flav_idx)],
+                                cwd=cur_path,
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+                run_times.append(time.time() - t0)
+            avg = sum(run_times) / len(run_times)
+            if len(run_times) > 1:
+                sigma = math.sqrt(
+                    sum((t - avg) ** 2 for t in run_times) / (len(run_times) - 1))
+            else:
+                sigma = 0.0
+            pdg_label = pdg_per_flavor[flav_idx - 1] if flav_idx - 1 < len(pdg_per_flavor) else ''
+            results.append((flav_idx, pdg_label, avg, sigma))
+
+        # Print summary table
+        n_diagrams = self._read_feynman_diagram_count(cur_path)
+        sep = '=' * 80
+        header_fmt = '%-6s  %-30s  %-18s  %-18s'
+        row_fmt    = '%-6d  %-30s  %-18.6f  %-18.6f'
+        print('\n' + sep)
+        if n_diagrams is not None:
+            print('Timing summary: %d Feynman diagram(s), %d SMATRIX calls/flavor/run, %d run(s)' %
+                  (n_diagrams, nb_try, nb_run))
+        else:
+            print('Timing summary: %d SMATRIX calls/flavor/run, %d run(s)' % (nb_try, nb_run))
+        print('-' * 80)
+        print(header_fmt % ('Flavor', 'PDG codes', 'Avg time (s)', '1-sigma (s)'))
+        print('-' * 80)
+        for flav_idx, pdg_label, avg, sigma in results:
+            print(row_fmt % (flav_idx, pdg_label, avg, sigma))
+        print(sep + '\n')
+
+    def _read_feynman_diagram_count(self, cur_path):
+        """Return number of Feynman diagrams from ngraphs.inc, if available."""
+        ngraphs_path = os.path.join(cur_path, 'ngraphs.inc')
+        try:
+            with open(ngraphs_path, 'r') as ngraphs_file:
+                content = ngraphs_file.read()
+        except (IOError, OSError):
+            return None
+
+        match = re.search(r'n_max_cg\s*=\s*(\d+)', content, re.IGNORECASE)
+        if not match:
+            return None
+
+        try:
+            return int(match.group(1))
+        except (TypeError, ValueError):
+            return None
+
+
+class FKSSALauncher(ExtLauncher):
+    """Launch the FKS Born building-block standalone check ('check_fks').
+
+    Produced by 'output standalone_fortran --fks'. ExtLauncher.run() first offers to
+    edit the param_card (bypassed with -f); launch_program() then compiles the
+    Source libraries, builds 'check_fks' in every born subprocess directory and
+    runs it, echoing the Born, spin-correlated Born and color/charge-linked
+    Borns for one phase-space point. The --energy / --timings / --nb_run
+    options are honoured.
+
+    For an output made with '--limits', it then also builds and runs the
+    aMC@NLO soft/collinear limit test (test_soft_col_limits) in every born
+    directory and reports whether the real emission approaches its
+    counterterms, which are built from these same Born building blocks.
+    """
+
+    # same input as the aMC@NLO launch uses for its 'test_ME' check: ME
+    # (not MC) counterterms, random energy/angle, 100 soft and 100 collinear
+    # points, all FKS configurations, first diagram
+    limits_input = "2\n-2 -2\n100 100\n0\n" + "-1\n" * 50
+
     def __init__(self, cmd_int, running_dir, **options):
-        """ initialize the StandAlone Version"""
+        """initialize the FKS standalone version"""
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
-        self.options = cmd_int.options
+        self.with_limits = os.path.isfile(
+            pjoin(running_dir, 'SubProcesses', 'check_sa_fks_limits'))
+        self.cards = ['param_card.dat']
+        if self.with_limits:
+            # the limit test reads the beams/energy from the run_card
+            self.cards.append('run_card.dat')
 
     def launch_program(self):
-        """launch the main program"""
-        
-        import madgraph.interface.madweight_interface as MW
-        # Check for number of cores if multicore mode
-        mode = str(self.cluster)
-        nb_node = 1
-        if mode == "2":
-            import multiprocessing
-            max_node = multiprocessing.cpu_count()
-            if max_node == 1:
-                logger.warning('Only one core is detected on your computer! Pass in single machine')
-                self.cluster = 0
-                self.launch_program()
-                return
-            elif max_node == 2:
-                nb_node = 2
-            elif not self.force:
-                nb_node = self.ask('How many core do you want to use?', max_node, list(range(2,max_node+1)))
-            else:
-                nb_node=max_node
-                
-        import madgraph.interface.madevent_interface as ME
-        
-        stdout_level = self.cmd_int.options['stdout_level']
-        if self.shell:
-            usecmd = MW.MadWeightCmdShell(me_dir=self.running_dir, options=self.options)
-        else:
-            usecmd = MW.MadWeightCmd(me_dir=self.running_dir, options=self.options)
-            usecmd.pass_in_web_mode()
-        #Check if some configuration were overwritten by a command. If so use it    
-        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
-        for line in set_cmd:
-            try:
-                usecmd.do_set(line[3:], log=False)
-            except Exception:
-                pass
-            
-        usecmd.do_set('stdout_level %s'  % stdout_level,log=False)
-        #ensure that the logger level 
-        launch = self.cmd_int.define_child_cmd_interface(
-                     usecmd, interface=False)
+        """compile and run check_fks in each born subprocess directory."""
+        me_dir = self.running_dir
+        logger.info(
+            'Compiling Source libraries for the FKS standalone check...')
+        misc.compile(cwd=pjoin(me_dir, 'Source'))
 
-        command = 'launch'
-        if mode == "1":
-            command += " --cluster"
-        elif mode == "2":
-            command += " --nb_core=%s" % nb_node
-        
-        if self.force:
-            command+= " -f"
-        if self.laststep:
-            command += ' --laststep=%s' % self.laststep
-        
-        try:
-            os.remove('ME5_debug')
-        except:
-           pass
-        launch.run_cmd(command)
-        launch.run_cmd('quit')
-        
-        if os.path.exists('ME5_debug'):
+        sub_path = pjoin(me_dir, 'SubProcesses')
+        born_dirs = sorted(pjoin(sub_path, p) for p in os.listdir(sub_path)
+                           if p.startswith('P') and os.path.isfile(
+                               pjoin(sub_path, p, 'check_sa_fks.f')))
+        if not born_dirs:
+            logger.error(
+                'No FKS standalone born directory found in %s' % sub_path)
+            return
+
+        energy = float(getattr(self, 'energy', 0) or 0)
+        timings = int(getattr(self, 'timings', 0) or 0)
+        nb_run = int(getattr(self, 'nb_run', 1) or 1)
+
+        for born_path in born_dirs:
+            pdir = os.path.basename(born_path)
+            logger.info('Building check_fks in %s ...' % pdir)
+            misc.compile(['check_fks'], cwd=born_path)
+            logger.info('==== %s ====' % pdir)
+            # print the building-block values once (honouring --energy)
+            output = subprocess.Popen(
+                ['./check_fks', self._energy_arg(energy)],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cwd=born_path).communicate()[0]
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', errors='replace')
+            logger.info(output)
+            if timings > 0:
+                self._run_with_timings(born_path, energy, timings, nb_run)
+
+        if self.with_limits:
+            failed = [os.path.basename(p) for p in born_dirs
+                      if not self._run_limits(p)]
+            if failed:
+                from madgraph import MadGraph5Error
+                raise MadGraph5Error('Soft/collinear limit test FAILED in %s '
+                    '(see test_ME.log there)' % ', '.join(failed))
+
+    def _run_limits(self, born_path):
+        """build and run test_soft_col_limits; True if no check FAILED."""
+        pdir = os.path.basename(born_path)
+        logger.info('Building test_soft_col_limits in %s ...' % pdir)
+        misc.compile(['test_soft_col_limits'], cwd=born_path)
+        log = pjoin(born_path, 'test_ME.log')
+        with open(pjoin(born_path, 'test_ME_input.txt'), 'w') as fsock:
+            fsock.write(self.limits_input)
+        with open(pjoin(born_path, 'test_ME_input.txt')) as stdin, \
+                open(log, 'w') as stdout:
+            misc.call(['./test_soft_col_limits'], cwd=born_path, stdin=stdin,
+                      stdout=stdout, stderr=subprocess.STDOUT)
+        content = open(log, errors='replace').read()
+        if 'incoming j_fks, but fixed shat' in content:
+            # an initial-state FKS parton needs a varying momentum fraction,
+            # i.e. PDF beams; for incoming leptons ([QED]) that means lepton
+            # densities, which the default run_card does not set up
+            logger.warning('%s: soft/collinear limit test NOT RUN: an FKS '
+                'parton is in the initial state, which needs PDF beams '
+                '(set lpp1/lpp2 in Cards/run_card.dat). See %s' % (pdir, log))
             return True
-        
+        npass, nfail = content.count('PASSED'), content.count('FAILED')
+        if nfail or not npass:
+            logger.error('%s: soft/collinear limit test FAILED '
+                         '(%d passed, %d failed), see %s'
+                         % (pdir, npass, nfail, log))
+            return False
+        logger.info('%s: soft/collinear limit test passed (%d checks)'
+                    % (pdir, npass))
+        return True
+
+    @staticmethod
+    def _energy_arg(energy):
+        """command-line sqrt(s) for check_fks; '0' means built-in default."""
+        return ('%.16g' % energy) if energy and energy > 0 else '0'
+
+    def _run_with_timings(self, born_path, energy, nb_try, nb_run):
+        """time nb_try Born re-evaluations, averaged over nb_run repetitions."""
+        run_times = []
+        for _ in range(nb_run):
+            t0 = time.time()
+            subprocess.call(
+                ['./check_fks', self._energy_arg(energy), str(nb_try)],
+                cwd=born_path, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL)
+            run_times.append(time.time() - t0)
+        avg = sum(run_times) / len(run_times)
+        if len(run_times) > 1:
+            sigma = math.sqrt(sum((t - avg) ** 2 for t in run_times)
+                              / (len(run_times) - 1))
+        else:
+            sigma = 0.0
+        sep = '=' * 60
+        print('\n' + sep)
+        print('Timing summary (%s): %d Born evaluation(s)/run, %d run(s)'
+              % (os.path.basename(born_path), nb_try, nb_run))
+        print('  wall time per run: %.6f +/- %.6f s' % (avg, sigma))
+        print(sep + '\n')
+
+
+class AskMadMatrixBuild(extended_cmd.ControlSwitch):
+    """Switches for building/running the `output standalone` (madmatrix)
+    check_sa.exe: the backend, the P* subfolder and the number of make jobs."""
+
+    to_control = [('backend', 'Backend to compile check_sa.exe with'),
+                  ('subprocess', 'P* subfolder to build and run'),
+                  ('nb_core', 'Number of parallel make jobs')]
+
+    # same list (and order) as bin/generate_events
+    backends = ['auto', 'scalar', 'simd_128', 'simd_256', 'avx512y',
+                'simd_512', 'cuda', 'hip']
+
+    def __init__(self, question, line_args=[], mode=None, force=False,
+                                                                  *args, **opt):
+        self.me_dir = opt['mother_interface'].me_dir
+        self.subproc_dir = pjoin(self.me_dir, 'SubProcesses')
+        self.p_dirs = sorted(d for d in os.listdir(self.subproc_dir)
+                             if d.startswith('P') and
+                             os.path.isdir(pjoin(self.subproc_dir, d)))
+        super(AskMadMatrixBuild, self).__init__(self.to_control,
+                                    opt['mother_interface'], *args, **opt)
+
+    #
+    #   BACKEND
+    #
+    def get_allowed_backend(self):
+        """cuda/hip are only offered when their compiler is in the PATH
+        (madmatrix.mk looks for them the same way)"""
+
+        if hasattr(self, 'allowed_backend'):
+            return self.allowed_backend
+        self.allowed_backend = [b for b in self.backends
+                                if b not in ('cuda', 'hip')]
+        if misc.which('nvcc'):
+            self.allowed_backend.append('cuda')
+        if misc.which('hipcc'):
+            self.allowed_backend.append('hip')
+        return self.allowed_backend
+
+    def set_default_backend(self):
+        """reuse the backend of the last build (recorded by the makefile in
+        .check_sa_backend) so that a relaunch does not recompile"""
+
+        self.switch['backend'] = 'auto'
+        for d in self.p_dirs:
+            marker = pjoin(self.subproc_dir, d, '.check_sa_backend')
+            if os.path.exists(marker):
+                with open(marker) as fsock:
+                    last = fsock.read().strip()
+                if last in self.get_allowed_backend():
+                    self.switch['backend'] = last
+                return
+
+    #
+    #   SUBPROCESS
+    #
+    def get_allowed_subprocess(self):
+        return ['all'] + self.p_dirs
+
+    def set_default_subprocess(self):
+        self.switch['subprocess'] = 'all'
+
+    def print_options_subprocess(self):
+        others = [v for v in self.get_allowed_subprocess()
+                  if v != self.switch['subprocess']]
+        if len(others) > 3:
+            others = others[:3] + ['...']
+        return '|'.join(others)
+
+    #
+    #   NB_CORE
+    #
+    def get_allowed_nb_core(self):
+        ncpu = os.cpu_count() or 1
+        return [str(n) for n in sorted(set([1, 2, 4, 8, ncpu])) if n <= ncpu]
+
+    def check_value_nb_core(self, value):
+        return str(value).isdigit() and int(value) > 0
+
+    def set_default_nb_core(self):
+        nb_core = self.mother_interface.options.get('nb_core')
+        if not nb_core:
+            nb_core = self.get_allowed_nb_core()[-1]
+        self.switch['nb_core'] = str(nb_core)
+
+    def print_options_nb_core(self):
+        return 'any positive integer'
+
+
+class AskMadMatrixEditCard(common_run.AskforEditCardWithSwitch,
+                           AskMadMatrixBuild,
+                           common_run.AskforEditCard):
+    """Single question for `launch` of an `output standalone` directory: the
+    build switches and the edition of the param_card (same commands as for
+    standalone_fortran: set, path to a card, decay all auto, ...)."""
+
+    switch_class = AskMadMatrixBuild
+    always_cards = ['param_card.dat']
+    optional_cards = ['onia_card.dat']
+    switch_cards = []
+
+
+class MadMatrixLauncher(ExtLauncher):
+    """Launch the `output standalone` (madmatrix) check_sa.exe.
+
+    Everything runs in process (no bin/generate_events subprocess, which
+    stays for command-line use only): one question for the build switches
+    and the param_card, then make + check_sa.exe in each chosen P* folder."""
+
+    def __init__(self, cmd_int, running_dir, **options):
+        ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **options)
+        self.cards = ['param_card.dat']
+        self.switch = {}
+
+    def get_model(self):
+        """The model this output was generated with (SubProcesses/model.txt),
+        or the current one of the session if the output did not record it."""
+
+        current = getattr(self.cmd_int, '_curr_model', None)
+        model_file = pjoin(self.running_dir, 'SubProcesses', 'model.txt')
+        if not os.path.exists(model_file):
+            return current
+        with open(model_file) as fsock:
+            ref = fsock.readline().strip()
+        if not ref:
+            return current
+        try:
+            if current and current.get('modelpath+restriction') == ref:
+                return current
+        except Exception:
+            pass
+        import madgraph.models.import_ufo as import_ufo
+        try:
+            with misc.MuteLogger(['madgraph.model'], [50]):
+                return import_ufo.import_model(ref)
+        except Exception as error:
+            logger.warning('could not import the model %s of this output: %s',
+                           ref, error)
+            return current
+
+    def run(self):
+        """ask the build/card question, then build and run check_sa.exe"""
+
+        self.cmd_int.me_dir = self.running_dir
+        # the card question needs the output's model (auto widths, update
+        # dependent), which is not necessarily the one of the session
+        with misc.TMP_variable(self.cmd_int, '_curr_model', self.get_model()):
+            self.switch, question = self.cmd_int.ask('', '0', [],
+                                           path_msg='enter path',
+                                           ask_class=AskMadMatrixEditCard,
+                                           mode='fixed', timeout=0,
+                                           force=self.force,
+                                           return_instance=True)
+            if self.force:
+                # a forced ask returns without closing the question: run its
+                # final card check (auto widths, update dependent) ourselves
+                question.postcmd(True, '0')
+        self.launch_program()
+
+    def launch_program(self):
+        """make and run check_sa.exe (same logic as bin/generate_events)"""
+
+        backend = self.switch['backend']
+        sub_path = pjoin(self.running_dir, 'SubProcesses')
+        p_dirs = sorted(d for d in os.listdir(sub_path)
+                        if d.startswith('P') and
+                        os.path.isdir(pjoin(sub_path, d)))
+        if self.switch['subprocess'] != 'all':
+            p_dirs = [self.switch['subprocess']]
+
+        for d in p_dirs:
+            cur_path = pjoin(sub_path, d)
+            logger.info('[%s] Building %s', backend, d)
+            misc.compile(['BACKEND=%s' % backend, 'USEBUILDDIR=1'],
+                         cwd=cur_path, mode='cpp',
+                         nb_core=int(self.switch['nb_core']))
+            logger.info('[%s] Running %s/check_sa.exe matrix', backend, d)
+            try:
+                misc.call(['./check_sa.exe', 'matrix'], cwd=cur_path)
+            except KeyboardInterrupt:
+                break
 
 
 class aMCatNLOLauncher(ExtLauncher):
@@ -584,7 +966,10 @@ class aMCatNLOLauncher(ExtLauncher):
             usecmd = run_int.aMCatNLOCmd(me_dir=self.running_dir, options = self.cmd_int.options)
         
         #Check if some configuration were overwritten by a command. If so use it    
-        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+        set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')
+                   # an answer to an earlier launch's question is not a
+                   # setting of this prompt (extended_cmd.QuestionAnswer)
+                   and not extended_cmd.is_question_answer(l)]
         all_options = list(usecmd.options_configuration.keys()) +  list(usecmd.options_madgraph.keys()) + list(usecmd.options_madevent.keys())
         for line in set_cmd:
             arg = line.split()
@@ -694,7 +1079,10 @@ class MELauncher(ExtLauncher):
                 usecmd = ME.MadEventCmd(me_dir=self.running_dir, options=self.options, force_run=True)
                 usecmd.pass_in_web_mode()
             #Check if some configuration were overwritten by a command. If so use it    
-            set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')]
+            set_cmd = [l for l in self.cmd_int.history if l.strip().startswith('set')
+                       # an answer to an earlier launch's question is not a
+                       # setting of this prompt (extended_cmd.QuestionAnswer)
+                       and not extended_cmd.is_question_answer(l)]
             all_options = list(usecmd.options_configuration.keys()) +  list(usecmd.options_madgraph.keys()) + list(usecmd.options_madevent.keys())
             for line in set_cmd:
                 arg = line.split()
@@ -858,4 +1246,3 @@ class Pythia8Launcher(ExtLauncher):
 
 # old compatibility shortcut
 open_file = misc.open_file
-

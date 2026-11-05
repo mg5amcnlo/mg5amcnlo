@@ -75,7 +75,7 @@ class MG_diagram(diagram):
         self.order_in_level()
 
 
-        #self.define_twin() -> put in the definition of the desintegration
+        #self.define_twin() -> put in the definition of the disintegration
 
     #####################################################################
     #                  FUNCTION LINKED TO INIT                          #
@@ -104,9 +104,9 @@ class MG_diagram(diagram):
         #pattern to recognise
         new_config=re.compile(r'''^\s*\*\s*(?P<iconfig>\d+)\s+(?P<igraph>\d+)''')
         propa_des=re.compile(r'''^\s+                      #begin line
-                            (?P<propa>-?\d+)\s+         #desintegrated propa
-                            (?P<des1>-?\d+)\s+          #product of desintegration
-                            (?P<des2>-?\d+)\s+          #product of desintegration 2
+                            (?P<propa>-?\d+)\s+         #disintegrated propagator
+                            (?P<des1>-?\d+)\s+          #product of disintegration
+                            (?P<des2>-?\d+)\s+          #product of disintegration 2
                             (?P<mass>\w*)\s*          #text for the mass ot the part
                             (?P<width>\w*)\s*         #text for the width ot the part
                             (?P<channel>[ST]*)\s*         # S or T propagator
@@ -386,7 +386,7 @@ class MG_diagram(diagram):
                     out=self.check_decay(order_particle[i].des,decay_list[i].des)
                     if not out:
                         break
-                if i==len(order_particle)-1: #all suceed
+                if i==len(order_particle)-1: #all succeed
                     return order_particle    #return succeed info
 
         print('error 392')
@@ -460,7 +460,7 @@ class MG_diagram(diagram):
 
 
     def tag_unaligned(self,unaligned):
-        """ store information that this propagator cann't be generated following BW
+        """ store information that this propagator can't be generated following BW
             restore the other propagator
         """
 
@@ -473,7 +473,7 @@ class MG_diagram(diagram):
 
     def clear_solution(self):
         """
-           supress all data from the solution in order to restart a new solution possibility
+           suppress all data from the solution in order to restart a new solution possibility
         """
         self.ECS_sol=[]
         self.blob_content={}
@@ -521,7 +521,7 @@ class MG_diagram(diagram):
         #first find the lowest value of non-aligned intrinsic variable
         #secondly select those one and return(def=0) or put in solution(def=1)
 
-        #create list with autorized change of variable:
+        #create list with authorized change of variable:
         #at this point they are no C~B
         authorize_ecs=list(self.opt.ecs_on)
         if authorize_ecs.count('b') ^  authorize_ecs.count('c'):
@@ -674,7 +674,7 @@ class MG_diagram(diagram):
                 if free1!=lowest_neutrino[i].level and free2!=lowest_neutrino[j].level:
                     #this condition implies that they are (at least) one common propagator
                     if free1 != 0 and free2 != 0:
-                        #this condition check that the two neutrino are independant
+                        #this condition check that the two neutrino are independent
                         ECS_sol=ECS_sector(self,'e',[lowest_neutrino[i],lowest_neutrino[j]],total_propa-3)
                         ECS_list.append(ECS_sol)                   
         
@@ -749,7 +749,7 @@ class MG_diagram(diagram):
 
         return text
        except:
-               text='not supportted string in not full mode: organize_particle_content is needed fisrt'
+               text='not supported string in not full mode: organize_particle_content is needed fisrt'
                return text
        
        

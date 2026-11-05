@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -26,7 +26,6 @@ import re
 import shutil
 import sys
 import time
-from madgraph.interface.tutorial_text import output
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(root_path)
@@ -37,7 +36,7 @@ import aloha.aloha_lib as aloha_lib
 import aloha.aloha_object as aloha_object
 import aloha.aloha_parsers as aloha_parsers
 import aloha.aloha_fct as aloha_fct
-import models
+import madgraph.models as models
 try:
     import madgraph.iolibs.files as files
     import madgraph.various.misc as misc
@@ -59,7 +58,11 @@ ALOHAERROR = aloha.ALOHAERROR
 class AbstractRoutine(object):
     """ store the result of the computation of Helicity Routine
     this is use for storing and passing to writer """
-    
+
+    # builders of the merged multiple coupling routines, shared by all the
+    # outgoing of a given set of Lorentz structures (see get_combined_routine)
+    combined_builder = {}
+
     def __init__(self, expr, outgoing, spins, name, infostr, model, denom=None):
         """ store the information """
 
@@ -84,12 +87,138 @@ class AbstractRoutine(object):
     
     def add_combine(self, lor_list):
         """add a combine rule """
-        
+
         if lor_list not in self.combined:
             self.combined.append(lor_list)
 
+    def get_combined_routine(self, lor_names):
+        """Return the AbstractRoutine associated to the merged structure
+              Coup(1) * <structure of self> + Coup(i+1) * <structure of lor_names[i]>
+        i.e. the routine that a writer can output as a single subroutine (one
+        coupling argument per structure) instead of a wrapper calling each
+        single structure routine in turn.
+
+        The expression is built exactly like the one of a single coupling
+        routine, so the momenta, the propagator denominator and the temporary
+        variables are shared by all the structures.
+        Return None if such a merge is not possible (unknown Lorentz structure,
+        structures acting on different spins, loop routine, ...). In that case
+        the caller has to fall back on the wrapper form.
+        """
+
+        if not hasattr(self, 'combined_routine'):
+            self.combined_routine = {}
+
+        key = tuple(lor_names)
+        if key not in self.combined_routine:
+            try:
+                self.combined_routine[key] = self.compute_combined_routine(lor_names)
+            except Exception as error:
+                logger.debug('can not merge the routines %s (%s): %s',
+                             self.name, ','.join(lor_names), error)
+                self.combined_routine[key] = None
+
+        routine = self.combined_routine[key]
+        if routine is not None:
+            # the same merged routine is written once per tag set (the MP pass
+            # adds the 'MP' tag on the fly) -> keep the tag in sync.
+            routine.tag = list(self.tag)
+        return routine
+
+    def compute_combined_routine(self, lor_names):
+        """Compute the merged routine of get_combined_routine (no caching)"""
+
+        if self.model is None:
+            return None
+        if any(t.startswith('L') for t in self.tag):
+            # loop routines have their own (already explicit) combine mechanism
+            return None
+
+        l_lorentz = [getattr(self.model.lorentz, name)
+                     for name in (self.name,) + tuple(lor_names)]
+        if any(lor.spins != l_lorentz[0].spins for lor in l_lorentz[1:]):
+            return None
+
+        conjg = tuple(int(t[1:]) for t in self.tag if t.startswith('C'))
+        # the model is part of the key: two models can define different
+        # structures under the same Lorentz name
+        key = (self.model, tuple(lor.name for lor in l_lorentz), conjg)
+        if key in self.combined_builder:
+            builder = self.combined_builder[key]
+        else:
+            builder = CombineRoutineBuilder(l_lorentz, self.model)
+            if conjg:
+                builder = builder.define_conjugate_builder(conjg)
+            # the kernel is computed once and re-used for each outgoing
+            self.combined_builder[key] = builder
+
+        routine = builder.compute_routine(self.outgoing, list(self.tag))
+        # the merge does not change which particles are identical
+        routine.symmetries = list(self.symmetries)
+        routine.tag = list(self.tag)
+        return routine
+
+    def get_combined_routines(self, lor_names):
+        """Return the routines to sum -- one per Lorentz structure, this one
+        first -- when the structures do not act on the same spins, so that
+        get_combined_routine can not build a single expression for them.
+
+        This is the FD gauge situation: a massive vector and its Goldstone are
+        the very same wavefunction (components 1-4 and 5 of one object), so the
+        structures of a vertex mix V and S on a given leg. They still write
+        into one output and read one wavefunction per leg, so a writer can
+        assemble them into a single routine.
+        Return None when even that is not possible.
+        """
+
+        if not hasattr(self, 'combined_routines'):
+            self.combined_routines = {}
+
+        key = tuple(lor_names)
+        if key not in self.combined_routines:
+            try:
+                self.combined_routines[key] = self.compute_combined_routines(lor_names)
+            except Exception as error:
+                logger.debug('can not assemble the routines %s (%s): %s',
+                             self.name, ','.join(lor_names), error)
+                self.combined_routines[key] = None
+
+        routines = self.combined_routines[key]
+        if routines is not None:
+            for routine in routines:
+                routine.tag = list(self.tag)
+        return routines
+
+    def compute_combined_routines(self, lor_names):
+        """Compute the routines of get_combined_routines (no caching)"""
+
+        if self.model is None:
+            return None
+        if any(t.startswith('L') for t in self.tag):
+            return None
+
+        conjg = tuple(int(t[1:]) for t in self.tag if t.startswith('C'))
+        routines = [self]
+        for name in lor_names:
+            lorentz = getattr(self.model.lorentz, name)
+            if len(lorentz.spins) != len(self.spins):
+                # not the same legs: nothing to assemble them into
+                return None
+            key = (self.model, name, conjg)
+            if key in self.combined_builder:
+                builder = self.combined_builder[key]
+            else:
+                builder = AbstractRoutineBuilder(lorentz, self.model)
+                if conjg:
+                    builder = builder.define_conjugate_builder(conjg)
+                self.combined_builder[key] = builder
+            routines.append(builder.compute_routine(self.outgoing, list(self.tag)))
+        return routines
+
     def write(self, output_dir, language='Fortran', mode='self', combine=True, options=None, **opt):
         """ write the content of the object """
+        # Set loop_mode based on the tag of this specific routine
+        aloha.loop_mode = any(t.startswith('L') for t in self.tag)
         writer = aloha_writers.WriterFactory(self, language, output_dir, self.tag, options)
         text = writer.write(mode=mode, **opt)
         if combine:
@@ -335,7 +464,7 @@ in presence of majorana particle/flow violation"""
                     else:
                         massless = True
                         self.denominator = None
-                # 1D is a multiplication of standar propagator -> later
+                # 1D is a multiplication of standard propagator -> later
                 elif propa in [[],['1D']]:
                     massless = False
                     self.denominator = None
@@ -705,7 +834,7 @@ in presence of majorana particle/flow violation"""
 
 class CombineRoutineBuilder(AbstractRoutineBuilder):
     """A special builder for combine routine if needed to write those
-        explicitely.
+        explicitly.
     """
     def __init__(self, l_lorentz, model=None):
         """ initialize the run
@@ -724,7 +853,15 @@ class CombineRoutineBuilder(AbstractRoutineBuilder):
         self.outgoing = None
         self.lorentz_expr = []
         for i, lor in enumerate(l_lorentz):
-            self.lorentz_expr.append( 'Coup(%s) * (%s)' % (i+1, lor.structure))
+            structure = lor.structure
+            # AbstractRoutineBuilder.__init__ only expanded the formfactors of
+            # l_lorentz[0], and that expansion is overwritten here -> redo it
+            # for each structure entering the combination.
+            if getattr(lor, 'formfactors', None):
+                for formf in lor.formfactors:
+                    pat = re.compile(r'\b%s\b' % formf.name)
+                    structure = pat.sub('(%s)' % formf.value, structure)
+            self.lorentz_expr.append( 'Coup(%s) * (%s)' % (i+1, structure))
         self.lorentz_expr = ' + '.join(self.lorentz_expr)
         self.routine_kernel = None
         self.contracted = {}
@@ -774,7 +911,22 @@ class AbstractALOHAModel(dict):
         
         if write_dir:
             self.main(write_dir,format=format)
-            
+
+    @classmethod
+    def from_model(cls, model, **opts):
+        """Build the AbstractALOHAModel associated to an already loaded
+        madgraph.core.base_objects.Model. The model name alone is not enough:
+        it can carry a restriction suffix ('sm-no_b_mass') and it does not say
+        where the model was imported from, so a model outside of MG5DIR/models
+        would not be found at all. Use the directory the model was loaded from
+        whenever it is still available."""
+
+        try:
+            model_name = model.get('modelpath')
+        except Exception:
+            model_name = model.get('name')
+        return cls(model_name, **opts)
+
     def main(self, output_dir, format='Fortran'):
         """ Compute if not already compute. 
             Write file in models/MY_MODEL/MY_FORMAT.
@@ -1081,7 +1233,7 @@ class AbstractALOHAModel(dict):
                                          routines=routines)
             
         
-        # Build mutiple lorentz call
+        # Build multiple lorentz call
         for list_l_name, tag, outgoing in data:
             if len(list_l_name) ==1:
                 continue
@@ -1104,7 +1256,15 @@ class AbstractALOHAModel(dict):
                 l_lorentz = []
                 for l_name in list_l_name: 
                     l_lorentz.append(eval('self.model.lorentz.%s' % l_name))
-                builder = CombineRoutineBuilder(l_lorentz)
+
+                if any(lor.spins != l_lorentz[0].spins for lor in l_lorentz[1:]):
+                    lorentzname = list_l_name[0]
+                    lorentzname += ''.join(tag)
+                    if (lorentzname, outgoing) in self:
+                        self[(lorentzname, outgoing)].add_combine(list_l_name[1:])
+                    continue
+
+                builder = CombineRoutineBuilder(l_lorentz, self.model)
                                
                 for conjg in request[list_l_name[0]]:
                     #ensure that routines are in rising order (for symetries)
@@ -1127,7 +1287,7 @@ class AbstractALOHAModel(dict):
                             
     def compute_aloha(self, builder, symmetry=None, routines=None, tag=[]):
         """ define all the AbstractRoutine linked to a given lorentz structure
-        symmetry authorizes to use the symmetry of anoter lorentz structure.
+        symmetry authorizes to use the symmetry of another lorentz structure.
         routines to define only a subset of the routines."""
 
         name = builder.name
@@ -1147,7 +1307,8 @@ class AbstractALOHAModel(dict):
             realname = name + ''.join(tag)
             if (realname, outgoing) in self:
                 continue # already computed
-            
+            # Set loop_mode correctly for each routine based on its tag
+            aloha.loop_mode = any(t.startswith('L') for t in tag)
             if symmetric:
                 self.get(realname, symmetric).add_symmetry(outgoing)
             else:
@@ -1158,7 +1319,7 @@ class AbstractALOHAModel(dict):
 
     def compute_aloha_without_kernel(self, builder, symmetry=None, routines=None):
         """define all the AbstractRoutine linked to a given lorentz structure
-        symmetry authorizes to use the symmetry of anoter lorentz structure.
+        symmetry authorizes to use the symmetry of another lorentz structure.
         routines to define only a subset of the routines. 
         Compare to compute_aloha, each routines are computed independently.
         """
@@ -1197,7 +1358,7 @@ class AbstractALOHAModel(dict):
 #               pjoin(output_dir, 'additional_aloha_function.f') )
 #            else:
 #                logger.warning('''Some function present in the lorentz structure are 
-#                not recognized. Please edit the code to add the defnition of such function.''')
+#                not recognized. Please edit the code to add the definition of such a function.''')
 #                logger.info('list of missing fct: %s .' % \
 #                            ','.join([a[0] for a in aloha_lib.KERNEL.unknow_fct]))
 #        
@@ -1442,7 +1603,6 @@ if '__main__' == __name__:
     stop = time.time()
     logger.info('done in %s s' % (stop-start))
   
-
 
 
 

@@ -30,7 +30,7 @@ c      call hbook1(1,'s hat',100,0.,500.,0.)
 
       subroutine graph_point(p,dwgt)
 c***************************************************************************
-c     fill historgrams
+c     fill histograms
 c***************************************************************************
       implicit none
 c

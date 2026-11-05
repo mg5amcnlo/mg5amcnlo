@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: 0BSD
+# Numerically group the generated representatives of the flavour-blind
+# p p > j j j j artifact and update its process-groups.json in place.
+
+schema_version = 1
+action = "group-processes"
+
+[process]
+# Run cards use the schema default "none"; request the numerical analysis.
+analyze_process_groups = "numerical"
+only_unit_multiplier = false
+consider_charge_conjugation = true
+
+[evaluation]
+artifact = "artifacts/pp_4j_flavor_blind"
+
+[output]
+format = "human"
+color = "auto"
+progress = "auto"
+log_level = "info"

@@ -177,9 +177,9 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         TYPE(B0F_NODE),POINTER::ITEM1
         INTEGER::ICOMP
         FIND=.FALSE.
-        NULLIFY(ITEM%%PARENT)
-        NULLIFY(ITEM%%LEFT)
-        NULLIFY(ITEM%%RIGHT)
+        NULLIFY(ITEM%PARENT)
+        NULLIFY(ITEM%LEFT)
+        NULLIFY(ITEM%RIGHT)
         IF(.NOT.ASSOCIATED(HEAD))THEN
           HEAD => ITEM
           RETURN
@@ -188,24 +188,24 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         DO
         ICOMP=B0F_NODE_COMPARE(ITEM,ITEM1)
         IF(ICOMP.LT.0)THEN
-          IF(.NOT.ASSOCIATED(ITEM1%%LEFT))THEN
-            ITEM1%%LEFT => ITEM
-            ITEM%%PARENT => ITEM1
+          IF(.NOT.ASSOCIATED(ITEM1%LEFT))THEN
+            ITEM1%LEFT => ITEM
+            ITEM%PARENT => ITEM1
             EXIT
           ELSE
-            ITEM1 => ITEM1%%LEFT
+            ITEM1 => ITEM1%LEFT
           ENDIF
         ELSEIF(ICOMP.GT.0)THEN
-          IF(.NOT.ASSOCIATED(ITEM1%%RIGHT))THEN
-            ITEM1%%RIGHT => ITEM
-            ITEM%%PARENT => ITEM1
+          IF(.NOT.ASSOCIATED(ITEM1%RIGHT))THEN
+            ITEM1%RIGHT => ITEM
+            ITEM%PARENT => ITEM1
             EXIT
           ELSE
-            ITEM1 => ITEM1%%RIGHT
+            ITEM1 => ITEM1%RIGHT
           ENDIF
         ELSE
           FIND=.TRUE.
-          ITEM%%VALUE=ITEM1%%VALUE
+          ITEM%VALUE=ITEM1%VALUE
           EXIT
         ENDIF
         ENDDO
@@ -215,11 +215,11 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         INTEGER FUNCTION B0F_NODE_COMPARE(ITEM1,ITEM2) RESULT(RES)
         IMPLICIT NONE
         TYPE(B0F_NODE),POINTER,INTENT(IN)::ITEM1,ITEM2
-        RES=COMPLEX_COMPARE(ITEM1%%P2,ITEM2%%P2)
+        RES=COMPLEX_COMPARE(ITEM1%P2,ITEM2%P2)
         IF(RES.NE.0)RETURN
-        RES=COMPLEX_COMPARE(ITEM1%%M22,ITEM2%%M22)
+        RES=COMPLEX_COMPARE(ITEM1%M22,ITEM2%M22)
         IF(RES.NE.0)RETURN
-        RES=COMPLEX_COMPARE(ITEM1%%M12,ITEM2%%M12)
+        RES=COMPLEX_COMPARE(ITEM1%M12,ITEM2%M12)
         RETURN
         END
 
@@ -320,19 +320,19 @@ C       trajectory method as advocated in arXiv:1804.10017 (Eq.(E.47))
             INIT=1
           ENDIF
           ALLOCATE(ITEM)
-          ITEM%%P2=P2
-          ITEM%%M12=M12
-          ITEM%%M22=M22
+          ITEM%P2=P2
+          ITEM%M12=M12
+          ITEM%M22=M22
           FIND=.FALSE.
           CALL B0F_SEARCH(ITEM,B0F_BT,FIND)
           IF(FIND)THEN
-            B0F=ITEM%%VALUE
+            B0F=ITEM%VALUE
             DEALLOCATE(ITEM)
             RETURN
           ELSE
             LOGTERMS=LOG_TRAJECTORY(100,P2,M12,M22)
             B0F=-LOG(P2/M22)+LOGTERMS
-            ITEM%%VALUE=B0F
+            ITEM%VALUE=B0F
             RETURN
           ENDIF
         ELSE
@@ -704,9 +704,9 @@ C       segments from -DABS(tiny*Ga) to Ga
           TYPE(MP_B0F_NODE),POINTER::ITEM1
           INTEGER::ICOMP
           FIND=.FALSE.
-          NULLIFY(ITEM%%PARENT)
-          NULLIFY(ITEM%%LEFT)
-          NULLIFY(ITEM%%RIGHT)
+          NULLIFY(ITEM%PARENT)
+          NULLIFY(ITEM%LEFT)
+          NULLIFY(ITEM%RIGHT)
           IF(.NOT.ASSOCIATED(HEAD))THEN
             HEAD => ITEM
             RETURN
@@ -715,24 +715,24 @@ C       segments from -DABS(tiny*Ga) to Ga
           DO
           ICOMP=MP_B0F_NODE_COMPARE(ITEM,ITEM1)
           IF(ICOMP.LT.0)THEN
-            IF(.NOT.ASSOCIATED(ITEM1%%LEFT))THEN
-              ITEM1%%LEFT => ITEM
-              ITEM%%PARENT => ITEM1
+            IF(.NOT.ASSOCIATED(ITEM1%LEFT))THEN
+              ITEM1%LEFT => ITEM
+              ITEM%PARENT => ITEM1
               EXIT
             ELSE
-              ITEM1 => ITEM1%%LEFT
+              ITEM1 => ITEM1%LEFT
             ENDIF
           ELSEIF(ICOMP.GT.0)THEN
-            IF(.NOT.ASSOCIATED(ITEM1%%RIGHT))THEN
-              ITEM1%%RIGHT => ITEM
-              ITEM%%PARENT => ITEM1
+            IF(.NOT.ASSOCIATED(ITEM1%RIGHT))THEN
+              ITEM1%RIGHT => ITEM
+              ITEM%PARENT => ITEM1
               EXIT
             ELSE
-              ITEM1 => ITEM1%%RIGHT
+              ITEM1 => ITEM1%RIGHT
             ENDIF
           ELSE
             FIND=.TRUE.
-            ITEM%%VALUE=ITEM1%%VALUE
+            ITEM%VALUE=ITEM1%VALUE
             EXIT
           ENDIF
           ENDDO
@@ -742,11 +742,11 @@ C       segments from -DABS(tiny*Ga) to Ga
           INTEGER FUNCTION MP_B0F_NODE_COMPARE(ITEM1,ITEM2) RESULT(RES)
           IMPLICIT NONE
           TYPE(MP_B0F_NODE),POINTER,INTENT(IN)::ITEM1,ITEM2
-          RES=MP_COMPLEX_COMPARE(ITEM1%%P2,ITEM2%%P2)
+          RES=MP_COMPLEX_COMPARE(ITEM1%P2,ITEM2%P2)
           IF(RES.NE.0)RETURN
-          RES=MP_COMPLEX_COMPARE(ITEM1%%M22,ITEM2%%M22)
+          RES=MP_COMPLEX_COMPARE(ITEM1%M22,ITEM2%M22)
           IF(RES.NE.0)RETURN
-          RES=MP_COMPLEX_COMPARE(ITEM1%%M12,ITEM2%%M12)
+          RES=MP_COMPLEX_COMPARE(ITEM1%M12,ITEM2%M12)
           RETURN
           END
 
@@ -848,19 +848,19 @@ C       segments from -DABS(tiny*Ga) to Ga
               INIT=1
             ENDIF
             ALLOCATE(ITEM)
-            ITEM%%P2=P2
-            ITEM%%M12=M12
-            ITEM%%M22=M22
+            ITEM%P2=P2
+            ITEM%M12=M12
+            ITEM%M22=M22
             FIND=.FALSE.
             CALL MP_B0F_SEARCH(ITEM, B0F_BT, FIND)
             IF(FIND)THEN
-              MP_B0F=ITEM%%VALUE
+              MP_B0F=ITEM%VALUE
               DEALLOCATE(ITEM)
               RETURN
             ELSE
               LOGTERMS=MP_LOG_TRAJECTORY(100,P2,M12,M22)
               MP_B0F=-LOG(P2/M22)+LOGTERMS
-              ITEM%%VALUE=MP_B0F
+              ITEM%VALUE=MP_B0F
               RETURN
             ENDIF
           ELSE

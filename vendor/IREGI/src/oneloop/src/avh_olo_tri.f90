@@ -592,7 +592,7 @@ contains
    subroutine trif3HV( rslt ,pp,mm ,ap ,smax ,lam )
 !*******************************************************************
 ! Finite 1-loop scalar 3-point function with all internal masses
-! non-zero. Based on the fomula of 't Hooft & Veltman
+! non-zero. Based on the formula of 't Hooft & Veltman
 !*******************************************************************
    include 'avh_olo_complex.h90'
      ,intent(out) :: rslt(0:2)
@@ -756,7 +756,7 @@ contains
      if (arez*EPSN*EPSN.le.aimz*neglig(prcpar).and.aimz.le.arez*neglig(prcpar)) then
 ! Here, the value of Imz is just numerical noise due to cancellations.
 ! Realize that |Imz|~eps^2 indicates there were no such cancellations,
-! so the lower limit is needed in in the if-statement!
+! so the lower limit is needed in the if-statement!
        zz = (rez + cc)/aa
      else
        zz = (zz + cc)/aa

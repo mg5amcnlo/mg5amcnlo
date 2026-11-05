@@ -47,7 +47,7 @@ c     iseed can be between 0 and 30081*30081
 c     before pattern repeats
 c
 c     TJS 12/3/2010
-c     multipied iseed to give larger values more likely to make change
+c     multiplied iseed to give larger values more likely to make change
 c     get offset for multiple runs of single process
 c
 c     TJS 18/6/2012

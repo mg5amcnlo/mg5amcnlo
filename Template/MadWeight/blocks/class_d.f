@@ -209,7 +209,7 @@ c
 c---------------------------------------------------------------------------------------------------     
 c      Now, the variables p1x,p1y,p1z,p2x,p2y,p2z
 c      can be expressed as a combili of E1,E2 
-c      + an independant term (=ti)
+c      + an independent term (=ti)
 c
 c      for example,
 c           p1x = p1x_ti + p1x_E1 * E1 + p1x_E2 * E2       

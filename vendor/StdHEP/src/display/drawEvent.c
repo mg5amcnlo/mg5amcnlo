@@ -74,7 +74,7 @@ static void detectorToSegment(SpaceWindow *window, SpinSegment *segdt,
 ** 	For Color display,  the charged leptons have the three fundamental 
 ** 	RGB colors: electron is blue, muon is green and tau is red. 
 ** 	The neutrinos are gray. The quarks are characterised a mixture
-** 	where one componenet of RGB is set to 0, the other two are 
+** 	where one component of RGB is set to 0, the other two are
 ** 	half of the full intensity.  For instance, the up quark has 
 ** 	no blue compoenet, and is half green, half red.
 ** 	The Weak bosons and the gluons are made of a disgusting 
@@ -201,7 +201,7 @@ void SetPinVertex()
 **			transverse momentum. This trick greatly enhances 
 **			the "high Pt" Physics in the event.
 **
-** BY_RAPIDITY: 	The length of the vector is propotional to the rapidity 
+** BY_RAPIDITY: 	The length of the vector is proportional to the rapidity
 **			of the particle, as defined in the PDG bible.
 **
 ** BY_PSEUDORAPIDITY:	The length of the vector is proportional to the pseudo
@@ -223,7 +223,7 @@ void DrawEvent(StdHepWindow *window, int setScale)
     SpaceVertex *pinv, *v;
     char nameText[MAXCHAR_HEPNAM], statText[255];
     XmString cStatText;
-    /* There is a very wierd Ultrix compiler problem concerning this statement:*/
+    /* There is a very weird Ultrix compiler problem concerning this statement:*/
     /*    PhaseEvent *event; */
     static char *unitText[6] = {"p", "Pt", "Eta", "Eta", "value", "Eta-Pt"};
     XmFontList fontList;

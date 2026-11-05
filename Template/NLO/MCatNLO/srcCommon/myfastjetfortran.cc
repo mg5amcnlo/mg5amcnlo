@@ -143,7 +143,7 @@ void fastjetppgenkt_etamax_(const double * p, const int & npart,
 void fastjetppgenkt_(const double * p, const int & npart,                   
                      const double & R, const double & jetptmin,
                      const double & palg, double * f77jets, int & njets, int * whichjet) {
-    // jsut call fastjetppgenkt_etamax passing etamax=-1.
+    // just call fastjetppgenkt_etamax passing etamax=-1.
     double etamax = -1.;
     fastjetppgenkt_etamax_(p,npart,R,jetptmin,etamax,palg,f77jets,njets,whichjet);
 }

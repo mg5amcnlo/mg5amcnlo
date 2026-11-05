@@ -1,4 +1,4 @@
-MadGraph5_aMC@NLO (MadEvent)
+MadGraph7 (MadEvent)
 arXiv:1405.0301
 
 
@@ -74,7 +74,7 @@ B) Running in cluster or multicore mode:
 
 In order to automatically run in cluster or multicore mode, please set
 the flag run_mode in the Cards/me5_configuration.txt file (or in the
-input/mg5_configuration.txt file before you generate your process):
+input/mg7_configuration.txt file before you generate your process):
 
 # Default Running mode 
 # 0: single machine/ 1: cluster / 2: multicore
@@ -130,7 +130,7 @@ E) How to prevent automatic opening of the crossx.html page:
 Edit the file ./Cards/me5_configuration.txt and set
 the option automatic_html_opening to `False`.
 You can also edit the MG5 configuration card
-input/mg5_configuration.txt
+input/mg7_configuration.txt
 in order to have this value on False by default for all subsequently 
 generated processes.
 
@@ -139,7 +139,7 @@ F) How to run with a LHAPDF set
 -------------------------------
 
 1) Install lhapdf on your computer
-2) If not install globally, modify the file input/mg5_configuration.txt
+2) If not install globally, modify the file input/mg7_configuration.txt
 and specify the path to the script lhpadfconfig.
 3) in the run_card use the following parameter
  'lhapdf'    = pdlabel     ! PDF set

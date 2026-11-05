@@ -6,7 +6,7 @@ mw_run  bw_cut          logical  T
 mw_run  histo           logical F                       # put one creates histogram for value defined in topgraph.f
 mw_run  histo_by_events logical F                       # decide if we create the histograms for each events
 mw_run  nb_event_by_node integer  10                    # decide how many events weight are computed in a single cluster submission
-mw_run  event_packing    integer  20                    # the input event files will be splitted in event_packing*nb_event_by_node 
+mw_run  event_packing    integer  20                    # the input event files will be split in event_packing*nb_event_by_node
 mw_run  log_level        string   'channel'             # from low level of log to extensive log: weight, permutation, channel, iteration, full     
 mw_run  nwa              float    0.1                   # width below NWA is used instead of performing the actual integrals
 mw_run  integrator       integer  0                   # default integrator method (0/1 -> vegas/mint)
@@ -20,8 +20,8 @@ mw_parameter 2    logical 0                  # put on 1 to add new param_card.da
 
 mw_perm  permutation    logical T                       # make the permutation between identical particles/jets
 mw_perm  bjet_is_jet    logical T                       #consider bjet like normal jet for permutation
-mw_perm  bjet_is_jet_for_selection  logical mw_perm@@bjet_is_jet  #don't use btagging for selceting events (follow precedent rules)
-mw_perm  preselect      string   'default'              # How to pre-select permutation (None/default/path)
+mw_perm  bjet_is_jet_for_selection  logical mw_perm@@bjet_is_jet  #don't use btagging for selecting events (follow precedent rules)
+mw_perm  preselect      string   'default'              # How to preselect permutation (None/default/path)
 mw_perm  min_perm_cut   float    5e-4                   # permutation to remove if relative weight lower than
 mw_perm  combine_mode    integer 1        # how to combine the permutation 1: average
                                           #                                2: first permutation 
@@ -29,9 +29,9 @@ mw_perm  combine_mode    integer 1        # how to combine the permutation 1: av
 mw_perm  montecarlo     logical T         # Perform the MC over permutation or not...
 
        
-mw_gen     1         integer 1            # choose which propagator to allign in ECS:
+mw_gen     1         integer 1            # choose which propagator to align in ECS:
                                 # 0: favours the  BW at the very end of the decay chain
-                                # 1: favours the thinest BW
+                                # 1: favours the thinnest BW
 mw_gen     2         integer 1            # Same condition but for blobs
 mw_gen     3         integer 4            # maximal multiplicity for ECS sector
 # Preference in blob generation (If more than one "True", we will perform a multi-channel techniques)

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -110,7 +110,6 @@ status_template = """
         <TD nowrap ROWSPAN=2> %(tag_name)s </TD>
         <TD nowrap ROWSPAN=2> <a href="./Cards/param_card.dat">param_card</a><BR>
                     <a href="./Cards/run_card.dat">run_card</a><BR>
-                    %(plot_card)s
                     %(pythia_card)s
                     %(pgs_card)s
                     %(delphes_card)s
@@ -432,10 +431,6 @@ class AllResults(dict):
                 status_dict['results'] = """<A HREF="./HTML/%(run_name)s/results.html">%(cross).4g <font face=symbol>&#177;</font> %(error).4g (%(unit)s)</A>""" % status_dict
             else:
                 status_dict['results'] = "No results yet"
-            if exists(pjoin(self.path, 'Cards', 'plot_card.dat')):
-                status_dict['plot_card'] = """ <a href="./Cards/plot_card.dat">plot_card</a><BR>"""
-            else:
-                status_dict['plot_card'] = ""
             if exists(pjoin(self.path, 'Cards', 'pythia_card.dat')):
                 status_dict['pythia_card'] = """ <a href="./Cards/pythia_card.dat">pythia_card</a><BR>"""
             else:

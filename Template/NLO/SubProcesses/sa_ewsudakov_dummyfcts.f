@@ -22,7 +22,7 @@
       subroutine ewsudakov_f77(p_born_in, gstr_in, results)
       use fks_phase_space_data, only: p_born
 c**************************************************************************
-c     This is the driver for the whole calulation
+c     This is the driver for the whole calculation
 c**************************************************************************
       implicit none
 C arguments

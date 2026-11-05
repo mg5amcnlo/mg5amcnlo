@@ -1,22 +1,23 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
+"""A user friendly command line interface to access all MadGraph7 features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
 from __future__ import absolute_import
+import copy
 import os
 import shutil
 import time
@@ -93,10 +94,19 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_add(self,args)
     
-    def check_output(self, args, default='standalone'):
+    def check_output(self, args, default='standalone_fortran'):
         """ Check the arguments of the output command in the context
         of the Loop interface."""
-       
+
+        # Elsewhere `standalone` names the MadMatrix (C++/CUDA) export, which
+        # MadLoop does not support. Here it is accepted as an alias for
+        # `standalone_fortran`, the MadLoop standalone output, so that
+        # `output standalone` keeps working in the ML5 interface. Without this
+        # the generic check_output would not recognise it as a format and would
+        # silently use it as the output *path*.
+        if args and args[0] == 'standalone':
+            args[0] = 'standalone_fortran'
+
         mg_interface.MadGraphCmd.check_output(self,args, default=default)
 
         if self._export_format not in self.supported_ML_format:
@@ -282,13 +292,13 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         logger.debug('Process difficulty estimation: %d'%proc_diff)
         if proc_diff >= difficulty_threshold:
             msg = """
-  The %s you attempt to generate appears to be of challenging difficulty, but it will be tried anyway. If you have successfully studied it with MadGraph5_aMC@NLO, please report it.
+  The %s you attempt to generate appears to be of challenging difficulty, but it will be tried anyway. If you have successfully studied it with MadGraph7, please report it.
 """
             logger.warning(msg%proc.nice_string().replace('Process:','process'))
 
         if proc['perturbation_couplings'] and proc['orders'] and not proc['squared_orders']:
             if any(val not in [0,99] for val in proc['orders'].values()):
-                message = "Potentially ambigious syntax detected. Note that the syntax of paper 1804.10017 (used in 3.0.x) is not used anymore (since version 3.1.0).\n" +\
+                message = "Potentially ambiguous syntax detected. Note that the syntax of paper 1804.10017 (used in 3.0.x) is not used anymore (since version 3.1.0).\n" +\
                     'If you want to follow the syntax of that paper, you can just replace "QED" by "aEW" and "QCD" by "aS".\n' +\
                     'More information here: http://amcatnlo.cern.ch/co.htm\n'
                 if not self.options['acknowledged_v3.1_syntax']:
@@ -301,21 +311,45 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
     def validate_model(self, loop_type='virtual',coupling_type=['QCD'], stop=True):
         """ Upgrade the model sm to loop_sm if needed """
 
-        # Allow to call this function with a string instead of a list of 
+        # Allow to call this function with a string instead of a list of
         # perturbation orders.
         if isinstance(coupling_type,str):
             coupling_type = [coupling_type,]
 
+        # Everything below assumes a model. [virt=]/[real=] get one from
+        # check_generate before we are called, but master_interface calls us
+        # directly for [noborn=], ahead of create_loop_induced's check_add.
+        if not self._curr_model:
+            logger.info("No model currently active, so we import the Standard Model")
+            self.do_import('model sm')
+
+        active_interface = getattr(self, 'current_interface', None)
+
 ##        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
 ##            c = ' '.join(coupling_type)
-##            raise self.InvalidCmd('MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c))
+##            raise self.InvalidCmd('MadGraph7 can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c))
+        if self._curr_model.merged_particles:
+            logger.debug('Unmerge particles for loop computations')
+            self.exec_cmd('set apply_flavor_grouping False', precmd=False)
+            assert self.options['apply_flavor_grouping'] == False
+            model_name = self._curr_model.get('name')
+            # Preserve user-defined multiparticles: reloading the model triggers
+            # add_default_multiparticles which auto-removes the photon from p/j
+            # when the plain (non-loop) model has no QED perturbation couplings.
+            # Since this reload is an internal NLO operation (not a user model
+            # switch), all previously valid multiparticle definitions must survive.
+            saved_multiparticles = copy.deepcopy(self._multiparticles)
+            self.exec_cmd(" import model %s" % (model_name), precmd=False)
+            if active_interface and hasattr(self, 'change_principal_cmd') and \
+                        getattr(self, 'current_interface', None) != active_interface:
+                self.change_principal_cmd(active_interface)
+            self._multiparticles = saved_multiparticles
         
-
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
            any((coupl not in self._curr_model['perturbation_couplings']) \
            for coupl in coupling_type):
-            if loop_type.startswith('real') or loop_type == 'LOonly':
+            if loop_type.startswith('real') or loop_type == 'LOonly' and self._curr_model:
                 if loop_type == 'real':
                     logger.info(\
                       "Beware that real corrections are generated from a tree-level model.")
@@ -345,16 +379,19 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                         add_on = 'qcd_qed_'
                     else:
                         raise MadGraph5Error(
-                          "The pertubation coupling cannot be '%s'"\
+                          "The perturbation coupling cannot be '%s'"\
                                     %str(coupling_type)+" in SM loop processes")
 
-                    logger.info("MG5_aMC now loads 'loop_%s%s'."%(add_on,model_name))
+                    logger.info("MadGraph7 now loads 'loop_%s%s'."%(add_on,model_name))
 
                     #import model with correct treatment of the history
-                    self.history.move_to_last('generate')
-                    last_command = self.history[-1]
-                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=True)
-                    self.history.append(last_command)
+                    #self.history.move_to_last('generate')
+                    #last_command = self.history[-1]
+                    self.exec_cmd(" import model loop_%s%s" % (add_on,model_name), precmd=False)
+                    if active_interface and hasattr(self, 'change_principal_cmd') and \
+                        getattr(self, 'current_interface', None) != active_interface:
+                        self.change_principal_cmd(active_interface)
+                    #self.history.append(last_command)
                 elif stop:
                     raise self.InvalidCmd(
                       "The model %s cannot handle loop processes"%model_name)    
@@ -372,7 +409,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
 
 class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
           
-    supported_ML_format = ['standalone', 'standalone_rw', 'matchbox'] 
+    supported_ML_format = ['standalone_fortran', 'standalone_rw', 'matchbox'] 
     
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
@@ -395,7 +432,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         self._curr_amps = diagram_generation.AmplitudeList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._v4_export_formats = []
-        self._export_formats = [ 'matrix', 'standalone' ]
+        self._export_formats = [ 'matrix', 'standalone_fortran' ]
         self._nlo_modes_for_completion = ['virt']
         self.validate_model()
         # Set where to look for CutTools installation.
@@ -485,11 +522,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                      noclean, output_type=output_type, group_subprocesses=False,
                      cmd_options=line_options)
 
-        if self._export_format in ['standalone', 'matchbox']:
+        if self._export_format in ['standalone_fortran', 'matchbox']:
             self._curr_exporter.copy_template(self._curr_model)
 
         if self._export_format == "standalone_rw":
-            self._export_format = "standalone"
+            self._export_format = "standalone_fortran"
             self._curr_exporter.copy_template(self._curr_model)
             self._export_format = "standalone_rw"
 
@@ -572,7 +609,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             elif value == 'local':
                 ## LOCAL INSTALLATION OF NINJA/COLLIER
                     logger.info(
-"""MG5aMC will now install the loop reduction tool '%(p)s' from the local offline installer.
+"""MadGraph7 will now install the loop reduction tool '%(p)s' from the local offline installer.
 Use the command 'install $(p)s' if you want to update to the latest online version.
 This installation can take some time but only needs to be performed once.""" %{'p': key},'$MG:color:GREEN')
                     additional_options = ['--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','%s.tar.gz' % key)]
@@ -583,12 +620,12 @@ This installation can take some time but only needs to be performed once.""" %{'
                         self.do_install(key,paths={'HEPToolsInstaller':
                                 pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
                         additional_options=additional_options)
-                    except self.InvalidCmd:
+                    except (self.InvalidCmd, FileNotFoundError):
                             logger.warning(
-"""The offline installation of %(p)s was unsuccessful, and MG5aMC disabled it.
+"""The offline installation of %(p)s was unsuccessful, and MadGraph7 disabled it.
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install %(p)s' or install it on your
-own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key})
+own and set the path to its library in the MadGraph7 option '%(p)s'.""" % {'p': key})
                             self.exec_cmd("set %s ''" % key)
                             self.exec_cmd('save options %s' % key)
             
@@ -613,8 +650,9 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
-        if not self._curr_helas_model:
-            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
+        # Always use a new writer: the one of a previous output caches calls
+        # formatted for that exporter (e.g. fk_ widths of madevent/standalone_rw)
+        self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before exporting"""
 
@@ -664,7 +702,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
         matrix_elements = \
                         self._curr_matrix_elements.get_matrix_elements()
         
-        # Fortran MadGraph5_aMC@NLO Standalone
+        # Fortran MadGraph7 Standalone
         if self._export_format in self.supported_ML_format:
             for unique_id, me in enumerate(matrix_elements):
                 calls = calls + \
@@ -711,12 +749,12 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 logger.info("Wrote files for %d OPP calls" % \
                             (calls))
 
-        # Replace the amplitudes with the actual amplitudes from the
-        # matrix elements, which allows proper diagram drawing also of
-        # decay chain processes
-        self._curr_amps = diagram_generation.AmplitudeList(\
-               [me.get('base_amplitude') for me in \
-                matrix_elements])
+        # Keep self._curr_amps as generated: the 'base_amplitude' of a
+        # LoopHelasMatrixElement is rebuilt from its helas diagrams, without
+        # the loop tags and structure repository, so it cannot regenerate the
+        # matrix element of a later output (e.g. after 'set loop_color_flows').
+        # The tree-level replacement only serves decay chains, which loop
+        # processes do not support.
 
     def ML5finalize(self, nojpeg, online = False):
         """Copy necessary sources and output the ps representation of 
@@ -839,6 +877,10 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
             self.validate_model()
 
         loop_filter=None
+        diagram_filter=False
+        # filter options, given back to each process of a multiprocess below
+        filter_options = [a for a in args if a.startswith('--loop_filter=')
+                          or a.startswith('--diagram_filter')]
         if args[0] == 'process':
 
             # Extract potential loop_filter          
@@ -853,6 +895,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 if not isinstance(self, extended_cmd.CmdShell):
                     raise self.InvalidCmd("loop_filter is not allowed in web mode")
             args = [a for a in args if not a.startswith('--loop_filter=')]
+            diagram_filter = self.extract_diagram_filter(args)
 
             # Rejoin line
             line = ' '.join(args[1:])
@@ -874,6 +917,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
                 command = "add process %s" % base_proc.nice_string(prefix=False, print_weighted=True)
                 if '@' not in command:
                     command += ' @%s'  % base_proc.get('id')
+                command = ' '.join([command] + filter_options)
                 try:
                     self.exec_cmd(command)
                     succes += 1
@@ -899,7 +943,7 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
 
         cpu_time1 = time.time()
 
-        # Decide here wether one needs a LoopMultiProcess or a MultiProcess
+        # Decide here whether one needs a LoopMultiProcess or a MultiProcess
         multiprocessclass=None
         if myprocdef['perturbation_couplings']!=[]:
             multiprocessclass=loop_diagram_generation.LoopMultiProcess
@@ -908,7 +952,8 @@ own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key
 
         myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
                                             ignore_six_quark_processes = False,
-                                            loop_filter = loop_filter)
+                                            loop_filter = loop_filter,
+                                            diagram_filter = diagram_filter)
         
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:
@@ -948,12 +993,12 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     def __init__(self, question, *args, **opts):
 
         import urllib.request, urllib.error, urllib.parse
-        #try:
-        #    response=urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
-        #    self.online=True
-        #except urllib.error.URLError as err: 
-        #    self.online=False              
-        self.online = True # We assume that the user is online, but we will adapt the question if it is not the case.
+        try:
+            response=urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+            self.online=True
+        except urllib.error.URLError as err: 
+            self.online=False              
+        #self.online = True # We assume that the user is online, but we will adapt the question if it is not the case.
         
         self.code = {'ninja': 'install',
                      'collier': 'install',

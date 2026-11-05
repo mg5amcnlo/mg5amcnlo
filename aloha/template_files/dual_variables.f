@@ -114,7 +114,7 @@
       !=================================================================
       ! Assignment rules
       !=================================================================
-      subroutine assign_Double(self,dn)
+      elemental subroutine assign_Double(self,dn)
          type(Dual),intent(out)::self
          real(kind(1d0)),intent(in)::dn
 
@@ -122,7 +122,7 @@
          self%comp(1:) = (0d0,0d0)
       end subroutine assign_Double
 
-      subroutine assign_Complex(self,cn)
+      elemental subroutine assign_Complex(self,cn)
          type(Dual),intent(inout)::self
          complex*16,intent(in)::cn
 
@@ -130,7 +130,7 @@
          self%comp(1:) = (0d0,0d0)
       end subroutine assign_Complex
 
-      subroutine assign_Dual(self,other)
+      elemental subroutine assign_Dual(self,other)
          type(Dual),intent(inout)::self
          type(Dual),intent(in)::other
          integer::i
@@ -165,7 +165,7 @@
       !=================================================================
       ! Addition rules
       !=================================================================
-      function add_DualVariable(a, b) result(res)
+      elemental function add_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
          integer::i
@@ -174,7 +174,7 @@
          enddo
       end function add_DualVariable
 
-      function add_CN_DualVariable(cn,a) result(res)
+      elemental function add_CN_DualVariable(cn,a) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -185,7 +185,7 @@
          enddo
       end function add_CN_DualVariable
 
-      function add_DualVariable_CN(a,cn) result(res)
+      elemental function add_DualVariable_CN(a,cn) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -193,7 +193,7 @@
          res=add_CN_DualVariable(cn,a)
       end function add_DualVariable_CN
 
-      function add_RN_DualVariable(rn,a) result(res)
+      elemental function add_RN_DualVariable(rn,a) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -204,7 +204,7 @@
          enddo
       end function add_RN_DualVariable
 
-      function add_DualVariable_RN(a,rn) result(res)
+      elemental function add_DualVariable_RN(a,rn) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -212,7 +212,7 @@
          res=add_RN_DualVariable(rn,a)
       end function add_DualVariable_RN
 
-      function add_NON_DualVariable(a) result(res)
+      elemental function add_NON_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
          integer::i
@@ -226,7 +226,7 @@
       !=================================================================
       ! Subtraction rules
       !=================================================================
-      function minus_DualVariable(a, b) result(res)
+      elemental function minus_DualVariable(a, b) result(res)
          type(Dual), intent(in) :: a, b
          type(Dual) :: res
          integer::i
@@ -236,7 +236,7 @@
          enddo
       end function minus_DualVariable
 
-      function minus_CN_DualVariable(cn,a) result(res)
+      elemental function minus_CN_DualVariable(cn,a) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -248,7 +248,7 @@
          enddo
       end function minus_CN_DualVariable
 
-      function minus_DualVariable_CN(a,cn) result(res)
+      elemental function minus_DualVariable_CN(a,cn) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -260,7 +260,7 @@
          enddo
       end function minus_DualVariable_CN
 
-      function minus_RN_DualVariable(rn,a) result(res)
+      elemental function minus_RN_DualVariable(rn,a) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -272,7 +272,7 @@
          enddo
       end function minus_RN_DualVariable
       
-      function minus_DualVariable_RN(a,rn) result(res)
+      elemental function minus_DualVariable_RN(a,rn) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -284,7 +284,7 @@
          enddo
       end function minus_DualVariable_RN
 
-      function minus_NON_DualVariable(a) result(res)
+      elemental function minus_NON_DualVariable(a) result(res)
          type(Dual), intent(in) :: a
          type(Dual) :: res
          integer::i
@@ -297,7 +297,7 @@
       !=================================================================
       ! Multiplication rules
       !=================================================================
-      function multiply_DualVariable(a, b) result(res)
+      elemental function multiply_DualVariable(a, b) result(res)
          type(Dual),intent(in)::a,b
          type(Dual)::res
          integer::i,j
@@ -312,7 +312,7 @@
          enddo
       end function multiply_DualVariable
 
-      function multiply_CN_DualVariable(cn,a) result(res)
+      elemental function multiply_CN_DualVariable(cn,a) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -323,14 +323,14 @@
          enddo
       end function multiply_CN_DualVariable
 
-      function multiply_DualVariable_CN(a,cn) result(res)
+      elemental function multiply_DualVariable_CN(a,cn) result(res)
          complex(kind(1d0)),intent(in)::cn
          type(Dual), intent(in) :: a
          type(Dual) :: res
          res=multiply_CN_DualVariable(cn,a)
       end function multiply_DualVariable_CN
 
-      function multiply_RN_DualVariable(rn,a) result(res)
+      elemental function multiply_RN_DualVariable(rn,a) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -340,14 +340,14 @@
          enddo
       end function multiply_RN_DualVariable
 
-      function multiply_DualVariable_RN(a,rn) result(res)
+      elemental function multiply_DualVariable_RN(a,rn) result(res)
          real(kind(1d0)),intent(in)::rn
          type(Dual), intent(in) :: a
          type(Dual) :: res
          res=multiply_RN_DualVariable(rn,a)
       end function multiply_DualVariable_RN
 
-      function multiply_IN_DualVariable(jn,a) result(res)
+      elemental function multiply_IN_DualVariable(jn,a) result(res)
          integer,intent(in)::jn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -357,7 +357,7 @@
          enddo
       end function multiply_IN_DualVariable
 
-      function multiply_DualVariable_IN(a,jn) result(res)
+      elemental function multiply_DualVariable_IN(a,jn) result(res)
          integer,intent(in)::jn
          type(Dual), intent(in) :: a
          type(Dual) :: res
@@ -376,7 +376,7 @@
          integer:: nd
          complex(kind(1d0))::cterm,prefact
 
-         if (np.gt.1) then       ! positive powers (identiy excluded)
+         if (np.gt.1) then       ! positive powers (identity excluded)
             res%comp(0) = (a%comp(0))**np
             do i=1,2**npwave-1
                res%comp(i) = dcmplx(0d0,0d0)
@@ -389,7 +389,7 @@
                   else
                      prefact=(a%comp(0))**(np-nd)
                   endif
-                  ! Determing the prefactor (same for all nd entries)
+                  ! Determining the prefactor (same for all nd entries)
                   if (np.le.4) then
                      prefact = prefact*fallfact_int(np,nd)
                   else
@@ -426,7 +426,7 @@
                ! Each group corresponds to a number of derivative nd
                do nd=1,nd_max(i)
                   prefact=(a%comp(0))**(np-nd)
-                  ! Determing the prefactor (same for all nd entries)
+                  ! Determining the prefactor (same for all nd entries)
                   if (np.ge.-4) then
                      prefact = prefact*fallfact_int(np,nd)
                   else
@@ -484,7 +484,7 @@
                ! Each group corresponds to a number of derivative nd
                do nd=1,nd_max(i)
                   prefact=(a%comp(0))**(np-nd)
-                  ! Determing the prefactor (same for all nd entries)
+                  ! Determining the prefactor (same for all nd entries)
                   if (np.eq.0.5d0 .or. np.eq.1.5d0) then
                      prefact = prefact*fallfact_real(int(np+0.5),nd)
                   else
@@ -521,7 +521,7 @@
                ! Each group corresponds to a number of derivative nd
                do nd=1,nd_max(i)
                   prefact=(a%comp(0))**(np-nd)
-                  ! Determing the prefactor (same for all nd entries)
+                  ! Determining the prefactor (same for all nd entries)
                   if (np.eq.-0.5d0 .or. np.eq.-1.5d0) then
                      prefact = prefact*fallfact_real(int(np+0.5),nd)
                   else

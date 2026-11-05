@@ -126,7 +126,7 @@ void mcfioC_GetNTupleName(int stream, int id, char **answer)
 
 /*
 ** Copy utility routine for a General Ntuple Variable descriptor d/s
-** It is the responsability of the usr to allocate memory for the 
+** It is the responsibility of the usr to allocate memory for the
 ** structure where data will be copied to.
 */           
 void CopyVarGenNtuple(varGenNtuple *vFrom, varGenNtuple *vTo)
@@ -203,7 +203,7 @@ void DestroyNTuDDL(nTuDDL *ddl)
 } 
 /*
 ** Free the memory for a Description NTuple
-** Note : the pointer to adrresses are lost, the user will have to give 
+** Note : the pointer to addresses are lost, the user will have to give
 ** them to this application back..
 */
 void DestroyGenNtuple(descrGenNtuple *dNTu)

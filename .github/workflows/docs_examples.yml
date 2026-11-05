@@ -1,0 +1,65 @@
+name: MadSpace docs examples
+
+# The other MG7 acceptance workflows all carry `paths-ignore: ['docs/**']`, so a
+# docs-only commit currently triggers none of them. This workflow does the
+# opposite: it triggers ONLY on the paths that can affect the documentation
+# examples, so editing docs/source/madspace/examples/*.rst (or the event
+# streaming example in docs/source/event_stream.rst) is actually tested.
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'docs/source/madspace/examples/**'
+      - 'docs/source/event_stream.rst'
+      - 'madgraph/iolibs/template_files/mg7/**'
+      - 'madgraph/mg7/**'
+      - 'madspace/**'
+      - 'tests/acceptance_tests/test_madspace_examples.py'
+      - '.github/workflows/docs_examples.yml'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/source/madspace/examples/**'
+      - 'docs/source/event_stream.rst'
+      - 'madgraph/iolibs/template_files/mg7/**'
+      - 'madgraph/mg7/**'
+      - 'madspace/**'
+      - 'tests/acceptance_tests/test_madspace_examples.py'
+      - '.github/workflows/docs_examples.yml'
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Build the madspace install exactly once per workflow run, cached on the
+  # madspace source hash (same composite action the mg7 workflow uses).
+  build_madspace:
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build_madspace
+
+  docs_examples:
+    needs: build_madspace
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/install_madspace
+      - uses: ./.github/actions/restore_heptools_core
+      - uses: ./.github/actions/restore-pip-cache
+      - name: install torch and madnis (CPU wheel)
+        run: >
+            pip install --extra-index-url https://download.pytorch.org/whl/cpu
+            torch madnis
+      - name: run the madspace doc examples
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madspace_example_simple_mappings test_madspace_example_cuts test_madspace_example_diagram_mapping test_madspace_example_integration_order test_madspace_example_matrix_element test_madspace_example_pdf test_madspace_example_integrator test_madspace_example_integrator_madnis test_madspace_example_flow_training test_gridpack_example_event_stream -pA -t0 -l INFO

@@ -1,13 +1,13 @@
 #! /usr/bin/env python3
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -29,7 +29,7 @@ sys.path.append(root_path)
 from madgraph import MG5DIR
 import madgraph.iolibs.import_v4 as import_v4
 import madgraph.interface.master_interface as interface
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import aloha.create_aloha as create_aloha
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
@@ -57,8 +57,8 @@ class Compile_MG5:
 
         # important to uclclus
         if self.overwrite_configuration:
-            files.cp(pjoin(MG5DIR,'input','.mg5_configuration_default.txt'),
-                     pjoin(MG5DIR,'input','mg5_configuration.txt'))
+            files.cp(pjoin(MG5DIR,'input','.mg7_configuration_default.txt'),
+                     pjoin(MG5DIR,'input','mg7_configuration.txt'))
             
         self.cmd = interface.MasterCmd()                
 

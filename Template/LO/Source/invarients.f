@@ -1,6 +1,6 @@
       subroutine set_invarients(nfinal,ninvar)
 c***************************************************************************
-c     Calculates all of the invarients for a 2->n process
+c     Calculates all of the invariants for a 2->n process
 c***************************************************************************
       implicit none
 c     
@@ -96,7 +96,7 @@ c         write(*,*) np-nfinal+ip1,buff
       ninvarients=np-nfinal+np
       ninvar=ninvarients
       if (ninvarients .gt. maxinvar) then
-         print*,'Error too many invarients to map'
+         print*,'Error too many invariants to map'
 c         stop
       endif
       end
@@ -104,7 +104,7 @@ c         stop
 
       subroutine fill_invarients(nfinal,p1,s,xx)
 c***************************************************************************
-c     Calculates all of the invarients for a 2->n process
+c     Calculates all of the invariants for a 2->n process
 c***************************************************************************
       implicit none
 c     
@@ -187,7 +187,7 @@ c     &         real(-dot(ptemp,ptemp)/s)
 
       subroutine map_invarients(Minvar,nconfigs,ninvar,mincfig,maxcfig,nexternal,nincoming,nb_tchannel)
 c****************************************************************************
-c     Determines mappings for each structure of invarients onto integration
+c     Determines mappings for each structure of invariants onto integration
 c     variables.  Input: Ninvar, iforest.  Output: Minvar, ninvar, nb_tchannel
 c****************************************************************************
       implicit none

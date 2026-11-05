@@ -1207,7 +1207,7 @@ static void selectEvtCB(Widget w, caddr_t clientData, caddr_t callData)
      McfioPanelState = STEPPING;
      DialogF(DF_PROMPT, McfioMainPanelW, 0, 
  " Please type the event #, store #, run #, trigger Mask # \n\
- You can ommit any of these quantity, but you must type at least the event #\n\
+ You can omit any of these quantities, but you must type at least the event #\n\
  0 means any, e.g. to get the first event run # 5, type: \n\
  0, 5 ", str1);
      mcfioC_RemoveWhiteSpace(str1);

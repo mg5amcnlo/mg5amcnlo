@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -35,7 +35,7 @@ import aloha.create_aloha as create_aloha
 import madgraph.iolibs.export_python as export_python
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.helas_call_writers as helas_call_writer
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import madgraph.iolibs.save_load_object as save_load_object
 
 import madgraph.core.base_objects as base_objects
@@ -53,7 +53,7 @@ import madgraph.various.misc as misc
 
 from madgraph import MG5DIR
 
-import models.model_reader as model_reader
+import madgraph.models.model_reader as model_reader
 import aloha.template_files.wavefunctions as wavefunctions
 from aloha.template_files.wavefunctions import \
      ixxxxx, oxxxxx, vxxxxx, sxxxxx
@@ -67,7 +67,8 @@ logger = logging.getLogger('madgraph.various.diagram_symmetry')
 # find_symmetry
 #===============================================================================
 
-def find_symmetry(matrix_element):
+def find_symmetry(matrix_element, tag_type=diagram_generation.DiagramTag,
+                  skip_identical_check=False, check_flavor_rows=False):
     """Find symmetries between amplitudes by comparing diagram tags
     for all the diagrams in the process. Identical diagram tags
     correspond to different external particle permutations of the same
@@ -77,7 +78,11 @@ def find_symmetry(matrix_element):
     symmetric diagrams and negative numbers corresponding to the
     equivalent diagram (for e+e->3a, get [6, -1, -1, -1, -1, -1]),
     list of the corresponding permutations needed, and list of all
-    permutations of identical particles."""
+    permutations of identical particles.
+
+    check_flavor_rows: keep only the permutations that leave every flavor
+    row of the matrix element unchanged (needed when symfact.dat replaces
+    the symmetric configs by one with a multiplicity, as in madevent)."""
 
     if isinstance(matrix_element, group_subprocs.SubProcessGroup):
         return find_symmetry_subproc_group(matrix_element)
@@ -123,7 +128,7 @@ def find_symmetry(matrix_element):
             symmetry.append(1)
 
     # Check for matrix elements with no identical particles
-    if matrix_element.get("identical_particle_factor") == 1:
+    if not skip_identical_check and matrix_element.get("identical_particle_factor") == 1:
         return symmetry, \
                permutations,\
                [list(range(nexternal))]
@@ -144,7 +149,7 @@ def find_symmetry(matrix_element):
             # Only 3-vertices allowed in configs.inc
             continue
         
-        tag = diagram_generation.DiagramTag(base_diagram)
+        tag = tag_type(base_diagram)
         try:
             ind = diagram_tags.index(tag)
         except ValueError:
@@ -154,6 +159,15 @@ def find_symmetry(matrix_element):
         else:
             diagram_classes[ind].append(diag.get('number'))
             perms[ind].append(tag.get_external_numbers())
+
+    # With several flavor rows (merged particles), a permutation of the
+    # legs is a symmetry only if it maps every row onto itself: in
+    # u q > z u q (q = u d) swapping the two final quarks holds for u u
+    # but not for u d
+    flavor_rows = get_flavor_rows(matrix_element) if check_flavor_rows else []
+    if len(flavor_rows) > 1:
+        diagram_classes, perms = split_classes_by_flavor(diagram_classes,
+                                                         perms, flavor_rows)
 
     for inum, diag_number in enumerate(diagram_numbers):
         if symmetry[inum] == 0:
@@ -175,6 +189,51 @@ def find_symmetry(matrix_element):
             ident_perms.append(perm)
 
     return (symmetry, permutations, ident_perms)
+
+def get_flavor_rows(matrix_element):
+    """The external pdg codes of every flavor row of a matrix element
+    (several when it uses merged particles or combines processes)."""
+
+    if not isinstance(matrix_element, helas_objects.HelasMatrixElement) or \
+       isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
+        return []
+    rows = []
+    for proc in matrix_element.get('processes'):
+        row = [l.get('id') for l in proc.get_legs_with_decays()]
+        if row not in rows:
+            rows.append(row)
+    if matrix_element.get('processes')[0].get('model').get('merged_particles'):
+        for row in matrix_element.get_external_flavors(return_pdgs=True)[1]:
+            row = list(row)
+            if row not in rows:
+                rows.append(row)
+    return rows
+
+def split_classes_by_flavor(diagram_classes, perms, flavor_rows):
+    """Split each class of symmetric diagrams such that the permutation
+    linking two diagrams of a class leaves every flavor row unchanged."""
+
+    def keeps_rows(perm):
+        return all(len(row) == len(perm) and
+                   all(row[j] == row[i] for i, j in enumerate(perm))
+                   for row in flavor_rows)
+
+    new_classes, new_perms = [], []
+    for diag_class, class_perms in zip(diagram_classes, perms):
+        sub_classes, sub_perms = [], []
+        for number, perm in zip(diag_class, class_perms):
+            for sub_class, sub_perm in zip(sub_classes, sub_perms):
+                if keeps_rows(diagram_generation.DiagramTag.\
+                              reorder_permutation(sub_perm[0], perm)):
+                    sub_class.append(number)
+                    sub_perm.append(perm)
+                    break
+            else:
+                sub_classes.append([number])
+                sub_perms.append([perm])
+        new_classes.extend(sub_classes)
+        new_perms.extend(sub_perms)
+    return new_classes, new_perms
 
 def find_symmetry_by_evaluation(matrix_element, evaluator, max_time = 600):
     """Find symmetries between amplitudes by comparing the squared

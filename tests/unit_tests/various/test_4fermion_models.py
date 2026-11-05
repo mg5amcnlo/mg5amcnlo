@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -31,8 +31,8 @@ import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.various.process_checks as process_checks
 import madgraph.various.diagram_symmetry as diagram_symmetry
-import models.import_ufo as import_ufo
-import models.model_reader as model_reader
+import madgraph.models.import_ufo as import_ufo
+import madgraph.models.model_reader as model_reader
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 # Special logger
@@ -57,13 +57,27 @@ class Models4FermionTest(unittest.TestCase):
         myleglist.append(base_objects.Leg({'id':6}))
         myleglist.extend([base_objects.Leg({'id':21}) for i in range(nglue)])
 
+        myleglist_flavor = base_objects.LegList()
+        myleglist_flavor.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist_flavor.append(base_objects.Leg({'id':2,
+                                           'state':False}))
+        myleglist_flavor.append(base_objects.Leg({'id':6}))
+        myleglist_flavor.append(base_objects.Leg({'id':6}))
+        myleglist_flavor.extend([base_objects.Leg({'id':21}) for i in range(nglue)])        
+
         values = {}
         p = None
         for model in 'scalar', '4ferm':
 
+
             base_model = eval('self.base_model_%s' % model)
             full_model = eval('self.full_model_%s' % model)
-            myproc = base_objects.Process({'legs':myleglist,
+            if model == 'scalar':
+                myproc = base_objects.Process({'legs':myleglist_flavor,
+                                               'model':base_model})
+            else:
+                myproc = base_objects.Process({'legs':myleglist,
                                            'model':base_model})
 
             evaluator = process_checks.MatrixElementEvaluator(base_model,
@@ -95,12 +109,12 @@ class TestSchannelModels(Models4FermionTest):
         
 
        
-        self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion')
+        self.base_model_4ferm = import_ufo.import_model('uutt_sch_4fermion', options={'apply_flavor_grouping':False})
         self.full_model_4ferm = \
                                model_reader.ModelReader(self.base_model_4ferm)
         self.full_model_4ferm.set_parameters_and_couplings()
         
-        self.base_model_scalar = import_ufo.import_model('sextet_diquarks')
+        self.base_model_scalar = import_ufo.import_model('sextet_diquarks', options={'apply_flavor_grouping':False})
         self.full_model_scalar = \
                                model_reader.ModelReader(self.base_model_scalar)
         self.full_model_scalar.set_parameters_and_couplings()

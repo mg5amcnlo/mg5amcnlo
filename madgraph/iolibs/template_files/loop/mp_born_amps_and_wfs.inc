@@ -1,4 +1,5 @@
       SUBROUTINE %(proc_prefix)sMP_BORN_AMPS_AND_WFS(P)
+      USE ALOHA_OBJECT
 C  
 %(info_lines)s
 C
@@ -35,6 +36,8 @@ C
       INTEGER I,J,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
+	  INTEGER FLAVOR(NEXTERNAL)
+	  DATA FLAVOR /NEXTERNAL*1/
 C
 C FUNCTIONS
 C
@@ -58,13 +61,13 @@ C
 
 	  %(mp_born_amps_decl)s
 	  %(dp_born_amps_decl_in_mp)s
-	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(mp_aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sMP_WFS/W
 
       %(complex_mp_format)s AMPL(3,NCTAMPS)
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
-	  %(complex_dp_format)s DPW(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(aloha) DPW(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sWFCTS/DPW
 
       %(complex_dp_format)s DPAMPL(3,NLOOPAMPS)
@@ -105,9 +108,11 @@ C Handle the possible requirement of specific polarizations
   %(born_amps_and_wfs_calls)s
 C  Copy the qp wfs to the dp ones as they are used to setup the CT calls.
   DO I=1,NWAVEFUNCS
-    DO J=1,20
-      DPW(J,I%(h_w_suffix)s)=W(J,I%(h_w_suffix)s)
+    DO J=1,SIZE(W(I%(h_w_suffix)s)%W)
+      DPW(I%(h_w_suffix)s)%W(J)=W(I%(h_w_suffix)s)%W(J)
     ENDDO
+    DPW(I%(h_w_suffix)s)%P = W(I%(h_w_suffix)s)%P
+    DPW(I%(h_w_suffix)s)%flv_index = W(I%(h_w_suffix)s)%flv_index
   ENDDO
 C  Same for the counterterms amplitudes
   DO I=1,NCTAMPS

@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* mcf_BrowseUtil1.c -- Utilities and auxillary Panels for NTuple Browser.      *
+* mcf_BrowseUtil1.c -- Utilities and auxiliary Panels for NTuple Browser.      *
 *									       *
 * Copyright (c) 1995, 1996 Universities Research Association, Inc.	       *
 * All rights reserved.							       *

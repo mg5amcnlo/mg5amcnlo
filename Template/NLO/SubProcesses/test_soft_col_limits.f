@@ -544,7 +544,7 @@ c sum without a randomly selected flow or a stale Born-flow probability.
 
       call generate_valid_momenta(wgt,x,p)
       
-      call sborn_native(p_born,wgt1)
+      call sborn_frame(p_born,wgt1)
       write (*,*) ''
       write (*,*) ''
       write (*,*) ''
@@ -662,7 +662,7 @@ c Note that tests are always performed at fixed energy with Bjorken x=1.
             totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
          elseif (is_a_ph(i)) then
             totmass = totmass + ptgmin
-         else
+         elseif (i.ne.nexternal) then
             if (any(mxxmin(i,i+1:nexternal-1).gt.0d0)) then
                do k=i+1,nexternal-1
                   if (mxxmin(i,k).gt.0d0) then

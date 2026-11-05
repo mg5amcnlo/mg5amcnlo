@@ -8,13 +8,13 @@ C array an integer number
       integer i
       integer base, step
       parameter(base=100)
-      ! this is for the printout of the informations
+      ! this is for the printout of the information
       logical firsttime, firsttime_contr(amp_split_size)
       data firsttime/.true./
       data firsttime_contr/amp_split_size * .true./
       integer orders_to_amp_split_pos
 
-      ! print out some extra informations
+      ! print out some extra information
       if (firsttime) write(*,fmt='(a)',advance="NO") 
      $    "INFO: orders_tag_plot is computed as:"
 

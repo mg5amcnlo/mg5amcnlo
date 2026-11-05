@@ -18,7 +18,7 @@ c     o) The first argument is an integer that labels the histogram. In
 c     the analysis_end and analysis_fill subroutines this label is used
 c     to keep track of the histogram. The label should be a number
 c     between 1 and NPLOTS/4=5000 (can be increased in dbook.inc).
-c     o) The second argument is a string that will apear above the
+c     o) The second argument is a string that will appear above the
 c     histogram. Do not use brackets "(" or ")" inside this string.
 c     o) The third, forth and fifth arguments are the bin size, the
 c     lower edge of the first bin and the upper edge of the last
@@ -96,7 +96,7 @@ c Open the topdrawer file to write the histograms (do not remove the
 c next to calls)
       call open_topdrawer_file
       call mclear
-c Do not touch the folloing 4 lines. These lines make sure that the
+c Do not touch the following 4 lines. These lines make sure that the
 c histograms will have the correct overall normalisation: cross section
 c (in pb) per bin.
       do i=1,NPLOTS

@@ -2,7 +2,7 @@
 	subroutine ffxb0(cb0,d0,xmu,xp,xma,xmb,ier)
 ***#[*comment:***********************************************************
 *									*
-*	Calculates the the two-point function (cf 't Hooft and Veltman)	*
+*	Calculates the two-point function (cf 't Hooft and Veltman)	*
 *	we include an overall factor 1/(i*pi^2)	relative to FormF	*
 *									*
 *	Input:	d0	(real)	  infinity arising from renormalization	*

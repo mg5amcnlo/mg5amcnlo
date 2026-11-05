@@ -117,7 +117,7 @@
 	if ( lwrite ) print '(a)','  ##[ determinants:'
 *
 *	note that not all errors are additive, only when a previous
-*	result is used as input do we need to add ther ier's, otherwise
+*	result is used as input do we need to add their ier's, otherwise
 *	we can take the maximum value to get a decent estimate of the
 *	number of digits lost.
 *

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -20,12 +20,14 @@ import fractions
 import glob
 import itertools
 import logging
+import math
 import os
 import re
 import shutil
 import subprocess
 import aloha
 
+import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.drawing_eps as draw
@@ -123,6 +125,20 @@ class ProcessExporterPython(object):
             # Averaging initial state color, spin, and identical FS particles
             den_factor_line = self.get_den_factor_line(matrix_element)
             replace_dict['den_factor_line'] = den_factor_line
+
+            # Information for the flavor-dependent symmetry factor (broken_sym),
+            # using the same decay-aware component/block logic as Fortran/C++.
+            from madgraph.iolibs import export_v4
+            process = matrix_element.get('processes')[0]
+            sym_data = export_v4.ProcessExporterFortran._get_broken_symmetry_data(
+                process, ninitial)
+            replace_dict['broken_sym_ncomponents'] = sym_data['ncomponents']
+            replace_dict['broken_sym_component_starts'] = repr(list(sym_data['component_starts']))
+            replace_dict['broken_sym_component_ends'] = repr(list(sym_data['component_ends']))
+            replace_dict['broken_sym_component_old_factors'] = repr(list(sym_data['component_old_factors']))
+            replace_dict['broken_sym_pid_list'] = repr(list(sym_data['pid_list']))
+            replace_dict['broken_sym_block_starts'] = repr(list(sym_data['block_starts']))
+            replace_dict['broken_sym_block_lengths'] = repr(list(sym_data['block_lengths']))
 
             # Extract process info lines for all processes
             process_lines = self.get_process_info_lines(matrix_element)
@@ -227,7 +243,10 @@ class ProcessExporterPython(object):
 
         res_list = []
 
-        for i, coeff_list in enumerate(matrix_element.get_color_amplitudes()):
+        # this writer emits no amplitude sums, so the quartic contributions
+        # have to stay in the JAMPs with their own colour coefficients
+        for i, coeff_list in enumerate(matrix_element.get_color_amplitudes(
+                merge_quartic_amplitudes=False)):
 
             res = "jamp[%d] = " % i
 
@@ -328,14 +347,14 @@ class ProcessExporterPython(object):
         info = misc.get_pkg_info()
         info_lines = ""
         if info and 'version' in info and  'date' in info:
-            info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
+            info_lines = "#  MadGraph7 v. %s, %s\n" % \
                          (info['version'], info['date'])
             info_lines = info_lines + \
-                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
+                         "        #  By the MadGraph7 Development Team\n" + \
                          "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
         else:
-            info_lines = "        #  by MadGraph5_aMC@NLO\n" + \
-                         "        #  By the MadGraph5_aMC@NLO Development Team\n" + \
+            info_lines = "        #  by MadGraph7\n" + \
+                         "        #  By the MadGraph7 Development Team\n" + \
                          "        #  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
 
         return info_lines
@@ -374,14 +393,49 @@ class ProcessExporterPython(object):
         couplings = misc.make_unique([c.replace('-', '') for func \
                               in matrix_element.get_all_wavefunctions() + \
                               matrix_element.get_all_amplitudes() for c in func.get('coupling')
-                              if func.get('mothers') ])
-        
-        return "\n        ".join([\
+                              if func.get('mothers') and  isinstance(c, str)])
+
+        # Collect FLV_Coupling objects and add their constituent couplings
+        flv_couplings = {}
+        for func in matrix_element.get_all_wavefunctions() + \
+                     matrix_element.get_all_amplitudes():
+            if not func.get('mothers'):
+                continue
+            for c in func.get('coupling'):
+                if not isinstance(c, str) and c.get('name') not in flv_couplings:
+                    flv_couplings[c.get('name')] = c
+                    # Also collect the underlying coupling names
+                    for coup_name in c.get_all_couplings():
+                        stripped = coup_name.lstrip('-')
+                        if stripped not in couplings:
+                            couplings.append(stripped)
+
+        # Build FLV_Coupling_py instantiation lines
+        flv_lines = []
+        for fc_name in sorted(flv_couplings):
+            fc = flv_couplings[fc_name]
+            items = ', '.join(
+                '%s: model.get(\'coupling_dict\')[\'%s\']' % (
+                    repr(key), val.lstrip('-'))
+                for key, val in fc.get('flavors').items()
+            )
+            flv_lines.append(
+                '%s = wavefunctions.FLV_Coupling_py({%s})' % (fc_name, items))
+
+        param_lines = "\n        ".join([\
                          "%(param)s = model.get(\'parameter_dict\')[\"%(param)s\"]"\
-                         % {"param": param} for param in sorted(parameters)]) + \
-               "\n        " + "\n        ".join([\
+                         % {"param": param} for param in sorted(parameters)])
+        coup_lines = "\n        ".join([\
                          "%(coup)s = model.get(\'coupling_dict\')[\"%(coup)s\"]"\
                               % {"coup": coup} for coup in sorted(couplings)])
+        flv_section = "\n        ".join(flv_lines)
+
+        result = param_lines
+        if coup_lines:
+            result += "\n        " + coup_lines
+        if flv_section:
+            result += "\n        " + flv_section
+        return result
 
 #===============================================================================
 # Global helper methods
@@ -413,4 +467,3 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + '*complex(0,1)'
 
     return res_str + '*'
-

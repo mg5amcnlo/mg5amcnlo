@@ -1,0 +1,70 @@
+{
+  "artifact_path": "artifact",
+  "color_ids": [
+    "flow:2,1"
+  ],
+  "compatible_targets": [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu"
+  ],
+  "helicity_ids": [
+    "h:-1,-1,-1",
+    "h:-1,-1,+0",
+    "h:-1,-1,+1",
+    "h:-1,+1,-1",
+    "h:-1,+1,+0",
+    "h:-1,+1,+1",
+    "h:+1,-1,-1",
+    "h:+1,-1,+0",
+    "h:+1,-1,+1",
+    "h:+1,+1,-1",
+    "h:+1,+1,+0",
+    "h:+1,+1,+1"
+  ],
+  "momenta": [
+    [
+      [
+        45.594,
+        0.0,
+        0.0,
+        45.594
+      ],
+      [
+        45.594,
+        0.0,
+        0.0,
+        -45.594
+      ],
+      [
+        91.188,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ]
+  ],
+  "process": "d d~ > z",
+  "process_id": "d_dbar_to_z",
+  "resolved_shape": [
+    1,
+    12,
+    1
+  ],
+  "schema_version": 1,
+  "serialization": {
+    "endianness": "little",
+    "kind": "symjit-application-mir-v3",
+    "load_behavior": "recompile-mir-for-loading-host",
+    "source_optimization_level": 2,
+    "word_size_bits": 64
+  },
+  "source_generation_target": "portable-64le",
+  "target": "portable-64le",
+  "total": [
+    [
+      142.10653372833232,
+      0.0
+    ]
+  ]
+}

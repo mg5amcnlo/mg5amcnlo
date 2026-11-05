@@ -1,6 +1,7 @@
       SUBROUTINE MP_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
 C     
       USE POLYNOMIAL_CONSTANTS
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -35,6 +36,8 @@ C
 C     LOCAL VARIABLES
 C     
       INTEGER I,J,K
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /NEXTERNAL*1/
       COMPLEX*32 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
 C     
 C     GLOBAL VARIABLES
@@ -58,7 +61,7 @@ C
 
       COMPLEX*32 AMP(NBORNAMPS)
       COMMON/MP_AMPS/AMP
-      COMPLEX*32 W(20,NWAVEFUNCS)
+      TYPE(MP_ALOHA) W(NWAVEFUNCS)
       COMMON/MP_W/W
 
       COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,
@@ -80,13 +83,13 @@ C      if true.
         GOTO 1001
       ENDIF
 
-      CALL MP_OXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-      CALL MP_IXXXXX(P(0,2),ZERO,NHEL(2),+1*IC(2),W(1,2))
-      CALL MP_VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
+      CALL MP_OXXXXX(P(0,1),ZERO,NHEL(1),-1, FLAVOR(1),W(1))
+      CALL MP_IXXXXX(P(0,2),ZERO,NHEL(2),+1, FLAVOR(2),W(2))
+      CALL MP_VXXXXX(P(0,3),MDL_MW,NHEL(3),+1,W(3))
 C     Amplitude(s) for born diagram with ID 1
-      CALL MP_FFV2_0(W(1,2),W(1,1),W(1,3),GC_11,AMP(1))
+      CALL MP_FFV2_0(W(2),W(1),W(3),GC_11,AMP(1))
 C     Counter-term amplitude(s) for loop diagram number 2
-      CALL MP_FFV2_0(W(1,2),W(1,1),W(1,3),R2_BXTW,AMPL(1,1))
+      CALL MP_FFV2_0(W(2),W(1),W(3),R2_BXTW,AMPL(1,1))
 C     At this point, all CT amps needed for (QCD=2 QED=2), i.e. of
 C      split order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 2000

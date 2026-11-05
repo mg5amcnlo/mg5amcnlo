@@ -1,13 +1,13 @@
 #! /usr/bin/env python3
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -44,6 +44,9 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_aMCatNLO').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_MadLoop').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_plugin').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
     #my_proc_list=['g g > h g', 'g g > h g g', 'g g > h g g g', 'g g > h g g g g']
@@ -68,10 +71,6 @@ if '__main__' == __name__:
     my_mg5_ufo = me_comparator.MG5_UFO_Runner()
     my_mg5_ufo.setup(mg5_path, mg4_path)
 
-    # Create a MERunner object for C++
-    my_mg5_cpp = me_comparator.MG5_CPP_Runner()
-    my_mg5_cpp.setup(mg5_path, mg4_path)
-
     # Create and setup a comparator
     my_comp = me_comparator.MEComparator()
     my_comp.set_me_runners(my_mg5, my_mg5_ufo)
@@ -92,4 +91,3 @@ if '__main__' == __name__:
 
     # Print a list of non zero processes
     #print my_comp.get_non_zero_processes()
-

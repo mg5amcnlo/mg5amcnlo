@@ -1,0 +1,13 @@
+UMAMI_1.0 {
+    global:
+        umami_get_meta;
+        umami_supported_inputs;
+        umami_required_inputs;
+        umami_supported_outputs;
+        umami_initialize;
+        umami_set_parameter;
+        umami_get_parameter;
+        umami_matrix_element;
+        umami_free;
+    local: *;
+};

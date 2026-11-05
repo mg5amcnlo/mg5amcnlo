@@ -2,6 +2,7 @@ C     THE CORE SUBROUTINE CALLED BY CUTTOOLS WHICH CONTAINS THE HELAS
 C      CALLS BUILDING THE LOOP
 
       SUBROUTINE ML5_0_LOOPNUM(Q,RES)
+      USE ALOHA_OBJECT
 C     
 C     CONSTANTS 
 C     
@@ -50,7 +51,7 @@ C
       COMMON/ML5_0_CF/CF_D,CF_N
 
 
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_WFCTS/W
 
       INTEGER HELPICKED
@@ -71,6 +72,7 @@ C
       END
 
       SUBROUTINE ML5_0_LOOPNUMHEL(Q,RES,H)
+      USE ALOHA_OBJECT
 C     
 C     CONSTANTS 
 C     
@@ -99,7 +101,7 @@ C
 C     LOCAL VARIABLES 
 C     
       COMPLEX*16 BUFF(4)
-      COMPLEX*16 WL(20,NMAXLOOPWFS)
+      TYPE(ALOHA) WL(NMAXLOOPWFS)
       INTEGER I
 C     
 C     GLOBAL VARIABLES
@@ -113,7 +115,7 @@ C
       COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      TYPE(ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_WFCTS/W
 
 C     ----------
@@ -123,72 +125,72 @@ C     ----------
       IF (ID.EQ.1) THEN
 C       Loop diagram number 1 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_AF(Q(0),I,WL(1,2))
-          CALL FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFV1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFS1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL FFS1L_2(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL LCUT_AF(Q(0),I,WL(2))
+          CALL FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFV1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFS1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL FFS1L_2(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.2) THEN
 C       Loop diagram number 3 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_AF(Q(0),I,WL(1,2))
-          CALL FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFV1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFS1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          BUFF(I)=WL(I+4,5)
+          CALL LCUT_AF(Q(0),I,WL(2))
+          CALL FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFV1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFS1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          BUFF(I)=WL(5)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.3) THEN
 C       Loop diagram number 4 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_F(Q(0),I,WL(1,2))
-          CALL FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFV1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFS1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          BUFF(I)=WL(I+4,5)
+          CALL LCUT_F(Q(0),I,WL(2))
+          CALL FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFV1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFS1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          BUFF(I)=WL(5)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.4) THEN
 C       Loop diagram number 5 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_F(Q(0),I,WL(1,2))
-          CALL FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFV1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFS1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL FFS1L_1(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL LCUT_F(Q(0),I,WL(2))
+          CALL FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFV1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFS1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL FFS1L_1(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.5) THEN
 C       Loop diagram number 6 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_AF(Q(0),I,WL(1,2))
-          CALL FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFS1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFV1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL FFS1L_2(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL LCUT_AF(Q(0),I,WL(2))
+          CALL FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFS1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFV1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL FFS1L_2(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
 C       Loop diagram number 8 (might be others, just an example)
         DO I=1,4
-          CALL LCUT_F(Q(0),I,WL(1,2))
-          CALL FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL FFS1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL FFV1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL FFS1L_1(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL LCUT_F(Q(0),I,WL(2))
+          CALL FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL FFS1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL FFV1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL FFS1L_1(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL CLOSE_4(BUFF(1),RES)
       ENDIF
       END
 
       SUBROUTINE ML5_0_MPLOOPNUM(Q,RES)
-
+      USE ALOHA_OBJECT
       INCLUDE 'cts_mprec.h'
       IMPLICIT NONE
 C     
@@ -254,7 +256,7 @@ C
       COMMON/ML5_0_CF/CF_D,CF_N
 
 
-      COMPLEX*32 W(20,NWAVEFUNCS)
+      TYPE(MP_ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_MP_WFS/W
 
       INTEGER HELPICKED
@@ -287,8 +289,9 @@ C       This is just to compute the wfs in quad prec
       END
 
       SUBROUTINE ML5_0_MPLOOPNUMHEL(Q,RES,H)
+      USE ALOHA_OBJECT
 C     
-C     CONSTANTS 
+C     CONSTANTS
 C     
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
@@ -315,7 +318,7 @@ C
 C     LOCAL VARIABLES 
 C     
       COMPLEX*32 BUFF(4)
-      COMPLEX*32 WL(20,NMAXLOOPWFS)
+      TYPE(MP_ALOHA) WL(NMAXLOOPWFS)
       INTEGER I
 C     
 C     GLOBAL VARIABLES
@@ -329,7 +332,7 @@ C
       COMMON/ML5_0_LOOP/WE,ID,SYMFACT,MULTIPLIER,AMPLNUM
 
 
-      COMPLEX*32 W(20,NWAVEFUNCS)
+      TYPE(MP_ALOHA) W(NWAVEFUNCS)
       COMMON/ML5_0_MP_WFS/W
 C     ----------
 C     BEGIN CODE
@@ -338,65 +341,65 @@ C     ----------
       IF (ID.EQ.1) THEN
 C       Loop diagram number 1 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_AF(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFV1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFS1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL MP_FFS1L_2(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL MP_LCUT_AF(Q(0),I,WL(2))
+          CALL MP_FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFV1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFS1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL MP_FFS1L_2(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.2) THEN
 C       Loop diagram number 3 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_AF(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFV1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFS1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          BUFF(I)=WL(I+4,5)
+          CALL MP_LCUT_AF(Q(0),I,WL(2))
+          CALL MP_FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFV1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFS1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          BUFF(I)=WL(5)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.3) THEN
 C       Loop diagram number 4 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_F(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFV1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFS1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          BUFF(I)=WL(I+4,5)
+          CALL MP_LCUT_F(Q(0),I,WL(2))
+          CALL MP_FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFV1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFS1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          BUFF(I)=WL(5)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.4) THEN
 C       Loop diagram number 5 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_F(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFV1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFS1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL MP_FFS1L_1(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL MP_LCUT_F(Q(0),I,WL(2))
+          CALL MP_FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFV1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFS1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL MP_FFS1L_1(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.5) THEN
 C       Loop diagram number 6 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_AF(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_2(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFS1L_2(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFV1L_2(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL MP_FFS1L_2(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL MP_LCUT_AF(Q(0),I,WL(2))
+          CALL MP_FFV1L_2(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFS1L_2(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFV1L_2(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL MP_FFS1L_2(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ELSEIF (ID.EQ.6) THEN
 C       Loop diagram number 8 (might be others, just an example)
         DO I=1,4
-          CALL MP_LCUT_F(Q(0),I,WL(1,2))
-          CALL MP_FFV1L_1(WL(1,2),W(1,WE(1)),LC(1),ML(3),ZERO,WL(1,3))
-          CALL MP_FFS1L_1(WL(1,3),W(1,WE(2)),LC(2),ML(4),ZERO,WL(1,4))
-          CALL MP_FFV1L_1(WL(1,4),W(1,WE(3)),LC(3),ML(5),ZERO,WL(1,5))
-          CALL MP_FFS1L_1(WL(1,5),W(1,WE(4)),LC(4),ML(6),ZERO,WL(1,6))
-          BUFF(I)=WL(I+4,6)
+          CALL MP_LCUT_F(Q(0),I,WL(2))
+          CALL MP_FFV1L_1(WL(2),W(WE(1)),LC(1),ML(3),ZERO,WL(3))
+          CALL MP_FFS1L_1(WL(3),W(WE(2)),LC(2),ML(4),ZERO,WL(4))
+          CALL MP_FFV1L_1(WL(4),W(WE(3)),LC(3),ML(5),ZERO,WL(5))
+          CALL MP_FFS1L_1(WL(5),W(WE(4)),LC(4),ML(6),ZERO,WL(6))
+          BUFF(I)=WL(6)%W(I)
         ENDDO
         CALL MP_CLOSE_4(BUFF(1),RES)
       ENDIF

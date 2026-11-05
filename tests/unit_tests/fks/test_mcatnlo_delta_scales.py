@@ -183,7 +183,7 @@ class TestStartingScaleIntegration(unittest.TestCase):
 class TestMCatNLODeltaModelMasses(unittest.TestCase):
     def check_model_masses(self, model_name, charm_mass, bottom_mass):
         from madgraph.iolibs import export_fks, file_writers
-        from models import import_ufo, model_reader
+        from madgraph.models import import_ufo, model_reader
 
         model = model_reader.ModelReader(import_ufo.import_model(model_name))
         model.set_parameters_and_couplings()

@@ -194,7 +194,7 @@
 	    endif
 	endif
 *  #] check input:
-*  #[ handel special cases:
+*  #[ handle special cases:
 *
 *	The infrared divergent diagrams are calculated in ffxc0i:
 *
@@ -253,7 +253,7 @@
 *	endif
 *	return
 *   50	continue
-*  #] handel special cases:
+*  #] handle special cases:
 *  #[ rotate to alpha in (0,1):
 	call ffrot3(irota3,xqi,dqiqj,qiDqj,xpi,dpipj,dum66,6,2,3,ier)
 *  #] rotate to alpha in (0,1):

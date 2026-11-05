@@ -99,7 +99,7 @@ CONTAINS
              IF(RECYCLING)item%value(1:4)=si(1:4)
              RETURN
           ELSE
-             ! aviod mixing of UV and IR poles
+             ! avoid mixing of UV and IR poles
              si(1:4)=B0C1(0d0,0d0,0d0)*(-prefactor)
              IF(RECYCLING)item%value(1:4)=si(1:4)
              RETURN
@@ -677,7 +677,7 @@ CONTAINS
              IF(RECYCLING)item%value(1:4)=si(1:4)
              RETURN
           ELSE
-             ! aviod mixing of UV and IR poles
+             ! avoid mixing of UV and IR poles
              si(1:4)=B0C1(0d0,0d0,0d0)*(-prefactor)
              IF(RECYCLING)item%value(1:4)=si(1:4)
              RETURN

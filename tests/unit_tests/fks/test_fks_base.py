@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -23,21 +23,31 @@ sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
+import madgraph
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.misc as misc
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import copy
 import array
 class TestFKSProcess(unittest.TestCase):
     """a class to test FKS Processes"""
 
+    def setUp(self):
+        # these build the fks amplitudes by hand, so they have to turn the
+        # four gluon merging off themselves, as FKSMultiProcess does
+        self.merge_quartic = madgraph.merge_quartic_vertices
+        madgraph.merge_quartic_vertices = False
+
+    def tearDown(self):
+        madgraph.merge_quartic_vertices = self.merge_quartic
+
     # the model, import the SM but remove 2nd and 3rd gen quarks
     remove_list = [3,4,5,6,-3,-4,-5,-6]
-    mymodel = import_ufo.import_model('sm')
+    mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
     for p in mymodel['particles'][:]:
         if p.get_pdg_code() in remove_list:
             mymodel['particles'].remove(p)
@@ -223,7 +233,7 @@ class TestFKSProcess(unittest.TestCase):
     
     
     def test_FKSMultiProcess(self):
-        """tests the correct initializiation of a FKSMultiProcess. In particular
+        """tests the correct initialization of a FKSMultiProcess. In particular
         checks that the correct number of borns is found"""
         
         p = [1, 21]
@@ -307,7 +317,7 @@ class TestFKSProcess(unittest.TestCase):
 
 
     def test_FKSMultiProcess_no_fsr(self):
-        """tests the correct initializiation of a FKSMultiProcess. In particular
+        """tests the correct initialization of a FKSMultiProcess. In particular
         checks the setting for has_isr/fsr"""
         
         p = [1, -1]
@@ -360,7 +370,7 @@ class TestFKSProcess(unittest.TestCase):
 
 
     def test_FKSMultiProcess_no_isr(self):
-        """tests the correct initializiation of a FKSMultiProcess. In particular
+        """tests the correct initialization of a FKSMultiProcess. In particular
         checks the setting for has_isr/fsr"""
         p = [1, -1]
         a = [22]
@@ -412,7 +422,7 @@ class TestFKSProcess(unittest.TestCase):
 
 
     def test_FKSMultiProcess_add(self):
-        """tests the correct initializiation of a FKSMultiProcess and the add funciton. In particular
+        """tests the correct initialization of a FKSMultiProcess and the add function. In particular
         checks the setting for has_isr/fsr"""
         p = [1, -1]
         a = [22]
@@ -883,7 +893,7 @@ class TestFKSProcess(unittest.TestCase):
             'orders':{'QCD':3, 'QED':0, 'WEIGHTED': 3}, 'id':1})
         sorted_real_proc_qed = MG.Process({'legs':sorted_legs_qed, 'model':self.mymodel,
             'orders':{'QCD':2, 'QED':1, 'WEIGHTED': 4}, 'id':1})
-## an emplty amplitude is generted so far...
+## an empty amplitude is generated so far...
         self.assertEqual(diagram_generation.Amplitude(), realproc.amplitude)
         self.assertEqual(diagram_generation.Amplitude(), realproc_qed.amplitude)
 
@@ -2307,3 +2317,153 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(fks_a_u.born_amp['process']['legs_with_decays'], MG.LegList())
         self.assertEqual(fks_a_s_qed.born_amp['process']['legs_with_decays'], MG.LegList())
         self.assertEqual(fks_a_u_qed.born_amp['process']['legs_with_decays'], MG.LegList())
+
+
+    def test_real_keeps_born_polarization(self):
+        """The real emission has to fix the same helicity as the born for the
+        leg it splits: in the singular limit the real's leg j IS the born's
+        leg ij, and the two are subtracted against each other. A polarized
+        born must therefore give a polarized real.
+
+        Regression test: split_leg used to build the daughters from a bare
+        dict, so they took the Leg default polarization = [] and insert_legs
+        then replaced the polarized born leg by an unpolarized one. That was
+        invisible while a polarized coloured particle was refused outright (a
+        colour singlet never splits in QCD, so it stayed a spectator that the
+        deepcopy preserved), and it became reachable when massive coloured
+        polarized particles were allowed.
+
+        e+ e- > t{+} t~ is the process that shows it: there is no initial-state
+        QCD splitting, so the only real comes from the (anti)top splitting --
+        the path that dropped the polarization. p p > t{+} t~ hides the bug,
+        because find_reals enumerates the ISR splittings first, that real keeps
+        the polarization as a spectator, and the FSR ones are merged onto it on
+        PDGs alone.
+        """
+        # flavour grouping off: with it on, the light quarks are merged and a
+        # process written with a bare pdg has no diagram
+        model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': False})
+
+        leglist = MG.LegList()
+        leglist.append(MG.Leg({'id': -11, 'state': False}))
+        leglist.append(MG.Leg({'id': 11, 'state': False}))
+        leglist.append(MG.Leg({'id': 6, 'state': True, 'polarization': [1]}))
+        leglist.append(MG.Leg({'id': -6, 'state': True}))
+        proc = MG.Process({'model': model, 'legs': leglist,
+                           'orders': {'QED': 2},
+                           'squared_orders': {'QCD': 2, 'QED': 4},
+                           'sqorders_types': {'QCD': '<=', 'QED': '<='},
+                           'perturbation_couplings': ['QCD'],
+                           'NLO_mode': 'real'})
+
+        # init_lep_split as the interface sets it for a leptonic initial state
+        fksproc = fks_base.FKSProcess(proc, init_lep_split=True)
+        fksproc.generate_reals([], [])
+
+        self.assertTrue(len(fksproc.real_amps) > 0)
+        for real in fksproc.real_amps:
+            self.assertEqual([(l['id'], list(l['polarization']))
+                              for l in real.process['legs']],
+                             [(-11, []), (11, []), (6, [1]),
+                              (-6, []), (21, [])])
+            # ... and the key that decides whether two reals may share one
+            # amplitude sees the polarization, not only the PDGs
+            self.assertEqual(real.pdgs_pols[1],
+                             ((), (), (1,), (), ()))
+
+
+    def test_split_leg_polarization_transfer(self):
+        """split_leg carries the mother's polarization onto the daughter j,
+        and refuses rather than dropping it when j is not the same particle as
+        the mother (the massless case, which the interface guard refuses at
+        generation time)."""
+        model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': False})
+
+        # t -> t g : leg j is the top, it inherits; the gluon does not
+        top = fks_common.to_fks_leg(MG.Leg({'id': 6, 'number': 3,
+                                            'state': True,
+                                            'polarization': [1]}), model)
+        splittings = fks_common.find_splittings(top, model, {}, 'QCD')
+        self.assertTrue(len(splittings) > 0)
+        for split in splittings:
+            self.assertEqual([l['id'] for l in split], [6, 21])
+            self.assertEqual(list(split[0]['polarization']), [1])
+            self.assertEqual(list(split[1]['polarization']), [])
+        # not aliased onto the mother's list
+        self.assertFalse(any(split[0]['polarization'] is top['polarization']
+                             for split in splittings))
+
+        # an unpolarized mother is untouched
+        top_unpol = fks_common.to_fks_leg(MG.Leg({'id': 6, 'number': 3,
+                                                  'state': True}), model)
+        for split in fks_common.find_splittings(top_unpol, model, {}, 'QCD'):
+            self.assertEqual([list(l['polarization']) for l in split],
+                             [[], []])
+
+        # g -> g g and g -> q q~ have nothing to carry the polarization to,
+        # so they raise instead of silently dropping it
+        gluon = fks_common.to_fks_leg(MG.Leg({'id': 21, 'number': 3,
+                                              'state': True,
+                                              'polarization': [1]}), model)
+        self.assertRaises(fks_common.FKSProcessError,
+                          fks_common.find_splittings, gluon, model, {}, 'QCD')
+        # ... but that one raises on the SECOND condition (both daughters have
+        # the mother's identity): find_splittings reaches the ggg vertex
+        # first, so it never exercises the identity-change condition. Two
+        # cases that do:
+        #
+        # (1) g -> q q~ asked for directly. Leg j is the quark, which is not
+        #     the mother.
+        # (tests.unit_tests.TestCase.assertRaises is not usable as a context
+        #  manager -- it swallows the return value -- so check the message by
+        #  hand)
+        try:
+            fks_common.split_leg(gluon,
+                                 [model.get_particle(1),
+                                  model.get_particle(-1)], model)
+            self.fail('g -> q q~ must not silently drop the polarization')
+        except fks_common.FKSProcessError as error:
+            self.assertIn('the FKS emitter j is a different particle',
+                          str(error))
+
+        # (1b) g -> g g asked for directly. Both daughters ARE the mother, so
+        #      the first condition passes and the SECOND one raises. Asking
+        #      through find_splittings would not pin this raise on its own:
+        #      the gluon also has g -> q q~, which raises on the first
+        #      condition, so the assertRaises above holds either way.
+        try:
+            fks_common.split_leg(gluon,
+                                 [model.get_particle(21),
+                                  model.get_particle(21)], model)
+            self.fail('g -> g g must not silently pick a daughter')
+        except fks_common.FKSProcessError as error:
+            self.assertIn('both daughters have the identity', str(error))
+
+        # (2) a polarized quark in the INITIAL state. Its two QCD splittings
+        #     are [j=u, i=g] -- perfectly well defined -- and the backward
+        #     [j=g, i=u~], in which the polarized quark is an internal line.
+        #     split_leg builds both and carries the polarization onto both, so
+        #     the bad one raises and the whole leg is refused: this is why the
+        #     interface guard refuses a coloured initial state wholesale
+        #     rather than channel by channel.
+        u_init = fks_common.to_fks_leg(MG.Leg({'id': 2, 'number': 1,
+                                               'state': False,
+                                               'polarization': [1]}), model)
+        try:
+            fks_common.find_splittings(u_init, model, {}, 'QCD')
+            self.fail('a polarized initial-state quark must not split '
+                      'silently')
+        except fks_common.FKSProcessError as error:
+            self.assertIn('the FKS emitter j is a different particle',
+                          str(error))
+        # the well-defined channel really is there when the mother carries no
+        # polarization -- so the refusal above is a whole-leg one, not the
+        # absence of a good splitting
+        u_unpol = fks_common.to_fks_leg(MG.Leg({'id': 2, 'number': 1,
+                                                'state': False}), model)
+        self.assertEqual(
+            [[l['id'] for l in s]
+             for s in fks_common.find_splittings(u_unpol, model, {}, 'QCD')],
+            [[2, 21], [21, -2]])

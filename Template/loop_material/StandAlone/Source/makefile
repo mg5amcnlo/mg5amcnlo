@@ -23,7 +23,7 @@ GENSUDGRID = gensudgrid.o is-sud.o setrun_gen.o rw_routines.o open_file.o
 # Locally compiled libraries
 #
 # CutTools and IREGI are only shipped *inside* this Source directory when
-# MG5aMC is run with output_dependencies='internal' (see
+# MadGraph7 is run with output_dependencies='internal' (see
 # LoopExporterFortran.link_CutTools / link_IREGI). For the default
 # 'external' setting -- and for 'environment_paths' -- only the ready-made
 # libraries are symlinked into ../lib and Source/CutTools, Source/IREGI do

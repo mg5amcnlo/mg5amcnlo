@@ -253,8 +253,8 @@ class Coupling(UFOBaseClass):
         return self.pole(0)
 
     def pole(self, x):
-        """ the self.value attribute can be a dictionary directly specifying the Laurent serie using normal
-        parameter or just a string which can possibly contain CTparameter defining the Laurent serie."""
+        """ the self.value attribute can be a dictionary directly specifying the Laurent series using normal
+        parameter or just a string which can possibly contain CTparameter defining the Laurent series."""
 
         if isinstance(self.value,dict):
             if -x in self.value.keys():

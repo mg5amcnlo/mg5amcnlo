@@ -31,7 +31,7 @@
 ##   Syntax/variables:                                                  ## 
 ##                                                                      ##
 ##  - a definition for transfer functions should define the variable tf ##
-##    while a definition for the width shoud define the variable width  ##                               
+##    while a definition for the width should define the variable width  ##
 ##	- You can use all standard f77 functions. (All variables are	##
 ##		in double precision format). 	                        ##
 ##	- The experimental event is  defined by the variable pexp(i)    ##
@@ -59,7 +59,7 @@
 ##	- You can incorporate parameters that will be passed through    ##
 ##	        the transfert_card.dat. Those ones must have the        ##
 ##		following syntax: #1,#2,#3,.. You can restart 		##
-##		the assignement for each different transfer function	##
+##		the assignment for each different transfer function	##
 ##	- In addition to each transfer function(tf_), you MUST give	##
 ##		the typical width associated to your function (sigma_)	##
 ##		This is needed for the phase space generator      	##
@@ -85,7 +85,7 @@
      #    will be used. the input in this block must be label in 
      #    particles.dat (or special tag as x1,x2,met)
   <width_type> thin </width_type>
-     #  "width_type" could be large or thin. thin is for acurate resolution 
+     #  "width_type" could be large or thin. thin is for accurate resolution
      #     on the Energy of the particles (up to 5-10%)
   <variable name='E'> 
      <include>
@@ -116,7 +116,7 @@ c
 ##                           TF JET                                     ##
 ##**********************************************************************##
 ## define binned simple gaussian for energy 
-##        simple guassian for  THETA 
+##        simple gaussian for  THETA
 ##        delta for PHI variable
 <block name="jet">
   <info> Transfer function for jet.
@@ -131,7 +131,7 @@ c
      #    will be used. the input in this block must be label in 
      #    particles.dat (or special tag as x1,x2,met)
   <width_type> thin </width_type>
-     #  "width_type" could be large or thin. thin is for acurate resolution 
+     #  "width_type" could be large or thin. thin is for accurate resolution
      #     on the Energy of the particles (up to 5-10%)
   <variable name='E'>
     <tf>

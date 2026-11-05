@@ -430,7 +430,7 @@ c
      +		del2s,ldel2s,ier)
 ***#[*comment:***********************************************************
 *									*
-*	Break in the calculation of D0 to allow the E0 to tie in in a	*
+*	Break in the calculation of D0 to allow the E0 to tie in a	*
 *	logical position.  This part gets untransformed momenta but	*
 *	rotated momenta in and gives the D0 (in two pieces) and the	*
 *	maximum term back.						*

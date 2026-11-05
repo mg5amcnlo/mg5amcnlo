@@ -4,6 +4,268 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+0.3.0 (XX/XX/XX):
+   OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
+       and mg7 outputs) no longer read their commands, or the answers to the questions of
+       a command given on the command line, from a pipe or a redirected file (e.g.
+       "./bin/madgraph < script.txt", "echo 0 | ./bin/generate_events"). That mode runs as
+       an interactive session, where a command that cannot be applied (such as an invalid
+       "set") was only a warning and the run went on. They now stop with an error asking
+       to write the commands to a file and run "EXECUTABLE PATH" instead, unless the new
+       --allow-stdin option is given. A forced run (-f) only stops when input is waiting
+       on stdin, which it would otherwise silently ignore. Running with a script file, or
+       with stdin on /dev/null, is unchanged.
+   OM: energy units ("1 TeV", "500 MeV", ...) are now only accepted where the value is an
+       energy, and converted to GeV. The run_card entries carrying an energy are declared
+       as such (energy=True in their definition): the madevent and aMC@NLO run_cards now
+       accept units on them too (e.g. "set ptj 1 TeV"). A unit on any other numeric entry
+       is an error: on the mg7 run_card, "set etaj 2 TeV" or "set jet-eta_abs.max 4 TeV"
+       used to set an eta cut of 2000/4000; for the [cuts], the observable of the cut says
+       whether it is an energy. In the param_card, only the masses and the widths accept
+       a unit (e.g. "set mt 172.5 GeV"). The madevent energy shortcuts (lhc, lcc, lep,
+       ilc, ebeam, fixed_scale) take a unit too: "set lhc 500 GeV" is a 500 GeV collider
+       (a unit-less lhc/lcc value stays in TeV), where "set ebeam 6.5 TeV" used to set
+       6.5 GeV; a real extra argument ("set lhc 13 14") is now refused.
+   OM: madevent MLM (ickkw=1) with use_syst: the <pdfrwt> entry of the incoming partons
+       used the flavour class of the grouped subprocess instead of the event's flavour
+       (pdg 1 for s s~, 2 for c c~), so the systematics (PDF and mu_F variations) of every
+       s/c-initiated event were computed with the d/u PDF (up to 9% for mu_F=2 on p p > z).
+   OM: madevent LO vector mode (vector_size>1): the good-helicity scan saw a single
+       beam orientation per warp, so up to half of p p > z was dropped. With helicity
+       recycling, the madevent_forhel scan now runs event by event. Without it
+       (hel_recycling = False), the scan inside SMATRIX now runs its MAXTRIES events
+       for each beam orientation and gets the orientation of each event. Also fixed a
+       latent bug: an event in IMODE 5 no longer skips the rest of the vector (the
+       vector code currently always uses IMODE 0).
+   RF: Add real-diagram channels for fixed-order NLO, through the
+       hidden option real_channels_x0 in the run_card. Useful for
+       processes that have new structures opening beyond LO, such as
+       pp>w+bb [QCD] (W radiating from a final state quark line) or
+       pp>w+h [QED] (photon induced t-channel contribution). A typical
+       value would be a few percent or so (e.g., 0.03). See also
+       Sec.6.3 of 0908.4272 [hep-ph].
+   OM: real_channels_x0 is now set by default, at output, for the processes
+       whose real-emission diagrams have propagators that the Born channels
+       do not follow (0.05, e.g. pp>w+h [QED], pp>w+bb~ [QCD], pp>w+w- [QED];
+       -1 otherwise, e.g. pp>jj, pp>w+j, pp>tt~j, pp>tt~h [QCD]). The
+       decision is the same for a resonance and its decay products
+       (pp>w+j and pp>e+vej). The value is written in the run_card, and
+       ignored for MC@NLO/LO/merged runs.
+   OM: The default PDF follows the process when a photon is needed (issue #311):
+       a photon in the initial state of a proton beam (LO, NLO and the mg7
+       [beam] pdf) or NLO EW corrections ([QED]) select
+       NNPDF40_nlo_as_01180_qed (lhaid 335900), at NLO also for a model with a
+       massive b (NNPDF4.0 has no 4-flavour QED set). The NNPDF4.0 defaults
+       have no photon. A PDF set by the user is kept.
+   ZW: MG7 outputs have two reweighting backends: MadtRex ('install madtrex';
+       matrix-element and PDF/scale reweighting on lhe or lhe_npy events) and the
+       classic reweighting module (f2py). Both read Cards/reweight_card.dat with the
+       classic vocabulary ('change' for options, 'set' for parameters). The backend
+       comes from 'generate_events --reweight-backend=classic|madtrex|auto', the
+       reweight switch of the launch question (now OFF/ON/classic/madtrex/density,
+       ON being auto), or the card's new 'change backend' line; auto prefers
+       MadtRex when it can run the card. The choice is logged and recorded in
+       Events/<run>/reweighting.json, and a choice that cannot run stops the launch
+       before the generation. Reweighting runs once, after the systematics;
+       '--reweight=CARD' now just switches it on with CARD as the reweight card.
+       MadtRex cards: 'change helicity', 'change fptype', 'change mode LO|pdf',
+       'change verbose/max_batch/...' replace the former 'set' spellings (still
+       accepted, with a warning), 'set MT 175' (a parameter by its param_card
+       name) works, and directives only the classic module knows are an error
+       instead of being ignored. MG7 outputs get their own default reweight card
+       documenting both backends. madevent and aMC@NLO outputs are unchanged.
+       Both backends add their weights to the run's own event file
+       (Events/<run>/events.lhe.gz, or events.npy for an lhe_npy run reweighted by
+       MadtRex, as rwgt_<name> columns that npy_to_lhe carries over), after the
+       systematics weights; MadtRex no longer writes a separate *_reweighted file
+       (bin/reweight --output still can). MadtRex reads lhe_npy events with
+       systematics weights (they were refused as "Invalid header for event file").
+   ZW: Without f2py_compiler set, the f2py installed with the running Python (e.g.
+       in a virtual environment) is used before f2py3/f2py on the PATH, which may
+       build modules for another Python version (reweighting then failed with "file
+       too short" or a missing all_matrix2py module).
+   OM: MadtRex follow-ups: 'install madtrex' builds with clang/macOS; madtrex refuses a
+       madspace other than the one it was built against (with the command to rebuild it;
+       MadGraph then reweights with the classic module) and its installer a too old
+       madspace; a failing reweighting no longer stops the run, and 'reweight RUN' (after
+       'launch PROC -i') reweights the events of an earlier run; MadtRex reweight cards
+       accept '!' comments and multi-index parameters ('set NMIX 1 2 0.5'); the baseline
+       PDF set and precision of a MadtRex reweighting are those of the run that made the
+       events (its LHE header), not of the current run_card; a gridpack made with
+       include_madtrex_source builds madtrex from its sources in bin/reweight.
+   OM: new command 'install cuttools_iregi' recompiling CutTools and IREGI (vendor/)
+       with the current fortran compiler. The error raised when CutTools/IREGI were
+       compiled with another compiler (e.g. after a gfortran update) now points to it.
+   OM: compute_widths (and the 'auto' widths of a param_card) integrates the
+       N-body decays (N>2) with madspace instead of MadEvent: 6 s instead of
+       26 s for the Higgs of heft up to 3 bodies, with a more precise result.
+       'compute_widths ... --engine=madevent' (or 'DECAY 6 auto
+       --engine=madevent') selects the former MadEvent integration. Falls
+       back to MadEvent, with a warning, if madspace cannot do it. The precompiled
+       standard headers (new 'make PCH=1' of madmatrix, clang only) halve the
+       build of many small processes: used by mg7 runs of 4 subprocess
+       directories or more.
+   OM: compute_widths --nlo without a dedicated code for the model (SMWidth, the
+       SM) now runs the two-body decays with a colour charge at NLO with MC@NLO
+       (aMC@NLO fixed order, loop_sm for sm); the decays into 3 bodies or more
+       stay at LO. 'DECAY 6 auto --nlo --body_decay=3' takes the options of
+       compute_widths in the param_card ('auto@NLO' stays 'auto --nlo'), also
+       with 'set decay 6 auto --nlo --body_decay=3'. A width on auto that is
+       not computed in the same call is now kept in the card (it used to be
+       dropped when another width was computed). '--nlo=smwidth' and
+       '--nlo=mcatnlo' choose the code (SMWidth, QCD and EW, or MC@NLO, QCD);
+       the QCD widths of the two agree to 0.05% for t, W and Z.
+   OM: compute_widths --nlo --corrections=QED|QCD+QED runs the two-body decays at
+       NLO electroweak (or QCD and EW) with MC@NLO ([QED] / [QCD QED] of aMC@NLO,
+       loop_qcd_qed_sm), for every two-body decay and not only the coloured ones.
+       t, W and Z agree with SMWidth to 0.1% (EW) and 0.13% (QCD+EW, the top
+       without the finite width of the W); the b is run apart from d and s since
+       its isospin partner is the top. Bug fix: the NLO runs used the names of the
+       UFO model for the particles (m-, tt+) and failed for leptons: they use the
+       names of MG (mu-, ta+).
+   OM: Bug fix: 'compute_widths --nlo' with SMWidth gave zero for every width
+       when the path of the param_card was longer than 100 characters (smwidth
+       cannot read it): it now works on copies with short names, and reports
+       an error when smwidth gives no width.
+   OM: Bug fix: the alpha_s of a madspace decay (1 > N, also 'output mg7' of a
+       decay) was alpha_s(m_Z) at any mass. It is now the 2-loop running up to
+       the decaying mass, as in MadEvent: e.g. 4.7% lower alpha_s(125 GeV) and
+       9.7% lower width for h > g g in heft.
+   OM: Bug fix: 'check_sa.exe perf' of 'output standalone' ignored the alpha_s
+       of the param card and always used 0.118 (the 'matrix' mode was right).
+       With --momenta/-e and --dump-me, the matrix elements at user points are
+       now evaluated with the card alpha_s.
+   OM: Bug fix: in 'output standalone_fortran' (without --prefix), a plain
+       'make' in SubProcesses built the python module of the first P directory
+       only. It now builds all of them, like 'make all'.
+   OM: multi_run:the merge of the runs (merge.pl) is now done in python, 5 to 10
+       times faster. Fix the normalisation for event_norm=sum (the merged sample was
+       N_run times too large) and the <rwgt> weights (systematics/reweighting), which
+       were not rescaled with the central weight. The relative weights of the events
+       (bias, MadSpin, ...) are kept instead of being set to the same unit weight.
+   OM: 'import model' now says when the model keeps a mass for u, d, s, e or mu:
+       such a mass is negligible at collider energies but brings in Yukawa
+       vertices and helicity configurations in every process, and
+       'customize_model' removes it. Silent for a massive b or tau, which is
+       the 4F scheme and a deliberate choice.
+   OM: Bug fix: mg7 runs on AMD GPUs (device = ["hip"]) aborted at the start of
+       the survey with "GPU error: an illegal memory access was encountered".
+       The GPU matrix element rounds the batch up to a multiple of 256 events
+       and computes all of them, but only the first 'count' events of the
+       padded batch received inputs. The flavour index of the padding events
+       was whatever the fresh allocation held, and cFlavors[iflavor] then read
+       far out of bounds. The padding events are now copies of the first event.
+       CUDA has the same code; it did not crash there only because the fresh
+       memory happened to hold harmless values.
+   OM: mg7 (madspace) now supports the run_card "me_frame", with the same meaning
+       as in madevent: it names the external particles whose momentum sum is put
+       at rest, and the matrix element is evaluated on momenta boosted into that
+       frame. Only the matrix element sees them -- the cuts, the scales, the
+       momentum fractions and the written event all keep the momenta as
+       generated. It only changes the result for a matrix element that is not
+       Lorentz invariant, i.e. a polarised one, and it is then the frame the
+       polarisations are defined in; the default [] applies no boost, so every
+       other run is unaffected and pays nothing. [1, 2] asks for the partonic
+       centre of mass, which is the frame madevent evaluates in, and [1] is its
+       equivalent for a 1 -> n decay. madspace generates its momenta in the lab
+       frame, so unlike madevent it reaches the requested frame in two steps,
+       through the rest frame of the incoming system: a single boost from the
+       lab would leave a Wigner rotation behind and pick different polarisation
+       axes than madevent.
+   OM: BUG FIX (reweight): for a sample generated with a non-default me_frame,
+       the matrix elements were still evaluated in the partonic centre of mass.
+       The frame was read from frame_id, which a run_card read back from the LHE
+       banner never sets (it always said 6, whatever me_frame was), and which an
+       mg7 banner has none of -- there me_frame = [] means no boost at all, the
+       matrix element having seen the lab-frame momenta. It is now read from
+       me_frame, LO, NLO and mg7 alike. Only polarised samples were affected.
+       RunCardMG7.from_LO now also carries me_frame over, instead of reporting
+       it as unsupported. MadSpin likewise takes the frame of an mg7 sample from
+       its run.me_frame, the default [] meaning the lab frame (no boost) rather
+       than the partonic centre of mass every other sample defaults to.
+   OM: BUG FIX (mg7): the initial-state mirror paired each event with a matrix
+       element evaluated on the momenta *before* the mirror was applied. madspace
+       covers the beam-swapped copy of an asymmetric initial state by rotating
+       the event by pi about x (py, pz -> -py, -pz), but only the written event
+       was rotated; the weight kept the momenta as generated. The two agree only
+       because |M|^2 is invariant under that rotation -- which a polarised matrix
+       element is not once it is evaluated in a frame that holds the polarised
+       particle at rest, because HELAS then quantises the spin along the frame z
+       axis, the mirror flips it, and the + and - states swap. p p > z{+} j and
+       p p > z{-} j evaluated in the Z rest frame came out 4485 +- 39 pb against
+       6060 +- 54 pb, 23 sigma apart, where the symmetry of a pp collider
+       requires them to be equal; they now agree within 1 sigma. The sum over the
+       three polarisations was already right, which is why no unpolarised result
+       is affected (checked: p p > z j unchanged at 12420 +- 69 pb). The matrix
+       element is now evaluated on the momenta the event is written with, which
+       is both what madevent does and what the systematics reweighting here
+       already assumed, since it reads them back out of the event buffer.
+   OM: 'customize_model' now works for every UFO model: generic options (flavour
+       scheme, massive leptons, diagonal CKM), commands to fix a parameter or a whole
+       block ('set decay all 0'), to change a formula, to choose the values written in
+       param_NAME.dat ('set default'), and --explain to say what each choice removes.
+   OM: New command 'explain_restriction': report what a restriction card removes.
+   OM: Bug fix: a parallel build of a generated Source/ could fail and still be
+       reported as a success. Every library rule read 'cd DIR; make; cd ..', so
+       the recipe returned the exit status of the final 'cd' -- always 0 -- and a
+       failed sub-make went unnoticed until a subprocess directory later died
+       with "No rule to make target '../../lib/libdhelas.a', needed by 'gensym'".
+       They now use 'cd DIR && make'.
+       The underlying failure was a 'make -j' race on Fortran module files: the
+       Majorana-flip DHELAS routines and PDF/pdfwrap_lhapdf.f 'use model_object'
+       (from MODEL/flavor_couplings.f), the other MODEL sources use it too, and
+       the ALOHA routines 'use aloha_object' (from DHELAS/aloha_functions.f).
+       Order-only prerequisites now enforce those three orderings.
+   OM: 'set madanalysis_path'/'set td_path' no longer raise: the options are gone
+       with MadAnalysis4, so a value that would only disable them is ignored
+       silently and any other value warns once and is dropped. Stale entries in an
+       old configuration file are dropped the same way. This keeps old command
+       files and old process directories working.
+   OM: Removed MadAnalysis4 support. The 'install MadAnalysis4' command, the
+       'madanalysis_path'/'td_path' configuration options, the 'plot' command of
+       both madevent and aMC@NLO, the plot_card.dat and the topdrawer-based
+       plotting of the parton/Pythia6/PGS/Delphes outputs are all gone. The
+       topdrawer ('td') binary it relied on is no longer downloadable, so the
+       install had been broken for a while. Use MadAnalysis5 or Rivet instead.
+       The Pythia8 merging (DJR/pt) plots are unaffected: they go through HwU.
+   OM: Bug fix: OrganizeModelExpression.track_dependant is a class attribute that
+       analyze_parameters() was extending in place, so the tracked variables of one
+       UFO model leaked into every model imported afterwards in the same process.
+       Importing a Gmu-scheme model (no external aEWM1) added 'Gf' to the class
+       list for good, and a later import of e.g. loop_sm then grouped mdl_MW under
+       ('aEWM1','Gf') instead of ('aEWM1',), reordering mp_intparam_definition.inc.
+       Each instance now works on its own copy.
+
+
+3.8.2 (XX/XX/XX):
+    OM: LO grouped output (default): the renormalisation/factorisation scales and the MLM xqcut
+        veto were computed on the momenta before the symmetry permutation of the channel (#453).
+        Channels with such permutations were biased (e.g. -3.5% for u q > z u q, also with MLM).
+        Fixed both for the scalar and the vector (vector_size>1, cudacpp) mode.
+    OM: LO vector mode (vector_size>1): fix the reweighting of MLM matching (the central factorisation
+        scale of the last event of the batch was used for all events), the config/mirror used per warp,
+        and a crash (memory corruption) when vector_size was changed in the run_card after the output.
+    OM: LO vector mode with nb_warp>1: when a P directory groups several subprocesses, each warp
+        selected its own subprocess but only the last one was evaluated for all warps (wrong weights,
+        'Clustering failed' crashes). The subprocess is now chosen once per vector (from the PDF weights
+        averaged over the warps) and the configuration/beam orientation per warp.
+    OM: MadSpin (spinmode=PA): new option 'auto_zero_width_PA' (default True) setting the width
+        of the particles decayed by MadSpin to zero in the matrix element of the production density
+        matrix, and each one in the matrix element of its own decay density matrix only (Breit-Wigner
+        sampling, reshuffling, propagator factor and branching ratios keep the param_card widths).
+    OM: output standalone: new option --zerowidth_decay=True|False|<pdg>,<pdg>,... writing propagators
+        with a zero width (param_card untouched): in a 2>N process those of the final-state particles,
+        in a 1>N process (decay) those of the decaying particle only; a pdg list restricts to those.
+    VD+OM: Density mode of the reweighting (since 3.8.0): the particles of the density matrix are now
+        ordered as given in particle_in_density_matrix (they followed the order of the process), also
+        when they are ranked with an observable. That ranking could be wrong, or drop a particle, when
+        other particles were in between. A pdg code (or a rank) absent from the process is now an error.
+    OM: Density mode of the reweighting (since 3.8.0): boost_choice used the wrong particles when the
+        event contains intermediate particles, e.g. the t+W frame instead of the b+t~ one for
+        g g > t t~, t > b w+ with boost_choice [5, -6].
+    VD: Quantum Information library: new observable Get_Steering (two-qubit steering for 2 or 3
+        measurements per site, 1510.08030).
+
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum
         weight; they keep the weight w/w_max in units of the common weight

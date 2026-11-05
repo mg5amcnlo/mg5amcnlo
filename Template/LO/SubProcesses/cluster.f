@@ -199,6 +199,7 @@ c                       daughter1, daughter2
 c     output:
 c            true if no errors
 c**************************************************************************
+      use model_object
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -433,6 +434,81 @@ c          print *,'Added BW for resonance ',i,icl(i),this_config
       
       end
 
+      subroutine flavor_filter(idi,idj,flavor,icgs)
+c**************************************************************************
+c     Drop from icgs the graphs in which legs idi and idj cannot be joined
+c     with the flavours of this event.
+c
+c     flavor(i) is the merged-flavour index of external leg i (0 when the
+c     leg is not a merged particle such as 81): two merged legs carry the
+c     same flavour iff they carry the same index. A flavour-diagonal boson
+c     (g, a, Z, h) can therefore only join two merged legs with the same
+c     index -- e.g. for q q~ > q' q~' (flavour pattern 1,1,2,2) the q-q'
+c     t-channel gluon of the merged graphs does not exist. Every other
+c     case (unmerged or internal legs, W) is left to the diagrams.
+c**************************************************************************
+      implicit none
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+      include 'cluster.inc'
+      integer idi, idj, flavor(nexternal), icgs(0:n_max_cg)
+      integer i, k, l, iflav, jflav, ipdg_prop
+
+      integer imirror, iproc
+      common/to_mirror/imirror, iproc
+
+      iflav=0
+      jflav=0
+      do l=1,nexternal
+         if(idi.eq.ishft(1,l-1)) iflav=abs(flavor(l))
+         if(idj.eq.ishft(1,l-1)) jflav=abs(flavor(l))
+      enddo
+      if(iflav.eq.0.or.jflav.eq.0.or.iflav.eq.jflav) return
+
+      k=0
+      do i=1,icgs(0)
+         ipdg_prop=abs(ipdgcl(idi+idj,icgs(i),iproc))
+         if(ipdg_prop.lt.21.or.ipdg_prop.gt.25.or.ipdg_prop.eq.24)then
+            k=k+1
+            icgs(k)=icgs(i)
+         endif
+      enddo
+      icgs(0)=k
+      end
+
+
+      logical function flavor_allows_graph(igraph,flavor)
+c**************************************************************************
+c     False if graph igraph joins two external legs that the flavours of
+c     this event forbid (see flavor_filter), i.e. if the graph does not
+c     exist for these flavours.
+c**************************************************************************
+      implicit none
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+      include 'cluster.inc'
+      integer igraph, flavor(nexternal)
+      integer i, j, k, idij, icgs(0:n_max_cg)
+
+      integer imirror, iproc
+      common/to_mirror/imirror, iproc
+
+      flavor_allows_graph=.true.
+      do i=3,nexternal
+         do j=1,i-1
+            idij=ishft(1,i-1)+ishft(1,j-1)
+            do k=1,id_cl(iproc,idij,0)
+               if(id_cl(iproc,idij,k).eq.igraph)then
+                  icgs(0)=1
+                  icgs(1)=igraph
+                  call flavor_filter(ishft(1,i-1),ishft(1,j-1),flavor,icgs)
+                  if(icgs(0).eq.0) flavor_allows_graph=.false.
+               endif
+            enddo
+         enddo
+      enddo
+      end
+
       logical function findmt(idij,icgs)
 c**************************************************************************
 c     input:
@@ -515,7 +591,7 @@ c     Check for common graphs
       end
 
 
-      logical function cluster(p, ivec)
+      logical function cluster(p, flavor, ivec)
 c**************************************************************************
 c     input:
 c            p(0:3,i)           momentum of i'th parton
@@ -532,13 +608,19 @@ c**************************************************************************
       integer ivec
       real*8 p(0:3,nexternal), pcmsp(0:3), p1(0:3)
       real*8 pi(0:3), nr(0:3), pz(0:3)
-      integer i, j, k, n, idi, idj, idij, icgs(0:n_max_cg)
-      integer nleft, iwin, jwin, iwinp, imap(nexternal,2) 
+      integer i, j, k, n, l, idi, idj, idij, icgs(0:n_max_cg)
+      integer nleft, iwin, jwin, iwinp, imap(nexternal,2)
+      integer igraph
       double precision nn2,ct,st
       double precision minpt2ij,pt2ij(n_max_cl),zij(n_max_cl)
+      integer tmppdg
 
+      integer flavor(nexternal)
       integer mapconfig(0:lmaxconfigs), this_config
       common/to_mconfigs/mapconfig, this_config
+
+      integer imirror, iproc
+      common/to_mirror/imirror, iproc
 
       data (pz(i),i=0,3)/1d0,0d0,0d0,1d0/
 
@@ -573,9 +655,29 @@ c     initialize index map
          imap(i,1)=i
          imap(i,2)=ishft(1,i-1)
          mt2ij(i)=0
-      enddo   
+      enddo
       mt2last=0
       minpt2ij=1.0d37
+c     Map the quark legs (and merged 81 legs) to the representative of the
+c     coupling class of this event: FLAVOR(i) is the position of that
+c     representative in the merged quark group, which is its pdg since the
+c     quarks are always merged in pdg order (1,2,...). It is NOT the flavour
+c     of the event (s s~ > z gives 1, c c~ > z gives 2): the flavour
+c     combination (IPSEL) is only drawn after the scales are set, and rewgt
+c     sets the external identities to it after clustering.
+      do i=1,nexternal
+         if(flavor(i).ge.1.and.flavor(i).le.6)then
+               do igraph=1,n_max_cg
+               tmppdg=ipdgcl(ishft(1,i-1),igraph,iproc)
+                  if(tmppdg.eq.81.or.(tmppdg.gt.0.and.tmppdg.le.6)) then
+                     ipdgcl(ishft(1,i-1),igraph,iproc)=flavor(i)
+                  else if(tmppdg.eq.-81.or.(tmppdg.lt.0.and.tmppdg.ge.-6))then
+                     ipdgcl(ishft(1,i-1),igraph,iproc)=-flavor(i)
+                  endif
+               enddo
+         endif
+      enddo
+
       do i=1,nexternal
 c     initialize momenta
          idi=ishft(1,i-1)
@@ -595,10 +697,12 @@ c     cluster only combinable legs (acc. to diagrams)
                icgs(0)=0
                idij=combid(idi,idj)
                pt2ij(idij)=1.0d37
-               if (findmt(idij,icgs)) then
-                  if (btest(mlevel,4)) then
-                     write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
-                  endif
+c     and only via graphs allowed for the flavours of this event
+               if (findmt(idij,icgs))
+     $            call flavor_filter(idi,idj,flavor,icgs)
+               if (icgs(0).gt.0) then
+                  if(btest(mlevel,5))
+     $        write(*,*)'After flavor filter: ',icgs(0),' graphs remain'
                   if (j.ne.1.and.j.ne.2) then
 c     final state clustering                     
                      if(isbw(idij))then
@@ -642,7 +746,7 @@ c     Check if smallest pt2 ("winner")
                      iwin=j
                      jwin=i
                      minpt2ij=pt2ij(idij)
-                  endif                 
+                  endif
                endif
             enddo
          endif
@@ -699,8 +803,10 @@ c        Set info for LH clustering output
             enddo
          endif
 c     Reset igraphs with new mother
-         if (.not.findmt(imocl(n),igraphs)) then
-            write(*,*) 'cluster.f: Error. Invalid combination.' 
+         if (findmt(imocl(n),igraphs))
+     $      call flavor_filter(idacl(n,1),idacl(n,2),flavor,igraphs)
+         if (igraphs(0).eq.0) then
+            write(*,*) 'cluster.f: Error. Invalid combination.'
             return
          endif
          if (btest(mlevel,4)) then
@@ -854,7 +960,9 @@ c     cluster only combinable legs (acc. to diagrams)
                      idij=combid(idi,idj)
 c                     write (*,*) 'RECALC !!! ',idij
                      pt2ij(idij)=1.0d37
-                     if (findmt(idij,icgs)) then
+                     if (findmt(idij,icgs))
+     $                  call flavor_filter(idi,idj,flavor,icgs)
+                     if (icgs(0).gt.0) then
                         if (btest(mlevel,4)) then
                            write(*,*)'diagrams: ',(icgs(k),k=1,icgs(0))
                        endif

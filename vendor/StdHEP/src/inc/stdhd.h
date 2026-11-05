@@ -11,9 +11,9 @@ char comment[255];	/* MCFIO_COMMENT: comment */
 } stdhd1_;
 
 extern struct stdhd2 {
-int dlen;         /* actual lenght of date */
-int tlen;         /* actual lenght of title */
-int clen;         /* actual lenght of comment */
+int dlen;         /* actual length of date */
+int tlen;         /* actual length of title */
+int clen;         /* actual length of comment */
 int numblocks;    /* MCFIO_NUMBLOCKS: number of blocks per event */
 int blkids[50];   /* MCFIO_BLOCKIDS: list of block types */
 } stdhd2_;

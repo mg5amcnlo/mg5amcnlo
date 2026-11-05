@@ -152,7 +152,7 @@ c iret#0 when problem occur
       endif
       if(nopions)then
         if(abs(ih).ne.1.and.ih.ne.4.and.ih.ne.5)then
-          write(*,*) ' hadron tpye ',ih,' not implemented'
+          write(*,*) ' hadron type ',ih,' not implemented'
           iret=1
           return
         endif

@@ -11,7 +11,7 @@ c       complex ga(6)       : first  incoming vector (gluon)
 c       complex gb(6)       : second incoming vector (gluon)
 c       complex sc(3)       : incoming scalar        (Higgs)
 c       real    g1          : coupling constant      (QCD)
-c       complex g2(2)       : coupling constant      (Higgs Effct. Thr.)
+c       complex g2(2)       : coupling constant      (Higgs Effect. Thr.)
 c
 c output:
 c       complex jggs(6)         : vector current

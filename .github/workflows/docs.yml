@@ -1,0 +1,320 @@
+name: Docs
+
+# Builds and deploys the Sphinx docs to the gh-pages branch (replacing Read
+# the Docs, which has no cross-build cache and a 15 min build ceiling -- too
+# tight for a from-source madspace build with ENABLE_DOCS=ON).
+#
+#   MadSpace (madspace.yml) or MadSpace docs examples completing for a push
+#   to main                 -> publish docs/latest/  (gated on CI, see `gate`)
+#   release published       -> publish docs/<tag>/    (skipped for prereleases)
+#   release unpublished/deleted -> remove docs/<tag>/
+#   workflow_dispatch       -> manual publish/remove of any dir/branch, with
+#                              a dry_run that builds without deploying
+#
+# gen_site_index.py (run by deploy_docs.sh) regenerates versions.json, the
+# root redirect and the stable/ alias from whatever directories are actually
+# on gh-pages afterwards, so the site is self-consistent by construction.
+on:
+  # Triggered by the workflows the docs depend on rather than by the push
+  # itself, so nothing holds a runner while they run (the wheels take ~25 min;
+  # polling for them used to occupy a hosted runner for ~an hour per push).
+  # Fires once per completed run; `gate` decides whether this one publishes.
+  workflow_run:
+    workflows: [MadSpace, MadSpace docs examples]
+    types: [completed]
+    branches: [main]
+  release:
+    types: [published, unpublished, deleted]
+  workflow_dispatch:
+    inputs:
+      version_dir:
+        description: "Target directory on gh-pages (default: latest)"
+        default: ''
+      action:
+        description: "publish or remove"
+        default: publish
+      branch:
+        description: "gh-pages branch to deploy to"
+        default: gh-pages
+      dry_run:
+        description: "Build only; do not push to gh-pages"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write   # deploy job pushes to gh-pages
+  actions: read      # gate job reads other workflows' run status
+
+jobs:
+  # Resolve which directory/action this run targets, from whichever trigger
+  # fired. Kept as its own job so build/gate/deploy can share one place that
+  # knows how to interpret each event.
+  target:
+    runs-on: ubuntu-24.04
+    outputs:
+      dir: ${{ steps.resolve.outputs.dir }}
+      action: ${{ steps.resolve.outputs.action }}
+      skip: ${{ steps.resolve.outputs.skip }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      branch: ${{ steps.resolve.outputs.branch }}
+    steps:
+      - id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WR_EVENT: ${{ github.event.workflow_run.event }}
+          WR_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPO: ${{ github.repository }}
+          RELEASE_ACTION: ${{ github.event.action }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          INPUT_VERSION_DIR: ${{ inputs.version_dir }}
+          INPUT_ACTION: ${{ inputs.action }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          skip=false
+          dry_run=false
+          branch=gh-pages
+
+          case "$EVENT_NAME" in
+            workflow_run)
+              dir=latest
+              action=publish
+              # `branches: [main]` matches the head branch name only: a pull
+              # request from a fork's own main matches too. Publish only for
+              # pushes to this repository's main.
+              if [ "$WR_EVENT" != "push" ] || [ "$WR_REPO" != "$REPO" ]; then
+                echo "triggered by a $WR_EVENT run from $WR_REPO: nothing to publish"
+                skip=true
+              fi
+              ;;
+            release)
+              dir="$RELEASE_TAG"
+              case "$RELEASE_ACTION" in
+                published)
+                  action=publish
+                  # v0.2.0-alpha-style content is already visible as `latest`;
+                  # a prerelease in the switcher would invite reading docs for
+                  # something not on PyPI.
+                  [ "$RELEASE_PRERELEASE" = "true" ] && skip=true
+                  ;;
+                unpublished|deleted)
+                  action=remove
+                  ;;
+                *)
+                  echo "::error::unexpected release action: $RELEASE_ACTION" >&2
+                  exit 1
+                  ;;
+              esac
+              ;;
+            workflow_dispatch)
+              dir="${INPUT_VERSION_DIR:-latest}"
+              action="${INPUT_ACTION:-publish}"
+              branch="${INPUT_BRANCH:-gh-pages}"
+              dry_run="${INPUT_DRY_RUN:-false}"
+              ;;
+            *)
+              echo "::error::unexpected event: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "dir=$dir"
+            echo "action=$action"
+            echo "skip=$skip"
+            echo "dry_run=$dry_run"
+            echo "branch=$branch"
+          } >> "$GITHUB_OUTPUT"
+          echo "resolved: dir=$dir action=$action skip=$skip dry_run=$dry_run branch=$branch"
+
+  # Only the CI-triggered publish of `latest` is gated -- a release has
+  # already gone through release.yml's own (stricter) require_green_ci before
+  # it could publish, and a manual dispatch is an explicit human decision.
+  #
+  # One look, no polling: this run was started by one of the two workflows
+  # completing, and the other one's completion starts another run. So
+  #   - anything failed           -> fail (as the old polling gate did),
+  #   - anything still running,
+  #     cancelled (superseded by a
+  #     newer push), or the commit
+  #     is no longer main's tip   -> ready=false, a later run publishes,
+  #   - all green                 -> ready=true.
+  # docs_examples.yml has `paths:` filters, so it legitimately never runs for
+  # most commits: absent counts as passing for it (not for madspace.yml, which
+  # runs on every push).
+  gate:
+    needs: target
+    if: github.event_name == 'workflow_run' && needs.target.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          ready=true
+          runs=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA&event=push&branch=main&per_page=100" \
+                   --jq '.workflow_runs')
+          for wf in madspace.yml docs_examples.yml; do
+            read -r status conclusion url <<<"$(jq -r --arg p ".github/workflows/$wf" '
+              [.[] | select(.path == $p)] | sort_by(.id) | last
+              | if . == null then "absent - -"
+                else "\(.status) \(.conclusion // "-") \(.html_url)" end' <<<"$runs")"
+            echo "$wf: $status $conclusion $url"
+            case "$status:$conclusion" in
+              completed:success) ;;
+              absent:*)
+                [ "$wf" = docs_examples.yml ] || ready=false ;;
+              completed:cancelled|completed:skipped) ready=false ;;
+              completed:*)
+                echo "::error::$wf is $conclusion for $SHA -- not publishing"
+                exit 1 ;;
+              *) ready=false ;;
+            esac
+          done
+          tip=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          if [ "$tip" != "$SHA" ]; then
+            echo "main has moved on to $tip: its own runs will publish"
+            ready=false
+          fi
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "ready=$ready"
+
+  build:
+    needs: [target, gate]
+    # !cancelled() is required: gate is skipped for release/dispatch events,
+    # and a skipped need otherwise skips this job via the implicit success().
+    if: |
+      !cancelled() &&
+      needs.target.result == 'success' &&
+      needs.target.outputs.skip != 'true' &&
+      needs.target.outputs.action == 'publish' &&
+      (github.event_name != 'workflow_run' ||
+       (needs.gate.result == 'success' && needs.gate.outputs.ready == 'true'))
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: docs-build-${{ github.ref }}-${{ github.event_name }}
+      cancel-in-progress: ${{ github.event_name == 'workflow_run' }}
+    steps:
+      # a workflow_run's github.sha is main's tip when it fired, not the
+      # commit the triggering run tested
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      # ubuntu-24.04 ships doxygen ~1.9.x via apt; pin explicitly rather than
+      # trust whatever apt resolves to, since two things parse its XML output
+      # (breathe and madspace's generate_docstrings.py) and doxygen's XML
+      # schema has shifted across versions (e.g. 1.14+ changed <type>/
+      # qualifiedname). This has never actually run on RTD, so this is the
+      # first real doxygen run for these docs.
+      - name: Install doxygen (pinned)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          curl -fsSL https://github.com/doxygen/doxygen/releases/download/Release_1_9_8/doxygen-1.9.8.linux.bin.tar.gz | sudo tar xz -C /opt
+          echo /opt/doxygen-1.9.8/bin >> "$GITHUB_PATH"
+
+      # enable_docs=true builds with ENABLE_DOCS=ON (doxygen-derived pybind11
+      # docstrings + .pyi stubs), under its own cache key -- see the action's
+      # description for why this must never reuse the test workflows' cache.
+      - uses: ./.github/actions/build_madspace
+        with:
+          enable_docs: 'true'
+
+      - name: Install docs dependencies
+        run: pip install -r docs/requirements.txt
+
+      - name: Build the HTML
+        env:
+          DOCS_VERSION: ${{ needs.target.outputs.dir }}
+        run: |
+          set -o pipefail
+          make -C docs html 2>&1 | tee "$RUNNER_TEMP/sphinx.log"
+
+      # generate_api_pages.py swallows a missing doxygen index or a failed
+      # `import madspace` and falls back to an empty, globbed toctree instead
+      # of raising -- which is exactly how the current Read the Docs build
+      # silently publishes an empty API reference. Fail loudly instead.
+      - name: Check the API reference did not degrade silently
+        run: |
+          set -euo pipefail
+          if grep -nE 'cannot import madspace|index\.xml missing' "$RUNNER_TEMP/sphinx.log"; then
+            echo "::error::the API generator degraded silently -- see the lines above"
+            exit 1
+          fi
+
+          cpp=$(find docs/source/madspace/cpp    -name '*.rst' 2>/dev/null | wc -l)
+          py=$( find docs/source/madspace/python -name '*.rst' 2>/dev/null | wc -l)
+          echo "generated API pages: cpp=$cpp python=$py"
+          if [ "$cpp" -lt 100 ]; then
+            echo "::error::only $cpp C++ pages generated (expected >=100): doxygen XML missing/empty"
+            exit 1
+          fi
+          if [ "$py" -lt 100 ]; then
+            echo "::error::only $py Python pages generated (expected >=100): 'import madspace' likely failed"
+            exit 1
+          fi
+
+          for f in cpp-api python-api; do
+            if grep -q ':glob:' "docs/source/madspace/$f.rst"; then
+              echo "::error::$f.rst fell back to the globbed toctree"
+              exit 1
+            fi
+          done
+
+      # The page-count check above can't catch ENABLE_DOCS=OFF: the stub
+      # still writes pages, just with no prose (doc() returns "").
+      - name: Check ENABLE_DOCS actually produced docstrings
+        run: python3 .github/scripts/check_docstrings.py
+
+      - name: Check breathe rendered a known C++ brief
+        run: grep -q "Base class for invertible phase-space mappings" docs/build/html/madspace/cpp/Mapping.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-html-${{ needs.target.outputs.dir }}
+          path: docs/build/html
+          retention-days: 14
+
+  deploy:
+    needs: [target, build]
+    # Explicit condition (not the implicit success()) because `build` is
+    # legitimately skipped for a `remove`: there is nothing to build to delete
+    # a directory.
+    if: |
+      !cancelled() &&
+      needs.target.result == 'success' &&
+      needs.target.outputs.skip != 'true' &&
+      needs.target.outputs.dry_run != 'true' &&
+      (needs.target.outputs.action == 'remove' || needs.build.result == 'success')
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: docs-deploy       # one global, non-cancellable writer of gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download built HTML
+        if: needs.target.outputs.action == 'publish'
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-html-${{ needs.target.outputs.dir }}
+          path: docs/build/html
+
+      - name: Deploy to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DOCS_BRANCH: ${{ needs.target.outputs.branch }}
+          # Unset until the staged domain rollout's cutover step sets this repo
+          # variable -- see the docs migration plan. Deploys write no CNAME
+          # file until then, so GitHub never claims a domain still pointing at
+          # Read the Docs.
+          DOCS_CNAME: ${{ vars.DOCS_CNAME }}
+        run: .github/scripts/deploy_docs.sh "${{ needs.target.outputs.dir }}" "${{ needs.target.outputs.action }}"

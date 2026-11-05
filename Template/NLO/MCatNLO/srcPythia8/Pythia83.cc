@@ -1,18 +1,71 @@
 // Driver for Pythia 8. Reads an input file dynamically created on
 // the basis of the inputs specified in MCatNLO_MadFKS_PY8.Script 
+// The events are passed to the Fortran analysis through the HEPEVT common
+// block. With -DHEPMC3 (shower_card: hepmc_format) it is filled directly from
+// the Pythia8 event record, otherwise through HepMC2.
 #include "Pythia8/Pythia.h"
+#ifndef HEPMC3
 #include "Pythia8Plugins/HepMC2.h"
+#endif
 #include "Pythia8Plugins/CombineMatchingInput.h"
+#ifndef HEPMC3
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
 #include "HepMC/IO_BaseClass.h"
 #include "HepMC/IO_HEPEVT.h"
 #include "HepMC/HEPEVT_Wrapper.h"
 #include "HEPEVTSize.h"
+#endif
 #include "fstream"
 #include "LHEFRead.h"
 
 using namespace Pythia8;
+
+#ifdef HEPMC3
+// The HEPEVT common block of the analysis (MCatNLO/include/HEPMC.INC).
+const int NMXHEP = 4000;
+extern "C" {
+  extern struct {
+    int nevhep, nhep, isthep[NMXHEP], idhep[NMXHEP];
+    int jmohep[NMXHEP][2], jdahep[NMXHEP][2];
+    double phep[NMXHEP][5], vhep[NMXHEP][4];
+  } hepevt_;
+}
+
+// Copy the event record (without its system entry 0) to HEPEVT, with the
+// HepMC status codes, so that HEPEVT entry i is Pythia8 entry i.
+void fillHEPEVT(Event & event, int iEvent) {
+  static bool warned = false;
+  int n = 0;
+  for (int i = 1; i < event.size(); ++i) {
+    if (n == NMXHEP) {
+      if (!warned) cout << "Warning: events truncated to " << NMXHEP
+                        << " entries in HEPEVT" << endl;
+      warned = true;
+      break;
+    }
+    Particle & p = event[i];
+    hepevt_.isthep[n] = p.statusHepMC();
+    hepevt_.idhep[n] = p.id();
+    hepevt_.jmohep[n][0] = p.mother1();
+    hepevt_.jmohep[n][1] = p.mother2();
+    hepevt_.jdahep[n][0] = p.daughter1();
+    hepevt_.jdahep[n][1] = p.daughter2();
+    hepevt_.phep[n][0] = p.px();
+    hepevt_.phep[n][1] = p.py();
+    hepevt_.phep[n][2] = p.pz();
+    hepevt_.phep[n][3] = p.e();
+    hepevt_.phep[n][4] = p.m();
+    hepevt_.vhep[n][0] = p.xProd();
+    hepevt_.vhep[n][1] = p.yProd();
+    hepevt_.vhep[n][2] = p.zProd();
+    hepevt_.vhep[n][3] = p.tProd();
+    ++n;
+  }
+  hepevt_.nhep = n;
+  hepevt_.nevhep = iEvent;
+}
+#endif
 
 extern "C" {
   extern struct {
@@ -92,9 +145,11 @@ int main() {
     return 0;
   };
 
+#ifndef HEPMC3
   HepMC::IO_BaseClass *_hepevtio;
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
+#endif
   double nSelected;
   int nTry;
   double norm;
@@ -132,6 +187,11 @@ int main() {
       sigmaTotal  += evtweight*normhepmc*iEventtot;
     }
 
+#ifdef HEPMC3
+    fillHEPEVT(pythia.event, iEvent);
+    //event weight: the first weight that HepMC2 stores for the event
+    cevwgt.EVWGT=pythia.info.weightValueByIndex(0);
+#else
     HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     ToHepMC.fill_next_event( pythia, hepmcevt );
 
@@ -141,6 +201,7 @@ int main() {
     
     //event weight
     cevwgt.EVWGT=hepmcevt->weights()[0];
+#endif
 
     //call the FORTRAN analysis for this event. First, make sure to
     //re-synchronize the reading of the weights with the reading of
@@ -155,7 +216,9 @@ int main() {
     if (iEvent % nstep == 0 && iEvent >= 100){
       pyaend_(norm);
     }
+#ifndef HEPMC3
     delete hepmcevt;
+#endif
   }
   pyaend_(norm);
 

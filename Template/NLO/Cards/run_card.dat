@@ -1,5 +1,5 @@
 #***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
+#                        MadGraph7                             *
 #                                                                      *
 #                      run_card.dat aMC@NLO                            *
 #                                                                      *
@@ -38,10 +38,10 @@
 #***********************************************************************
 # Output format
 #***********************************************************************
-  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
+  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant lifetime is not written (-1 means not written)
   %(event_norm)s =  event_norm       ! average/sum/bias. Normalization of the weight in the LHEF
 #***********************************************************************
-# Number of points per itegration channel (ignored for aMC@NLO runs)   *
+# Number of points per integration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
  %(req_acc_fo)s   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)
@@ -50,6 +50,9 @@
  %(niters_fo_grid)s      = niters_FO_grid   ! number of iter. to setup grids
  %(npoints_fo)s  = npoints_FO       ! number of points to compute Xsec
  %(niters_fo)s      = niters_FO        ! number of iter. to compute Xsec
+# Separate integration channels for the hard real emission (0<x0<1: on,
+# -1: off). Default chosen at output from the real-emission diagrams
+ %(real_channels_x0)s  = real_channels_x0 ! f(x)=1/(1+(x/x0)^2), x=2ki.kj/shat
 #***********************************************************************
 # Random number seed                                                   *
 #***********************************************************************
@@ -66,6 +69,7 @@
  %(lpp2)s   = lpp2    ! beam 2 type (0 = no PDF)
  %(ebeam1)s   = ebeam1  ! beam 1 energy in GeV
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
+$frame
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 # pdlabel: lhapdf = LHAPDF (installation needed) [1412.7420]           *
@@ -141,7 +145,7 @@ $ion_pdf
 #      level. After showering an MLM-type merging should be applied as *
 #      well. See http://amcatnlo.cern.ch/FxFx_merging.htm for details. *
 #   4: UNLOPS merging (with pythia8 only). No interface from within    *
-#      MG5_aMC available, but available in Pythia8.                    *
+#      MadGraph7 available, but available in Pythia8.                    *
 #  -1: NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph].    *
 #***********************************************************************
  %(ickkw)s        = ickkw

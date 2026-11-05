@@ -2221,7 +2221,7 @@ CONTAINS
     ! hep-ph/0509141
     ! More expressions are given in hep-ph/0609282: 
     ! rank 9 for point 4, rank 8 for point 3 and rank 10 for point 2.
-    ! General formalism is also aviable. 
+    ! General formalism is also available.
     ! However, I think the expressions in hep-ph/0509141 are sufficient and I will leave it.
     IMPLICIT NONE
     INTEGER,INTENT(IN)::NLOOPLINE

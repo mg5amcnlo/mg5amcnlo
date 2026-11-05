@@ -71,7 +71,7 @@ c*******************************************************************************
      2 '   MCFIO_FILENUMBER : The Sequential file number currently',
      2 ' accessed.'/
      3 '   MCFIO_MAXLREC: Maximum Record length'/
-     4 '   MCFIO_MINLREC: Minumum Record length'/
+     4 '   MCFIO_MINLREC: Minimum Record length'/
      5 '   MCFIO_NUMRECORDS: The number of records in the current',
      5 ' event'/
      6 '   MCFIO_RECORDLENGTHS: The record lengths for the current', 

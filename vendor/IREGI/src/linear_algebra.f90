@@ -52,7 +52,7 @@ CONTAINS
           ENDDO
           inow=inow+1
        ELSE
-          ! the coloum is zero, put it to the end
+          ! the column is zero, put it to the end
           coloum(1:N)=B(1:N,inow)
           izero=izero+1
           iswap=iexchange(N)
@@ -151,7 +151,7 @@ CONTAINS
           ENDDO
           inow=inow+1
        ELSE
-          ! the coloum is zero, put it to the end
+          ! the column is zero, put it to the end
           coloum(1:N)=B(1:N,inow)
           izero=izero+1
           iswap=iexchange(N)

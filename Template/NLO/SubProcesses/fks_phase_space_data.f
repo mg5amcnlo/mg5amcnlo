@@ -28,7 +28,7 @@ c their existing owners. This module still describes one active point.
       public xiimax_cnt
       public xinorm_ev
       public xinorm_cnt
-      public xij_aor
+      public xij_aor,xij_kperp
       public veckn_ev,veckbarn_ev,xp0jfks
       public isolsign
       public nocntevents
@@ -106,6 +106,7 @@ c Former /cxinormcnt/ fields.
 
 c Former /cxij_aor/ fields.
       double complex :: xij_aor=(0d0,0d0)
+      double precision :: xij_kperp(0:3)=0d0
 
 c Former /cgenps_fks/ fields.
       double precision :: veckn_ev=0d0

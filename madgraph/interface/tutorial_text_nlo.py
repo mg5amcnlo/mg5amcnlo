@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -16,7 +16,7 @@
 
 tutorial_aMCatNLO = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options of MadGraph5_aMC@NLO for the computation of processes involving
+syntax options of MadGraph7 for the computation of processes involving
 NLO corrections.
 
 To learn more about the different options for a command, you can use
@@ -25,20 +25,20 @@ To see a list of all commands, use
 MG_aMC>help 
 
 The goal of this tutorial is to learn how to generate a process and to
-produce an output for MadGraph5_aMC@NLO. In this part we will learn
+produce an output for MadGraph7. In this part we will learn
 a) How to generate a process involving NLO corrections
-b) How to create the corresponding output for MadGraph5_aMC@NLO
+b) How to create the corresponding output for MadGraph7
 c) How to run this output for computing NLO corrections
 
 If you have FastJet (v3 or later) installed on your computer and you wish
-to link it, please update the mg5_configuration file or type
-MG5_aMC>set fastjet /path/to/fastjet-config
+to link it, please update the mg7_configuration file or type
+MadGraph7>set fastjet /path/to/fastjet-config
 Otherwise the basic fastjet functionalities included in FJcore (shipped
-with MadGraph5_aMC@NLO) will be used.
+with MadGraph7) will be used.
 
 
 Let's start with the first point, how to generate a process at NLO:
-MG5_aMC>generate p p > e+ ve [QCD]
+MadGraph7>generate p p > e+ ve [QCD]
 Note that a space is mandatory between the particle names and that '[QCD]' 
 specifies that you want to consider QCD NLO corrections. 
 Couplings different than QCD cannot be perturbed yet.
@@ -71,7 +71,7 @@ You have seen a list of the already defined processes.
 
 At this stage you can export your processes to different formats. In
 this tutorial, we will explain how to create a valid output for
-MadGraph5_aMC@NLO. This is done simply by typing:
+MadGraph7. This is done simply by typing:
 MG_aMC>output MY_FIRST_AMCTANLO_RUN
 """
 
@@ -114,7 +114,7 @@ You can do so by typing:
 MG_aMC> launch -i MyFolder
 
 Please see MY_FIRST_AMCATNLO_RUN/README to know about the available commands.
-To know the possible options/modes for each command, simply tiple
+To know the possible options/modes for each command, simply type
 'MyFolder'> help COMMAND
 from the interface bound to the 'MyFolder' output.
 

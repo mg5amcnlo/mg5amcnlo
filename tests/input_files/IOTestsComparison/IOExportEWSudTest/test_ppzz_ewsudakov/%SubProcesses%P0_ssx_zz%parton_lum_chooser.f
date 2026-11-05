@@ -4,9 +4,9 @@
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       SELECT CASE(NFKSPROCESS)
       CASE(1)
-      CALL DLUM_0(DLUM)
+        CALL DLUM_0(DLUM)
       CASE DEFAULT
-      STOP 'Invalid native PDF sector'
+        STOP 'Invalid native PDF sector'
       END SELECT
       CALL MC_FILTER_NATIVE_LUM(DLUM)
       END

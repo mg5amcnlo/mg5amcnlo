@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -185,7 +185,7 @@ class LoopDiagram(base_objects.Diagram):
                     else:
                         mystr += 'Struct. on loop vx #'+str(i+1)+": "+\
                       struct_list[struct].nice_string_vertices()+"\n"
-        #remove the unecessary last \n on the line
+        #remove the unnecessary last \n on the line
         mystr=mystr[:-1]
 
         return mystr
@@ -270,7 +270,7 @@ class LoopDiagram(base_objects.Diagram):
                                             use_FDStructure_ID_for_tag = False):
         """ This function returns what will be used as the 'loop_tag' attribute
         of the ContractedVertex instance in the function 'get_contracted_loop_diagram'.
-        It is important since it is what is used by MG5_aMC to decide
+        It is important since it is what is used by MadGraph7 to decide
         if two processes have *exactly* the same matrix element and can be
         identified. 
         There is no need to characterize the details of the FDStructures attached
@@ -391,7 +391,7 @@ class LoopDiagram(base_objects.Diagram):
                                                               synchronize=False)
 
         contracted_diagram_vertices = base_objects.VertexList()
-        # We give this vertex the special ID -2 so that whenever MG5_aMC tries
+        # We give this vertex the special ID -2 so that whenever MadGraph7 tries
         # to retrieve an information in typically gets from the model interaction
         # it will instead get it from the 'loop_info' provided by the contracted
         # vertex of its corresponding vertex_id in a Tag
@@ -654,7 +654,7 @@ class LoopDiagram(base_objects.Diagram):
             # The tag of the diagram is now updated with the canonical tag
             self['tag']=canonical_tag
             # We assign here the loopVertexList to the list of vertices 
-            # building this loop diagram. Keep in mind the the structures are 
+            # building this loop diagram. Keep in mind the structures are
             # factored out.
             if synchronize:
                 self.synchronize_loop_vertices_with_tag(model,n_initial,
@@ -714,7 +714,7 @@ class LoopDiagram(base_objects.Diagram):
                                   endLeg, loopVertexList, model, external_legs):
         """ Finds a loop leg and what is the next one. Also identify and tag the
         FD structure attached in between these two loop legs. It adds the 
-        corresponding tuple to the diagram tag and calls iself again to treat
+        corresponding tuple to the diagram tag and calls itself again to treat
         the next loop leg. Return True when tag successfully computed."""
 
         nextLoopLeg=None
@@ -760,7 +760,7 @@ class LoopDiagram(base_objects.Diagram):
                 # dictionary.
                 FDStruct.set('id',myStructID)
                 # And we now ask the structure to create its vertices, 
-                # starting from the outter legs going inwards towards the 
+                # starting from the outer legs going inwards towards the
                 # binding leg.
                 FDStruct.generate_vertices(model, external_legs)
                 structRep.append(FDStruct)
@@ -907,7 +907,7 @@ class LoopDiagram(base_objects.Diagram):
             # WARNING: This is very important here that the endLeg has the 
             # maximal attribute 'number' among all other legs, because this 
             # guarantees that its number is NOT propagated and that as soon 
-            # as we reach this number, we reached the EXTERNAL outter leg 
+            # as we reach this number, we reached the EXTERNAL outer leg
             # which set the end of the tagging algorithm.
             loopVertexList.append(\
                self.generate_loop_vertex(myleglist,model,n_initial,vertFoundID))
@@ -1105,7 +1105,7 @@ class LoopDiagram(base_objects.Diagram):
             for k in [ind for ind in \
                 range(len(self['vertices'][vertID].get('legs'))) if ind!=legID]:
                 # If we found currLeg in an identity vertex we directly skip it
-                # for what regards the construction of the cannonical 
+                # for what regards the construction of the canonical
                 # representation.
                 if not self['vertices'][vertID].get('id'):
                     return self.construct_FDStructure(vertID, k,\
@@ -1223,7 +1223,7 @@ class LoopDiagram(base_objects.Diagram):
         return max(self['vertices'][-1].get('legs'), key=lambda l: l['number'])
 
     def get_loop_line_types(self):
-        """ Return a set with one occurence of each different PDG code of the
+        """ Return a set with one occurrence of each different PDG code of the
         particles running in the loop. By convention, the PDF of the particle,
         not the antiparticle, is stored in this list. Using the tag would be 
         quicker, but we want this function to be available before tagging as 
@@ -1322,7 +1322,7 @@ class LoopDiagram(base_objects.Diagram):
 
 class LoopUVCTDiagram(base_objects.Diagram):
     """ A special kind of LoopDiagram which does not contain a loop but only
-    specifies all UV counter-term which factorize the the same given born
+    specifies all UV counter-term which factorize the same given born
     and bringing in the same orders. UV mass renormalization does not belong to
     this class of counter-term for example, and it is added along with the R2 
     interactions."""
@@ -1366,6 +1366,16 @@ class LoopUVCTDiagram(base_objects.Diagram):
         
         return ['vertices', 'UVCT_couplings', 'UVCT_orders', 'type', 'orders']
 
+    def get_contracted_loop_diagram(self, model, struct_rep=None):
+        """A UVCT diagram has no loop to contract: return a copy of it, as
+        for the tree-level diagrams interfered with a loop-induced amplitude
+        (LIxtree), which are stored as UVCT diagrams."""
+        return copy.copy(self)
+
+    def get_contracted_loop_diagram_without_tag(self, struct_rep=None):
+        """See get_contracted_loop_diagram."""
+        return copy.copy(self)
+
     def get_UVCTinteraction(self, model):
         """ Finds the UV counter-term interaction present in this UVCTDiagram """
         
@@ -1378,7 +1388,7 @@ class LoopUVCTDiagram(base_objects.Diagram):
 
     def calculate_orders(self, model):
         """Calculate the actual coupling orders of this diagram. Note
-        that the special order WEIGTHED corresponds to the sum of
+        that the special order WEIGHTED corresponds to the sum of
         hierarchies for the couplings."""
 
         coupling_orders = dict([(c, 0) for c in model.get('coupling_orders')])
@@ -1391,6 +1401,9 @@ class LoopUVCTDiagram(base_objects.Diagram):
             weight += sum([model.get('order_hierarchy')[c]*n for \
                               (c,n) in couplings.items()])
         coupling_orders['WEIGHTED'] = weight
+        # only the interfering trees (LIxtree) list the hidden order
+        if not coupling_orders.get(base_objects.INTERFERENCE_ORDER):
+            coupling_orders.pop(base_objects.INTERFERENCE_ORDER, None)
         self.set('orders', coupling_orders)
 
     def nice_string(self):
@@ -1562,7 +1575,7 @@ class FDStructure(base_objects.PhysicsObject):
         self['binding_leg']= base_objects.Leg()
 
     def is_external(self):
-        """Returns wether the structure is simply made of an external particle
+        """Returns whether the structure is simply made of an external particle
         only"""
         if (len(self['canonical'])==1 and self['canonical'][0][1]==0):
             return True
@@ -1652,7 +1665,7 @@ class FDStructure(base_objects.PhysicsObject):
 
     def generate_vertices(self, model, external_legs=None):
         """ This functions generate the vertices building this structure, 
-        starting from the outter legs going towards the binding leg. 
+        starting from the outer legs going towards the binding leg.
         It uses the interactions dictionaries from the model. """
 
         if isinstance(model, base_objects.Process):
@@ -1692,7 +1705,7 @@ class FDStructure(base_objects.PhysicsObject):
             self['binding_leg']=copy.deepcopy(legDict[tag[0][0][0]])
             return
 
-        # Reverse the tag to start from the outter legs
+        # Reverse the tag to start from the outer legs
         tag=list(tag)
         tag.reverse()
 

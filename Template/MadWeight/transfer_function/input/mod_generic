@@ -4,7 +4,7 @@
 ##				MadWeight				##
 ##				*********				##
 ##		    			                                ##
-##	Autor:	 Olivier Mattelaer 			                ##
+##	Author:	 Olivier Mattelaer 			                ##
 ##		 Pierre Artoisenet			                ##
 ##		 		                                        ##
 ##	date:	January 08		                                ##
@@ -33,7 +33,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-TF_BUILDER        |
+C|     This file is generated automatically by MADWEIGHT-TF_BUILDER        |
 C+-----------------------------------------------------------------------+     
 ##************************************************************************
 $E$ TF_HEADER $E$
@@ -155,7 +155,7 @@ $B$ START_TRANSFER_FCT $B$
 C+-----------------------------------------------------------------------+
 C|     Subroutine: transfer_fct(P,weight)                                |
 C|                                                                       |
-C|     purpose: returns the weight by the coeficient comming from the    |
+C|     purpose: returns the weight by the coefficient coming from the    |
 C|              transfer_fct                                             |
 C+-----------------------------------------------------------------------+
      subroutine transfer_fct(P,weight)
@@ -200,7 +200,7 @@ $B$ START_TF_E_FOR_PART $B$
 C+-----------------------------------------------------------------------+
 C|     Subroutine: tf_E_for_part(MG_num)                                 |
 C|                                                                       |
-C|     purpose: returns the value of the transfert function (in energy)  |
+C|     purpose: returns the value of the transfer function (in energy)  |
 C|              for the particles associated to the MG_number            |
 C+-----------------------------------------------------------------------+
       double precision function  tf_E_for_part(MG_num)

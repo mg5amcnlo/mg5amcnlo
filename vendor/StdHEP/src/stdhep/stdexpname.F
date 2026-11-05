@@ -4,7 +4,7 @@
 C...Purpose: get the padded particle name
 C
 C      IT = index to HEPEVT common block
-C      LMX = lenght of character variable to be filled
+C      LMX = length of character variable to be filled
 C
 
 #include "stdhep.inc"

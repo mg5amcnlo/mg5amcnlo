@@ -4,7 +4,7 @@ import json
 import re
 
 from madgraph.iolibs import born_support as support
-from models import import_ufo, model_reader
+from madgraph.models import import_ufo, model_reader
 
 
 def check_real_cache(output, run_command):
@@ -45,9 +45,14 @@ def check_real_cache(output, run_command):
             matrices.append(work/source.name)
             source_lines = list(support.statements(source.read_text()))
             names = {name.lower():name.lower()+'_oracle' for line in source_lines
-                     for name in re.findall(r'(?i)(?:subroutine|function)\s+(\w+)',line)}
+                     for name in re.findall(r'(?i)^\s*(?:[\w*]+\s+)*?'
+                                            r'(?:subroutine|function)\s+(\w+)',line)}
             oracle_names[name] = name+'_oracle'
-            oracle = [support.rename(line,names) for line in source_lines]
+            # The original matrix owns the shared diagram-weight BLOCK DATA.
+            # Clone only evaluator routines, keeping its COMMON initializer
+            # defined once when the direct and oracle matrices are linked.
+            oracle = [support.rename(line,names) for routine_name in names
+                      for line in support.routine(source.read_text(),routine_name)]
             # Independent all-helicity sum, retaining the actual diagrams and
             # colour/order contractions but bypassing every learned zero mask.
             oracle = [re.sub(r'(?i)\bntry\s*=\s*ntry\s*\+\s*1', 'NTRY=1',line)
@@ -157,9 +162,11 @@ def check_real_cache(output, run_command):
                   "write(*,*)'Mismatch',a,b,owner,ihist,j,iteration,stage", 'stop 91', 'endif', 'end',
                   'subroutine mc_sync_native_tables()', 'end']
         support.write_fortran(work/'check.f', lines)
-        paths = [sub/'mc_native_context.f90', work/'capture.f', sub/'real_me_chooser.f',
+        # MG7 matrices import the wavefunction record module defined here.
+        aloha = output/'Source/DHELAS/aloha_functions.f'
+        paths = [aloha, sub/'mc_native_context.f90', work/'capture.f', sub/'real_me_chooser.f',
                  *matrices, work/'wrappers.f', work/'oracle_chooser.f',work/'helpers.f',work/'check.f',
-                 *sorted((output/'Source/DHELAS').glob('*.f')),
+                 *(p for p in sorted((output/'Source/DHELAS').glob('*.f')) if p != aloha),
                  output/'Source/MODEL/model_functions.f']
         run_command(['gfortran','-O0','-g','-fcheck=all','-ffixed-line-length-none',
                      '-ffree-line-length-none','-I'+str(sub),'-I'+str(output/'lib'),

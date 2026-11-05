@@ -209,7 +209,7 @@ void ConvertVMSCommandLine(int *argc, char **argv[])
 ** Accumulate characters in an argv argc style argument list.  Spaces
 ** mean start a new argument and extra ones are ignored.  Argument strings
 ** are accumulated internally in the routine and not flushed into argv
-** until a space is recieved (so a final space is needed to finish argv).
+** until a space is received (so a final space is needed to finish argv).
 */
 static void addArgChar(int *argc, char *argv[], char c)
 {

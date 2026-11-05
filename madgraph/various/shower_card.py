@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -57,7 +57,7 @@ class ShowerCard(banner.RunCard):
     # var : {PYTHIA6: varpy6, HERWIG6: varhw6, HERWIG7: varhw7, PYTHIA8: varpy8}
     # where varpy, varhw6 and varhw7 are mc_dependent names
     # if a mc is not there, that variable is not supposed to be
-    # used / written for thar mc
+    # used / written for that mc
     names_dict = {}
     stdhep_dict = {'HERWIG6':'mcatnlo_hwan_stdhep.o', 'PYTHIA6':'mcatnlo_pyan_stdhep.o'}
     
@@ -197,6 +197,10 @@ class ShowerCard(banner.RunCard):
                        py8='qed_shower')
         self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
                         py8='primordialkt')
+        # resolved by amcatnlo_run_interface, which passes the HepMC version
+        # and its compilation flags to the shower script via banner.dat
+        self.add_param("hepmc_format", "auto", comment="HepMC version of the output: auto, hepmc2 or hepmc3 !ONLY FOR PYTHIA8!",
+                       py8='hepmc_format', allowed=['auto', 'hepmc2', 'hepmc3'])
 
         # ME correction
         self.add_param('space_shower_me_corrections', False, comment= "MECs for ISR",
@@ -327,7 +331,7 @@ class ShowerCard(banner.RunCard):
             output_file.write(self.text)
 
     def create_default_for_process(self, *args, **opts):
-        pass # will be usefull later on
+        pass # will be useful later on
 
     def write_card(self, shower, card_path):
         """write the shower_card for shower in card_path.
@@ -345,6 +349,9 @@ class ShowerCard(banner.RunCard):
         for key in self:
             value = self[key]
             key = key.lower()
+            if key == 'hepmc_format':
+                # passed to the shower script through banner.dat
+                continue
             if isinstance(value, bool): 
                 # deal with special case for pythia:
                 if key in ['ue_enabled', 'hadronize'] and self.shower == 'PYTHIA6':

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -32,7 +32,7 @@
 ##
 ################################################################################
 ##
-##   Variable is in fact Factory wich adds a references to the variable name
+##   Variable is in fact Factory which adds a references to the variable name
 ##   Into the KERNEL (Of class Computation) instantiate a real variable object
 ##   (of class C_Variable, DVariable for complex/real) and return a MUltVariable
 ##   with a single element.
@@ -49,7 +49,7 @@ import collections
 from fractions import Fraction
 import numbers
 import re
-import aloha # define mode of writting
+import aloha # define mode of writing
 try:
     import madgraph.various.misc as misc
 except Exception:
@@ -93,7 +93,7 @@ class Computation(dict):
         
     def get_ids(self, variables):
         """return the list of identification number associate to the 
-        given variables names. If a variable didn't exists, create it (in complex).
+        given variables names. If a variable didn't exist, create it (in complex).
         """
         out = []
         for var in variables:
@@ -323,8 +323,8 @@ class AddVariable(list):
     
     def replace(self, id, expression):
         """replace one object (identify by his id) by a given expression.
-           Note that expression cann't be zero.
-           Note that this should be canonical form (this should contains ONLY
+           Note that the expression can't be zero.
+           Note that this should be canonical form (this should contain ONLY
            MULTVARIABLE) --so this should be called before a factorize.
         """
         new = self.__class__()
@@ -680,7 +680,7 @@ class MultVariable(array):
         
     def replace(self, id, expression):
         """replace one object (identify by his id) by a given expression.
-           Note that expression cann't be zero.
+           Note that the expression can't be zero.
         """
         assert hasattr(expression, 'vartype') , 'expression should be of type Add or Mult'
         
@@ -695,7 +695,7 @@ class MultVariable(array):
                 new *= expression
             return new             
         elif expression.vartype == 2: # MultLorentz
-            # be carefull about A -> A * B
+            # be careful about A -> A * B
             nb = self.count(id)
             for i in range(nb):
                 self.remove(id)
@@ -772,7 +772,7 @@ class MultVariable(array):
         
 
     def __add__(self, obj):
-        """ define the adition with different object"""
+        """ define the addition with different object"""
 
         if not obj:
             return self
@@ -957,7 +957,7 @@ class MultLorentz(MultVariable):
         current = None # current point in the working chain
         
         while self.unused:
-            #Loop untill we have expand everything
+            #Loop until we have expand everything
             if not current:
                 # First we need to have a starting point
                 try: 
@@ -971,7 +971,7 @@ class MultLorentz(MultVariable):
                     if current not in self.unused:
                         current = None
                         continue
-                    #remove of the unuse (usualy done in the pop)
+                    #remove of the unused (usually done in the pop)
                     self.unused.remove(current)
                 cur_obj = KERNEL.objs[current] 
                 # initialize the new chain
@@ -1061,11 +1061,16 @@ class LorentzObject(object):
         return '%s' % self.name
 
 class FactoryLorentz(FactoryVar):
-    """ A symbolic Object for All Helas object. All Helas Object Should 
+    """ A symbolic Object for All Helas object. All Helas Object Should
     derivated from this class"""
-    
+
     mult_class = MultLorentz # The class for the multiplication
     object_class = LorentzObject # Define How to create the basic object.
+    # True when the arguments of the structure commute, so that writing them in
+    # any order denotes the same object (Metric(1,2) == Metric(2,1)). Consumers
+    # use it to tell a mere reordering apart from a real difference; see
+    # madgraph.models.import_ufo.canonicalize_lorentz_structure.
+    is_symmetric = False
     
     def __new__(cls, *args):
         name = cls.get_unique_name(*args)
@@ -1156,7 +1161,7 @@ class LorentzObjectRepresentation(dict):
                 index = l2.index(value)
             except Exception:
                 raise LorentzObjectRepresentation.LorentzObjectRepresentationError(
-                        "Invalid addition. Object doen't have the same lorentz "+ \
+                        "Invalid addition. Object doesn't have the same lorentz "+ \
                         "indices : %s != %s" % (l1, l2))
             else:
                 switch_order.append(shift + index)
@@ -1194,7 +1199,7 @@ class LorentzObjectRepresentation(dict):
         # define an empty representation
         new = LorentzObjectRepresentation({}, obj.lorentz_ind, obj.spin_ind)
         
-        # loop over all indices and fullfill the new object 
+        # loop over all indices and fill the new object
         if fact == 1:
             for ind in self.listindices():
                 value = obj.get_rep(ind) + self.get_rep(switch(ind))
@@ -1228,7 +1233,7 @@ class LorentzObjectRepresentation(dict):
         assert tuple(switch(self.lorentz_ind+self.spin_ind)) == tuple(obj.lorentz_ind+obj.spin_ind), '%s!=%s' % (switch(self.lorentz_ind+self.spin_ind), (obj.lorentz_ind+obj.spin_ind))
         assert tuple(switch(self.lorentz_ind) )== tuple(obj.lorentz_ind), '%s!=%s' % (switch(self.lorentz_ind), tuple(obj.lorentz_ind))
         
-        # loop over all indices and fullfill the new object         
+        # loop over all indices and fill the new object
         if fact == 1:
             for ind in self.listindices():
                 self[tuple(ind)] += obj.get_rep(switch(ind))
@@ -1277,7 +1282,7 @@ class LorentzObjectRepresentation(dict):
         # elsewher made a spin contraction
         # create an empty representation but with correct indices
         new_object = LorentzObjectRepresentation({}, l_ind, s_ind)
-        #loop and fullfill the representation
+        #loop and fill the representation
         for indices in new_object.listindices():
             #made a dictionary (pos -> index_value) for how call the object
             dict_l_ind = self.pass_ind_in_dict(indices[:len(l_ind)], l_ind)

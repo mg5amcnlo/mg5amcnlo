@@ -1,7 +1,7 @@
       Program DRIVER
       use fks_phase_space_data, only: p_born
 c**************************************************************************
-c     This is the driver for the whole calulation
+c     This is the driver for the whole calculation
 c**************************************************************************
       use mint_module
       use FKSParams
@@ -79,7 +79,7 @@ C-----
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
-      call printout              !Prints out a summary of paramaters
+      call printout              !Prints out a summary of parameters
       call run_printout          !Prints out a summary of the run settings
       include 'pmass.inc'
      
@@ -95,7 +95,7 @@ c     Set the energy to be characteristic of the run
       enddo
       if (abs(lpp(1)).eq.1.and.abs(lpp(2)).eq.1) then
           energy = max((ebeam(1)+ebeam(2))/20.0d0,2.0d0*totmass)
-      else if (lpp(1).eq.2.and.lpp(2).eq.2) then
+      else if (abs(lpp(1)).eq.2.and.abs(lpp(2)).eq.2) then
           energy = max((ebeam(1)/(nb_proton(1)+nb_neutron(1))+ebeam(2)/
      .       (nb_proton(2)+nb_neutron(2)))/200.0d0,2.0d0*totmass)
       else
@@ -217,11 +217,16 @@ c initialization
           enddo
 
           CALL UPDATE_AS_PARAM()
-          call sborn(p_born, born)
+          call sborn_frame(p_born, born)
           ! extra initialisation calls: skip the first point
           ! as well as any other points which is used for initialization
           ! (according to the return code)
-          call BinothLHA(p_born, born, virt_wgt)
+c The virtual must be evaluated in the same frame as the Born above: the
+c poles are proportional to the Born, so a frame mismatch here shows up as
+c a per-point constant ratio between the MadFKS and the OLP poles and the
+c check fails for every point. Go through binothlha_frame, exactly as the
+c integration does at fks_singular.f (bornsoftvirtual).
+          call binothlha_frame(p_born, born, virt_wgt)
           if (npointsChecked.eq.0) then
              if (mod(ret_code_ml,100)/10.eq.3 .or.
      &            mod(ret_code_ml,100)/10.eq.4) then

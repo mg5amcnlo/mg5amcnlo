@@ -11,7 +11,7 @@
 !
 !-----------------------------------------------
 !                               
-!     dummy subroutine, to be calld when idig= 0           
+!     dummy subroutine, to be called when idig= 0
 !                               
 !----------------------------------------------
 

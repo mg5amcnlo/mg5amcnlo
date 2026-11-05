@@ -2,7 +2,7 @@
 #
 # Content check for the HEPTools cache tree.
 #
-# "./bin/mg5_aMC cmd" exits 0 even when the "install <tool>" it contains
+# "./bin/madgraph cmd" exits 0 even when the "install <tool>" it contains
 # failed (e.g. the boost tarball came down truncated, so bootstrap.sh/b2
 # never ran and eMELA aborted).  A warm_cache job therefore ends green and
 # actions/cache happily saves a cache with the tool missing, which only shows
@@ -11,7 +11,7 @@
 # Every path asserted below mirrors what HEPToolInstaller.py installs
 # ('install_path' = <prefix>/<tool>, libraries looked up in lib/ or lib64/)
 # and what the .github/actions/restore_heptools_* actions then hand to MG5
-# through input/mg5_configuration.txt.
+# through input/mg7_configuration.txt.
 #
 # Usage: check_heptools.sh <component> [<component> ...]
 #   HEPTOOLS_PREFIX  install prefix to inspect  (default ~/.cache/HEPtools)
@@ -60,6 +60,9 @@ check_boost() {
         "$HEP/boost/lib/libboost_system.*" "$HEP/boost/lib/libboost_system-mt.*" \
         "$HEP/boost/lib64/libboost_system.*" "$HEP/boost/lib64/libboost_system-mt.*"
     need_file "$HEP/boost/include/boost/version.hpp"
+    # HEPToolInstaller.install_emela uses the first boost/boost* entry, the
+    # source tree, as eMELA's include path
+    need_glob "boost source headers" "$HEP/boost/boost_[0-9]*/boost/version.hpp"
 }
 
 check_pythia8() {
@@ -70,12 +73,13 @@ check_pythia8() {
     need_exec "$HEP/pythia8/bin/pythia8-config"
     need_glob "libpythia8" "$HEP/pythia8/lib/libpythia8.*" "$HEP/pythia8/lib64/libpythia8.*"
     need_dir  "$HEP/hepmc"
-    need_file "$HEP/MG5aMC_PY8_interface/MG5aMC_PY8_interface"
+    # the LO shower driver, compiled by installPYTHIA8.sh ('make mainMG')
+    need_exec "$HEP/pythia8/share/Pythia8/examples/main164"
 }
 
 check_emela() {
     # bin/eMELA-config is the symlink finalize_installation() creates and the
-    # path restore_heptools_emela writes into mg5_configuration.txt
+    # path restore_heptools_emela writes into mg7_configuration.txt
     need_exec "$HEP/bin/eMELA-config"
     need_glob "eMELA grids" "$HEP/EMELA/share/eMELA/*"
 }

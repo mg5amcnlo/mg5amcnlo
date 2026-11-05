@@ -39,7 +39,7 @@ set main.fastsim.detector = cms-ma5tune
 # @MG5aMC skip_analysis
 @MG5aMC set_reconstructions = ['BasicReco', 'CMSReco']
 
-# plot tunning: dsigma/sigma is plotted.
+# plot tuning: dsigma/sigma is plotted.
 set main.stacking_method = normalize2one
 
 # object definition

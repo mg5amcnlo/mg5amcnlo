@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: 0BSD
+schema_version = 2
+fixture_bundle = "reference-fixture-v2.manifest.json"
+captured_utc = "2026-07-16T08:30:24Z"
+memory_watchdog_gb = 30
+
+[source]
+repository = "https://github.com/mg5amcnlo/pyamplicol.git"
+revision = "54045e93070c87caab43063eae7c1807fb4ae70d"
+tree_sha256 = "b1df109c5ff447ffeb26b0fa8d6f09a0b1649e58de638100181498ba45e80e76"
+working_tree_clean = true
+installed_candidate = "0.1.0.dev0+candidate.38e8137f79f7"
+
+[capture]
+tool = "tools/developer/capture_reference_fixture_v2.py"
+artifact_root = ".artifacts/reference-fixture-v2/54045e93070c87caab43063eae7c1807fb4ae70d"
+artifact_mode = "generate"
+legacy_jobs = 5
+command = [
+  "python",
+  "tools/developer/capture_reference_fixture_v2.py",
+  "--generate",
+  "--external-watchdog-gb",
+  "30",
+  "--legacy-jobs",
+  "5",
+]
+
+[evidence.legacy_fortran]
+file = "legacy-fortran-v2.json"
+repository = "https://github.com/rikkert-frederix/AmpliCol.git"
+revision = "58c169b7df58ec8a38c0b748e08548cec20b4530"
+records = 90
+validation_profile = "binary64"
+
+[evidence.analytic]
+file = "analytic-oracles-v2.json"
+implementation = "tools/developer/analytic_oracles.py"
+records = 8
+validation_profile = "high-precision"
+
+[coverage]
+models = ["built-in-sm", "scalars-json", "scalar-gravity-json"]
+builtin_sm_processes = [
+  "d d~ > z",
+  "u d~ > w+",
+  "d d~ > z g",
+  "d d~ > e- e+",
+  "d d~ > u u~",
+  "d d~ > d d~",
+  "g g > g g",
+  "g g > t t~",
+  "d d~ > z g g",
+]
+color_accuracies = ["lc", "nlc", "full"]
+external_processes = [
+  "scalar_0 scalar_0 > scalar_0 scalar_0",
+  "scalar_0 scalar_0 > graviton graviton",
+]
+case_count = 29
+point_count = 38

@@ -1,11 +1,13 @@
 include ../../Source/make_opts
 
+FFLAGS += -I../../Source/MODEL -I../../Source/DHELAS
+
 LIBDIR = ../../lib/
 PROG   = check
 INIT   = init
 LINKLIBS =  -L../../lib/ -ldhelas -lmodel 
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
-PROCESS=  driver.o matrix.o matrix_prod.o ranmar.o
+PROCESS=  driver.o matrix.o matrix_prod.o ranmar.o impose_frame_rest.o
 
  
 $(PROG): $(PROCESS)  makefile $(LIBS)

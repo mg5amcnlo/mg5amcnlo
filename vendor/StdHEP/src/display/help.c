@@ -49,7 +49,7 @@ things:\n\n\
 Use the File pull-down menu to perform any of these functions.  \n\n\
 After specifying the file you which to browse, you need to specify \
 the event to view.  You can use the arrow buttons on the top of this \
-panel to select the event you whish to see. Currently, you can only  \
+panel to select the event you wish to see. Currently, you can only  \
 browse through 100 events of this file (or less). Since StdHep files are \
 sequential, reaching further downstream would probably be too slow. \
 At the outset, the first event in the file is shown. \
@@ -92,11 +92,11 @@ new anciliary window showing the selected event. It also has the print \
 and exit options. \n\n\
 New Window:\n\
     Once you have an event on display, it might be \n\
-    interesting to see it simultaneouly under different\n\
+    interesting to see it simultaneously under different\n\
     angles, or mapped to an other kinematical variables.\n\
     These new windows do not allow you to see an other \n\
     eventnor open an other file. \n\
-    If you whish to compare events across different files\n\
+    If you wish to compare events across different files\n\
     you will have to start an other Phase Display process.\n\
 Close: \n\
     Closing the last window will terminate the application \n\
@@ -139,7 +139,7 @@ Print: \n\
 /* 3456789012345678901234567890123456789012345678901234567890 */
 event = {"Event", 'E', False, HELP_TEXT,
 "\nThe Event pull-down menu allows you to understand the topology of the\
-event trough color mapping, 3D manipulation and the Tree Display\n\n\
+event through color mapping, 3D manipulation and the Tree Display\n\n\
 Show Rotation Angle:\n\
      You can rotate the Event by direct manipulation, \n\
      (click/drag on the graph, using the left button), or by\n\
@@ -153,7 +153,7 @@ Show Event Tree:\n\
      generation/decay process. Such a genealogical tree can\n\
      be display. In order to simplify the picture, \n\
      a standard tree structure is used, e.g., a particle \n\
-     has one and only  parent ( a ficticious node being \n\
+     has one and only one parent ( a fictitious node being \n\
      placed on the top). \n\n\
      This option display such a tree, where a node\n\
      represented a single particle, or collection of\n\
@@ -164,7 +164,7 @@ Show Event Tree:\n\
      node. This allows to simply high multiplicity trees. \n\n\
      The Tree display is made of buttons, pressing them \n\
      ( left buttons)  will give more information about the\n\
-     given node. Also, the tracks inluded in that node will \n\
+     given node. Also, the tracks included in that node will \n\
      be highlighted on the main panel \n\n\
      Known deficiency : The Tree widget ( or Motif) has a\n\
      bug in the DestroyWidget method, which can (and usually\n\
@@ -179,14 +179,14 @@ Show Event Tree:\n\
      a top or bottom quark.)\n\n\
 Show Eta-Pt Display:\n\
      Once you have an event on display, it might be \n\
-     interesting to see it simultaneouly in a Phase Space \n\
+     interesting to see it simultaneously in a Phase Space \n\
      appropriate to Hadronic physics: rapidity an Pt Space.\n\
      This new window does not allow you \n\
      to see an other event nor open an other file. \n\
-     If you whish to compare events across different files\n\
+     If you wish to compare events across different files\n\
      you will have to start an other Phase or Space Display.\n\n\
 Show Color Code: \n\
-     A fictious Tree display can be used to understand the\n\
+     A fictitious Tree display can be used to understand the\n\
      crummy color chosen in this application.  Currently, \n\
      this coding is fixed. If you have a better idea and \n\
      are willing to do the coding, let's talk !",0,0,},
@@ -200,7 +200,7 @@ Show Axes:\n\
      By default, the axis in the Phase space are shown. The\n\
      scale is identical for all three axis, and is \n\
      represented in the main panel.  To make the event\n\
-     more visible, it might be occasionaly useful not to\n\
+     more visible, it might be occasionally useful not to\n\
      draw these axis.  This option lets you do this. \n\n\
 Buffer Graphics:\n\
      Graphics buffering changes the way Histo-Scope draws\n\
@@ -226,7 +226,7 @@ Rotation Increment: \n\
 Track Highlights: \n\
      As you click on a given node of the Event Tree \n\
      Display, tracks related to that particular node are \n\
-     highlighted. This relation ship goes as folow: \n\
+     highlighted. This relationship goes as follows: \n\
         - Node : All tracks belonging to the selected node \n\
                  are highlighted. This is the default.\n\
         - Daughters : All daughter tracks are highlighted\n\
@@ -245,7 +245,7 @@ available in the Spatial Display, soon to be released.\n\n\
 You can pick a selected track on the drawing area by pointing the cursor to \
 it and depressing the central button ( the left button controls the motion \
 of the display). The selected track is highlighted on the display, \
-and a small text box should appear if the pointing is succesful, \
+and a small text box should appear if the pointing is successful, \
 indicating the particle identity, it's place in the HEPEVT block, and various \
 kinematical quantities. If the Event Tree is also displayed, the node to \
 which the tracks belongs to is highlighted, indicating the position of the \
@@ -253,7 +253,7 @@ selected particle in the hierarchy.\n\n\
 You can also get more information about a given node in the tree, by pressing \
 (left mouse button) on a tree element. The corresponding tracks are \
  highlighted on the event display.\n\n\
- If Greek fonts are available on yourplatform ( usualy refered as a symbol \
+ If Greek fonts are available on your platform ( usually referred as a symbol \
  font, Phase Display will display the name in greek, if applicable. \
  This is done by adding a few line to your .Xdefaults file, specifying a \
  fontlist. The name of this application is phase. \
@@ -304,7 +304,7 @@ things:\n\n\
 Use the File pull-down menu to perform any of these functions.  \n\n\
 After specifying the file you which to browse, you need to specify \
 the event to view.  You can use the arrow buttons on the top of this \
-panel to select the event you whish to see. Currently, you can only  \
+panel to select the event you wish to see. Currently, you can only  \
 browse through 100 events of this file (or less). Since StdHep files are \
 sequential, reaching further downstream would probably be too slow. \
 At the outset, the first event in the file is shown. \
@@ -389,7 +389,7 @@ Print: \n\
 /* 3456789012345678901234567890123456789012345678901234567890 */
 eventSpace = {"Event", 'E', False, HELP_TEXT,
 "\nThe Event pull-down menu allows you to understand the topology of the\
-event trough color mapping, 3D manipulation and the Tree Display.\n\n\
+event through color mapping, 3D manipulation and the Tree Display.\n\n\
 Show Rotation Angle:\n\
      You can rotate the Event by direct manipulation, \n\
      (click/drag on the graph, using the left button), or by\n\
@@ -399,16 +399,16 @@ Show Rotation Angle:\n\
      to set these angles. \n\n\
 Show Eta-Pt Display:\n\
     Once you have an event on display, it might be \n\
-    interesting to see it simultaneouly in a Phase Space\n\
+    interesting to see it simultaneously in a Phase Space\n\
     appropriate to Hadronic physics: rapidity an Pt Space.\n\
     This new window does not allow you \n\
     to see an other event nor open an other file. \n\
-    If you whish to compare events across different files\n\
+    If you wish to compare events across different files\n\
     you will have to start an other Phase or Space \n\
     Display process. \n\n\
 Show Phase Display:\n\
     Once you have an event on display, it might be \n\
-    interesting to see it simultaneouly in real space \n\
+    interesting to see it simultaneously in real space \n\
     in Phase Space. This new window has the same \n\
     constraints as the Eta-Pt one: no new events \n\n\
 Show Event Tree:\n\
@@ -417,7 +417,7 @@ Show Event Tree:\n\
      generation/decay process. Such a genealogical tree can\n\
      be display. In order to simplify the picture, \n\
      a standard tree structure is used, e.g., a particle \n\
-     has one and only  parent ( a ficticious node being \n\
+     has one and only one parent ( a fictitious node being \n\
      placed on the top). \n\n\
      This option display such a tree, where a node\n\
      represented a single particle, or collection of\n\
@@ -428,7 +428,7 @@ Show Event Tree:\n\
      node. This allows to simply high multiplicity trees. \n\n\
      The Tree display is made of buttons, pressing them \n\
      ( left buttons)  will give more information about the\n\
-     given node. Also, the tracks inluded in that node will \n\
+     given node. Also, the tracks included in that node will \n\
      be highlighted on the main panel \n\n\
      Known deficiency : The Tree widget ( or Motif) has a\n\
      bug in the DestroyWidget method, which can (and usually\n\
@@ -457,7 +457,7 @@ Show Detector Sketch:\n\
      To remove this sketch, ask for this option again, \n\
      and cancel the file selection. \n\n\
 Show Color Code: \n\
-     A fictious Tree display can be used to understand the\n\
+     A fictitious Tree display can be used to understand the\n\
      crummy color chosen in this application.  Currently, \n\
      this coding is fixed. If you have a better idea and \n\
      are willing to do the coding, let's talk! ", 0, 0},     
@@ -471,7 +471,7 @@ Show Axes:\n\
      By default, the axis in real space are shown. The\n\
      scale is identical for all three axis, and is \n\
      represented in the main panel.  To make the event\n\
-     more visible, it might be occasionaly useful not to\n\
+     more visible, it might be occasionally useful not to\n\
      draw these axis.  This option lets you do this. \n\n\
 Show Vertices:\n\
      By default, the vertices are represented by a \n\
@@ -497,7 +497,7 @@ Rotation Increment: \n\
 Track Highlights: \n\
      As you click on a given node of the Event Tree \n\
      Display, tracks related to that particular node are \n\
-     highlighted. This relation ship goes as folow: \n\
+     highlighted. This relationship goes as follows: \n\
         - Node : All tracks belonging to the selected node \n\
                  are highlighted. This is the default.\n\
         - Daughters : All daughter tracks are highlighted\n\
@@ -516,7 +516,7 @@ the middle of the track segment and depressing the central button \
 ( the left button controls the motion \
 of the display). The selected track ( or a portion of it )\
  is highlighted on the display, \
-and a small text box should appear if the pointing is succesful, \
+and a small text box should appear if the pointing is successful, \
 indicating the particle identity, it's place in the HEPEVT block, and various \
 kinematical quantities. If the Event Tree is also displayed, the node to \
 which the tracks belongs to is highlighted, indicating the position of the \
@@ -524,7 +524,7 @@ selected particle in the hierarchy.\n\n\
 You can also get more information about a given node in the tree, by pressing \
 (left mouse button) on a tree element. The corresponding tracks are \
  highlighted on the event display.\n\n\
- If Greek fonts are available on yourplatform ( usualy refered as a symbol \
+ If Greek fonts are available on your platform ( usually referred as a symbol \
  font, Phase Display will display the name in greek, if applicable. \
  This is done by adding a few line to your .Xdefaults file, specifying a \
  fontlist. The name of this application is phase. \

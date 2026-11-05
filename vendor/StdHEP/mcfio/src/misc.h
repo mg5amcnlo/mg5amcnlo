@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* misc.h -- Miscelaneous Motif convenience functions			       *
+* misc.h -- Miscellaneous Motif convenience functions			       *
 *									       *
 * Copyright (c) 1991 Universities Research Association, Inc.		       *
 * All rights reserved.							       *

@@ -304,7 +304,7 @@ c
       elseif(ih .eq. 2) then    !from a proton without breaking
          write(*,*) 'impossible call (or was it) to pdf-> please reporrt'
          stop 23
-         ! isssue with next call since this function takes now a third argument (beamid not define here)
+         ! issue with next call since this function takes now a third argument (beamid not define here)
           fx(7)=epa_proton(x,q2max)
       endif      
       

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -14,20 +14,23 @@
 ################################################################################
 from __future__ import division
 from __future__ import absolute_import
+import json
 import random
 import io
 import os
+import shutil
 import sys
+import tempfile
 import tests.unit_tests as unittest
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 import madgraph.core.base_objects as base_objects
 
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 
 sys.path.append('%s/../../Template/bin/internal' % _file_path)
-import models.check_param_card as writter
+import madgraph.models.check_param_card as writter
 
 
 class TestBlock(unittest.TestCase):
@@ -95,6 +98,36 @@ BLOCK SMINPUTS Q= 1.000000e+00 #  test
 class TestParamCard(unittest.TestCase):
     """ Test the ParamCard Object """
 
+    def test_deepcopy(self):
+        """copy.deepcopy keeps every parameter of every block (it used to
+        leave the blocks empty: the restored param_dict made Block.append
+        skip each parameter) and the copy is independent of the original"""
+        import copy
+        import pickle
+
+        full_card = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'param_card_sm.dat')
+        card = writter.ParamCard(full_card)
+        nparams = sum(len(card[block]) for block in card)
+        self.assertTrue(nparams)
+
+        new = copy.deepcopy(card)
+        self.assertEqual(sum(len(new[block]) for block in new), nparams)
+        for block in new:
+            for param in new[block]:
+                self.assertIs(new[block].get(param.lhacode), param)
+                self.assertEqual(param.value, card[block].get(param.lhacode).value)
+        mt = card['mass'].get((6,)).value
+        new['mass'].get((6,)).value = 2 * mt
+        self.assertEqual(card['mass'].get((6,)).value, mt)
+        reread = writter.ParamCard(new.write().splitlines())
+        self.assertEqual(sum(len(reread[block]) for block in reread), nparams)
+        self.assertAlmostEqual(reread['mass'].get((6,)).value, 2 * mt)
+
+        # pickling, which restores the state after the parameters, still works
+        new = pickle.loads(pickle.dumps(card))
+        self.assertEqual(sum(len(new[block]) for block in new), nparams)
+
     def test_mod_param(self):
         """ test that we can modify a param card """
 
@@ -146,6 +179,42 @@ class TestParamCard(unittest.TestCase):
         self.assertNotIn('new', list(card.keys()))
         
                 
+
+    def test_write_inc_file_running_scale(self):
+        """ the reference scale of a block of running parameters is taken from
+        the param_card, and falls back to a default with a warning when the
+        block is absent (e.g. all its parameters removed by a restriction)
+        instead of stopping on a KeyError """
+
+        tmpdir = tempfile.mkdtemp(prefix='mg5_test_runscale')
+        try:
+            card_text = 'Block dim62f Q= 2.000000e+03\n   19 1.000000e+00 # ctp\n'
+            card_path = os.path.join(tmpdir, 'param_card.dat')
+            default_path = os.path.join(tmpdir, 'param_card_default.dat')
+            for path in [card_path, default_path]:
+                with open(path, 'w') as fsock:
+                    fsock.write(card_text)
+            ident_path = os.path.join(tmpdir, 'ident_card.dat')
+            with open(ident_path, 'w') as fsock:
+                fsock.write('dim62f 19 mdl_ctp\n'
+                            'dim62f 0 mdl__dim62f__scale\n'
+                            'dim64f 0 mdl__dim64f__scale\n')
+            os.mkdir(os.path.join(tmpdir, 'MODEL'))
+            with open(os.path.join(tmpdir, 'MODEL', 'input.inc'), 'w') as fsock:
+                fsock.write('double precision mdl_ctp,mdl__dim62f__scale,mdl__dim64f__scale\n')
+
+            out_path = os.path.join(tmpdir, 'param_card.inc')
+            card = writter.ParamCard(card_path)
+            with self.assertLogs('madgraph.models', level='WARNING') as log:
+                card.write_inc_file(out_path, ident_path, default_path)
+            self.assertTrue(any('dim64f' in line for line in log.output))
+
+            lines = [l.strip().lower() for l in open(out_path) if l.strip()]
+            self.assertIn('mdl__dim62f__scale = 2.000000d+03', lines)
+            self.assertIn('mdl__dim64f__scale = 9.118800d+01', lines)
+            self.assertEqual(len([l for l in lines if l.startswith('mdl__dim62f__scale')]), 1)
+        finally:
+            shutil.rmtree(tmpdir)
 
     def test_mod_card(self):
         """ test that we can modify a param card """
@@ -211,7 +280,7 @@ class TestParamCardIterator(unittest.TestCase):
         
         # create a simple 1D scan
         card['mass'].get(6).value = "scan:[1,2,3,4,5]"
-        mh = card['mass'].get(25).value # to check that param_card are independant
+        mh = card['mass'].get(25).value # to check that param_card are independent
         
         itercard = writter.ParamCardIterator(card)
         card['mass'].get(25).value = 25.0
@@ -242,10 +311,59 @@ class TestParamCardIterator(unittest.TestCase):
             self.assertIn(choice, all_possibilities)
             all_possibilities.remove(choice)
             
-        self.assertEqual(i, 11)                    
+        self.assertEqual(i, 11)
         self.assertFalse(all_possibilities)
-        
-         
+
+    def test_scan_summary_json(self):
+        """write_summary also writes the same information in a json file"""
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            events = os.path.join(tmpdir, 'Events')
+            for run in ['run_01', 'run_02']:
+                os.makedirs(os.path.join(events, run))
+            os.makedirs(os.path.join(tmpdir, 'Cards'))
+            with open(os.path.join(tmpdir, 'Cards', 'ident_card.dat'), 'w') as fsock:
+                fsock.write('mass 6 mdl_MT\n')
+
+            itercard = writter.ParamCardIterator()
+            itercard.param_order = ['mass#6']
+            itercard.cross = [
+                {'run_name': 'run_01', 'bench': [170.], 'cross(pb)': 1.5,
+                 'error(pb)': 0.02, 'width#6': 1.3},
+                {'run_name': 'run_02', 'bench': [175.], 'cross(pb)': 1.7,
+                 'error(pb)': 0.03, 'width#6': 1.4},
+            ]
+            path = os.path.join(events, 'scan_run_01.txt')
+            itercard.write_summary(path)
+
+            json_path = os.path.join(events, 'scan_run_01.json')
+            self.assertTrue(os.path.exists(json_path))
+            with open(json_path) as fsock:
+                data = json.load(fsock)
+
+            self.assertEqual(data['scan_parameters'],
+                             [{'id': 'mass#6', 'name': 'mt'}])
+            self.assertEqual(sorted(data['result_keys']),
+                             ['cross(pb)', 'error(pb)', 'width#6'])
+            self.assertEqual([p['run_name'] for p in data['points']],
+                             ['run_01', 'run_02'])
+            self.assertEqual(data['points'][0]['parameters'], {'mass#6': 170.})
+            self.assertEqual(data['points'][1]['results'],
+                             {'cross(pb)': 1.7, 'error(pb)': 0.03, 'width#6': 1.4})
+
+            # the text and the json summary have to agree
+            with open(path) as fsock:
+                lines = [l.split() for l in fsock if not l.startswith('#')]
+            for line, point in zip(lines, data['points']):
+                self.assertEqual(line[0], point['run_name'])
+                values = [point['parameters'][p['id']] for p in data['scan_parameters']]
+                values += [point['results'][k] for k in data['result_keys']]
+                self.assertEqual([float(x) for x in line[1:]], values)
+        finally:
+            shutil.rmtree(tmpdir)
+
+
 class TestParamCardRule(unittest.TestCase):
     """ Test the ParamCardRule Object"""
     
@@ -337,7 +455,7 @@ class TestParamCardRule(unittest.TestCase):
         output = fsock.getvalue()
 
         target = """######################################################################
-## PARAM_CARD AUTOMATICALY GENERATED BY MG5                       ####
+## PARAM_CARD AUTOMATICALLY GENERATED BY MG5                       ####
 ######################################################################
 ###################################
 ## INFORMATION FOR SMINPUTS
@@ -534,7 +652,7 @@ DECAY 25 2.441404e+00 # wh
         writter.make_valid_param_card(full_card, restriction, outputpath=fsock)
         output = fsock.getvalue()
         target = """######################################################################
-## PARAM_CARD AUTOMATICALY GENERATED BY MG5                       ####
+## PARAM_CARD AUTOMATICALLY GENERATED BY MG5                       ####
 ######################################################################
 ###################################
 ## INFORMATION FOR MASS
@@ -603,7 +721,7 @@ class TestConvertSLAH(unittest.TestCase):
         """take the slah1 and convert it to mg5"""
 
         target = """######################################################################
-## PARAM_CARD AUTOMATICALY GENERATED BY MG5                       ####
+## PARAM_CARD AUTOMATICALLY GENERATED BY MG5                       ####
 ######################################################################
 ###################################
 ## INFORMATION FOR DCINFO
@@ -622,7 +740,7 @@ BLOCK SPINFO #  spectrum calculator information
 ###################################
 BLOCK MODSEL #  model selection
       1 1 sugra # 
-      2 1 # fake line for the formating line point of view
+      2 1 # fake line for the formatting line point of view
 ###################################
 ## INFORMATION FOR SMINPUTS
 ###################################

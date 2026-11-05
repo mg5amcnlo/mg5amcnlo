@@ -2,395 +2,303 @@
 
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
 
-"""This is a simple script to create a release for MadGraph5_aMC@NLO, based
-on the latest Bazaar commit of the present version. It performs the
-following actions:
+"""Package a MadGraph7 release tarball from the current git checkout.
 
-1. bzr branch the present directory to a new directory
-   MadGraph5_vVERSION
+Non-interactive, meant to run from the release GitHub Actions workflow (or
+locally for testing):
 
-4. Create the automatic documentation in the apidoc directory -> Now tar.gz
+    python bin/create_release.py --version 0.2.0 --output dist/
 
-5. Remove the .bzr directory
-
-6. tar the MadGraph5_vVERSION directory.
+It performs the following actions:
+  1. Check that VERSION agrees with --version, that madspace still derives
+     its version from it, and that pyamplicol's versions are synced to it. (UpdateNotes.txt still tracks the legacy MG5_aMC@NLO
+     3.7.x series and is not part of this check.)
+  2. git-archive the current HEAD into a clean MG7_v<version> directory
+     (preserves the madgraph/VERSION symlink; ignores untracked/gitignored
+     working-tree files).
+  3. Prune bin/ to the release-facing scripts only.
+  4. Materialize the default config/run-card files.
+  5. Vendor offline copies of collier/ninja/SMWidth/the HEPToolsInstaller
+     bundle into vendor/ (unless --skip-vendor; any failure aborts the release).
+  6. Write input/authors.md (first-contribution date per author, used by the
+     anniversary banner) and the input/.release marker read by
+     madspace/install.py to decide whether the PyPI wheel may be offered --
+     including, when --wheels-dir is given, the filenames of the wheels
+     actually built, so install.py can check platform/Python availability
+     locally instead of querying PyPI.
+  7. tar everything up.
 """
 
-from __future__ import absolute_import
-import sys
-if sys.version_info < (3, 7):
-    sys.exit('MadGraph5_aMC@NLO works only with python 3.7 or later.\n\
-               Please upgrate your version of python.')
-
+import argparse
 import glob
-import optparse
-import logging
-import logging.config
-import time
-
 import os
 import os.path as path
 import re
 import shutil
 import subprocess
-import urllib.request, urllib.parse, urllib.error
+import sys
+import tarfile
+import tomllib
+import unicodedata
+import urllib.request
+from datetime import date, datetime, timezone
 
-from datetime import date
-
-# Get the parent directory (mg root) of the script real path (bin)
-# and add it to the current PYTHONPATH
-
-root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
-sys.path.append(root_path)
-pjoin =os.path.join
-import madgraph.various.misc as misc
-from madgraph import MG5DIR
-
-# Write out nice usage message if called with -h or --help
-usage = "usage: %prog [options] [FILE] "
-parser = optparse.OptionParser(usage=usage)
-parser.add_option("-l", "--logging", default='INFO',
-                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
-(options, args) = parser.parse_args()
-if len(args) == 0:
-    args = ''
-
-# Set logging level according to the logging level given by options
-logging.basicConfig(level=vars(logging)[options.logging],
-                    format="%(message)s")
-
-# 0. check that all modification are committed in this directory
-#    and that the date/UpdateNote are up-to-date
-diff_result = subprocess.Popen(["git", "diff"], stdout=subprocess.PIPE).communicate()[0] 
-
-if diff_result:
-    logging.warning("Directory is not up-to-date. The release follow the last committed version.")
-    answer = input('Do you want to continue anyway? (y/n)')
-    if answer != 'y':
-        exit()
-
-# 0. check that all modification are committed in this directory
-#    and that the date/UpdateNote are up-to-date
-diff_result = subprocess.Popen(["git", "diff", "--cached"], stdout=subprocess.PIPE).communicate()[0]
-
-if diff_result:
-    logging.warning("Index has non commited file/... The release will follow the last committed version.")
-    answer = input('Do you want to continue anyway? (y/n)')
-    if answer != 'y':
-        exit()
-        
-release_date = date.fromtimestamp(time.time())
-for line in open(os.path.join(MG5DIR,'VERSION')):
-    if 'version' in line:
-        logging.info(line)
-        version = line.rsplit('=')[1].strip()
-    if 'date' in line:
-        if not str(release_date.year) in line or not str(release_date.month) in line or \
-                                                           not str(release_date.day) in line:
-            logging.warning("WARNING: The release time information is : %s" % line)
-            answer = input('Do you want to continue anyway? (y/n)')
-            if answer != 'y':
-                exit()
-
-Update_note = open(os.path.join(MG5DIR,'UpdateNotes.txt')).read()
-if version not in Update_note:
-    logging.warning("WARNING: version number %s is not found in \'UpdateNotes.txt\'" % version)
-    answer = input('Do you want to continue anyway? (y/n)')
-    if answer != 'y':
-        exit()
-
-auto_update = True
-
-# check that we are in the correct branch (note this file does not handle LTS)
-p = subprocess.Popen("git branch --show-current", stdout=subprocess.PIPE, shell=True)
-MG_branch = p.stdout.read().decode().strip()
-if MG_branch == 'LTS_2':
-    print("no auto-update as long as not the main version")
-    auto_update = False
-elif MG_branch not in  ['3.x', 'LTS']:
-    print("cannot create tarball with auto-update outside of the main branch, detected branch (%s)" % MG_branch)
-    answer = input('Do you want to continue anyway? (y/n)')
-    if answer != 'y':
-        exit()
-    auto_update = False
+pjoin = os.path.join
+ROOT = path.dirname(path.dirname(path.realpath(__file__)))
 
 
-#check if current version has already a version flag matching the VERSION information
-if auto_update:
-    p = subprocess.Popen(['git', 'tag', '-l', '-n','\'v%s\'' %version], stdout=subprocess.PIPE)
-    old_tag = p.stdout.read().decode().strip()
-    if old_tag:
-        print("tag v%s is already existing. Those tags should be added by this script.")
-        print("This will remove auto-update capabilities to this tarball")
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-        auto_update = False
-    p = subprocess.Popen("git tag -l 'r*' ", stdout=subprocess.PIPE, shell=True)
-    old_tag = p.stdout.read().decode().strip()
-    print("detected release tag (bzr format)", old_tag)
-    # this will not work for the LTS!!!
-    max_revnb = max([int(i[1:]) for i in old_tag.split('\n') if i])+1
-    print("latest tag found for auto-update: in current directory", max_revnb)
-    if not max_revnb:
-        print("no tag for auto-update found...")
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-        auto_update = False
-else:
-    max_revnb = 0 
-
-# 1. Adding the file .revision used for future auto-update.
-# Provide this only if version is not beta/tmp/...
-pattern = re.compile(r'''[\d.]+$''')
-if pattern.match(version):
-    #valid version format
-    # Get current revision number:
-    #p = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
-    rev_nb = max_revnb
-    logging.info('find %s for the revision number -> starting point for the auto-update' % rev_nb)  
-elif auto_update:
-    logging.warning("WARNING: version number %s is not in format A.B.C,\n" % version +\
-         "in consequence the automatic update of the code will be deactivated" )
-    answer = input('Do you want to continue anyway? (y/n)')
-    if answer != 'y':
-        exit()
-    auto_update = False
-
-# checking that the rev_nb is in a reasonable range compare to the old one.
-if auto_update:
-    rev_nb_i = int(rev_nb)
-    try:
-        if MG_branch == 'LTS':
-            import ssl
-            import urllib.request
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            filetext = urllib.request.urlopen('https://madgraph.mi.infn.it/mg5amc_build_nb', context=ctx)
-        elif MG_branch == '3.x':
-            filetext = urllib.request.urlopen('http://madgraph.phys.ucl.ac.be/mg5amc3_build_nb')
-        text = filetext.read().decode().split('\n')
-        web_version = int(text[0].strip())
-        if text[1]:
-            last_message = int(text[1].strip())
-        else:
-            last_message = 99
-    except (ValueError, IOError) as error:
-        print(error)
-        logging.warning("WARNING: impossible to detect the version number on the web")
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-        web_version = -1
-    else:
-        logging.info('version on the web is %s' % web_version)
-    if web_version +1 == rev_nb_i or web_version == -1:
-        pass # this is perfect
-    elif rev_nb_i in [web_version+i for i in range(1,4)]:
-        logging.warning("WARNING: current version on the web is %s" % web_version)
-        logging.warning("Please check that this (small difference) is expected.")
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-    elif web_version < rev_nb_i:
-        logging.warning("CRITICAL: current version on the web is %s" % web_version)
-        logging.warning("This is a very large difference. Indicating a wrong manipulation.")
-        logging.warning("and can creates trouble for the auto-update.")
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-            answer = input('Do you want to continue with auto-update? (y/n)')
-        if answer != 'y':
-            auto_update = False
-    else:
-        logging.warning("CRITICAL: current version on the web is %s" % web_version)
-        logging.warning("This FORBIDS any auto-update for this version.")
-        rev_nb=None
-        auto_update=False
-        answer = input('Do you want to continue anyway? (y/n)')
-        if answer != 'y':
-            exit()
-
-            
-# 1. bzr branch the present directory to a new directory
-#    MadGraph5_vVERSION
-
-filepath = "MG5_aMC_v" + misc.get_pkg_info()['version'].replace(".", "_")
-filename = "MG5_aMC_v" + misc.get_pkg_info()['version'] + ".tar.gz"
-    
-if path.exists(filepath):
-    logging.info("Removing existing directory " + filepath)
-    shutil.rmtree(filepath)
-
-logging.info("cloning " + MG5DIR + " to directory " + filepath)
-status = subprocess.call(['git', 'clone', MG5DIR, filepath])
-if status:
-    logging.error("git clone failed. Script stopped")
-    exit()
-
-# 1. Remove the .bzr directory and clean bin directory file,
-#    take care of README files.
-try:
-    shutil.rmtree(path.join(filepath, '.bzr'))
-except:
-    pass
-shutil.rmtree(path.join(filepath, '.git'))
-for data in glob.glob(path.join(filepath, 'bin', '*')):
-    if not data.endswith('mg5') and not data.endswith('mg5_aMC'):
-        if 'compile.py' not in data:
-            os.remove(data)
-        else:
-            os.rename(data, data.replace('compile.py','.compile.py'))
-
-#os.remove(path.join(filepath, 'README.developer'))
-#shutil.move(path.join(filepath, 'README.release'), path.join(filepath, 'README'))
+def sanitize_author(name):
+    # Remove email addresses, parenthesized asides and accents so that the
+    # same person under slightly different git identities collapses to one key.
+    name = re.sub(r'\S+@\S+', '', name)
+    name = re.sub(r'\(.*?\)', '', name)
+    name = unicodedata.normalize("NFKD", name)
+    name = "".join(c for c in name if not unicodedata.combining(c))
+    name = name.lower()
+    name = re.sub(r'[^a-z0-9]+', '', name)
+    return name.strip()
 
 
-# 1. Add information for the auto-update
-if rev_nb and auto_update:
-    fsock = open(os.path.join(filepath,'input','.autoupdate'),'w')
-    fsock.write("version_nb   %s\n" % int(rev_nb))
-    fsock.write("last_check   %s\n" % int(time.time()))
-    fsock.write("last_message %s\n" % int(last_message))
-    fsock.close()
-    # tag handling
-    if MG_branch == 'LTS':
-        p = subprocess.call("git tag  'L%s' " % int(rev_nb), shell=True)
-    elif MG_branch == '3.x':
-        p = subprocess.call("git tag  'r%s' " % int(rev_nb), shell=True)
-if (rev_nb and auto_update) or MG_branch == "LTS_2":
-    p = subprocess.call("git tag  'v%s' " % misc.get_pkg_info()['version'], shell=True)
-    print('new tag added')
-    answer = input('Do you want to push commit and tag? (y/n)')
-    if answer == 'y':
-        p = subprocess.call("git push", shell=True)
-        p = subprocess.call("git push --tags", shell=True)
-
-# 1. Copy the .mg5_configuration_default.txt to it's default path
-shutil.copy(path.join(filepath, 'input','.mg5_configuration_default.txt'), 
-            path.join(filepath, 'input','mg5_configuration.txt'))
-if os.path.exists(path.join(filepath, 'input','.default_run_card_lo.dat')):
-    shutil.copy(path.join(filepath, 'input','.default_run_card_lo.dat'),
-            path.join(filepath, 'input','default_run_card_lo.dat'))
-    shutil.copy(path.join(filepath, 'input','.default_run_card_nlo.dat'),
-            path.join(filepath, 'input','default_run_card_nlo.dat'))
-shutil.copy(path.join(filepath, 'input','proc_card_default.dat'), 
-            path.join(filepath, 'proc_card.dat'))
+# Aliases for contributors who committed under more than one identity.
+ALIAS = {'herquet': 'michelherquet',
+         'mherquet': 'michelherquet',
+         'janovak': 'jakobnovak',
+         'davidepaganicluster': 'davidepagani',
+         'davide': 'davidepagani',
+         'pagani': 'davidepagani',
+         'rikkert': 'rikkertfrederix',
+         'frederix': 'rikkertfrederix',
+         'riruiz': 'richardruiz',
+         'richardphysics': 'richardruiz',
+         'mguser': 'oliviermattelaer',
+         'githubbot': 'oliviermattelaer',
+         'shjeon': 'sihyunjeon',
+         'paolotorriell': 'paolotorrielli',
+         'sc': 'oliviermattelaer',
+         'omatt': 'oliviermattelaer',
+         'priscilaaquino': 'prisciladeaquino',
+         'mattelaerolivier': 'oliviermattelaer',
+         '': 'oliviermattelaer',
+         'shaohuasheng': 'huashengshao',
+         'ti5714vi': 'timstelzer',
+         }
 
 
-# 1.1 Change the trapfpe.c code to an empty file
-#os.remove(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'))
-#create_empty = open(path.join(filepath,'Template','NLO','SubProcesses','trapfpe.c'),'w')
-#create_empty.close()
+def get_first_contributions(repo_path):
+    """Map each author (sanitized name) to the date of their first commit."""
+    cmd = ["git", "-C", repo_path, "log", "--pretty=format:%an|%at"]
+    output = subprocess.check_output(cmd, text=True)
 
-# 2. Create the automatic documentation in the apidoc directory
-#try:
-#    status1 = subprocess.call(['epydoc', '--html', '-o', 'apidoc',
-#                               'madgraph', 'aloha',
-#                               os.path.join('models', '*.py')], cwd = filepath)
-#except:
-#    logging.error("Error while trying to run epydoc. Do you have it installed?")
-#    logging.error("Execution cancelled.")
-#    sys.exit()
-#
-#if status1:
-#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
-#                 status)
-#    sys.exit()
-#if status1:
-#    logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
-#                 status)
-#    sys.exit()
-
-#3. tarring the apidoc directory
-#status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
-
-#if status2:
-#    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-#                 status)
-#    sys.exit()
-#else:
-    # remove the apidoc file.
-#    shutil.rmtree(os.path.join(filepath,'apidoc'))
-
-# 4. Download the offline installer and other similar code
-install_str = """
-cd %s
-rm -rf download-temp &> /dev/null;
-mkdir -v download-temp;
-cd download-temp;
-git clone git@github.com:mg5amcnlo/HEPToolsInstallers.git
-rm -rfv `find HEPToolsInstallers -name .bzr -type d` > /dev/null;
-rm -rfv `find HEPToolsInstallers -name .git -type d` > /dev/null;
-tar czf OfflineHEPToolsInstaller.tar.gz HEPToolsInstallers/ > /dev/null;
-mv OfflineHEPToolsInstaller.tar.gz ../vendor;
-cd ..;
-rm -rf download-temp;
-""" % filepath
-os.system(install_str)
-
-sys.path.append(pjoin(root_path, '..'))
-from HEPToolsInstallers.HEPToolInstaller import _HepTools
-collier_link = _HepTools['collier']['tarball'][1] % _HepTools['collier']
-ninja_link = _HepTools['ninja']['tarball'][1] % _HepTools['ninja']
-misc.wget(collier_link, os.path.join(filepath, 'vendor', 'collier.tar.gz'))
-misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'ninja.tar.gz'))
-
-# Add the tarball for SMWidth
-swidth_link = "http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz"
-misc.wget(ninja_link, os.path.join(filepath, 'vendor', 'SMWidth.tar.gz')) 
-
-if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
-    print('Fail to create OfflineHEPToolsInstaller')
-    sys.exit()
-
-# 5. tar the MadGraph5_vVERSION directory.
-
-logging.info("Create the tar file " + filename)
-# clean all the pyc
-os.system("cd %s;find . -name '*.pyc' -delete" % filepath)
-status2 = subprocess.call(['tar', 'czf', filename, filepath])
-if status2:
-    logging.error('Non-0 exit code %d from tar. Please check result.' % \
-                 status)
-    sys.exit()
-
-try:
-    status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
-                               filename])
-    if status1 == 0:
-        logging.info("gpg signature file " + filename + ".asc created")
-except:
-    logging.warning("Call to gpg to create signature file failed. " +\
-                    "Please install and run\n" + \
-                    "gpg --armor --sign --detach-sig " + filename)
+    first_dates = {}
+    for line in output.splitlines():
+        try:
+            author, timestamp = line.split("|")
+        except ValueError:
+            continue
+        author = ALIAS.get(sanitize_author(author), sanitize_author(author))
+        d = datetime.fromtimestamp(int(timestamp), tz=timezone.utc).strftime("%Y-%m-%d")
+        if author not in first_dates or d < first_dates[author]:
+            first_dates[author] = d
+    return first_dates
 
 
-logging.info("Running tests on directory %s", filepath)
-print(os.listdir(filepath))
-import subprocess
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
-print("status:", status)
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
-print("status:", status)
-status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
-print("status:", status)
+def parse_info_file(filepath):
+    """Parse a 'name = value' file, e.g. VERSION or input/.release."""
+    info = {}
+    for line in open(filepath):
+        line = line.strip()
+        if not line:
+            continue
+        name, _, value = line.partition('=')
+        info[name.strip()] = value.strip()
+    return info
 
 
-logging.info("Thanks for creating a release. please check that the tests were sucessfull before releasing the version")
-sys.exit()
+def check_versions(version):
+    """Fail loudly if VERSION disagrees with the version being released, if
+    madspace/pyproject.toml has stopped deriving its version from VERSION, or
+    if pyamplicol's literal (Cargo) versions are out of sync with VERSION."""
+    errors = []
+
+    mg_version = parse_info_file(pjoin(ROOT, 'VERSION')).get('version')
+    if mg_version != version:
+        errors.append(f"VERSION says '{mg_version}', expected '{version}'")
+
+    with open(pjoin(ROOT, 'madspace', 'pyproject.toml'), 'rb') as f:
+        pyproject = tomllib.load(f)
+    if 'version' not in pyproject['project'].get('dynamic', []):
+        errors.append(
+            "madspace/pyproject.toml pins its own version instead of reading it "
+            "from VERSION; madspace must be released in lockstep with MadGraph")
+
+    sync = subprocess.run(
+        [sys.executable, pjoin(ROOT, 'pyamplicol', 'tools', 'release', 'sync_version.py'),
+         '--check', '--version', version],
+        capture_output=True, text=True)
+    if sync.returncode:
+        errors.append(sync.stderr.strip() + "; run pyamplicol/tools/release/sync_version.py")
+
+    if errors:
+        for e in errors:
+            print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def archive_source(version, workdir):
+    """git-archive HEAD into workdir/MG7_v<version_>/, preserving symlinks."""
+    version_ = version.replace('.', '_')
+    filepath = pjoin(workdir, f"MG7_v{version_}")
+    os.makedirs(filepath)
+
+    archive = subprocess.Popen(
+        ['git', '-C', ROOT, 'archive', '--format=tar', 'HEAD'],
+        stdout=subprocess.PIPE)
+    extract = subprocess.Popen(['tar', '-x', '-C', filepath],
+                                stdin=archive.stdout)
+    archive.stdout.close()
+    extract.communicate()
+    if archive.wait() or extract.returncode:
+        print("ERROR: git archive | tar extraction failed", file=sys.stderr)
+        sys.exit(1)
+    return filepath
+
+
+def prune_bin(filepath):
+    for name in ('create_release.py', 'create_aloha_release.py'):
+        candidate = pjoin(filepath, 'bin', name)
+        if path.exists(candidate):
+            os.remove(candidate)
+    compile_py = pjoin(filepath, 'bin', 'compile.py')
+    if path.exists(compile_py):
+        os.rename(compile_py, pjoin(filepath, 'bin', '.compile.py'))
+
+
+def materialize_config(filepath):
+    input_dir = pjoin(filepath, 'input')
+    shutil.copy(pjoin(input_dir, '.mg7_configuration_default.txt'),
+                pjoin(input_dir, 'mg7_configuration.txt'))
+    for card in ('default_run_card_lo.dat', 'default_run_card_nlo.dat',
+                 'default_run_card_mg7.toml', 'default_switch.txt'):
+        src = pjoin(input_dir, f'.{card}')
+        if path.exists(src):
+            shutil.copy(src, pjoin(input_dir, card))
+    shutil.copy(pjoin(input_dir, 'proc_card_default.dat'),
+                pjoin(filepath, 'proc_card.dat'))
+
+
+def vendor_offline_tools(filepath):
+    """Bundle offline copies of collier/ninja/SMWidth and the
+    HEPToolsInstaller scripts, so a release tarball can be used without
+    network access to the HEPTools installer's usual sources. Required for a
+    release: any failure here aborts it rather than shipping a tarball
+    silently missing the offline installers."""
+    vendor_dir = pjoin(filepath, 'vendor')
+    os.makedirs(vendor_dir, exist_ok=True)
+
+    clone_dir = pjoin(filepath, '..', 'HEPToolsInstallers')
+    subprocess.run(
+        ['git', 'clone', '--depth', '1',
+         'https://github.com/mg5amcnlo/HEPToolsInstallers.git', clone_dir],
+        check=True)
+    shutil.rmtree(pjoin(clone_dir, '.git'))
+    with tarfile.open(pjoin(vendor_dir, 'OfflineHEPToolsInstaller.tar.gz'), 'w:gz') as tf:
+        tf.add(clone_dir, arcname='HEPToolsInstallers')
+
+    sys.path.insert(0, path.dirname(clone_dir))
+    from HEPToolsInstallers.HEPToolInstaller import _HepTools
+    collier_link = _HepTools['collier']['tarball'][1] % _HepTools['collier']
+    ninja_link = _HepTools['ninja']['tarball'][1] % _HepTools['ninja']
+    urllib.request.urlretrieve(collier_link, pjoin(vendor_dir, 'collier.tar.gz'))
+    urllib.request.urlretrieve(ninja_link, pjoin(vendor_dir, 'ninja.tar.gz'))
+    urllib.request.urlretrieve(
+        'http://madgraph.phys.ucl.ac.be/Downloads/SMWidth.tgz',
+        pjoin(vendor_dir, 'SMWidth.tar.gz'))
+
+
+def write_authors(filepath):
+    first_contribs = get_first_contributions(ROOT)
+    with open(pjoin(filepath, 'input', 'authors.md'), 'w') as f:
+        for author in sorted(first_contribs):
+            f.write(f'{author} {first_contribs[author]}\n')
+
+
+def write_release_marker(filepath, version, wheels_dir=None):
+    """Write input/.release, read back by madspace/install.py to decide
+    whether the PyPI wheel may be offered. When wheels_dir is given, record
+    the filenames of the wheels actually built for this release, so
+    install.py can check platform/Python availability purely locally
+    (no PyPI query) instead of guessing from the CI build matrix."""
+    wheels = []
+    if wheels_dir:
+        wheels = sorted(path.basename(w) for w in glob.glob(pjoin(wheels_dir, '*.whl')))
+
+    with open(pjoin(filepath, 'input', '.release'), 'w') as f:
+        f.write(f'version = {version}\n')
+        f.write(f'date = {date.today().isoformat()}\n')
+        f.write(f'wheels = {",".join(wheels)}\n')
+
+
+def make_tarball(workdir, filepath, output_dir, version):
+    for pyc in glob.glob(pjoin(filepath, '**', '*.pyc'), recursive=True):
+        os.remove(pyc)
+
+    os.makedirs(output_dir, exist_ok=True)
+    tarname = pjoin(output_dir, f"MG7_v{version}.tar.gz")
+    subprocess.run(['tar', 'czf', tarname, '-C', workdir, path.basename(filepath)],
+                    check=True)
+    return tarname
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__,
+                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--version', required=True,
+                         help="Version being released, e.g. 0.2.0. Must match "
+                              "VERSION.")
+    parser.add_argument('--output', default='dist',
+                         help="Directory to write the tarball into (default: dist/).")
+    parser.add_argument('--skip-vendor', action='store_true',
+                         help="Skip bundling offline collier/ninja/SMWidth/HEPToolsInstaller.")
+    parser.add_argument('--wheels-dir', default=None,
+                         help="Directory holding the madspace wheels built for this "
+                              "release (e.g. the downloaded cibuildwheel artifacts). "
+                              "Their filenames are recorded in input/.release so "
+                              "install.py can check platform/Python availability "
+                              "without querying PyPI.")
+    parser.add_argument('--check-only', action='store_true',
+                         help="Only run the version consistency check, then exit.")
+    args = parser.parse_args()
+
+    check_versions(args.version)
+    if args.check_only:
+        return
+
+    workdir = pjoin(args.output, '_work')
+    filepath = archive_source(args.version, workdir)
+    prune_bin(filepath)
+    materialize_config(filepath)
+    if not args.skip_vendor:
+        vendor_offline_tools(filepath)
+    write_authors(filepath)
+    write_release_marker(filepath, args.version, wheels_dir=args.wheels_dir)
+    tarname = make_tarball(workdir, filepath, args.output, args.version)
+    shutil.rmtree(workdir)
+
+    print(f"Created {tarname}")
+
+
+if __name__ == '__main__':
+    main()

@@ -10,10 +10,10 @@
       double complex cnts(2,nsplitorders)
       cnts=(0d0,0d0)
       if(icnt.le.0)return
-      request%%extra=icnt
+      request%extra=icnt
       call mc_born_local(p,request,result)
-      cnts=result%%extra
-      amp_split_cnt=result%%split_counterterms
+      cnts=result%extra
+      amp_split_cnt=result%split_counterterms
       end
       INTEGER FUNCTION GET_EXTRA_CNT_COLOR(ICNT,IPART)
       INTEGER ICNT, IPART

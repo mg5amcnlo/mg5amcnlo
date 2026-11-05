@@ -13,14 +13,14 @@
       double precision wgt_ME_born,wgt_ME_real
       common/c_wgt_ME_tree/wgt_ME_born,wgt_ME_real
       call mc_born_local(p,request,result)
-      ans=result%%born
+      ans=result%born
       wgt_ME_born=ans
-      amp_split=result%%amplitudes
-      amp_split_cnt=result%%split_counterterms
-      ans_cnt=result%%counterterms
-      amp2=result%%diagrams
+      amp_split=result%amplitudes
+      amp_split_cnt=result%split_counterterms
+      ans_cnt=result%counterterms
+      amp2=result%diagrams
       jamp2(0)=2d0
-      jamp2(1:2)=result%%flows
+      jamp2(1:2)=result%flows
       end
       subroutine sborn_onehel(p,nhel,hell,ans)
       use mc_born_types
@@ -35,12 +35,12 @@
       common/to_amp_split_ewsud/amp_split_ewsud
       double complex amp_split_ewsud_lo2(amp_split_size)
       common/to_amp_split_ewsud_lo2/amp_split_ewsud_lo2
-      request%%single_helicity=hell
-      request%%helicity=nhel
+      request%single_helicity=hell
+      request%helicity=nhel
       call mc_born_local(p,request,result)
-      ans=result%%single_helicity
-      amp_split_ewsud=result%%ewsudakov
-      amp_split_ewsud_lo2=result%%ewsudakov_lo2
+      ans=result%single_helicity
+      amp_split_ewsud=result%ewsudakov
+      amp_split_ewsud_lo2=result%ewsudakov_lo2
       end
       INTEGER FUNCTION SQSOINDEXB(AMPORDERA,AMPORDERB)
       IMPLICIT NONE

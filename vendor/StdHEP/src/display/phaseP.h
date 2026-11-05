@@ -62,9 +62,9 @@ enum HighlightTracksMode{TRACK_NODE, TRACK_DAUGHTERS, TRACK_DESCENDANTS,
 
 typedef struct _PhaseWindow {
     struct _PhaseWindow *next;
-    int type;                   /* type of windo : Phase space here */
+    int type;                   /* type of window : Phase space here */
     int modetreedisp;
-    Widget colorWindowShell;    /* Informatio for ColorCode Display */
+    Widget colorWindowShell;    /* Information for ColorCode Display */
     Widget dtreecolorcode;
     Widget streecolorcode;
     Widget treecolorcode;
@@ -123,9 +123,9 @@ typedef struct _PhaseWindow {
 
 typedef struct  _SpaceWindow {
     struct _SpaceWindow *next;
-    int type;                   /* type of windo : Real space here */
+    int type;                   /* type of window : Real space here */
     int modetreedisp;
-    Widget colorWindowShell;    /* Informatio for ColorCode Display */
+    Widget colorWindowShell;    /* Information for ColorCode Display */
     Widget dtreecolorcode;
     Widget streecolorcode;
     Widget treecolorcode;
@@ -205,9 +205,9 @@ typedef struct  _SpaceWindow {
 
 typedef struct  _ParaWindow {
     struct _ParaWindow *next;
-    int type;                   /* type of windo : Para space here */
+    int type;                   /* type of window : Para space here */
     int modetreedisp;
-    Widget colorWindowShell;    /* Informatio for ColorCode Display */
+    Widget colorWindowShell;    /* Information for ColorCode Display */
     Widget dtreecolorcode;
     Widget streecolorcode;
     Widget treecolorcode;
@@ -271,7 +271,7 @@ typedef struct  _ParaWindow {
 
 typedef struct _StdHepWindow {
     struct _StdHepWindow *next;  /* The next window                     */
-    int type;                   /* type of windo : Phase of Vertex space */
+    int type;                   /* type of window : Phase of Vertex space */
     int modetreedisp;
     Widget colorWindowShell;    /* Information for ColorCode Display */
     Widget dtreecolorcode;

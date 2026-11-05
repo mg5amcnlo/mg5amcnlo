@@ -1,22 +1,23 @@
-C MadSONS
-      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,P_RESH,HEL,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIXHEL(P,HEL, FLAV_IDX, ANS)
       IMPLICIT NONE
 C
 C CONSTANT
 C
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
-      INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=%(ncomb)d)
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(IN) :: HEL
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
 
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),ANS
       INTEGER HEL
+      INTEGER FLAV_IDX
 C
 C GLOBAL VARIABLES
 C
@@ -26,20 +27,22 @@ C ----------
 C BEGIN CODE
 C ----------
       USERHEL=HEL
-      CALL %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
+      CALL %(proc_prefix)sSMATRIX(P,FLAV_IDX,ANS)
       USERHEL=-1
 
       END
 
-      SUBROUTINE %(proc_prefix)sSMATRIX(P,P_RESH,ANS)
+      SUBROUTINE %(proc_prefix)sSMATRIX(P, FLAV_IDX, ANS)
 C
 %(info_lines)s
 C
-C MadGraph5_aMC@NLO StandAlone Version
+C MadGraph7 StandAlone Version, bound-state (onium) matrix element
 C
 C Returns amplitude squared summed/avg over colors
 c and helicities
-c for the point in phase space P(0:3,NEXTERNAL)
+c for the point in phase space P(0:3,NEXTERNAL).
+C A bound state is one external particle of P: its constituents are
+C only built, and projected, inside MATRIX.
 C
 %(process_lines)s
 C
@@ -51,34 +54,43 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NINITIAL
       PARAMETER (NINITIAL=%(nincoming)d)
-      INTEGER    NPOLENTRIES
+      INTEGER NPOLENTRIES
       PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
-      INTEGER    NCOMB
-      PARAMETER (NCOMB=%(ncomb)d)
-      INTEGER    HELAVGFACTOR
+      INTEGER                 NCOMB
+      PARAMETER (             NCOMB=%(ncomb)d)
+      INTEGER HELAVGFACTOR
       PARAMETER (HELAVGFACTOR=%(hel_avg_factor)d)
 C
 C ARGUMENTS
 C
-      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
+      REAL*8 P(0:3,NEXTERNAL),ANS
 CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: FLAV_IDX
 C
 C LOCAL VARIABLES
 C
-      INTEGER NHEL(NEXTERNAL,NCOMB), NTRY
+      INTEGER NHEL(NEXTERNAL,NCOMB)
 C  put in common block to expose this variable to python interface
       COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL
       REAL*8 T
       REAL*8 %(proc_prefix)sMATRIX
-      INTEGER IHEL, IDEN, I, J
+      INTEGER IHEL,IDEN, I, J
 C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
       INTEGER BEAMS_HELAVGFACTOR(2)
       DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
+      INTEGER FLAVOR(NEXTERNAL)
       INTEGER JC(NEXTERNAL)
-      LOGICAL GOODHEL(NCOMB)
-      DATA NTRY/0/
-      DATA GOODHEL/NCOMB*.FALSE./
+      INTEGER NFLAV
+      PARAMETER (NFLAV=%(nflav)d)
+      INTEGER NNTRY_FLAV, NGOODHEL_FLAV
+      PARAMETER (NNTRY_FLAV=NFLAV)
+      PARAMETER (NGOODHEL_FLAV=NCOMB*NFLAV)
+      INTEGER FLAV_IDX
+      INTEGER NTRY(NFLAV)
+      LOGICAL GOODHEL(NCOMB,NFLAV)
+      DATA NTRY/NNTRY_FLAV*0/
+      DATA GOODHEL/NGOODHEL_FLAV*.FALSE./
 
 C
 C GLOBAL VARIABLES
@@ -87,38 +99,40 @@ C
       COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
       DATA USERHEL/-1/
       LOGICAL HELRESET
-      COMMON/%(proc_prefix)sHELRESET/HELRESET
-      DATA HELRESET/.TRUE./
+      common/%(proc_prefix)shelreset/HELRESET
+      data HELRESET/.true./
 
-      %(helicity_lines)s
-      %(den_factor_line)s
+%(helicity_lines)s
+%(den_factor_line)s
 
       INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
       COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
       DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
 C
-C MadSONS VARIABLES
+C BOUND STATES: projectors and JAMPs are cached over the helicity loop
+C of one phase-space point
 C
       INCLUDE 'onia.inc'
-
       LOGICAL IS_PROJ_COMPUTED(NONIA,-1:1)
       COMMON/%(proc_prefix)sIS_PROJ_COMPUTED/IS_PROJ_COMPUTED
-
       LOGICAL IS_JAMP_COMPUTED(4**NONIA,3**(NEXTERNAL-NONIA))
       COMMON/%(proc_prefix)sIS_JAMP_COMPUTED/IS_JAMP_COMPUTED
-
 C
 C     FUNCTIONS
 C
       LOGICAL %(proc_prefix)sIS_BORN_HEL_SELECTED
-
+      INTEGER %(proc_prefix)sBROKEN_SYM
 c----------
 c   Check if helreset mode is on
 c---------
       IF (HELRESET) THEN
-        NTRY = 0
+        DO I=1,NFLAV
+          NTRY(I) = 0
+        ENDDO
         DO I=1,NCOMB
-          GOODHEL(I) = .FALSE.
+          DO J=1,NFLAV
+            GOODHEL(I,J) = .FALSE.
+          ENDDO
         ENDDO
         HELRESET = .FALSE.
       ENDIF
@@ -126,43 +140,44 @@ c---------
 C ----------
 C BEGIN CODE
 C ----------
-
-      IS_PROJ_COMPUTED=.FALSE.
-      IS_JAMP_COMPUTED=.FALSE.
-
-      IF(USERHEL.EQ.-1) NTRY=NTRY+1
+      IF (FLAV_IDX.LT.1 .OR. FLAV_IDX.GT.NFLAV) THEN
+        ANS = 0D0
+        RETURN
+      ENDIF
+      IS_PROJ_COMPUTED = .FALSE.
+      IS_JAMP_COMPUTED = .FALSE.
+      CALL %(proc_prefix)sGET_FLAVOR(FLAV_IDX, FLAVOR)
+      IF(USERHEL.EQ.-1) NTRY(FLAV_IDX)=NTRY(FLAV_IDX)+1
       DO IHEL=1,NEXTERNAL
-        JC(IHEL) = +1
+         JC(IHEL) = +1
       ENDDO
 C     When spin-2 particles are involved, the Helicity filtering is dangerous for the 2->1 topology.
-C     This is because depending on the MC setup the initial PS points have back-to-back initial states
-C     for which some of the spin-2 helicity configurations are zero. But they are no longer zero
-C     if the point is boosted on the z-axis. Remember that HELAS helicity amplitudes are no longer
-C     lorentz invariant with expternal spin-2 particles (only the helicity sum is).
-C     For this reason, we simply remove the filterin when there is only three external particles.
+C     For this reason, we simply remove the filtering when there is only three external particles.
       IF (NEXTERNAL.LE.3) THEN
         DO IHEL=1,NCOMB
-          GOODHEL(IHEL)=.TRUE.
+          DO J=1,NFLAV
+            GOODHEL(IHEL,J)=.TRUE.
+          ENDDO
         ENDDO
       ENDIF
       ANS = 0D0
-        DO IHEL=1,NCOMB
-          IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-            IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
-              IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
-                CYCLE
-              ENDIF
-              T=%(proc_prefix)sMATRIX(P,P_RESH,NHEL(1,IHEL),JC(1))
-              IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
-                ANS=ANS+T
-              ENDIF
-              IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
-                GOODHEL(IHEL)=.TRUE.
-              ENDIF
+      DO IHEL=1,NCOMB
+        IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
+          IF (GOODHEL(IHEL,FLAV_IDX) .OR. NTRY(FLAV_IDX) .LT. 20.OR.USERHEL.NE.-1) THEN
+            IF(NTRY(FLAV_IDX).GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+              CYCLE
+            ENDIF
+            T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1),FLAV_IDX)
+            IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
+              ANS=ANS+T
+            ENDIF
+            IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL,FLAV_IDX)) THEN
+              GOODHEL(IHEL,FLAV_IDX)=.TRUE.
             ENDIF
           ENDIF
-        ENDDO
-      ANS=ANS/DBLE(IDEN)
+        ENDIF
+      ENDDO
+      ANS=ANS/DBLE(IDEN)*%(proc_prefix)sBROKEN_SYM(FLAVOR)
       IF(USERHEL.NE.-1) THEN
         ANS=ANS*HELAVGFACTOR
       ELSE
@@ -176,7 +191,8 @@ C     For this reason, we simply remove the filterin when there is only three ex
       END
 
 
-      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,P_RESH,NHEL,IC)
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC,FLAV_IDX)
+      use model_object
 C
 %(info_lines)s
 C
@@ -185,6 +201,7 @@ c for the point with external lines W(0:6,NEXTERNAL)
 C
 %(process_lines)s
 C
+      use aloha_object
       IMPLICIT NONE
 C
 C CONSTANTS
@@ -204,6 +221,7 @@ C ARGUMENTS
 C
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
+      INTEGER FLAV_IDX
 C
 C LOCAL VARIABLES
 C
@@ -211,21 +229,25 @@ C
       REAL*8 FRAC
       COMPLEX*16 ZTEMP
       INTEGER CF_INDEX
-      INTEGER CF(NCOLOR*(NCOLOR+1)/2)
-      INTEGER DENOM
-      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR), TMP_JAMP(%(nb_temp_jamp)i)
-      COMPLEX*16 W(20,NWAVEFUNCS)
+      double precision bwcutoff
+      INTEGER FLAVOR(NEXTERNAL)
+%(flavor_mask_decl)s
+      COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
+      type(aloha) W(NWAVEFUNCS)
+      REAL*8 COLSUM
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C
-C MadSONS VAIABLES
+C MadSONS VARIABLES
 C
       INCLUDE 'onia.inc'
       INCLUDE 'ldme.inc'
       REAL*8 NORM, LDME
       COMPLEX*16 PROJ(4**NONIA)
       REAL*8 P_ONIA(0:3,NEXTERNAL+NONIA),P_RESH(0:3,NEXTERNAL),PMASS_RESH(NEXTERNAL)
+      COMMON/%(proc_prefix)sONIA_RESH/P_RESH
       INTEGER NHEL_ONIA(NEXTERNAL+NONIA), IC_ONIA(NEXTERNAL+NONIA)
+      INTEGER FLAVOR_ONIA(NEXTERNAL+NONIA)
       INTEGER HELQ1(2), HELQ2(2)
       DATA HELQ1/-1, 1/
       DATA HELQ2/-1, 1/
@@ -245,16 +267,21 @@ C
       REAL*8 PMASS(NEXTERNAL)
       REAL*8 PMASS_ONIA(NEXTERNAL+NONIA)
       INCLUDE 'coupl.inc'
-      INCLUDE 'pmass.inc'
-      INCLUDE 'pmassonia.inc'
-      %(global_variable)s
+%(global_variable)s
+      INTEGER %(proc_prefix)sCF(%(ncolortriang)d)
+      INTEGER %(proc_prefix)sDENOM
+      common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
 C
 C COLOR DATA
 C
-      %(color_data_lines)s
+%(color_data_lines)s
 C ----------
 C BEGIN CODE
 C ----------
+      INCLUDE 'pmass.inc'
+      INCLUDE 'pmassonia.inc'
+      bwcutoff=15 ! use if $ syntax is defined in the process
+%(flavor_mask_setup)s
 
       PMASS_RESH = 0.D0
       DO I = 1, NEXTERNAL+NONIA
@@ -272,6 +299,7 @@ C ----------
         P_ONIA(:,I) = FRAC*P_RESH(:,MAPPING(I))
         NHEL_ONIA(I) = NHEL(MAPPING(I))
         IC_ONIA(I) = IC(MAPPING(I))
+        FLAVOR_ONIA(I) = FLAVOR(MAPPING(I))
       ENDDO
 
       NORM = 1D0
@@ -335,7 +363,7 @@ C     Computing the amplitudes
           IF (.NOT.IS_JAMP_COMPUTED(J,K)) THEN
             %(helas_calls)s
 
-            %(jamp_lines)s
+            CALL %(proc_prefix)sGET_JAMP(AMP,JAMP)
 C           Store amplitudes for reuse
             JAMP_SAVED(:,J,K) = JAMP
             IS_JAMP_COMPUTED(J,K) = .TRUE.
@@ -348,61 +376,81 @@ C           Store amplitudes for reuse
         JAMP = JAMP + JAMP_SAVED(:,I,K)*PROJ(I)
       ENDDO
 
-      %(proc_prefix)sMATRIX = 0.D0
-      CF_INDEX = 0
-      DO I = 1, NCOLOR
-          ZTEMP = (0.D0,0.D0)
-          DO J = I, NCOLOR
-              CF_INDEX = CF_INDEX + 1
-              ZTEMP = ZTEMP + CF(CF_INDEX)*JAMP(J)
-          ENDDO
-          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+REAL(ZTEMP*DCONJG(JAMP(I))*LDME)
-      ENDDO
-      %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX / DENOM
-      %(amp2_lines)s
+      CALL %(proc_prefix)sGET_MATRIX(JAMP,COLSUM)
+      %(proc_prefix)sMATRIX = COLSUM*LDME
+%(amp2_lines)s
       END
 
-
-
-      SUBROUTINE %(proc_prefix)sGET_VALUE(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE %(proc_prefix)sGET_JAMP(AMP,JAMP)
+C
+%(process_lines)s
+C
       IMPLICIT NONE
 C
-C CONSTANT
+C CONSTANTS
 C
-      INTEGER    NEXTERNAL
-      PARAMETER (NEXTERNAL=%(nexternal)d)
-C
-C ARGUMENTS
-C
-      REAL*8 P(0:3,NEXTERNAL),P_RESH(0:3,NEXTERNAL),ANS
-      INTEGER NHEL
-      DOUBLE PRECISION ALPHAS
-      real*8 pi
-CF2PY INTENT(OUT) :: ANS
-CF2PY INTENT(IN) :: NHEL
-CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
-CF2PY INTENT(IN) :: ALPHAS
-C     ROUTINE FOR F2PY to read the benchmark point.
-C     the include file with the values of the parameters and masses
-      include "coupl.inc"
+      INTEGER    NGRAPHS
+      PARAMETER (NGRAPHS=%(ngraphs)d)
+      INTEGER    NCOLOR
+      PARAMETER ( NCOLOR=%(ncolor)d)
+      COMPLEX*16 IMAG1
+      PARAMETER (IMAG1=(0D0,1D0))
+      COMPLEX*16 AMP(%(namp_dim)s), JAMP(NCOLOR)
+%(jamp_tmp_decl)s
+%(jamp_decl)s
 
-      pi = 3.141592653589793d0
-      G = 2*DSQRT(ALPHAS*pi)
-      call UPDATE_AS_PARAM()
-      if (NHEL.ne.0) then
-        CALL %(proc_prefix)sSMATRIXHEL(P, P_RESH, NHEL, ANS)
-      else
-        CALL %(proc_prefix)sSMATRIX(P, P_RESH, ANS)
-      endif
-      return
-      end
+%(jamp_lines)s
+      END
+
+      SUBROUTINE %(proc_prefix)sGET_MATRIX(JAMP,MATRIX)
+C
+%(process_lines)s
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+      INTEGER    NCOLOR
+      PARAMETER (NCOLOR=%(ncolor)d)
+      REAL*8     ZERO,MATRIX
+      PARAMETER (ZERO=0D0)
+C
+C LOCAL VARIABLES
+C
+      INTEGER I,J
+      COMPLEX*16 ZTEMP
+      INTEGER CF_INDEX
+      INTEGER %(proc_prefix)sCF(NCOLOR*(NCOLOR+1)/2)
+      INTEGER %(proc_prefix)sDENOM
+      common /%(proc_prefix)scolor_matrix/ %(proc_prefix)sCF,%(proc_prefix)sDENOM
+      COMPLEX*16 JAMP(NCOLOR)
+C
+C COLOR DATA
+C
+      CALL %(proc_prefix)sINIT_CF()
+
+      MATRIX = 0.D0
+      CF_INDEX = 0
+      DO I = 1, NCOLOR
+        ZTEMP = (0.D0,0.D0)
+        DO J = I, NCOLOR
+          CF_INDEX = CF_INDEX + 1
+          ZTEMP = ZTEMP + %(proc_prefix)sCF(CF_INDEX)*JAMP(J)
+        ENDDO
+        MATRIX = MATRIX+REAL(ZTEMP*DCONJG(JAMP(I)))/%(proc_prefix)sDENOM
+      ENDDO
+      END
+
+%(color_init_routine)s
+
+%(jamp_init_routine)s
 
       SUBROUTINE %(proc_prefix)sINITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
       CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
-      call setpara(PATH)  !first call to setup the paramaters
+      call setpara(PATH)  !first call to set up the parameters
       return
       end
 
@@ -460,6 +508,16 @@ C     ----------
 
       RETURN
       END
+
+
+%(broken_sym_function)s
+
+
+%(flavor_index_function)s
+
+
+%(flavor_array_function)s
+
 
       SUBROUTINE %(proc_prefix)sRESHUFFLE_MOMENTA(P,PMASS,P_RESH)
       IMPLICIT NONE

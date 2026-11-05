@@ -52,12 +52,30 @@ class TestQEDMCKernels(unittest.TestCase):
                                          'AP_reduced_massive', 'Qterms_reduced_timelike',
                                          'Qterms_reduced_spacelike'))
         (work / 'routines.f').write_text(source)
+        # This kernel fixture exercises the identity frame. Frame geometry and
+        # polarised contractions are checked separately against real MEs.
+        (work / 'frames.f90').write_text('''subroutine me_frame_born_boost(p,b,active)
+real(8) p(0:3,4),b(0:3,2)
+logical active
+active=.false.
+b=0d0
+end subroutine
+subroutine sborn_frame(p,w)
+real(8) p(0:3,4),w
+call sborn_native(p,w)
+end subroutine
+subroutine azifact_mc_frame(p,m,pi,pj,y,b,a,c,s)
+error stop 'unexpected frame in scalar kernel fixture'
+end subroutine
+''')
         cls.executable = work / 'check_qed_mc_kernels'
         command = [shutil.which('gfortran'), '-O0', '-std=legacy',
                    '-ffixed-line-length-none', '-fcheck=all', '-finit-real=snan',
                    '-ffpe-trap=invalid,zero,overflow', '-I', str(work),
                    str(TEMPLATE / 'qed_shower_support.f90'),
-                str(TEMPLATE / 'process_module.f90'), 'scale.f90', 'routines.f',
+                str(TEMPLATE / 'process_module.f90'),
+                   str(TEMPLATE / 'fks_phase_space_data.f'),
+                   'scale.f90', 'routines.f', 'frames.f90',
                    str(ROOT / 'tests/input_files/check_qed_mc_kernels.f90'),
                    '-o', str(cls.executable)]
         subprocess.run(command, cwd=work, check=True, capture_output=True, text=True)

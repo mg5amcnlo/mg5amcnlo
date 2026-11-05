@@ -1,6 +1,6 @@
       subroutine ewsudakov_py(p_born_in, nexternal, gstr_in, results) 
 c**************************************************************************
-c     This is the driver for the whole calulation
+c     This is the driver for the whole calculation
 c**************************************************************************
       implicit none
 CF2PY double precision, intent(in), dimension(0:3,nexternal) :: p_born_in

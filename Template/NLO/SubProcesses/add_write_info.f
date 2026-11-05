@@ -524,7 +524,7 @@ c     Fist set "safe" color info
             icolalt(1,i) = icolalt(1,ida(1))+icolalt(1,ida(2))
             icolalt(2,i) = icolalt(2,ida(1))+icolalt(2,ida(2))
          else
-c     Erraneous color assignment for propagator
+c     Erroneous color assignment for propagator
             write(*,*) 'ERROR: Safe color assignment wrong!'/
      &           /' This should never happen !',i,icolalt(1,ida(1))
      &           ,icolalt(1,ida(2)),icolalt(2,ida(1)),icolalt(2,ida(2))
@@ -799,11 +799,11 @@ c     If mother and daughter have the same ID, remove one of them
                   ida(j)=itree(j,i)
                   if(ida(j).lt.0) then
                      if (sprop_tree(i).eq.sprop_tree(ida(j))) then
-                        idenpart=ida(j) ! mother and daugher have same ID
+                        idenpart=ida(j) ! mother and daughter have same ID
                      endif
                   elseif (ida(j).gt.0) then
                      if (sprop_tree(i).eq.IDUP(ida(j))) then
-                        idenpart=ida(j) ! mother and daugher have same ID
+                        idenpart=ida(j) ! mother and daughter have same ID
                      endif
                   endif
                enddo

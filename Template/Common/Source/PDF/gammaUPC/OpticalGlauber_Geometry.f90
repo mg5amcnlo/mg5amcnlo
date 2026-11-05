@@ -1,7 +1,7 @@
 MODULE OpticalGlauber_Geometry
   ! This is module to provide the functions for the Optical Glauber model
   ! via the profiles. 
-  ! Besides the Optical Glauber model, another possiblity is to
+  ! Besides the Optical Glauber model, another possibility is to
   !  use the Monte Carlo Glauber model, in which the nucleons are
   ! populated stochastically according to the given nuclear density profile
   ! There are a few public Monte Carlo Glauber tools (e.g. PHOBOS in

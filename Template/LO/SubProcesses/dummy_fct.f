@@ -104,7 +104,7 @@ c     allow to define your own dynamical scale, need to set dynamical_scale_choi
       implicit none
       include 'nexternal.inc'
       double precision P(0:3, nexternal)
-c     Commmon to have access to all variable defined in the run_card      
+c     Common to have access to all variable defined in the run_card
       include 'genps.inc'
       include 'vector.inc'
       include 'run.inc'

@@ -1883,6 +1883,7 @@ c     For Pythia: IF is identical to II.
      $     born_weights,born_spin_weights)
 c Return the scalar and azimuthal split amplitudes for one selected
 c Born flow and correction order, using Odagiri's prescription.
+      use fks_phase_space_data, only: p_i_fks_ev
       implicit none
       include 'orders.inc'
       include 'nFKSconfigs.inc'
@@ -1900,7 +1901,8 @@ c Born flow and correction order, using Odagiri's prescription.
       double complex borntilde,amp_split_borntilde(amp_split_size)
       double complex azifact
       double precision sumborn,flow_weight,flow_fraction
-      double precision cphi_mother,sphi_mother
+      double precision cphi_mother,sphi_mother,pboost(0:3,2)
+      logical me_boosted
       integer i,iamp,imother_fks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
@@ -1929,20 +1931,22 @@ c Born flow and correction order, using Odagiri's prescription.
          stop 1
       endif
 
+      call me_frame_born_boost(p_born,pboost,me_boosted)
 c Rotate the second incoming leg into the matrix-element convention.
 c Exclude 2->1 Born processes, whose nonzero helicity configurations
 c can flip even though their matrix elements have no momentum dependence.
       if ((ileg.eq.1.or.ileg.eq.2).and.
-     $    (j_fks.eq.2.and.nexternal-1.ne.3)) then
+     $    (j_fks.eq.2.and.nexternal-1.ne.3).and.
+     $    .not.me_boosted) then
          do i=1,nexternal-1
             p_born_rot(0,i)=p_born(0,i)
             p_born_rot(1,i)=-p_born(1,i)
             p_born_rot(2,i)=p_born(2,i)
             p_born_rot(3,i)=-p_born(3,i)
          enddo
-         call sborn_native(p_born_rot,wgt_born)
+         call sborn_frame(p_born_rot,wgt_born)
       else
-         call sborn_native(p_born,wgt_born)
+         call sborn_frame(p_born,wgt_born)
       endif
 
       born=dble(ans_cnt(1,iord))
@@ -1957,6 +1961,11 @@ c can flip even though their matrix elements have no momentum dependence.
 c Complete the spin-correlated amplitudes with <ij>/[ij] and the
 c polarization-vector phase. Keep the original multiplication order.
       if (ileg.eq.1.or.ileg.eq.2) then
+         if (me_boosted) then
+            call azifact_mc_frame(p_born,j_fks,p_i_fks_ev,
+     $           p(0,j_fks),y_ij_fks,pboost,azifact,
+     $           cphi_mother,sphi_mother)
+         else
          azifact=mc_born_azimuth_phase(p,xi_i_fks,y_ij_fks,
      $        j_fks.eq.2)
          if (j_fks.eq.2) then
@@ -1965,6 +1974,7 @@ c polarization-vector phase. Keep the original multiplication order.
             cphi_mother=1d0
          endif
          sphi_mother=0d0
+         endif
          borntilde=-(cphi_mother+ximag*sphi_mother)**2*
      $        borntilde*dconjg(azifact)
          do iamp=1,amp_split_size
@@ -1979,10 +1989,17 @@ c ordering of the photon and fermion daughters.
             borntilde=czero
             amp_split_borntilde=czero
          elseif ((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0) then
+            imother_fks=min(i_fks,j_fks)
+            if (me_boosted) then
+               call azifact_mc_frame(p_born,imother_fks,p_i_fks_ev,
+     $              p(0,j_fks),y_ij_fks,pboost,azifact,
+     $              cphi_mother,sphi_mother)
+            else
             azifact=mc_born_azimuth_phase(p,xi_i_fks,y_ij_fks,.false.)
             imother_fks=min(i_fks,j_fks)
             call getaziangles(p_born(0,imother_fks),
      $           cphi_mother,sphi_mother)
+            endif
             borntilde=-(cphi_mother-ximag*sphi_mother)**2*
      $           borntilde*azifact
             do iamp=1,amp_split_size
@@ -2041,6 +2058,7 @@ c The spinor ratio <ij>/[ij] common to ISR and FSR barred amplitudes.
 c At the collinear endpoint use the phase retained by the FKS map;
 c in the soft region use its rescaled emitted momentum.
       use fks_phase_space_data, only: xij_aor,p_i_fks_ev
+      use ALOHA_OBJECT
       implicit none
       double precision p(0:3,nexternal),xi_i_fks,y_ij_fks
       logical rotate_beam
@@ -2049,7 +2067,8 @@ c in the soft region use its rescaled emitted momentum.
       common/fks_indices/i_fks,j_fks
       double precision pi(0:3),pj(0:3),zero,vtiny
       parameter (zero=0d0,vtiny=1d-12)
-      double complex w1(6),w2(6),w3(6),w4(6),wij_angle,wij_recta
+      TYPE(ALOHA) w1,w2,w3,w4
+      double complex wij_angle,wij_recta
 
       if (1d0-y_ij_fks.lt.vtiny) then
          mc_born_azimuth_phase=xij_aor
@@ -2070,15 +2089,15 @@ c Rotation according to innerpin.m for the second incoming leg.
          pj(1)=-pj(1)
          pj(3)=-pj(3)
       endif
-      call IXXXSO(pi,zero,+1,+1,w1)
-      call OXXXSO(pj,zero,-1,+1,w2)
-      call IXXXSO(pi,zero,-1,+1,w3)
-      call OXXXSO(pj,zero,+1,+1,w4)
+      call IXXXXX(pi,zero,+1,+1,1,w1)
+      call OXXXXX(pj,zero,-1,+1,1,w2)
+      call IXXXXX(pi,zero,-1,+1,1,w3)
+      call OXXXXX(pj,zero,+1,+1,1,w4)
       wij_angle=(0d0,0d0)
       wij_recta=(0d0,0d0)
       do i=1,4
-         wij_angle=wij_angle+w1(i)*w2(i)
-         wij_recta=wij_recta+w3(i)*w4(i)
+         wij_angle=wij_angle+w1%W(i)*w2%W(i)
+         wij_recta=wij_recta+w3%W(i)*w4%W(i)
       enddo
       mc_born_azimuth_phase=wij_angle/wij_recta
       end function mc_born_azimuth_phase

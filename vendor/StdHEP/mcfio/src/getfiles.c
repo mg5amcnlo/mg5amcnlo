@@ -337,7 +337,7 @@ int HandleCustomExistFileSB(Widget existFileSB, char *filename)
        the "OK" button.  Dynamic defaulting will restore it as the default
        button after the keyboard focus is established.  Note the voodoo
        below: calling XmProcess traversal extra times (a recommendation from
-       OSF technical support) somehow succeedes in giving the file list focus */
+       OSF technical support) somehow succeeds in giving the file list focus */
     XtVaSetValues(existFileSB, XmNdefaultButton, NULL, 0);
     for (i=1; i<30; i++)
     	XmProcessTraversal(XmFileSelectionBoxGetChild(existFileSB,
@@ -371,7 +371,7 @@ int HandleCustomExistFileSB(Widget existFileSB, char *filename)
 /*  if he/she wants to overwrite the file.  Answering no, allows the user  */
 /*  to select a new filename.  GetNewFilename also checks that the file    */
 /*  name specified by the user can be created, and allows re-entry if not. */
-/*  When the user presses the OK button to a filename satisying the above  */
+/*  When the user presses the OK button to a filename satisfying the above  */
 /*  criteria, GetNewFilename returns the selected filename and GFN_OK.     */
 /*  If the user presses the cancel button, the return value is GFN_CANCEL, */
 /*  and the filename character string supplied in the call is not altered. */
@@ -459,7 +459,7 @@ int GetNewFilename (Widget parent, char *promptString, char *filename)
        the "OK" button.  Dynamic defaulting will restore it as the default
        button after the keyboard focus is established.  Note the voodoo
        below: calling XmProcess traversal FOUR times (a recommendation from
-       OSF technical support) somehow succeedes in changing the focus */
+       OSF technical support) somehow succeeds in changing the focus */
     XtVaSetValues(newFileSB, XmNdefaultButton, NULL, 0);
     for (i=1; i<30; i++)
     	XmProcessTraversal(XmFileSelectionBoxGetChild(newFileSB, XmDIALOG_TEXT),
@@ -950,7 +950,7 @@ static void listCharCB(Widget w, XEvent *event, String *params, Cardinal n)
 ** ifdefs can be found that will correctly predict the ordering and adjust
 ** listCharCB above, instead of resorting to re-sorting, it should be done.
 ** This obviously wastes valuable time as the selection box is popping up
-** and should be removed.  These routines also leak memory like a seive,
+** and should be removed.  These routines also leak memory like a sieve,
 ** because Motif's inconsistent treatment of memory in list widgets does
 ** not allow us to free lists that we pass in, and most Motif versions
 ** don't clean it up properly.

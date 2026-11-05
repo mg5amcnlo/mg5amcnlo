@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: 0BSD
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build products
+build/
+dist/
+target/
+wheelhouse/
+/FFT_FEATURE_RESOURCES/
+*.whl
+*.mod
+src/pyamplicol/_rusticol*.so
+src/pyamplicol/_rusticol*.dylib
+src/pyamplicol/_rusticol*.pyd
+.artifacts/
+# Temporary upstream dependency fixes stay local to this development branch.
+/TMP_FIXED_SYMJIT/
+/TMP_FIXED_SPENSO/
+/FUTURE_ufo_model_loader/
+/SPENSO_LATEST_SYMBOLICA_COMPATIBILITY_FIXES/
+/SYMJIT_FOLLOW_UP_FIXES/
+/DEPENDENCY_FIXES/
+/IMPLEMENTATION_DOCS/REFERENCES/
+/IMPLEMENTATION_DOCS/RESULTS/fft-scaling-study/raw/
+/IMPLEMENTATION_DOCS/RESULTS/fft-profiling/runs/
+/IMPLEMENTATION_DOCS/RESULTS/summary_plots_final.pdf
+/IMPLEMENTATION_DOCS/RESULTS/summary_plots_final_helicity_sum.pdf
+.cargo/config.toml
+
+# Retain local performance campaigns and generated reports outside Git. The
+# repository publishes only the report index and four selected PDF snapshots.
+/docs/performance_reports/*
+!/docs/performance_reports/README.md
+!/docs/performance_reports/macbook_M3_pyAmpliCol.pdf
+!/docs/performance_reports/EPYC_pyAmpliCol.pdf
+!/docs/performance_reports/summary_plots_final.pdf
+!/docs/performance_reports/summary_plots_final_helicity_sum.pdf
+/docs/arxiv/
+
+# Managed environments and deployment sandboxes
+.venv/
+venv/
+dependencies/.venv/
+dependencies/checkouts/
+dependencies/candidate-Cargo.lock
+dependencies/candidate-cargo-config.toml
+dependencies/install-state.json
+dependencies/wheelhouse/
+PYPI_DEPLOYMENT_TEST/
+
+# Generated SDK staging
+src/pyamplicol/_sdk/lib/
+src/pyamplicol/_sdk/include/
+src/pyamplicol/_sdk/fortran/
+src/pyamplicol/_sdk/link.json
+src/pyamplicol/_sdk/metadata.json
+src/pyamplicol/_sdk/sboms/
+src/pyamplicol/assets/selftest/*/
+!src/pyamplicol/assets/selftest/portable-64le/
+!src/pyamplicol/assets/selftest/portable-64le/**
+
+# Generated process and benchmark output
+outputs/
+.sass-cache/
+docs/_site/
+docs/.jekyll-cache/
+docs/.sass-cache/
+docs/.bundle/
+docs/.result_outputs/
+docs/**/results/*.lock
+docs/**/results/.coordination/
+docs/performance_reports/.*.init-*/
+docs/*.aux
+docs/*.bbl
+docs/*.bcf
+docs/*.blg
+docs/*.fdb_latexmk
+docs/*.fls
+docs/*.log
+docs/*.out
+docs/*.run.xml
+docs/*.synctex.gz
+docs/*.toc
+docs/**/*.aux
+docs/**/*.bbl
+docs/**/*.bcf
+docs/**/*.blg
+docs/**/*.fdb_latexmk
+docs/**/*.fls
+docs/**/*.log
+docs/**/*.out
+docs/**/*.run.xml
+docs/**/*.synctex.gz
+docs/**/*.toc
+
+# Local tooling state
+/tmp/
+.trash/
+.agent-work/
+.DS_Store
+
+# Prepared-model packs and metadata come from the release archive
+# (tools/release/prepared_models_archive.py), not from Git.
+src/pyamplicol/assets/prepared_models/*.metadata.json
+src/pyamplicol/assets/prepared_models/*.pyamplicol-model
+release_assets/prepared_models/*.metadata.json
+release_assets/prepared_models/*.pyamplicol-model
+
+# MadGraph7 installer
+/install/
+/install_settings.json
+src/pyamplicol/_source_hash.py

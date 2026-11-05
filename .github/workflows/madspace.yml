@@ -1,0 +1,102 @@
+name: MadSpace
+
+on:
+  push:
+    # All branches, no tags: a release tag points at a commit that already
+    # ran this suite when it was pushed to main, and release.yml gates on
+    # that main run rather than re-testing the same tree. '**' is needed
+    # over '*' so branch names containing a slash still match.
+    branches:
+      - '**'
+  pull_request:
+  # Called from release.yml once main's CI for the tagged commit is green,
+  # to build the wheels it then publishes. The publishing itself deliberately
+  # lives in release.yml: PyPI trusted publishing matches the OIDC
+  # job_workflow_ref claim, which names the workflow file the *job* is defined
+  # in, so a publish job here would present madspace.yml and never match a
+  # "Workflow: release.yml" publisher.
+  workflow_call:
+    inputs:
+      full_matrix:
+        description: 'Build wheels for every supported Python/platform, not just the smoke-test subset'
+        type: boolean
+        default: false
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build_small: cp312-manylinux_x86_64
+            build_full: cp3*-manylinux_x86_64
+            CIBW_BEFORE_ALL: >
+              yum -y install openblas-devel yum-utils doxygen &&
+              yum-config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo &&
+              yum-config-manager --add-repo /project/.github/workflows/rocm.repo &&
+              yum -y install cuda-nvcc-12-8 cuda-cudart-devel-12-8 cuda-thrust-12-8 libcublas-devel-12-8 rocm-hip-runtime-devel rocblas-devel rocthrust-devel hipcub-devel
+            CIBW_REPAIR_WHEEL_COMMAND: >
+              auditwheel repair
+              --exclude libmadspace.so
+              --exclude 'libcublas.so.*'
+              --exclude 'libcublasLt.so.*'
+              --exclude 'libcudart.so.*'
+              --exclude 'libamdhip64.so.*'
+              --exclude 'libhipblaslt.so.*'
+              --exclude 'librocblas.so.*'
+              --exclude 'libroctx64.so.*'
+              -w {dest_dir} {wheel}
+            CIBW_ENVIRONMENT: >
+                PATH=$PATH:/usr/local/cuda/bin
+                CMAKE_PREFIX_PATH=/opt/rocm
+                HIPFLAGS=--gcc-toolchain=$(dirname $(which g++))/../..
+                SKBUILD_CMAKE_ARGS="-DENABLE_CUDA=ON;-DENABLE_HIP=ON;-DENABLE_SIMD=ON;-DENABLE_OPENBLAS=OFF;-DENABLE_DOCS=ON"
+
+          # GitHub retires the macos-14 image on 2026-11-02. macos-15 rather
+          # than macos-latest, which moves with each new macOS (and Xcode).
+          # The deployment target keeps the wheels installable on macOS 14.5+.
+          - os: macos-15
+            build_small: cp312-macosx_arm64
+            build_full: cp3*-macosx_arm64
+            MACOSX_DEPLOYMENT_TARGET: 14.5
+            CIBW_BEFORE_ALL: brew install doxygen
+            CIBW_ENVIRONMENT: >
+                SKBUILD_CMAKE_ARGS="-DENABLE_SIMD=ON;-DENABLE_DOCS=ON"
+            CIBW_REPAIR_WHEEL_COMMAND: >
+              delocate-wheel
+              --ignore-missing-dependencies
+              --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v3.2.1
+        with:
+          package-dir: madspace
+        env:
+            CIBW_BUILD: ${{ (inputs.full_matrix || github.ref == 'refs/heads/main') && matrix.build_full || matrix.build_small }}
+            CIBW_BEFORE_ALL: ${{ matrix.CIBW_BEFORE_ALL }}
+            CIBW_REPAIR_WHEEL_COMMAND: ${{ matrix.CIBW_REPAIR_WHEEL_COMMAND }}
+            CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
+            MACOSX_DEPLOYMENT_TARGET: ${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
+            CIBW_TEST_REQUIRES: >
+              pytest
+              numpy
+              scipy
+              --extra-index-url https://download.pytorch.org/whl/cpu
+              torch
+            # the GPU runs of these tests are in gpu_runner_ci.yml (job madspace_tests)
+            CIBW_TEST_ENVIRONMENT: MADSPACE_TEST_DEVICE=cpu
+            # runs the unit tests once per SIMD mode supported by the runner
+            CIBW_TEST_COMMAND: >
+              python {project}/madspace/tests/run_simd_modes.py {project}/madspace/tests
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl

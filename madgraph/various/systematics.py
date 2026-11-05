@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2016 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2016 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -67,6 +67,7 @@ class Systematics(object):
                  ion_scaling=True,
                  weight_format=None,
                  weight_info=None,
+                 lo_nqcd=None,
                  ):
 
 
@@ -113,6 +114,17 @@ class Systematics(object):
 
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
         matching_mode = self.banner.get('run_card', 'ickkw')
+
+        # Reconstruction of the LO reweighting info for event files that do not
+        # carry an <mgrwt> block (e.g. the mg7 output): lo_nqcd is the single
+        # alpha_s power of the process, and the beam energies (needed for the
+        # Bjorken-x) come from the run_card. See Event.reconstruct_lo_weight.
+        self.lo_nqcd = lo_nqcd
+        try:
+            self.lo_ebeam = (float(self.banner.get('run_card', 'ebeam1')),
+                             float(self.banner.get('run_card', 'ebeam2')))
+        except Exception:
+            self.lo_ebeam = None
 
         #check for beam
         beam1, beam2 = self.banner.get_pdg_beam()
@@ -170,12 +182,12 @@ class Systematics(object):
             isEVAxDIS=True
         # none, chff, edff
         if(self.banner.run_card['pdlabel'] in ['none','chff','edff']):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff')
+            raise SystematicsError('Systematics not supported for pdlabel=%s' % self.banner.run_card['pdlabel'])
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling
         self.only_beam = only_beam 
-        if isinstance(self.banner.run_card, banner_mod.RunCardLO):
+        if self.banner.run_card.LO:  # RunCardLO and the mg7 RunCardMG7 are LO
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
                 raise SystematicsError('The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.')
@@ -293,7 +305,7 @@ class Systematics(object):
         # For e+/e- type of collision initialise the running of alps
         if self.b1 == 0 == self.b2 or isEVA:
             try:
-                from models.model_reader import Alphas_Runner
+                from madgraph.models.model_reader import Alphas_Runner
             except ImportError:
                 root_path = pjoin(root, os.pardir, os.pardir)
                 try:
@@ -304,7 +316,7 @@ class Systematics(object):
                     cmd = me_int.Cmd(root_path,force_run=True)                
                 if 'mg5_path' in cmd.options and cmd.options['mg5_path']:
                     sys.path.append(cmd.options['mg5_path'])
-                from models.model_reader import Alphas_Runner
+                from madgraph.models.model_reader import Alphas_Runner
                 
             if not hasattr(self.banner, 'param_card'):
                 param_card = self.banner.charge_card('param_card')
@@ -600,7 +612,7 @@ class Systematics(object):
             try:
                 pdferr =  pdfset.uncertainty(values)
             except RuntimeError:
-                # the same error can happend to some other type of error like custom.
+                # the same error can happen to some other type of error like custom.
                 pass
             else:
                 resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,percent(pdferr.errplus), percent(pdferr.errminus)))
@@ -957,7 +969,14 @@ class Systematics(object):
         """ 
         pdf is a lhapdf object!"""
         
-        loinfo = event.parse_lo_weight()
+        loinfo = event.parse_lo_weight(nqcd=self.lo_nqcd, ebeam=self.lo_ebeam)
+        if loinfo is None:
+            raise SystematicsError(
+                "The event file does not contain the per-event reweighting "
+                "information (<mgrwt>: scales, x1/x2, parton PDGs and the "
+                "alpha_s power) required to compute LO systematics. For a "
+                "process with a single alpha_s power, pass lo_nqcd (that power) "
+                "so it can be reconstructed from the events.")
         if dyn == -1:
             mur = loinfo['ren_scale']
             if self.b1 != 0 and loinfo['pdf_pdg_code1']:
@@ -1137,7 +1156,7 @@ class Systematics(object):
         elif(vPol==-1):
             return self.get_eva_stripped_pdf_vm(muf,vPID,fPID,xx,beam,ievo_eva,evaorder)
         else:
-            raise SystematicsError("unknow EVA vPol: %s " % vPol)
+            raise SystematicsError("unknown EVA vPol: %s " % vPol)
         
     # scale dependence of f_V+ according to EVA accuracy
     def get_eva_stripped_pdf_vp(self, muf, vPID, fPID, xx, ebeam, ievo_eva=0, evaorder=0):
@@ -1339,6 +1358,8 @@ def call_systematics(args, result=sys.stdout, running=True,
 
 
     input, output = args[0:2]
+    if input.endswith('.gz') and not os.path.exists(input):
+        input = input[:-3]
     
     start_opts = 2
     if output and output.startswith('-'):
@@ -1361,7 +1382,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                     opts[key]=[tuple(values)]
             elif key == 'result':
                 result = open(values[0],'w')
-            elif key in ['start_event', 'stop_event', 'only_beam']:
+            elif key in ['start_event', 'stop_event', 'only_beam', 'lo_nqcd']:
                 opts[key] = banner_mod.ConfigFile.format_variable(values[0], int, key)
             elif key in ['write_banner', 'ion_scalling', 'no_banner', 'no_closing_tag']:
                 opts[key] = banner_mod.ConfigFile.format_variable(values[0], bool, key)
@@ -1371,7 +1392,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                 else:
                     opts[key] = values
         else:
-            raise SystematicsError("unknow argument %s" % arg)
+            raise SystematicsError("unknown argument %s" % arg)
 
     #load run_card and extract parameter if needed.
     if 'from_card' in opts:

@@ -3,7 +3,7 @@ c
 c	Very simple program to generate a little detector sketch, 
 c	made of line segments. One segment consist of two sets of xyz 
 c	coordinates. 
-c	Format is extremly simple : one line per segment, e.g., 6 f.p. numbers.
+c	Format is extremely simple : one line per segment, e.g., 6 f.p. numbers.
 c	
 c	This particular detector is square, 10 cm. in size, regularly spaced
 c	in Z with Forward extension "logarytmic spaced" for uniform hit 

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -182,7 +182,7 @@ class ColorOne(ColorObject):
         """Check for no index"""
         
         if len(args) ==2 and args[0] == 'i' and not args[1]:
-            # py3 pickle wierd output some time...
+            # py3 pickle weird output some time...
             return super(ColorOne, self).__init__()
             
         assert len(args) == 0 , "ColorOne objects must have no index!"
@@ -331,6 +331,13 @@ class f(ColorObject):
         col_str2.is_imaginary = True
 
         return ColorFactor([col_str1, col_str2])
+
+    def complex_conjugate(self):
+        """f (and d) are real, so complex conjugation leaves them untouched.
+        The default behaviour of reversing the indices would introduce a
+        spurious sign, since f is totally antisymmetric."""
+
+        return self
 
 #===============================================================================
 # d
@@ -768,7 +775,7 @@ class ColorString(list):
     Nc_power = 0
     # The loop_NC_power attribute is the power of Nc that comes from the
     # possible color trace that appear in loop diagrams. It is typically
-    # equal to 1 if the loop diagrams is a closed fermion loop and 0 otherwise.
+    # equal to 1 if the loop diagram is a closed fermion loop and 0 otherwise.
     loop_Nc_power = 0
     canonical = None
     immutable = None
@@ -1128,18 +1135,39 @@ class ColorFactor(list):
         for col_str in new_col_fact:
             self.append_str(col_str)
 
+    @staticmethod
+    def similarity_key(col_str):
+        """Hashable key which is equal for two color strings exactly when
+        ColorString.is_similar says they are, i.e. same Nc power, same
+        imaginary character and same canonical representation (both the
+        canonical structure and the index replacement dictionary)."""
+
+        canonical, repl_dict = col_str.to_canonical()
+        return (col_str.Nc_power, col_str.is_imaginary, canonical,
+                tuple(sorted(repl_dict.items())))
+
     def simplify(self):
         """Returns a new color factor where each color string has been
-        simplified once and similar strings have been added."""
+        simplified once and similar strings have been added.
+
+        Similar strings are looked up through a dictionary rather than by
+        scanning the strings accumulated so far: the color factors appearing
+        for high multiplicity processes have thousands of terms, and the linear
+        scan of append_str made this quadratic. Insertion order is preserved,
+        so the resulting color factor is identical to the one a scan produces."""
 
         new_col_factor = ColorFactor()
+        similar = {}
         # Simplify
         for col_str in self:
             res = col_str.simplify()
-            if res:
-                new_col_factor.extend_str(res)
-            else:
-                new_col_factor.append_str(col_str)
+            for new_str in (res if res else [col_str]):
+                key = self.similarity_key(new_str)
+                try:
+                    similar[key].add(new_str)
+                except KeyError:
+                    similar[key] = new_str
+                    new_col_factor.append(new_str)
 
         # Only returns non zero elements
         return ColorFactor([col_str for col_str in \

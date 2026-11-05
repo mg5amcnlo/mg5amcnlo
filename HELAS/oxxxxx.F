@@ -106,7 +106,12 @@ c
          
       else
          
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
             sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf

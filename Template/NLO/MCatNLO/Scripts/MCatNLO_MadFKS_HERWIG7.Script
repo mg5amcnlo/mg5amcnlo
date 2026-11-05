@@ -296,7 +296,7 @@ then
   fi
   ln -sf $thisdir/HW7Analyzer/$HW7ANALYZER.so $thisdir
 fi
-  # link the HW7 executable into the EXE directoy
+  # link the HW7 executable into the EXE directory
   # ln -sf $HERWIG7PATH/bin/$HWEXE $thisdir
   # link the stupid LHAPDF index, if necessary
   whichherpdf $HERPDF
@@ -307,7 +307,7 @@ fi
   fi
 
 runfile="MCATNLO_"$MCMODE
-  # create executable if eveything is ok
+  # create executable if everything is ok
   echo "#!/usr/bin/env bash" > $thisdir/$EXEC_NAMEFF
   echo "./$HWEXE read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
   echo "./$HWEXE run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
@@ -485,7 +485,7 @@ EOF
 elif  [[ "$pdftype" -eq 0 && "$HWNEW" -eq 0 ]]
 then
 cat <<EOF >> ./$ifile
-# Use internal HW7 defualt PDF sets
+# Use internal HW7 default PDF sets
 set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
 set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO

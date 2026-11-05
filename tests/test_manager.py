@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -185,7 +185,65 @@ def find_test_in_file(path):
                     continue
                 all.append(arg)
     return all
-            
+
+# an expression made only of those characters designates a single test by name,
+# anything else is a regular expression which is allowed to select nothing.
+re_syntax = re.compile(r'[*+?\[\]{}()|\\^$]')
+
+def find_test_definition(name):
+    """ Look for the file(s) where a test called 'name' would be defined, either
+    as a function or as a module. This does not import anything: it is only used
+    to tell where a test has gone when it is not found in the requested package.
+    """
+
+    out = []
+    definition = re.compile(r'^\s*def\s+%s\s*\(' % re.escape(name), re.M)
+    for directory, dirnames, filenames in os.walk(pjoin(root_path, 'tests')):
+        dirnames[:] = [d for d in dirnames
+                            if d not in ('input_files', '__pycache__')]
+        for filename in filenames:
+            if not filename.endswith('.py'):
+                continue
+            filepath = pjoin(directory, filename)
+            if filename[:-3] != name:
+                try:
+                    text = open(filepath).read()
+                except (IOError, UnicodeDecodeError):
+                    continue
+                if not definition.search(text):
+                    continue
+            out.append(os.path.relpath(filepath, root_path))
+    return out
+
+def report_unmatched(unmatched, package):
+    """ Warn about the requested expressions which selected no test at all and
+    return those of them which are plain names. A plain name selecting nothing
+    is a typo or a test which has been renamed/moved/removed, and must not be
+    reported as a successful run.
+    """
+
+    fatal = [expr for expr in unmatched if not re_syntax.search(expr)]
+    loose = [expr for expr in unmatched if re_syntax.search(expr)]
+
+    if loose:
+        print(colored % (34, "WARNING: no test selected by: %s" %
+                                                             ' '.join(loose)))
+    if fatal:
+        print(colored % (31, "ERROR: the following requested test(s) do not "
+                             "exist in '%s':" % package))
+        for expr in fatal:
+            elsewhere = find_test_definition(expr)
+            if elsewhere:
+                print(colored % (31, "   %s (still defined in %s: wrong -p "
+                            "option?)" % (expr, ', '.join(elsewhere))))
+            else:
+                print(colored % (31, "   %s" % expr))
+        print(colored % (31, "Such a name selected no test at all: it is a "
+                    "typo, or the test has been renamed, moved or removed."))
+
+    return fatal
+
+
 #===============================================================================
 # run
 #===============================================================================
@@ -217,17 +275,23 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
         exclude = []
 
 
-    for test_fct in TestFinder(package=package, expression=expression, \
-                                   re_opt=re_opt, excluded=exclude):
-        data = collect.loadTestsFromName(test_fct)        
-        assert(isinstance(data,unittest.TestSuite))        
+    finder = TestFinder(package=package, expression=expression, \
+                                   re_opt=re_opt, excluded=exclude)
+    for test_fct in finder:
+        data = collect.loadTestsFromName(test_fct)
+        assert(isinstance(data,unittest.TestSuite))
         data.__class__ = TestSuiteModified
 
         testsuite.addTest(data)
-        
+
     output =  MyTextTestRunner(verbosity=verbosity).run(testsuite)
-    
-    
+
+    # a name explicitly asked for which selects nothing has to be an error,
+    # otherwise a test removed/renamed silently keeps on being "OK" forever.
+    output.unmatched_names = report_unmatched(finder.unmatched_expressions(),
+                                              package)
+
+
     
     
     if TestSuiteModified.time_limit < 0:
@@ -362,7 +426,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # reference files by hand.
         text = " \nModifications performed by hand on %s at %s in"%(\
                          str(datetime.date.today()),misc.format_timer(0.0)[14:])
-        text += '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info()
+        text += '\n   MadGraph7 v. %(version)s, %(date)s\n'%misc.get_pkg_info()
         log = open(_hc_comparison_modif_log,mode='a')
         log.write(text)
         log.close()
@@ -407,7 +471,12 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # Instantiate the class
         IOTestsInstances.append(IOTestsClass())
         # Run the setUp
-        IOTestsInstances[-1].setUp()
+        try:
+            IOTestsInstances[-1].setUp()
+        except Exception as e:
+            print('[SKIP] %s.setUp: %s' % (IOTestsClass.__name__, e))
+            IOTestsInstances.pop()
+            continue
         # Find the testIO defined and use them in load mode only, we will run
         # them later here.
         IOTestsFunctions = IOTestFinder()
@@ -488,7 +557,7 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         text = colored%(34, " \nModifications performed on %s at %s in"%(\
                         str(datetime.date.today()),misc.format_timer(0.0)[14:]))
         text += colored%(34, 
-        '\n   MadGraph5_aMC@NLO v. %(version)s, %(date)s\n'%misc.get_pkg_info())
+        '\n   MadGraph7 v. %(version)s, %(date)s\n'%misc.get_pkg_info())
         for key in modifications.keys():
             if len(modifications[key])==0:
                 continue
@@ -548,7 +617,7 @@ class TimeLimit(Exception): pass
 class TestSuiteModified(unittest.TestSuite):
     """ This is a wrapper for the default implementation of unittest.TestSuite 
     so that we can add the decorator for the resetting of the global variables
-    everytime the TestSuite is __call__'ed., hence avoiding side effects from 
+    every time the TestSuite is __call__'ed., hence avoiding side effects from
     them."""
     
     time_limit = 1
@@ -644,7 +713,8 @@ class TestFinder(list):
 
         self.package = package
         self.rule = []
-        if self.package[-1] != '/': 
+        self.collected = False
+        if self.package[-1] != '/':
             self.package += '/'
         self.restrict_to(expression, re_opt)
         self.launch_pos = ''
@@ -654,11 +724,12 @@ class TestFinder(list):
             self.excluded = excluded
 
     def _check_if_obj_build(self):
-        """ Check if a collect is already done 
+        """ Check if a collect is already done
             Uses to have smart __iter__ and __contain__ functions
         """
-        if len(self) == 0:
+        if len(self) == 0 and not self.collected:
             start = time.time()
+            self.collected = True
             self.collect_dir(self.package, checking=True)
             print('loading test takes %ss'  % (time.time()-start))
     def __iter__(self):
@@ -758,15 +829,20 @@ class TestFinder(list):
         """
 
         if isinstance(expression, list):
-            pass
+            requested = list(expression)
         elif isinstance(expression, str):
             if expression in '':
                 expression = ['.*'] #made an re authorizing all regular name
+                requested = [] # nothing asked for: everything is selected
             else:
                 expression = [expression]
+                requested = list(expression)
         else:
             raise self.TestFinderError('obj should be list or string')
 
+        # what the caller explicitly asked for, aligned with self.rule, so that
+        # we can tell afterwards which of those selected no test at all.
+        self.requested = requested
         self.rule = []
         for expr in expression:
             #fix the beginning/end of the regular expression
@@ -846,7 +922,7 @@ class TestFinder(list):
         1) full file position
         2) name of the file (with extension)
         3) full file position whithour extension
-        4) name of the file (whithout extension)
+        4) name of the file (without extension)
         5) name of the file (but suppose name in python format)
         6) if name is a python file, try with a './' and with package pos
         """
@@ -884,6 +960,52 @@ class TestFinder(list):
         add_to_possibility(out, new_pos)
 
         return out
+
+    def collected_possibility(self, name):
+        """ return the different names under which a collected test, given in
+        the 'module.path.TestClass.test_function' format, could have been asked
+        for: the function, the class, the file or any of its parent directories.
+        """
+
+        pieces = name.split('.')
+        if len(pieces) < 2:
+            return [name]
+
+        out = [name, pieces[-1], pieces[-2], '.'.join(pieces[-2:])]
+        directories = pieces[:-2]
+        # the module itself (with the .py extension) and each directory above it
+        for i in range(len(directories), 0, -1):
+            pos = '/'.join(directories[:i])
+            if i == len(directories):
+                pos += '.py'
+            for possibility in self.format_possibility(pos):
+                if possibility not in out:
+                    out.append(possibility)
+
+        return out
+
+    def unmatched_expressions(self):
+        """ return the explicitly requested expressions which do not select any
+        of the collected tests, i.e. those pointing to a test which does not
+        exist (anymore) in this package.
+        """
+
+        if not self.requested:
+            return []
+
+        self._check_if_obj_build()
+        aliases = set()
+        for name in self:
+            aliases.update(self.collected_possibility(name))
+
+        unmatched = []
+        for expr, rule in zip(self.requested, self.rule):
+            if not expr:
+                continue
+            if not any(rule.search(alias) for alias in aliases):
+                unmatched.append(expr)
+
+        return unmatched
 
     def go_to_root(self):
         """ 
@@ -1120,11 +1242,14 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         logging.getLogger('madgraph').setLevel(eval('logging.' + options.logging))
         logging.getLogger('cmdprint').setLevel(eval('logging.' + options.logging))
         logging.getLogger('tutorial').setLevel('ERROR')
+        logging.getLogger('tutorial_aMCatNLO').setLevel('ERROR')
+        logging.getLogger('tutorial_MadLoop').setLevel('ERROR')
+        logging.getLogger('tutorial_plugin').setLevel('ERROR')
     except:
         pass
 
     if sys.platform == "darwin" and options.nosleep:
-        logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MG5aMC is running. Run './bin/mg5_aMC -s' to prevent this.")
+        logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MadGraph7 is running. Run './bin/madgraph -s' to prevent this.")
         pid = os.getpid()
         subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
         
@@ -1133,7 +1258,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     
     if options.synchronize and IOTestManager._compress_ref_fodler:
         print("The tarball synchronization is not necessary since"+ \
-          " MadGraph5_aMCatNLO is configured not to compress the references files.")
+          " MadGraph7 is configured not to compress the references files.")
     
     if options.IOTests=='No' and not options.synchronize:
         if not options.border_effect:
@@ -1163,6 +1288,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         output = runIOTests(args,update=options.IOTests=='U',force=force,
                                                 synchronize=options.synchronize)
 
+    # keep it aside: output is replaced by a string by the notification below
+    unmatched_names = getattr(output, 'unmatched_names', [])
 
     if 0 < float(options.notification) < time.time()-start_time:
         if isinstance(output, unittest.runner.TextTestResult):
@@ -1181,6 +1308,9 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                (output.failures, output.errors, output.skipped)))
         if failed or errored or skipped:
             sys.exit(1)
+
+    if unmatched_names:
+        sys.exit(1)
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')
@@ -1190,5 +1320,4 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
 #    run('test_check_valid_on_file')
 #    run('test_collect_dir.*') # '.*' stands for all possible char (re format)
 #    python tests/test_manager.py test_decay.py -l INFO|less
-
 

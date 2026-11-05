@@ -25,7 +25,7 @@ MGRootPath = pjoin(proc_path,os.pardir)
 sys.path.append(MGRootPath)
 sys.path.append(pjoin(proc_path,'bin'))
 import madgraph.various.lhe_parser as lhe_parser
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import banner
 import madgraph.various.misc as misc
 from madgraph.iolibs.files import cp

@@ -1,5 +1,8 @@
 %(python_information)s
+
+
   subroutine smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  use model_object
   IMPLICIT NONE
 C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
@@ -14,6 +17,30 @@ CF2PY double precision, intent(in) :: SCALE2
   integer npdg, nhel, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
+  call smatrixhel_internal(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  return
+  end
+
+
+
+
+  subroutine smatrixhel_internal(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  use model_object
+  IMPLICIT NONE
+C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
+
+CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
+CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in):: procid
+CF2PY integer, intent(in) :: npdg
+CF2PY double precision, intent(out) :: ANS
+CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALE2
+  integer pdgs(*)
+  integer npdg, nhel, procid
+  double precision p(*)
+  double precision ANS, ALPHAS, PI,SCALE2
+  integer flavor(%(maxpart)i),I
   include 'coupl.inc'
   
   
@@ -25,6 +52,8 @@ CF2PY double precision, intent(in) :: SCALE2
        CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
   endif
 
+%(flavormapping)s       
+
 %(smatrixhel)s
 
       return
@@ -35,12 +64,27 @@ C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
       CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
+      CALL SETPARA(PATH)  !first call to set up the parameters
+       %(setpara_for_each_matrix)s
       RETURN
       END
       
       
       subroutine CHANGE_PARA(name, value)
+      use model_object
+      implicit none
+CF2PY intent(in) :: name
+CF2PY intent(in) :: value
+
+      character*512 name
+      double precision value
+
+      call change_para_internal(name, value)
+      return
+      end
+
+      subroutine CHANGE_PARA_internal(name, value)
+      use model_object
       implicit none
 CF2PY intent(in) :: name
 CF2PY intent(in) :: value
@@ -219,10 +263,10 @@ C     pref = (E, 0, 0, p_k)
       IF (ABS(PREF(1)/PREF(0)) < EPSILON .AND. ABS(PREF(2)/PREF(0)) < EPSILON) THEN
 c     If the particle is immobile then we can't do the rotation
         IF (ABS(PREF(3)/PREF(0)) < EPSILON) THEN
-          WRITE(*,*) "The chosen particle is immobile. We cant use it",
+          WRITE(*,*) "The chosen particle is immobile. Cannot use it",
      &    " as reference for the helicity basis"
           STOP "Error when passing to helicity basis"
-c If the particle has no tranverse momentum (we are already in the correct frame)
+c If the particle has no transverse momentum (we are already in the correct frame)
         ELSE IF (PREF(3) < 0) THEN
           PHI = 0D0
           THETA = 4*ATAN(1D0)
@@ -270,13 +314,13 @@ C     pref = (E, 0, 0, p_k)
       IF (ABS(PREF(1)/PREF(0)) < EPSILON .AND. ABS(PREF(2)/PREF(0)) < EPSILON) THEN
 c     If the particle is immobile then we can't do the rotation
         IF (ABS(PREF(3)/PREF(0)) < EPSILON) THEN
-          WRITE(*,*) "The chosen particle is immobile. We cant use it",
+          WRITE(*,*) "The chosen particle is immobile. Cannot use it",
      &    " as reference for the helicity basis, using phi = theta = 0"
 c          STOP "Error when passing to helicity basis"
 c   We chose to put the angles to 0 to not stop the code
           PHI = 0D0
           THETA = 0D0
-c If the particle has no tranverse momentum (we are already in the correct frame)
+c If the particle has no transverse momentum (we are already in the correct frame)
         ELSE IF (PREF(3) < 0) THEN
           PHI = 0D0
           THETA = 4*ATAN(1D0)

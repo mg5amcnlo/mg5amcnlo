@@ -1,12 +1,12 @@
 ##############################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -250,7 +250,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             elif init_id == [21, 22] or init_id == [22, 21]:
                 self.assertEqual(len(proc.extra_cnt_amp_list), 1)
                 # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
-                # must not be incuded here)
+                # must not be included here)
                 self.assertEqual(len(proc.real_amps), 14)
                 # 17 real FKS configurations
                 self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 17)
@@ -266,7 +266,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             elif init_id == [22, 22]:
                 self.assertEqual(len(proc.extra_cnt_amp_list), 0)
                 # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
-                # must not be incuded here)
+                # must not be included here)
                 self.assertEqual(len(proc.real_amps), 10)
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
@@ -308,7 +308,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             elif init_id == [21, 22] or init_id == [22, 21]:
                 self.assertEqual(len(proc.extra_cnt_amp_list), 1)
                 # 22 real emission MEs (add mu/e leptons, photon splitting into quarks
-                # MUST be incuded here)
+                # MUST be included here)
                 self.assertEqual(len(proc.real_amps), 22)
                 # 25 real FKS configurations
                 self.assertEqual(len(sum([real.fks_infos for real in proc.real_amps], [])), 25)
@@ -324,7 +324,7 @@ class TestAMCatNLOEW(unittest.TestCase):
             elif init_id == [22, 22]:
                 self.assertEqual(len(proc.extra_cnt_amp_list), 0)
                 # 14 real emission MEs (add mu/e leptons, photon splitting into quarks
-                # must not be incuded here)
+                # must not be included here)
                 self.assertEqual(len(proc.real_amps), 10)
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
@@ -877,7 +877,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             elif final_id == [22, 21]:
                 # ag state, should not have extra_cnts with a a in the final state 
-                #(it should appear at order alpha^3, which is not inlcuded here
+                #(it should appear at order alpha^3, which is not included here
                 self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 21, 22)
                 # make sure there are qqbar splittings in the fs
                 foundqq = False
@@ -945,7 +945,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
             elif final_id == [22, 21]:
                 # ag state, should not have extra_cnts with a a in the final state 
-                #(it should appear at order alpha^3, which is not inlcuded here
+                #(it should appear at order alpha^3, which is not included here
                 self.assertEqual(len(proc.extra_cnt_amp_list), 1) #( 21, 22)
                 # make sure there are qqbar splittings in the fs
                 foundqqg = False
@@ -1126,7 +1126,7 @@ class TestAMCatNLOEW(unittest.TestCase):
     def test_combine_equal_processes_dijet_qcd_qed_virt(self):
         """check that two processes with the same matrix-elements are equal
         and check that the add_process function works as expected. 
-        This test also cehck that equality works for virtuals.
+        This test also check that equality works for virtuals.
         In particular b-initiate processes have same trees but different loops (w/top)"""
         # generate the processes
 
@@ -1203,7 +1203,7 @@ class TestAMCatNLOEW(unittest.TestCase):
     def test_combine_equal_processes_dy_qed_virt(self):
         """check that two processes with the same matrix-elements are equal
         and check that the add_process function works as expected. 
-        This test also cehck that equality works for virtuals.
+        This test also check that equality works for virtuals.
         In particular b-initiate processes have same trees but different loops (w/top)"""
         # generate the processes
 
@@ -1291,7 +1291,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         for real in reals[0]+reals[1]:
             self.assertTrue(all([lep not in [abs(l['id']) for l in real['leglist']] for lep in leptons]))
 
-        # chack that this does not affect final state photons
+        # check that this does not affect final state photons
         self.interface.do_generate('u u~ > g a QED^2=2 QCD^2=2 [real=QCD]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals

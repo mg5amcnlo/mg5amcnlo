@@ -34,7 +34,7 @@ C
       PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
       REAL(KI),DIMENSION(0:3),PARAMETER::NULL_VEC = (/0.0_ki,0.0_ki,0.0_ki,0.0_ki/)
 C     GOLEM_RUN_MODE = 1: Use directly MadLoop tensorial coefficients
-C     GOLEM_RUN_MODE = 2: Reconstruct the tensorial coefficeints directly from 
+C     GOLEM_RUN_MODE = 2: Reconstruct the tensorial coefficients directly from
 C                         numerator using golem internal reconstruction routine
 C     GOLEM_RUN_MODE = 3: Cross-checked reconstructed coefficients against
 C                         MadLoop internal ones.
@@ -133,9 +133,10 @@ C INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
 	    GOLEMINIT=.FALSE.
 	    CALL %(proc_prefix)sINITGOLEM()
+	    CALL cite('Cullen:2011kv','one-loop reduction with Golem95')
       ENDIF
 
-C  No stability test intrisic to Golem95 now
+C  No stability test intrinsic to Golem95 now
       STABLE=.TRUE.
 
 C  This initialization must be done for each reduction because we
@@ -203,7 +204,7 @@ C     Fill in the kinematic s-matrix while taking care of on-shell limits.
 C     Construct the golem internal matrices derived from the kinetic one.
       CALL PREPARESMATRIX()
 
-C     Fill in the golem coefficents and compute the loop
+C     Fill in the golem coefficients and compute the loop
       IF(GOLEM_RUN_MODE.EQ.2)THEN
 	res_golem = evaluate_b(%(proc_prefix)sGOLEM_LOOPNUM,PGOLEM,0,RANK)
       ELSE
@@ -394,13 +395,13 @@ C     Fill in the golem coefficents and compute the loop
       ENDIF
 
 ## if(AmplitudeReduction) {
-        RES(1)=NORMALIZATION*(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
-        RES(2)=NORMALIZATION*(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
-        RES(3)=NORMALIZATION*(RES_GOLEM%%a)
+        RES(1)=NORMALIZATION*(RES_GOLEM%c+2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)
+        RES(2)=NORMALIZATION*(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)
+        RES(3)=NORMALIZATION*(RES_GOLEM%a)
 ## } else {
-        RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%c+2.0*LOG(MU_R)*RES_GOLEM%%b+2.0*LOG(MU_R)**2*RES_GOLEM%%a)
-        RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%b+2.0*LOG(MU_R)*RES_GOLEM%%a)
-        RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%%a)
+        RES(1)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%c+2.0*LOG(MU_R)*RES_GOLEM%b+2.0*LOG(MU_R)**2*RES_GOLEM%a)
+        RES(2)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%b+2.0*LOG(MU_R)*RES_GOLEM%a)
+        RES(3)=NORMALIZATION*2.0D0*DBLE(RES_GOLEM%a)
 ## }
 C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
@@ -515,8 +516,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_1
       
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))
       
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_1=((NUM/DENOM).LT.coef_check_thrs)
@@ -535,8 +536,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_2
       
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_2=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
@@ -554,8 +555,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_3
 
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_3=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
@@ -573,8 +574,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_4
 
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_4=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
@@ -592,8 +593,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_5
 
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_5=((NUM/DENOM).LT.coef_check_thrs)
       ELSE
@@ -611,8 +612,8 @@ C    ----------
       %(real_dp_format)s DENOM,NUM
       LOGICAL %(proc_prefix)sCOMPARE_COEFS_6
 
-      NUM = ABS(COEFS_A%%c0-COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1-COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2-COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3-COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4-COEFS_B%%c4))
-      DENOM = ABS(COEFS_A%%c0+COEFS_B%%c0)+SUM(ABS(COEFS_A%%c1+COEFS_B%%c1))+SUM(ABS(COEFS_A%%c2+COEFS_B%%c2))+SUM(ABS(COEFS_A%%c3+COEFS_B%%c3))+SUM(ABS(COEFS_A%%c4+COEFS_B%%c4))
+      NUM = ABS(COEFS_A%c0-COEFS_B%c0)+SUM(ABS(COEFS_A%c1-COEFS_B%c1))+SUM(ABS(COEFS_A%c2-COEFS_B%c2))+SUM(ABS(COEFS_A%c3-COEFS_B%c3))+SUM(ABS(COEFS_A%c4-COEFS_B%c4))
+      DENOM = ABS(COEFS_A%c0+COEFS_B%c0)+SUM(ABS(COEFS_A%c1+COEFS_B%c1))+SUM(ABS(COEFS_A%c2+COEFS_B%c2))+SUM(ABS(COEFS_A%c3+COEFS_B%c3))+SUM(ABS(COEFS_A%c4+COEFS_B%c4))
       IF(DENOM.GT.0d0)THEN
         %(proc_prefix)sCOMPARE_COEFS_6=((NUM/DENOM).LT.coef_check_thrs)
       ELSE

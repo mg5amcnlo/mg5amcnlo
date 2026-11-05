@@ -10,7 +10,7 @@ import unittest
 
 from madgraph.iolibs import born_support as support
 from madgraph.core.base_objects import ModelVariable, ParamCardVariable
-from models import import_ufo
+from madgraph.models import import_ufo
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -30,6 +30,9 @@ class TestRealHelicityFilter(unittest.TestCase):
     def test_generated_helicity_state_comparator(self):
         self.run_driver(4, 2, COMPARATOR_DRIVER, SCALING_MEMBERS,
                         SCALING_SIGNATURE, include_real=False)
+
+    def test_diagram_weights_follow_all_retained_helicities(self):
+        self.run_driver(3, 1, DIAGRAM_WEIGHTS_DRIVER, diagram_weights=True)
 
     def test_matrix_scaling_certifies_each_squared_order(self):
         model = import_ufo.import_model('sm')
@@ -136,7 +139,7 @@ class TestRealHelicityFilter(unittest.TestCase):
                     self.assertEqual(degrees[name], degree)
 
     def run_driver(self, ncomb, nsqamps, driver, members=None, signature=None,
-                   include_real=True):
+                   include_real=True, diagram_weights=False):
         template = (ROOT/'madgraph/iolibs/template_files/'
                     'realmatrix_splitorders_fks.inc').read_text()
         start = template.index('      SUBROUTINE SMATRIX%(proc_prefix)s_SPLITORDERS')
@@ -151,6 +154,14 @@ class TestRealHelicityFilter(unittest.TestCase):
             work = Path(tmp)
             (work/'nexternal.inc').write_text(
                 '      INTEGER NEXTERNAL\n      PARAMETER(NEXTERNAL=1)\n')
+            (work/'real_matrix_weights.inc').write_text(
+                ('      logical get_real_diagram_weights\n'
+                 '      common/c_get_real_diagram_weights/get_real_diagram_weights\n'
+                 '      real*8 real_amp2(2)\n'
+                 '      common/c_real_diagram_weights/real_amp2\n')
+                if diagram_weights else
+                ('      logical,parameter::get_real_diagram_weights=.false.\n'
+                 '      real*8 real_amp2(1)\n'))
             support.write_fortran(work/'real.f', lines)
             module = work/'mc_born_types.f90'
             shutil.copyfile(ROOT/'Template/NLO/Source/BornSupport/mc_born_types.f90',
@@ -475,4 +486,47 @@ program check
   if (born_helicity_state_equal(a,b)) stop 16
   print *, 'PASS real helicity filtering'
 end program
+'''
+
+
+DIAGRAM_WEIGHTS_DRIVER = '''\
+program check
+  implicit none
+  include 'real_matrix_weights.inc'
+  real(8) p(0:3,1),ans(0:1)
+  get_real_diagram_weights=.true.
+  p=0d0
+  p(0,1)=1d0
+  call smatrix1_splitorders(p,ans)
+  ! Both good helicities agree on this first point; the third vanishes
+  ! only after diagram cancellation, so its diagram squares are excluded.
+  if(abs(ans(0)-1d0)>1d-13)stop 1
+  if(any(abs(real_amp2-[5d0,13d0])>1d-13))stop 2
+  p(0,1)=2d0
+  call smatrix1_splitorders(p,ans)
+  if(abs(ans(0)-2d0)>1d-13)stop 3
+  if(any(abs(real_amp2-[7d0,25d0])>1d-13))stop 4
+  print *, 'PASS real helicity filtering'
+end program
+
+subroutine matrix_1(p,nhel,t)
+  implicit none
+  include 'real_matrix_weights.inc'
+  real(8) p(0:3,1),t(0:1),diagram
+  integer nhel(1)
+  t=0d0
+  if(nhel(1)==1)t(1)=p(0,1)**2
+  if(nhel(1)==2)t(1)=(2d0-p(0,1))**2
+  t(0)=t(1)
+  diagram=p(0,1)+nhel(1)
+  if(get_real_diagram_weights)real_amp2=real_amp2+[diagram,diagram**2]
+end subroutine
+
+subroutine mc_capture_model_state(state)
+  use mc_born_types
+  implicit none
+  type(BornModelState) state
+  state%real_values=[1d0]
+  state%complex_values=[(1d0,0d0)]
+end subroutine
 '''

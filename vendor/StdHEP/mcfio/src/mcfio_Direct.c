@@ -227,7 +227,7 @@ static int openReadDirect(char *filename, int mode)
    ** set the reference pointer accordingly, conversely, recompute the 
    ** offsets and length if requested.  We also fill the sequential 
    ** id number for the descriptors.  Note: those are trivial for 
-   ** input streams, but we still fill them for consitency.
+   ** input streams, but we still fill them for consistency.
    */
    for (i=0; i<str->fhead->nNTuples; i++) {
       ddl = mcf_GetNTuByPtrID((oldNumOfNTuples+i+1));
@@ -256,7 +256,7 @@ static int openReadDirect(char *filename, int mode)
    }
    str->currentPos = p2;
    str->fhead->firstTable = p2;
-    /* presumably correct , assume standard direct acces file config. */
+    /* presumably correct , assume standard direct access file config. */
    str->numWordsT += ((p2-p1)/4);
    str->status = MCFIO_RUNNING;
    str->table = (mcfxdrEventTable *) malloc(sizeof(mcfxdrEventTable));
@@ -749,7 +749,7 @@ int  mcfioC_Wrtfhead(mcfStream *str, int mode)
 /*
 ** Write the file header. 
 **  IF Mode = INITIATE, write the dummy information, at the current location.
-**  IF mode = Flush, rewite all the information, this time with the 
+**  IF mode = Flush, rewrite all the information, this time with the
 **  correct number of events.
 **
 */
@@ -767,7 +767,7 @@ int  mcfioC_Wrtfhead(mcfStream *str, int mode)
      if (xdr_mcfast_fileheader(str->xdr, &idtmp,
           &ntot, McfGenericVersion, &(str->fhead), str->id) == FALSE) {
        fprintf (stderr, 
-               "mcfio_OpenCloseDirect: Unable to reencode file head \n");
+               "mcfio_OpenCloseDirect: Unable to re-encode file head \n");
        return FALSE;
       }
       /*
@@ -901,7 +901,7 @@ static int mcfioC_gofornextevent(mcfStream *str)
 /*
 ** Move in the direct access file to the next event or event table, 
 ** whatever comes first. The XDR current position is set to the beginning 
-** of the event header or event table, if search sucessfull.
+** of the event header or event table, if search successful.
 ** We position the stream to the last Block or Ntuple defined in 
 ** the current event. 
 */

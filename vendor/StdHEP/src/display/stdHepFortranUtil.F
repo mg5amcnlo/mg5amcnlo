@@ -18,7 +18,7 @@ c
  	return
  	end 
 c
-c	These are dummy routine to avoid linking the entire GEANT pacakge.
+c	These are dummy routine to avoid linking the entire GEANT package.
 c
 c
 	subroutine gsvert(vert, ntbeam, ntt, ub, nu, nv)

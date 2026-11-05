@@ -17,7 +17,7 @@ runs:
         setup_only: ${{ inputs.setup_only }}
 
     - name: Set cache key
-      run: echo "CACHE_KEY=boost-$ImageOS" >> $GITHUB_ENV
+      run: echo "CACHE_KEY=boost-v2-$ImageOS" >> $GITHUB_ENV && echo "OLD_CACHE_KEY=boost-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     # check if the cache exists (if not an higher level will be called)
@@ -29,9 +29,10 @@ runs:
         key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
         restore-keys: |
           ${{ env.CACHE_KEY }}-
-          ${{ env.CACHE_KEY }}
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
 
-    # Nothing to write into mg5_configuration.txt: boost has no MG5 option.
+    # Nothing to write into mg7_configuration.txt: boost has no MG5 option.
     # HEPToolInstaller finds it on its own as soon as
     # <heptools_install_dir>/boost/lib/libboost_system.so is present, and then
     # skips the (~6 min, download-flaky) boost build when installing eMELA.

@@ -83,7 +83,7 @@ c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
 
 c======================================================================
-c example for checking the cancelation of the poles
+c example for checking the cancellation of the poles
       if (firsttime_pole) then
          tolerance=IRPoleCheckThreshold  ! set in FKS_params.dat
          call getpoles(pin,QES2,madfks_double,madfks_single,fksprefact)

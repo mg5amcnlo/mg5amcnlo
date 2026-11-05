@@ -6,7 +6,7 @@ c
 c   Algorithm:Generating next permutation of 1,2,...n.
 c
 c   input:    n=5
-c   complier: f77 nexper_2.f
+c   compiler: f77 nexper_2.f
 c-----------------------------------------------------------
 
 c      parameter(n=6)

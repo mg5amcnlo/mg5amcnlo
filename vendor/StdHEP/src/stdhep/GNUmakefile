@@ -17,7 +17,14 @@ SINC = $(STDHEP_DIR)/src/inc
 INCS = -I$(SINC) -I$(STDHEP_DIR)/mcfio/src \
        -I$(SINC)/isajet -I$(SINC)/pythia -I$(SINC)/herwig \
        -I$(SINC)/qq -I$(SINC)/dpm
-CFLAGS += -I$(SINC) -I$(STDHEP_DIR)/mcfio/src -I/usr/include/tirpc
+# Sun RPC / XDR headers (rpc/types.h, rpc/xdr.h) used by mcfio:
+#  - old glibc and macOS ship them in the base system    -> no extra flag needed
+#  - glibc >= 2.32 (Ubuntu 20.10+, 24.04, ...) removed them; they now live in
+#    libtirpc (package: libtirpc-dev) under /usr/include/tirpc
+# Auto-detect so the user only has to install the package, never edit this file.
+XDRINC := $(shell pkg-config --cflags libtirpc 2>/dev/null || \
+          { test -d /usr/include/tirpc && echo -I/usr/include/tirpc; })
+CFLAGS += -I$(SINC) -I$(STDHEP_DIR)/mcfio/src $(XDRINC)
 CPPFLGS = $(KPPFLAGS) $(INCS)
 
 FOBJS =	$(patsubst %.F,%$(SFX).o,$(wildcard *.F))

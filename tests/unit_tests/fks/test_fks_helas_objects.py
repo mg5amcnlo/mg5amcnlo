@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -18,11 +18,13 @@
 from __future__ import absolute_import
 import sys
 import os
+import shutil
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
+import madgraph.interface.master_interface as MGCmd
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_helas_objects as fks_helas
@@ -33,10 +35,40 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import copy
 import array
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
+from madgraph import MG5DIR
 
 class testFKSHelasObjects(unittest.TestCase):
     """a class to test the module FKSHelasObjects"""
+
+    def _prepare_rs_model(self):
+        cache_root = os.path.join(os.path.expanduser('~'), '.cache', 'UFOMODEL')
+        cached_model = os.path.join(cache_root, 'RS')
+
+        if not os.path.isdir(cached_model):
+            source_model = os.path.join(MG5DIR, 'models', 'RS')
+            if not os.path.isdir(source_model):
+                try:
+                    import_ufo.import_model_from_db('RS')
+                except Exception:
+                    self.skipTest('RS UFO model is unavailable locally and could not be downloaded')
+            if not os.path.isdir(source_model):
+                self.skipTest('RS UFO model is unavailable locally')
+            if not os.path.isdir(cache_root):
+                os.makedirs(cache_root)
+            shutil.copytree(source_model, cached_model)
+
+        object_library = os.path.join(cached_model, 'object_library.py')
+        if os.path.exists(object_library):
+            with open(object_library) as stream:
+                content = stream.read()
+            if '.iteritems()' in content:
+                cmd = MGCmd.MasterCmd()
+                cmd.no_notification()
+                cmd.exec_cmd('convert model %s' % cached_model,
+                             precmd=False, postcmd=False)
+
+        return cached_model
 
     def setUp(self):
         if not hasattr(self, 'mymodel') or \
@@ -62,7 +94,7 @@ class testFKSHelasObjects(unittest.TestCase):
             for i in mylegs:
                 myleglist3.append(MG.Leg(i))
 
-            mymodel = import_ufo.import_model('sm')
+            mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False} )
 
             dict1 = {'legs' : myleglist1, 
                                'model': mymodel,
@@ -165,7 +197,7 @@ class testFKSHelasObjects(unittest.TestCase):
 
     def test_fks_helas_multi_process_ppz_loonly(self):
         """tests the LOonly NLO mode. In particular test that no
-        reals are generated and that the get_nexternal_ninitial funciton
+        reals are generated and that the get_nexternal_ninitial function
         returns the values as if the reals were generated.
         """
         p= [21, 1, 2, 3, 4, -1, -2, -3, -4]
@@ -204,7 +236,8 @@ class testFKSHelasObjects(unittest.TestCase):
         p_leg = MG.MultiLeg({'ids': p, 'state': False});
         my_multi_leglist = MG.MultiLegList([copy.copy(leg) for leg in [p_leg] * 2] \
                     + MG.MultiLegList([z_leg, z_leg]))
-        mymodel = import_ufo.import_model('RS')
+        mymodel = import_ufo.import_model(self._prepare_rs_model(),
+                                          options={'apply_flavor_grouping':False})
         my_process_definition = MG.ProcessDefinition({ \
                         'born_sq_orders': {'QCD':0, 'QED':4, 'QTD':4},
                         'squared_orders': {'QCD':2, 'QED':4, 'QTD':4},
@@ -418,6 +451,69 @@ class testFKSHelasObjects(unittest.TestCase):
         self.assertEqual(len(my_helas_mp.get('matrix_elements')[2].real_processes[2].fks_infos), 1)
         
     
+    def test_fks_helas_multi_process_polarizations_not_combined(self):
+        """tests that two born processes which differ only by the polarization
+        of one of their legs are NOT combined into a single FKS matrix
+        element. helas_objects.IdentifyMETag -- which is what
+        FKSHelasProcess.__eq__ starts from -- is blind to the polarization of
+        the external legs, so without an explicit check
+        'p p > t{+} t~' and 'p p > t{-} t~' share a single matrix element and
+        only the first polarization is ever written out (silently). The reals
+        must be kept apart as well, since they inherit their polarization from
+        the born they belong to.
+        """
+        p = [21, 2, -2]
+        p_leg = MG.MultiLeg({'ids': p, 'state': False})
+        tx = MG.MultiLeg({'ids': [-6], 'state': True})
+
+        my_process_definitions = MG.ProcessDefinitionList()
+        for pol in ([1], [-1]):
+            t = MG.MultiLeg({'ids': [6], 'state': True, 'polarization': pol})
+            my_multi_leglist = MG.MultiLegList(\
+                        [copy.copy(leg) for leg in [p_leg] * 2] \
+                        + MG.MultiLegList([t, tx]))
+            my_process_definitions.append(MG.ProcessDefinition({ \
+                        'born_sq_orders': {'QCD':4, 'QED':0},
+                        'squared_orders': {'QCD':6, 'QED':0},
+                        'legs': my_multi_leglist,
+                        'perturbation_couplings': ['QCD'],
+                        'NLO_mode': 'real',
+                        'model': self.mymodel}))
+
+        my_multi_process = fks_base.FKSMultiProcess(\
+                {'process_definitions': my_process_definitions})
+        my_helas_mp = fks_helas.FKSHelasMultiProcess(my_multi_process, False)
+
+        matrix_elements = my_helas_mp.get('matrix_elements')
+
+        def top_polarizations(process_list):
+            """the polarizations of the final-state top of each process"""
+            return set(tuple(leg.get('polarization')) \
+                       for proc in process_list \
+                       for leg in proc.get('legs') \
+                       if leg.get('id') == 6 and leg.get('state'))
+
+        # 3 borns (gg, uux and uxu initiated) for each of the 2 polarizations
+        self.assertEqual(len(matrix_elements), 6)
+
+        polarizations = []
+        for me in matrix_elements:
+            # a given matrix element holds a single polarization ...
+            me_pols = top_polarizations(me.born_me.get('processes'))
+            self.assertEqual(len(me_pols), 1)
+            pol = me_pols.pop()
+            polarizations.append(pol)
+            # ... and its reals carry that same polarization, i.e. they have
+            # not been recycled from the born with the other polarization
+            for real in me.real_processes:
+                self.assertEqual(\
+                    top_polarizations(real.matrix_element.get('processes')),
+                    set([pol]))
+
+        # both polarizations survived, 3 matrix elements each
+        self.assertEqual(sorted(polarizations), [(-1,)] * 3 + [(1,)] * 3)
+
+
     def test_fks_helas_real_process_init(self):
         """tests the correct initialization of an FKSHelasRealProcess, from a 
         FKSRealProc. The process uu~>dd~ is used as born.

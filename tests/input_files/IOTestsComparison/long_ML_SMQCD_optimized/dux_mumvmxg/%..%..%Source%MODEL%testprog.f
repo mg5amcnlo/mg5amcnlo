@@ -28,7 +28,7 @@ c$$$c     get the value of gs
 c$$$      include '../coupl.inc'
 c$$$c     for initialization of the running      
 c$$$      include "../alfas.inc"
-c$$$c     include parameter from the run_card (usefull for the running)      
+c$$$c     include parameter from the run_card (useful for the running)
 c$$$      INCLUDE '../maxparticles.inc'
 c$$$c      INCLUDE '../run.inc'
 c$$$c     local 

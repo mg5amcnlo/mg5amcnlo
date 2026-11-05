@@ -270,7 +270,7 @@ C routine exploits the facts, that
 C  a) the Thrust axis is given by the longest vector that can be 
 C     formed from any subset of the available momentum vectors, 
 C     and that
-C  b) all partions of a set of N elements into 2 subsets are given 
+C  b) all partitions of a set of N elements into 2 subsets are given
 C     by the pattern of 0 and 1 of a binary counter which ranges 
 C     from 0 to 2**N-1. 
 C As the momenta are assumed to be balanced only 2**(N-1)-1 
@@ -564,7 +564,7 @@ C--      COPY DATA TO INTERNAL ARRAYS
         P(I,3) = PP(3,I)
       ENDDO
  
-C--      START THE LUND ALOGORITHM
+C--      START THE LUND ALGORITHM
 
       NP=0
       PS=0.
@@ -1352,7 +1352,7 @@ C                          EvS(14-20) not yet assigned
 C
 C         R*4 ThD(4,3)     Thrust and Major Directions, see subr ThrustDG
 C         I*4 Error        Error = 0 : o.k.
-C                          Error <>0 : a problem occured in Thrust         I
+C                          Error <>0 : a problem occurred in Thrust         I
 C         
 C
 C Author: Guenther Dissertori / 19-Dec-1994

@@ -19,7 +19,7 @@ C
 C     The approach is to separate the different stages of analysis.
 C     KTCLUS does all the clustering and records a merging history.
 C     It returns a simple list of the y values at which each merging
-C     occured. Then the following routines can be called to give extra
+C     occurred. Then the following routines can be called to give extra
 C     information on the most recently analysed event.
 C     KTCLUR is identical but includes an R parameter, see below.
 C     KTYCUT gives the number of jets at each given YCUT value.

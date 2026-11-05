@@ -9,7 +9,7 @@
 #
 
 #It is recommended to use a very recent version of root.
-#On SLC6 maching, from a tcsh shell execute e.g.
+#On SLC6 machine, from a tcsh shell execute e.g.
 # setenv ROOTSYS /afs/cern.ch/sw/lcg/app/releases/ROOT/5.34.11/x86_64-slc6-gcc46-dbg/root/
 # set path= ( $ROOTSYS/bin $path )
 # setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${ROOTSYS}/lib

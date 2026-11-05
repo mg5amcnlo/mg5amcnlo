@@ -21,7 +21,7 @@
 module avh_olo_forIREGI_units
   implicit none
 ! By default these values are set to 6. However, they can potentially clog
-! the logs so we want to force them off, unless explicitely turned on
+! the logs so we want to force them off, unless explicitly turned on
   integer :: eunit=0
   integer :: wunit=0
   integer :: munit=0

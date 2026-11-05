@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -19,6 +19,8 @@ from __future__ import absolute_import
 import math
 import copy
 import os
+import re
+import subprocess
 import sys
 import time
 
@@ -26,8 +28,8 @@ import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import madgraph.various.process_checks as process_checks
 import madgraph.various.misc as misc
-import models.import_ufo as import_ufo
-import models.model_reader as model_reader
+import madgraph.models.import_ufo as import_ufo
+import madgraph.models.model_reader as model_reader
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
 #===============================================================================
@@ -39,7 +41,7 @@ class TestMatrixElementChecker(unittest.TestCase):
 
     def setUp(self):
         
-        self.base_model = import_ufo.import_model('sm')
+        self.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
         #sm_path = import_ufo.find_ufo_path('sm')
         #self.base_model = import_ufo.import_model(sm_path)
     
@@ -218,6 +220,14 @@ class TestMatrixElementChecker(unittest.TestCase):
             cmd.exec_cmd('import model sm')
             cmd.exec_cmd('generate %s' % process_line)
             me = helas_objects.HelasMatrixElement(cmd._curr_amps[0])
+            # The SM is imported with flavor grouping, so the light quarks are
+            # merged.  Evaluate at an explicit, valid flavor assignment (all-up:
+            # index 2 for each merged-quark leg, 1 for the non-merged W bosons);
+            # without it the merged-flavor vertices stay unresolved (flavor -1)
+            # and the amplitude is identically zero in every gauge.
+            for leg, flv in zip(me.get('processes')[0].get('legs'),
+                                (2, 2, 1, 1, 2, 2)):
+                leg.set('flavor', [flv])
             evaluator = process_checks.MatrixElementEvaluator(cmd._curr_model, cmd=cmd, reuse=False)
             for particle in evaluator.full_model.get('particles'):
                 if particle.get('width') != 'ZERO':
@@ -432,6 +442,859 @@ class TestLorentzInvariance(unittest.TestCase):
             self.assertAlmostEqual(invariant_mass_boost[i], 
                                    invariant_mass_result[i])    
 
+
+
+class TestFlavorCheck(unittest.TestCase):
+    """Test the flavor-grouping check (check_flavor / output_flavor)."""
+
+    def setUp(self):
+        self.merged_model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': True})
+
+    def _make_proc_def(self, is_ids, fs_ids):
+        """Helper: build a ProcessDefinition with multi-legs."""
+        legs = base_objects.MultiLegList(
+            [base_objects.MultiLeg({'ids': list(is_ids), 'state': False})] * 1 +
+            [base_objects.MultiLeg({'ids': list(is_ids), 'state': False})] * 0
+        )
+        # Build proper multi-leg list
+        all_legs = base_objects.MultiLegList()
+        for ids, state in [(is_id_list, False) for is_id_list in
+                           ([list(i) if isinstance(i, (list, tuple)) else [i]
+                             for i in is_ids])]:
+            all_legs.append(base_objects.MultiLeg({'ids': ids, 'state': state}))
+        for ids, state in [(list(i) if isinstance(i, (list, tuple)) else [i], True)
+                           for i in fs_ids]:
+            all_legs.append(base_objects.MultiLeg({'ids': ids, 'state': state}))
+        return base_objects.ProcessDefinition({
+            'legs': all_legs,
+            'model': self.merged_model,
+        })
+
+    def test_check_flavor_qqbar_to_tt(self):
+        """check_flavor for _quark _anti_quark > t t~ should pass all flavors."""
+        # _quark has PDG 81 in the merged model
+        q_id = 81
+        t_id = 6
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [t_id],  'state': True}),
+                base_objects.MultiLeg({'ids': [-t_id], 'state': True}),
+            ]),
+            'model': self.merged_model,
+        })
+
+        result = process_checks.check_flavor(proc_def, cmd=process_checks.FakeInterface())
+        # Should have at least one entry (one per unmerged flavor)
+        self.assertTrue(len(result) > 0,
+                        "check_flavor returned no results for _quark _anti_quark > t t~")
+
+        # Every result should pass (merged agrees with unmerged)
+        fail_count = process_checks.output_flavor(result, output='fail')
+        self.assertEqual(fail_count, 0,
+                         "check_flavor: some flavor subprocesses disagree.\n" +
+                         process_checks.output_flavor(result))
+
+    def test_check_flavor_qqbar_to_zg(self):
+        """check_flavor for _quark _anti_quark > z g (mixed merged+non-merged FS).
+
+        This process has non-M gluon vertices mixed with M-tagged Z vertices.
+        Flavor must be propagated through the non-M gluon off-shell wavefunction
+        so the subsequent M-tagged Z amplitude receives the correct flavor.
+        """
+        q_id = 81
+        z_id = 23
+        g_id = 21
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [z_id],  'state': True}),
+                base_objects.MultiLeg({'ids': [g_id],  'state': True}),
+            ]),
+            'model': self.merged_model,
+        })
+
+        result = process_checks.check_flavor(proc_def, cmd=process_checks.FakeInterface())
+        self.assertTrue(len(result) > 0,
+                        "check_flavor returned no results for _quark _anti_quark > z g")
+
+        fail_count = process_checks.output_flavor(result, output='fail')
+        self.assertEqual(fail_count, 0,
+                         "check_flavor: some flavor subprocesses disagree.\n" +
+                         process_checks.output_flavor(result))
+
+
+    def test_check_language_proclist_merged_expansion(self):
+        """check_language with a merged-particle ProcessDefinition.
+
+        For ``_quark _anti_quark > t t~``, the SA binaries internally loop over
+        all individual quark flavors.  check_language must therefore return one
+        result entry per flavor combination (u u~ > t t~, d d~ > t t~, …)
+        when at least one compiled backend is available, or exactly one
+        placeholder entry when no backend can run.
+
+        Each returned entry must:
+        * carry the original merged-id Process object so callers can trace back
+          which merged process it came from,
+        * have a ``process_label`` string that includes '>' and the individual
+          flavor particle names.
+        * have Fortran and C++ values that agree within 1e-4 relative when both
+          backends ran successfully.
+        """
+        q_id = 81
+        t_id = 6
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [t_id],  'state': True}),
+                base_objects.MultiLeg({'ids': [-t_id], 'state': True}),
+            ]),
+            'model': self.merged_model,
+        })
+
+        results = process_checks.check_language(
+            proc_def,
+            param_card=None,
+            options=None,
+            cmd=process_checks.FakeInterface(),
+        )
+
+        self.assertGreater(len(results), 0,
+                           "Expected at least one result for merged process")
+
+        for entry in results:
+            # The original Process object must use the merged-particle ids.
+            proc = entry['process']
+            legs = proc.get('legs')
+            is_legs = [l for l in legs if not l.get('state')]
+            for leg in is_legs:
+                self.assertEqual(abs(leg.get('id')), q_id,
+                                 "IS leg should use merged id %d" % q_id)
+
+            # Every entry must carry a process_label with a '>' separator.
+            label = entry.get('process_label', '')
+            self.assertIn('>', label,
+                          "process_label should contain '>' separator: %r" % label)
+
+            # When both backends ran they must agree within 1e-4 relative.
+            vf  = entry['value_fortran']
+            vc  = entry['value_cpp']
+            if vf is not None and vc is not None:
+                me_f   = vf['m2']
+                me_cpp = vc['m2']
+                ref = abs(me_f) if me_f != 0 else abs(me_cpp)
+                if ref > 0:
+                    rel = abs(me_f - me_cpp) / ref
+                    self.assertLess(rel, 1e-4,
+                                    "Fortran/C++ disagree for %s: F=%g C++=%g "
+                                    "rel=%g" % (label, me_f, me_cpp, rel))
+
+            # MG7 SA must also match Fortran per flavor when it ran.
+            # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+            vm = entry.get('value_mg7')
+            if vf is not None and vm is not None:
+                me_f   = vf['m2']
+                for backend, me_mg7 in vm['m2'].items():
+                    if me_mg7 is None:
+                        continue
+                    ref = abs(me_f) if me_f != 0 else abs(me_mg7)
+                    if ref > 0:
+                        rel = abs(me_f - me_mg7) / ref
+                        self.assertLess(rel, 1e-4,
+                                        "Fortran/MG7 disagree for %s (%s): "
+                                        "F=%g MG7=%g rel=%g"
+                                        % (label, backend, me_f, me_mg7, rel))
+
+    def test_output_flavor_summary(self):
+        """output_flavor returns a string with summary line."""
+        q_id = 81
+        t_id = 6
+        proc_def = base_objects.ProcessDefinition({
+            'legs': base_objects.MultiLegList([
+                base_objects.MultiLeg({'ids': [q_id],  'state': False}),
+                base_objects.MultiLeg({'ids': [-q_id], 'state': False}),
+                base_objects.MultiLeg({'ids': [t_id],  'state': True}),
+                base_objects.MultiLeg({'ids': [-t_id], 'state': True}),
+            ]),
+            'model': self.merged_model,
+        })
+        result = process_checks.check_flavor(proc_def, cmd=process_checks.FakeInterface())
+        text = process_checks.output_flavor(result)
+        self.assertIn('Summary:', text)
+        self.assertIn('passed', text)
+
+
+
+#===============================================================================
+# TestMultiLanguageComparison
+#===============================================================================
+class TestMultiLanguageComparison(unittest.TestCase):
+    """Compare Python, Fortran SA, and C++ SA matrix elements for the same
+    phase-space point.  The strategy is:
+      1. Generate and run the Fortran (or C++) standalone check binary.
+      2. Parse the phase-space point and |M|^2 value printed by the binary.
+      3. Evaluate the Python matrix element with those *same* momenta.
+      4. Assert that both results agree to within a relative tolerance.
+    Tests are skipped automatically if gfortran / g++ is not found.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Import heavy dependencies once and decide which back-ends exist."""
+        import shutil as _shutil
+        import madgraph.iolibs.export_v4 as _ev4
+        import madgraph.iolibs.export_cpp as _ecpp
+        import madgraph.iolibs.helas_call_writers as _hcw
+        import madgraph.various.misc as _misc
+        cls._ev4 = _ev4
+        cls._ecpp = _ecpp
+        cls._hcw = _hcw
+        cls._misc = _misc
+        cls._shutil = _shutil
+
+        cls.has_fortran = bool(_misc.which('gfortran'))
+        cls.has_cpp = bool(_misc.which('g++'))
+        try:
+            import madmatrix.output  # noqa: F401
+            cls.has_mg7 = cls.has_cpp and bool(_misc.which('make'))
+        except ImportError:
+            cls.has_mg7 = False
+
+        cls.model = import_ufo.import_model(
+            'sm', options={'apply_flavor_grouping': False})
+
+        # Build the HelasMatrixElement for e+ e- > a a once
+        legs = base_objects.LegList([
+            base_objects.Leg({'id': -11, 'state': False, 'number': 1}),
+            base_objects.Leg({'id':  11, 'state': False, 'number': 2}),
+            base_objects.Leg({'id':  22, 'state': True,  'number': 3}),
+            base_objects.Leg({'id':  22, 'state': True,  'number': 4}),
+        ])
+        import madgraph.core.diagram_generation as _dg
+        import madgraph.core.helas_objects as _ho
+        proc = base_objects.Process({
+            'legs': legs, 'model': cls.model,
+            'orders': {}, 'forbidden_particles': [],
+            'forbidden_onsh_s_channels': [],
+            'forbidden_s_channels': [],
+            'perturbation_couplings': [],
+        })
+        amplitude = _dg.Amplitude(proc)
+        cls.matrix_element = _ho.HelasMatrixElement(amplitude, gen_color=True)
+
+        # Ensure Template/LO/Source/make_opts exists (created on first MG5 run)
+        import madgraph
+        MG5DIR = madgraph.MG5DIR
+        make_opts = os.path.join(MG5DIR, 'Template', 'LO', 'Source', 'make_opts')
+        make_opts_src = os.path.join(MG5DIR, 'Template', 'LO', 'Source', '.make_opts')
+        if not os.path.exists(make_opts) and os.path.exists(make_opts_src):
+            _shutil.copy(make_opts_src, make_opts)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    _me_re = re.compile(
+        r"\sMatrix\selement\s=\s*(?P<val>-?\d*\.\d*(E[+-]?\d*)?)"
+        r"\s*GeV\^\s*(?P<pow>-?\d+)", re.IGNORECASE | re.VERBOSE)
+    _mom_re = re.compile(
+        r"""\s*\d+\s+(?P<p0>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p1>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p2>-?\d*\.\d*E[+-]?\d*)\s+
+             (?P<p3>-?\d*\.\d*E[+-]?\d*)""",
+        re.IGNORECASE | re.VERBOSE)
+    # Matches the "PDG  2  -2  6  -6" line written per flavor by Fortran SA.
+    _pdg_re = re.compile(r'^\s*PDG\s+(.+)$', re.IGNORECASE)
+
+    def _parse_sa_output(self, text, target_pdgs=None):
+        """Return (me_value, [[E,px,py,pz], ...]) from check binary output.
+
+        If *target_pdgs* is given the matrix-element value for the flavor
+        whose preceding "PDG …" line matches those PDG codes is returned.
+        If no block matches (e.g. because the process uses merged-particle
+        legs whose PDG codes are flavor indices in the Fortran output), falls
+        back to the last seen matrix-element value.
+        If *target_pdgs* is not given the last value is returned (legacy).
+        """
+        momenta = []
+        me_val = None
+        last_val = None
+        current_pdgs = None
+        for line in text.split('\n'):
+            mp = self._pdg_re.match(line)
+            if mp:
+                try:
+                    current_pdgs = [int(x) for x in mp.group(1).split()]
+                except ValueError:
+                    current_pdgs = None
+            m = self._me_re.match(line)
+            if m:
+                val = float(m.group('val'))
+                last_val = val
+                if target_pdgs is not None and current_pdgs is not None:
+                    if current_pdgs == list(target_pdgs):
+                        me_val = val
+                else:
+                    me_val = val
+                current_pdgs = None
+            m2 = self._mom_re.match(line)
+            if m2:
+                momenta.append([float(x) for x in m2.groups()[:4]])
+        # Fallback: target was specified but no PDG block matched.
+        if target_pdgs is not None and me_val is None:
+            me_val = last_val
+        return me_val, momenta
+
+    def _run_check_binary(self, check_dir):
+        """Compile and run ./check in *check_dir*, return stdout."""
+        devnull = open(os.devnull, 'w')
+        ret = subprocess.call(['make', 'check'], cwd=check_dir,
+                              stdout=devnull, stderr=devnull)
+        devnull.close()
+        if ret != 0:
+            self.skipTest('make check failed in %s' % check_dir)
+        return subprocess.check_output(
+            './check', cwd=check_dir, stderr=subprocess.STDOUT).decode()
+
+    def _first_P_dir(self, sa_root):
+        """Return the first P-directory found under sa_root/SubProcesses."""
+        sub = os.path.join(sa_root, 'SubProcesses')
+        for d in sorted(os.listdir(sub)):
+            if d.startswith('P') and os.path.isdir(os.path.join(sub, d)):
+                return os.path.join(sub, d)
+        return None
+
+    # ------------------------------------------------------------------
+    # Tests
+    # ------------------------------------------------------------------
+    def test_parse_sa_output_flavor_selection(self):
+        """_parse_sa_output correctly selects or falls back for target_pdgs.
+
+        When the Fortran SA iterates over multiple flavors (e.g. u, d, b for a
+        merged _quark leg) it prints one "PDG …" + "Matrix element = …" pair per
+        flavor.  The function should:
+        1. Return the ME for the block whose PDG line matches target_pdgs.
+        2. Fall back to the last ME value when target_pdgs is given but no block
+           matches.  This handles merged-particle processes where Fortran stores
+           flavor *indices* (1, -1, …) rather than actual PDG codes.
+        3. Return the last ME when target_pdgs is not given (legacy behaviour).
+        """
+        # Simulated Fortran SA output with three flavors:
+        #   u (PDG 2 -2 6 -6)  → ME = 0.6177
+        #   d (PDG 1 -1 6 -6)  → ME = 0.6178 (same coupling; differs slightly)
+        #   b (PDG 5 -5 6 -6)  → ME = 0.5894 (b mass ≈ 4.7 GeV gives ~5% diff)
+        fake_output = (
+            "\n Phase space point:\n"
+            "  1   5.0000000E+02  0.0000000E+00  0.0000000E+00  4.9000000E+02\n"
+            "  2   5.0000000E+02  0.0000000E+00  0.0000000E+00 -4.9000000E+02\n"
+            "  3   6.0000000E+02  1.0000000E+02  2.0000000E+02 -3.0000000E+02\n"
+            "  4   4.0000000E+02 -1.0000000E+02 -2.0000000E+02  3.0000000E+02\n"
+            " PDG           2          -2           6          -6\n"
+            " Matrix element =  0.617700E+00 GeV^  -4\n"
+            " -----------------------------------------------------------------------------\n"
+            " PDG           1          -1           6          -6\n"
+            " Matrix element =  0.617800E+00 GeV^  -4\n"
+            " -----------------------------------------------------------------------------\n"
+            " PDG           5          -5           6          -6\n"
+            " Matrix element =  0.589400E+00 GeV^  -4\n"
+            " -----------------------------------------------------------------------------\n"
+        )
+
+        # ── no target: backward-compat, returns last flavor (b quark) ──────
+        me, p = self._parse_sa_output(fake_output)
+        self.assertAlmostEqual(me, 0.5894, places=7,
+                               msg='Without target_pdgs should return last ME')
+        self.assertEqual(len(p), 4,
+                         'Should parse 4 momentum vectors')
+
+        # ── matching target: u quark → 0.6177 ───────────────────────────────
+        me_u, _ = self._parse_sa_output(fake_output, target_pdgs=[2, -2, 6, -6])
+        self.assertAlmostEqual(me_u, 0.6177, places=7,
+                               msg='target_pdgs=[2,-2,6,-6] should return u ME')
+
+        # ── matching target: d quark → 0.6178 ───────────────────────────────
+        me_d, _ = self._parse_sa_output(fake_output, target_pdgs=[1, -1, 6, -6])
+        self.assertAlmostEqual(me_d, 0.6178, places=7,
+                               msg='target_pdgs=[1,-1,6,-6] should return d ME')
+
+        # ── matching target: b quark → 0.5894 ───────────────────────────────
+        me_b, _ = self._parse_sa_output(fake_output, target_pdgs=[5, -5, 6, -6])
+        self.assertAlmostEqual(me_b, 0.5894, places=7,
+                               msg='target_pdgs=[5,-5,6,-6] should return b ME')
+
+        # ── sanity: b quark ME differs >1% from u/d (mass effect) ───────────
+        rel_ub = abs(me_u - me_b) / abs(me_u)
+        self.assertGreater(rel_ub, 0.01,
+                           'u and b quark MEs should differ by >1%% due to b mass')
+
+        # ── unmatched target: Fortran uses flavor indices for merged legs ────
+        # In this scenario Fortran outputs PDG lines like "PDG  1  -1  6  -6"
+        # (flavor *indices*) while proc.get('legs') contains the merged-particle
+        # PDG code (e.g. 2000).  No block matches, so the function falls back
+        # to the *last* ME value (0.5894 here) instead of returning None.
+        me_merged, _ = self._parse_sa_output(fake_output,
+                                             target_pdgs=[2000, -2000, 6, -6])
+        self.assertAlmostEqual(me_merged, 0.5894, places=7,
+                               msg='Unmatched target_pdgs should fall back to '
+                                   'last ME, not return None')
+
+
+    def test_python_vs_fortran_epem_aa(self):
+        """e+ e- > a a: Python and Fortran SA must agree within 1e-4 rel."""
+        if not self.has_fortran:
+            self.skipTest('gfortran not available')
+
+        import tempfile
+        ev4 = self._ev4
+        hcw = self._hcw
+        misc = self._misc
+        model = self.model
+        me = self.matrix_element
+
+        wl = misc.make_unique(me.get_used_lorentz())
+        wc = misc.make_unique([c for l in me.get_used_couplings() for c in l])
+
+        parent = tempfile.mkdtemp(prefix='mg5_test_f_')
+        sa_dir = os.path.join(parent, 'sa_f')
+        try:
+            opt = {'sa_symmetry': False, 'export_format': 'standalone_fortran',
+                   'mp': False, 'v5_model': True,
+                   'output_options': {'noeps': 'True'}}
+            exporter = ev4.ProcessExporterFortranSA(sa_dir, opt)
+            fmodel = hcw.FortranUFOHelasCallWriter(model)
+            exporter.copy_template(model)
+            exporter.generate_subprocess_directory(me, fmodel, 0)
+            exporter.convert_model(model, wl, wc)
+            exporter.finalize({'matrix_elements': [me]}, '',
+                              {'fortran_compiler': 'gfortran',
+                               'cpp_compiler': 'g++',
+                               'f2py_compiler': 'f2py',
+                               'output_dependencies': 'external'},
+                              ['nojpeg'])
+
+            check_dir = self._first_P_dir(sa_dir)
+            if check_dir is None:
+                self.skipTest('No subprocess directory created')
+
+            output = self._run_check_binary(check_dir)
+            me_f, p_f = self._parse_sa_output(output)
+
+            self.assertIsNotNone(me_f, 'Could not parse Fortran ME value')
+            self.assertGreater(len(p_f), 0, 'Could not parse Fortran momenta')
+
+            # Evaluate Python with the *same* phase-space point
+            process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
+            evaluator = process_checks.MatrixElementEvaluator(model)
+            me_py, _ = evaluator.evaluate_matrix_element(me, p=p_f)
+
+            self.assertGreater(abs(me_f), 0.,
+                               'Fortran ME is zero – unexpected')
+            rel_diff = abs(me_f - me_py) / abs(me_f)
+            self.assertLess(rel_diff, 1e-4,
+                            'Python and Fortran SA disagree: '
+                            'Fortran=%g  Python=%g  rel_diff=%g'
+                            % (me_f, me_py, rel_diff))
+        finally:
+            self._shutil.rmtree(parent, ignore_errors=True)
+
+    def test_python_vs_cpp_epem_aa(self):
+        """e+ e- > a a: Python and C++ SA must agree within 1e-4 rel."""
+        if not self.has_cpp:
+            self.skipTest('g++ not available')
+
+        import tempfile
+        ecpp = self._ecpp
+        hcw = self._hcw
+        misc = self._misc
+        model = self.model
+        me = self.matrix_element
+
+        wl = misc.make_unique(me.get_used_lorentz())
+        wc = misc.make_unique([c for l in me.get_used_couplings() for c in l])
+
+        parent = tempfile.mkdtemp(prefix='mg5_test_cpp_')
+        sa_dir = os.path.join(parent, 'sa_cpp')
+        try:
+            opt = {'sa_symmetry': False, 'export_format': 'standalone_cpp',
+                   'mp': False, 'v5_model': True, 'cpp_compiler': 'g++'}
+            exporter = ecpp.ProcessExporterCPP(sa_dir, opt)
+            cpp_model = hcw.CPPUFOHelasCallWriter(model)
+            exporter.copy_template(model)
+            exporter.generate_subprocess_directory(me, cpp_model, 0)
+            exporter.convert_model(model, wl, wc)
+            exporter.finalize({'matrix_elements': [me]}, '',
+                              {'fortran_compiler': 'gfortran',
+                               'cpp_compiler': 'g++',
+                               'f2py_compiler': 'f2py',
+                               'output_dependencies': 'external'},
+                              ['nojpeg'])
+
+            check_dir = self._first_P_dir(sa_dir)
+            if check_dir is None:
+                self.skipTest('No subprocess directory created')
+
+            output = self._run_check_binary(check_dir)
+            me_cpp, p_cpp = self._parse_sa_output(output)
+
+            self.assertIsNotNone(me_cpp, 'Could not parse C++ ME value')
+            self.assertGreater(len(p_cpp), 0, 'Could not parse C++ momenta')
+
+            # Evaluate Python with the *same* phase-space point
+            process_checks.clean_added_globals(process_checks.ADDED_GLOBAL)
+            evaluator = process_checks.MatrixElementEvaluator(model)
+            me_py, _ = evaluator.evaluate_matrix_element(me, p=p_cpp)
+
+            self.assertGreater(abs(me_cpp), 0.,
+                               'C++ ME is zero – unexpected')
+            rel_diff = abs(me_cpp - me_py) / abs(me_cpp)
+            self.assertLess(rel_diff, 1e-4,
+                            'Python and C++ SA disagree: '
+                            'C++=%g  Python=%g  rel_diff=%g'
+                            % (me_cpp, me_py, rel_diff))
+        finally:
+            self._shutil.rmtree(parent, ignore_errors=True)
+
+    def test_check_language_function_epem_aa(self):
+        """check_language() must return Passed for e+ e- > a a when at least
+        one compiled backend (gfortran or g++) is available.
+
+        check_language compares Fortran SA, C++ SA and the pure-Python back-end
+        side by side.  All three use the same RAMBO-generated phase-space
+        point so the matrix-element values must agree.
+        """
+        model = self.model
+
+        # Build a single Process (not a ProcessDefinition) so check_language
+        # takes the non-ProcessDefinition branch.
+        import madgraph.core.base_objects as _bo
+        legs = _bo.LegList([
+            _bo.Leg({'id': -11, 'state': False, 'number': 1}),
+            _bo.Leg({'id':  11, 'state': False, 'number': 2}),
+            _bo.Leg({'id':  22, 'state': True,  'number': 3}),
+            _bo.Leg({'id':  22, 'state': True,  'number': 4}),
+        ])
+        proc = _bo.Process({
+            'legs': legs, 'model': model,
+            'orders': {}, 'forbidden_particles': [],
+            'forbidden_onsh_s_channels': [],
+            'forbidden_s_channels': [],
+            'perturbation_couplings': [],
+        })
+
+        results = process_checks.check_language(proc)
+        self.assertEqual(len(results), 1)
+
+        entry = results[0]
+        self.assertIn('value_fortran', entry)
+        self.assertIn('value_cpp', entry)
+        self.assertIn('value_mg7', entry)
+        self.assertIn('value_python', entry)
+
+        if not (self.has_fortran or self.has_cpp):
+            self.skipTest('No compiled backend available')
+
+        me_f   = entry['value_fortran']['m2'] if entry['value_fortran'] else None
+        me_cpp = entry['value_cpp']['m2']      if entry['value_cpp']     else None
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2']    if entry['value_mg7']     else {}
+        me_py  = entry['value_python']['m2']   if entry['value_python']  else None
+
+        # Every pair of available backends must agree within 1e-4 relative.
+        pairs = [
+            (me_f,   me_cpp, 'Fortran', 'C++'),
+            (me_f,   me_py,  'Fortran', 'Python'),
+            (me_cpp, me_py,  'C++',     'Python'),
+        ]
+        for backend, me_mg7 in mg7_vals.items():
+            pairs.extend([
+                (me_f,   me_mg7, 'Fortran', backend),
+                (me_cpp, me_mg7, 'C++',     backend),
+                (me_mg7, me_py,  backend,   'Python'),
+            ])
+        for a, b, na, nb in pairs:
+            if a is None or b is None:
+                continue
+            ref = abs(a) if a != 0 else abs(b)
+            rel = abs(a - b) / ref if ref > 0 else 0.
+            self.assertLess(rel, 1e-4,
+                            '%s/%s disagree: %s=%g %s=%g rel=%g'
+                            % (na, nb, na, a, nb, b, rel))
+
+        # MG7 SA must be available when the madmatrix backend is present.
+        if self.has_mg7:
+            self.assertIsNotNone(entry['value_mg7'],
+                                 'MG7 SA value missing though madmatrix present')
+
+        # output_language must at least contain a Summary line + MG7 column.
+        text = process_checks.output_language(results)
+        self.assertIn('Summary', text)
+        self.assertIn('MG7 SA', text)
+
+    def test_check_language_gg_ttx_cpp_ps_point(self):
+        """g g > t t~: Fortran SA and C++ SA must agree within 1e-4 rel.
+
+        Both backends receive the same energy argument so RAMBO generates
+        identical momenta; the matrix-element values should therefore agree
+        to machine precision (modulo compiler differences).
+        """
+        if not (self.has_fortran and self.has_cpp):
+            self.skipTest('Both gfortran and g++ are required for this test')
+
+        import madgraph.core.base_objects as _bo
+
+        model = self.model
+        legs = _bo.LegList([
+            _bo.Leg({'id': 21, 'state': False, 'number': 1}),
+            _bo.Leg({'id': 21, 'state': False, 'number': 2}),
+            _bo.Leg({'id':  6, 'state': True,  'number': 3}),
+            _bo.Leg({'id': -6, 'state': True,  'number': 4}),
+        ])
+        proc = _bo.Process({
+            'legs': legs, 'model': model,
+            'orders': {}, 'forbidden_particles': [],
+            'forbidden_onsh_s_channels': [],
+            'forbidden_s_channels': [],
+            'perturbation_couplings': [],
+        })
+
+        results = process_checks.check_language(proc)
+        self.assertEqual(len(results), 1, 'Expected exactly one subprocess result')
+
+        entry = results[0]
+        self.assertIn('value_fortran', entry)
+        self.assertIn('value_cpp', entry)
+        self.assertIn('value_mg7', entry)
+        self.assertIn('value_python', entry)
+
+        if entry['value_fortran'] is None:
+            self.skipTest('Fortran SA evaluation failed')
+        if entry['value_cpp'] is None:
+            self.skipTest('C++ SA evaluation failed (no g++ or compile error)')
+
+        me_f   = entry['value_fortran']['m2']
+        me_cpp = entry['value_cpp']['m2']
+        # value_mg7['m2'] is a dict {value_mg7_<backend>: float|None}.
+        mg7_vals = entry['value_mg7']['m2'] if entry['value_mg7'] else {}
+        me_py  = entry['value_python']['m2'] if entry['value_python'] else None
+
+        self.assertGreater(abs(me_cpp), 0., 'C++ ME is zero – unexpected')
+        rel_diff = abs(me_f - me_cpp) / abs(me_f)
+        self.assertLess(rel_diff, 1e-4,
+                        'Fortran and C++ SA disagree for g g > t t~: '
+                        'F=%g  C++=%g  rel_diff=%g'
+                        % (me_f, me_cpp, rel_diff))
+
+        # MG7 SA must agree with Fortran when the madmatrix backend ran.
+        for backend, me_mg7 in mg7_vals.items():
+            if me_mg7 is None:
+                continue
+            rel_mg7_f = abs(me_f - me_mg7) / abs(me_f)
+            self.assertLess(rel_mg7_f, 1e-4,
+                            'MG7 and Fortran SA disagree for g g > t t~ (%s): '
+                            'MG7=%g  F=%g  rel_diff=%g'
+                            % (backend, me_mg7, me_f, rel_mg7_f))
+
+        # Python must also agree if it ran successfully.
+        self.assertIsNotNone(me_py, 'Python evaluation failed for g g > t t~')
+        rel_py_f = abs(me_f - me_py) / abs(me_f)
+        self.assertLess(rel_py_f, 1e-4,
+                        'Python and Fortran SA disagree for g g > t t~: '
+                        'Python=%g  F=%g  rel_diff=%g'
+                        % (me_py, me_f, rel_py_f))
+
+        # output_language must also report Passed
+        text = process_checks.output_language(results)
+        self.assertIn('Passed', text,
+                      'output_language reported failure for g g > t t~:\n' + text)
+
+
+class TestPrecisionCheck(unittest.TestCase):
+    """check precision: the statistics, the report, and one compiled run."""
+
+    def test_precision_statistics(self):
+        """Relative errors against double precision, with the zero and
+        non-finite reference cases counted apart from the mean."""
+        me_double = [1., 2., 0., 0., 4., 3.]
+        me_mode = [1.001, 2.1, 0., 1e-3, 4., float('nan')]
+        stats = process_checks.precision_statistics(me_double, me_mode)
+        self.assertEqual(stats['nb_event'], 6)
+        self.assertEqual(stats['nb_invalid'], 2)   # 0 -> 1e-3, and the nan
+        self.assertEqual(stats['nb_above'], 3)     # 5% and the two invalid ones
+        self.assertAlmostEqual(stats['rate'], 0.5)
+        self.assertTrue(math.isinf(stats['max']))
+        self.assertAlmostEqual(stats['mean'], (1e-3 + 0.05) / 4)
+        self.assertAlmostEqual(stats['errors'][0], 1e-3)
+        self.assertEqual(stats['errors'][2], 0.)
+
+        self.assertRaises(Exception, process_checks.precision_statistics,
+                          [1., 2.], [1.])
+
+    def test_output_precision(self):
+        """The report quotes the three numbers and where the plot went."""
+        stats = process_checks.precision_statistics([1., 2.], [1.5, 2.])
+        stats.update({'process_label': 'e+ e- > mu+ mu-', 'subprocess': 'P0',
+                      'flavor': 0, 'mode': 'f', 'plot': '/tmp/x.pdf',
+                      'time_double': 0.5, 'time_mode': 0.25})
+        stats_m = process_checks.precision_statistics([1., 2.], [1., 2.])
+        stats_m.update({'process_label': 'e+ e- > mu+ mu-', 'subprocess': 'P0',
+                        'flavor': 0, 'mode': 'm', 'plot': '/tmp/x.pdf',
+                        'time_double': 0.5, 'time_mode': 0.4})
+        text = process_checks.output_precision([stats, stats_m])
+        for word in ('FPTYPE=f,m vs FPTYPE=d', 'mean error', 'max error',
+                     'rate > 1%', 'mode', 'e+ e- > mu+ mu-', '5.000e-01',
+                     'time d [s]', 'time mode [s]', '2.500e-01', '2.00', '1.25',
+                     process_checks.PRECISION_MODES['m']):
+            self.assertIn(word, text)
+        # one plot for both modes, quoted once
+        self.assertEqual(text.count('Plot of the difference: /tmp/x.pdf'), 1)
+        rows = [l for l in text.split('\n') if l.startswith('e+ e- > mu+ mu-')]
+        self.assertEqual([r.split()[5] for r in rows], ['f', 'm'])
+        stats['time_mode'] = None
+        self.assertIn('N/A', process_checks.output_precision([stats]))
+        stats['plot'] = '/tmp/x.dat'
+        self.assertIn('Relative errors (no matplotlib, no plot): /tmp/x.dat',
+                      process_checks.output_precision([stats]))
+
+    def test_precision_progress(self):
+        """The progress bar counts every step, grows when told to, and is a
+        silent no-op when tqdm cannot be imported."""
+        import io
+        try:
+            import tqdm  # noqa: F401
+            has_tqdm = True
+        except ImportError:
+            has_tqdm = False
+        if has_tqdm:
+            stream = io.StringIO()            # keep the test output clean
+            progress = process_checks.PrecisionProgress(2, stream=stream)
+            progress.add(1)
+            for i in range(3):
+                with progress.step('step %d' % i):
+                    pass
+            self.assertEqual((progress.bar.n, progress.bar.total), (3, 3))
+            progress.close()
+            self.assertIn('3/3', stream.getvalue())
+            self.assertIn('step 2', stream.getvalue())
+
+        saved = sys.modules.get('tqdm')
+        sys.modules['tqdm'] = None            # makes 'from tqdm import tqdm' raise
+        try:
+            progress = process_checks.PrecisionProgress(2)
+            self.assertIsNone(progress.bar)
+            progress.add(1)
+            with progress.step('no bar'):
+                pass
+            progress.close()
+        finally:
+            if saved is None:
+                del sys.modules['tqdm']
+            else:
+                sys.modules['tqdm'] = saved
+
+    def test_matrix_element_time(self):
+        """The matrix element time is read from the check_sa.exe perf report."""
+        perf = ('TotalTime[Rambo]        (2) = ( 1.000000e-03 )  sec\n'
+                'TotalTime[MatrixElems]  (3) = ( 2.345678e-02 )  sec\n')
+        self.assertAlmostEqual(process_checks.matrix_element_time(perf), 2.345678e-02)
+        self.assertIsNone(process_checks.matrix_element_time('nothing here'))
+
+    def test_check_precision_epem_mupmum(self):
+        """FPTYPE=f against FPTYPE=d for e+ e- > mu+ mu-: single precision is
+        good to ~1e-7 there, so no event may come anywhere near 1%."""
+        import shutil
+        import tempfile
+        if not (misc.which('g++') and misc.which('make')):
+            self.skipTest('check precision needs g++ and make')
+        try:
+            import madmatrix.output  # noqa: F401
+        except ImportError:
+            self.skipTest('madmatrix is not available')
+
+        model = import_ufo.import_model('sm', options={'apply_flavor_grouping': False})
+        legs = base_objects.MultiLegList([
+            base_objects.MultiLeg({'ids': [-11], 'state': False}),
+            base_objects.MultiLeg({'ids': [11], 'state': False}),
+            base_objects.MultiLeg({'ids': [-13], 'state': True}),
+            base_objects.MultiLeg({'ids': [13], 'state': True})])
+        procdef = base_objects.ProcessDefinition({'legs': legs, 'model': model})
+
+        output_path = tempfile.mkdtemp(prefix='mg5_test_precision_')
+        try:
+            # two modes (and a duplicate) share one double precision reference
+            results = process_checks.check_precision(
+                procdef, ['f', 'm', 'f'], options={'nb_event': 2000},
+                output_path=output_path)
+            self.assertEqual([r['mode'] for r in results], ['f', 'm'])
+            for entry in results:
+                self.assertEqual(entry['nb_event'], 2000)
+                self.assertEqual(entry['nb_invalid'], 0)
+                self.assertEqual(entry['nb_above'], 0)
+                self.assertLess(entry['max'], 1e-4)
+                self.assertGreater(entry['time_double'], 0.)
+                self.assertGreater(entry['time_mode'], 0.)
+                self.assertTrue(os.path.exists(entry['plot']), entry['plot'])
+            self.assertEqual(results[0]['time_double'], results[1]['time_double'])
+            self.assertEqual(results[0]['plot'], results[1]['plot'])
+            self.assertIn('check_precision_f_m_', results[0]['plot'])
+            # single precision leaves a visible difference, the colour-only
+            # single precision of FPTYPE=m cannot do worse on a colourless process
+            self.assertGreater(results[0]['max'], 0.)
+            self.assertLessEqual(results[1]['max'], results[0]['max'])
+        finally:
+            shutil.rmtree(output_path, ignore_errors=True)
+
+    def test_check_precision_v_epem_mupmum(self):
+        """FPTYPE=v against FPTYPE=d for e+ e- > mu+ mu-, on the widest SIMD
+        backend of the host and on the scalar one.
+
+        FPTYPE=v computes the momenta and the propagator denominators in double
+        precision and the rest in single precision. On a SIMD backend the
+        denominators are a double precision vector with the single precision
+        lane count (MGONGPU_SIMD_DENOM64), a code path of its own; on the scalar
+        backend they are plain doubles. The process uses both forms of
+        madmatrix::denom: the photon propagator with its coupling (FFV1P0_3) and
+        the Z one of a routine assembled from two Lorentz structures, without
+        coupling (FFV2_4_3). FPTYPE=v is good to ~1e-6 there, so a lane filled
+        from the wrong momenta, or a non-finite value, fails at once."""
+        import shutil
+        import tempfile
+        if not (misc.which('g++') and misc.which('make')):
+            self.skipTest('check precision needs g++ and make')
+        try:
+            import madmatrix.output  # noqa: F401
+        except ImportError:
+            self.skipTest('madmatrix is not available')
+
+        model = import_ufo.import_model('sm', options={'apply_flavor_grouping': False})
+        legs = base_objects.MultiLegList([
+            base_objects.MultiLeg({'ids': [-11], 'state': False}),
+            base_objects.MultiLeg({'ids': [11], 'state': False}),
+            base_objects.MultiLeg({'ids': [-13], 'state': True}),
+            base_objects.MultiLeg({'ids': [13], 'state': True})])
+        procdef = base_objects.ProcessDefinition({'legs': legs, 'model': model})
+
+        for backend in ('auto', 'scalar'):
+            output_path = tempfile.mkdtemp(prefix='mg5_test_precision_v_')
+            try:
+                results = process_checks.check_precision(
+                    procdef, ['v'], options={'nb_event': 20000, 'backend': backend},
+                    output_path=output_path)
+                self.assertEqual([(r['mode'], r['backend']) for r in results],
+                                 [('v', backend)])
+                entry = results[0]
+                self.assertEqual(entry['nb_event'], 20000)
+                self.assertEqual(entry['nb_invalid'], 0, backend)
+                self.assertEqual(entry['nb_above'], 0, backend)
+                self.assertLess(entry['max'], 1e-4, backend)
+                # single precision amplitudes leave a visible difference: a
+                # build that fell back to double precision would give 0
+                self.assertGreater(entry['max'], 0., backend)
+                self.assertGreater(entry['time_mode'], 0., backend)
+            finally:
+                shutil.rmtree(output_path, ignore_errors=True)
 
 
 if __name__ == '__main__':

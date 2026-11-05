@@ -12,7 +12,7 @@ except ImportError:
     import internal.misc as misc
     
 class Decay_info:
-    """ all routine linked to the reconaissance of the topology from the proc card
+    """ all routine linked to the reconnaissance of the topology from the proc card
         
         The proc-card has two information:
             1) the process decay pp>(t>blvl~)(t~>(W->l~vl)b)
@@ -93,11 +93,11 @@ class Decay_info:
                 decay_item[daughter_id].mother=res_label
                 decay_item[res_label].des.append(decay_item[daughter_id])
 
-#       now decay item is a dictionnary with 
+#       now decay item is a dictionary with
 #                   each key = one of the legs in the diagrams
 #           associated value = decay chain initiated by this leg
 
-#       the list "decay_diag" should contains the values associated with the legs
+#       the list "decay_diag" should contain the values associated with the legs
 #       originating from the production part         
 
 #       here I use the criteria written by Olivier, so that "proc_list"="decay_list" later on in the code
@@ -242,7 +242,7 @@ class Decay_info:
     def first_part_pid(self,text,pid):
         """find the pid(s) of the fist tag in text.
            return the text without this tag and the pid.
-           pid is a dictonary
+           pid is a dictionary
         """
 
         len_max=4

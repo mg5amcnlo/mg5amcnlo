@@ -61,6 +61,7 @@ C INITIALIZE CUTTOOLS IF NEEDED
       IF (CTINIT) THEN
 	    CTINIT=.FALSE.
 		CALL %(proc_prefix)sINITCT()
+		CALL cite('Ossola:2007ax','one-loop reduction with CutTools')
       ENDIF
 
 C YOU CAN FIND THE DETAILS ABOUT THE DIFFERENT CTMODE AT THE BEGINNING OF THE FILE CTS_CUTS.F90 IN THE CUTTOOLS DISTRIBUTION
@@ -200,7 +201,7 @@ C     	----------
 	          enddo
 C             Default value of the kinematic matrix
 	          s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
-C             And we now test various thresholds. Normaly, at most one applies.
+C             And we now test various thresholds. Normally, at most one applies.
 	          IF(ABS(M2L(i)).NE.0.0D0)THEN
 	            IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
 	              s_mat(i,j)=-M2L(j)
@@ -272,7 +273,7 @@ C     	----------
 	          enddo
 C             Default value of the kinematic matrix
 	          s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
-C             And we now test various thresholds. Normaly, at most one applies.
+C             And we now test various thresholds. Normally, at most one applies.
 	          IF(ABS(M2L(i)).NE.0.0e0_16)THEN
 	            IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
 	              s_mat(i,j)=-M2L(j)
@@ -688,6 +689,8 @@ C INITIALIZE NINJA IF NEEDED
       IF (NINJAINIT) THEN
 	    NINJAINIT=.FALSE.
 		CALL %(proc_prefix)sINITNINJA()
+		CALL cite('Peraro:2014cba','one-loop reduction with Ninja')
+		CALL cite('Hirschi:2016mdz','one-loop reduction with Ninja (MadLoop interface)')
       ENDIF
 
 C  CONVERT THE MASSES TO BE COMPLEX
@@ -920,6 +923,8 @@ C INITIALIZE NINJA IF NEEDED
       IF (NINJAINIT) THEN
 	    NINJAINIT=.FALSE.
 		CALL %(proc_prefix)sINITNINJA()
+		CALL cite('Peraro:2014cba','one-loop reduction with Ninja')
+		CALL cite('Hirschi:2016mdz','one-loop reduction with Ninja (MadLoop interface)')
       ENDIF
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS

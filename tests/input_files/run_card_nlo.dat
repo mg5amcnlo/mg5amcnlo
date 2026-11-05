@@ -1,5 +1,5 @@
 #***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
+#                        MadGraph7                             *
 #                                                                      *
 #                      run_card.dat aMC@NLO                            *
 #                                                                      *
@@ -35,7 +35,7 @@
 #***********************************************************************
  average = event_norm      ! average or sum
 #***********************************************************************
-# Number of points per itegration channel (ignored for aMC@NLO runs)   *
+# Number of points per integration channel (ignored for aMC@NLO runs)   *
 #***********************************************************************
  0.01   = req_acc_FO       ! Required accuracy (-1=ignored, and use the 
  	                   ! number of points and iter. below)

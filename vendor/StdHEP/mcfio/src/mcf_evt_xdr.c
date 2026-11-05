@@ -647,7 +647,7 @@ static bool_t xdr_mcfast_NTuDDL(XDR *xdrs, char *version, nTuDDL *ddl)
     
     
     /*
-    ** This is the first version, let us not get too compilcated..
+    ** This is the first version, let us not get too complicated..
     */
     if (xdrs->x_op == XDR_ENCODE) {
            nc_title = strlen(ddl->title);
@@ -708,7 +708,7 @@ static bool_t xdr_mcfast_descrNTU(XDR *xdrs, char *version,
     u_int nn;
     char *tc;
     /*
-    ** This is the first version, let us not get too compilcated..
+    ** This is the first version, let us not get too complicated..
     */
     
     if (xdr_int(xdrs,&(dNTu->numVariables)) == FALSE) return FALSE;
@@ -1415,7 +1415,7 @@ bool_t xdr_mcfast_NTupleXDRPtr(XDR *xdrs, descrGenNtuple *dNTu,
 }
 /*
 ** Generalized NTuple XDR filter, used for Decode only. 
-** Simply decode the multiplicty value. No checks whatsoever!
+** Simply decode the multiplicity value. No checks whatsoever!
 */
 bool_t xdr_mcfast_NTupleMult(mcfStream *str, descrGenNtuple *dNTu,
  		char* version)
@@ -1593,7 +1593,7 @@ bool_t xdr_mcfast_NTupleSubVar(mcfStream *str, descrGenNtuple *dNTu,
 ** Generalized NTuple XDR filter, used for Decode only. 
 ** Simply decode a sub-structure given a value for the multiplicity index.
 ** Not applicable if the structure organization style is parallel array.
-** No check whatsover!
+** No check whatsoever!
 */
 bool_t xdr_mcfast_NTupleSubStruct(mcfStream *str, descrGenNtuple *dNTu,
  		int multIndex, char* version)

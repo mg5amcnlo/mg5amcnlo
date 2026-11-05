@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -41,7 +41,7 @@ import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.save_load_object as save_load_object
-import models.import_ufo as models
+import madgraph.models.import_ufo as models
 from madgraph import MadGraph5Error
 
 
@@ -212,7 +212,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
             # Clean up for the test that follows            
             lwf['analytic_info'] = {}
 
-        # Also check the the compute_all_analytic_information works when one 
+        # Also check the compute_all_analytic_information works when one
         # provides its own aloha model
         myLoopME.compute_all_analytic_information(alohaModel)
         for (lwf, trgt_interaction_rank, trgt_wavefunction_rank) in \
@@ -240,7 +240,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
               diagram tested while in 'collective' mode, a single matrix element
               creates all the HelasDiagrams for the selection so that the dynamic
               effects of wavefunction recycling are tested.
-        verbose: To display some informations on the diagram checked.
+        verbose: To display some information on the diagram checked.
         checkColor: To also check the color generation"""
        
         alldiags=Amplitude['diagrams']
@@ -296,6 +296,11 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
                 amp_number_apparition=[]
                 for jamp in color_amplitudes:
                     amp_number_apparition.extend([a[1] for a in jamp])
+                # A four gluon contribution summed into another amplitude is
+                # dropped from the jamps on purpose, its colour factor being
+                # carried by the amplitude it was summed into
+                amp_number_apparition.extend(
+                    myME.get_quartic_amplitude_merges().keys())
 
             diagIndex=0
             for i, diag in enumerate(diagSelection):
@@ -366,7 +371,7 @@ class LoopHelasMatrixElementTest(unittest.TestCase):
               diagram tested while in 'collective' mode, a single matrix element
               creates all the HelasDiagrams for the selection so that the dynamic
               effects of wavefunction recycling are tested.
-        verbose: To display some informations on the diagram checked.
+        verbose: To display some information on the diagram checked.
         checkColor: To also check the color generation of the tested diagrams"""
        
         alldiags=loopAmplitude['born_diagrams']

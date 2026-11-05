@@ -7380,7 +7380,7 @@ C...Find maximum weight factors for photon flux.
 C...Select subprocess to study: skip cases not applicable.
         IF(ISET(ISUB).EQ.11) THEN
           IF(MSUB(ISUB).NE.1) GOTO 460
-C...User process intialization: cross section model dependent.
+C...User process initialization: cross section model dependent.
           IF(IABS(IDWTUP).EQ.1) THEN
             IF(IDWTUP.GT.0.AND.XMAXUP(KFPR(ISUB,1)).LT.0D0) CALL
      &      PYERRM(26,'(PYMAXI:) Negative XMAXUP for user process')
@@ -8512,8 +8512,8 @@ C...Format statements for maximization results.
 C*********************************************************************
  
 C...PYPILE
-C...Initializes multiplicity distribution and selects mutliplicity
-C...of pileup events, i.e. several events occuring at the same
+C...Initializes multiplicity distribution and selects multiplicity
+C...of pileup events, i.e. several events occurring at the same
 C...beam crossing.
  
       SUBROUTINE PYPILE(MPILE)
@@ -11528,7 +11528,7 @@ C...f + q -> f' + Q; th = (p(f) - p(f'))**2
           KCC=22
  
         ELSEIF(ISUB.EQ.84) THEN
-C...g + gamma -> Q + Qbar; th arbitary
+C...g + gamma -> Q + Qbar; th arbitrary
           KCS=(-1)**INT(1.5D0+PYR(0))
           MINT(21)=ISIGN(MINT(55),KCS)
           MINT(22)=-MINT(21)
@@ -11536,7 +11536,7 @@ C...g + gamma -> Q + Qbar; th arbitary
           IF(MINT(16).EQ.21) KCC=28
  
         ELSEIF(ISUB.EQ.85) THEN
-C...gamma + gamma -> F + Fbar; th arbitary
+C...gamma + gamma -> F + Fbar; th arbitrary
           KCS=(-1)**INT(1.5D0+PYR(0))
           MINT(21)=ISIGN(MINT(56),KCS)
           MINT(22)=-MINT(21)
@@ -13762,7 +13762,7 @@ C...MODE= 1: Evolve event from PTMAX to PTMIN.
 C...Skip if no phase space.
   190   IF (PT2MAX.LE.PT2MIN) GOTO 330
  
-C...Starting pT2 max scale (to be udpated successively).
+C...Starting pT2 max scale (to be updated successively).
         PT2CMX=PT2MAX
  
 C...Evolve two sides of the event to find which branches at highest pT.
@@ -16052,7 +16052,7 @@ C*********************************************************************
 C...PYPTMI
 C...Handles the generation of additional interactions in the new
 C...multiple interactions framework.
-C...MODE=-1 : Initalize MI from scratch.
+C...MODE=-1 : Initialize MI from scratch.
 C...MODE= 0 : Generate trial interaction. Start at PT2NOW, solve
 C...         Sudakov for PT2, abort if below PT2CUT.
 C...MODE= 1 : Accept interaction at PT2NOW and store variables.
@@ -16604,7 +16604,7 @@ C...Only report error first time for this event
 C...Try a few times
             IF (NTRY.LE.10) THEN
               GOTO 320
-C... But if it stil fails, abort this event
+C... But if it still fails, abort this event
             ELSE
               MINT(51)=1
               RETURN
@@ -22730,7 +22730,7 @@ C...NBRJQ counts # of jq, NBRVQ # of jv, inside BR.
           NBRVQ =0
           DO 720 MSJ=1,3
             IDQ(MSJ)=0
-C...Find jq with no glue inbetween inside beam remnant.
+C...Find jq with no glue in between inside beam remnant.
             IF (JST(JS,MSJ).GT.MINT(53).AND.IABS(K(JST(JS,MSJ),2)).LE.5)
      &           THEN
               NBRJQ=NBRJQ+1
@@ -23434,7 +23434,7 @@ C...Total momentum to be compensated on this side
               IF (NNXT(MSID-3).EQ.0) GOTO 160
               PTCX=-(NNXT(MSID-3)*PTX)/NSUM
               PTCY=-(NNXT(MSID-3)*PTY)/NSUM
-C...RS: compensation supression factor as we go out from parton I.
+C...RS: compensation suppression factor as we go out from parton I.
 C...Hardcoded behaviour RS=0.5, i.e. 1/2**n falloff,
 C...since (for now) MSTP(90) provides enough variability.
               RS=0.5D0
@@ -23634,7 +23634,7 @@ C...Calculation of x of companion quark.
             ENDIF
   260     CONTINUE
  
-C...Optionally enchance x of composite systems (e.g. diquarks)
+C...Optionally enhance x of composite systems (e.g. diquarks)
           IF (KFA.GT.100) X=PARP(79)*X
  
 C...Store x. Also calculate light cone energies of each system.
@@ -23990,7 +23990,7 @@ C...  For lepton-lepton, use actual p2/m2, otherwise approximate p2 ~ 3/2 pT2
 C...  Estimate number of particles ~ log(M2), cut off at 1.
               RLOGM2=MAX(1D0,LOG(RM2STR))
               P2AVG=P2STR/RLOGM2
-C...  Supress reconnection probability by 1/(1+P77*P2AVG)
+C...  Suppress reconnection probability by 1/(1+P77*P2AVG)
               CRMODF=1D0/(1D0+PARP(77)**2*P2AVG)
             ENDIF
             PKEEP=(1D0-PARP(78)*CRMODF)**MINT(31)
@@ -24069,7 +24069,7 @@ C...  Mass of string piece in units of mpi (at least 1)
 C...  Estimate number of pions ~ log(M2) (at least 1)
             RNPI   = LOG(RM2STR/RMPI2)+1D0
             PT2AVG = (PTTS / RNPI)**2
-C...  Supress reconnection probability by 1/(1+P77*P2AVG)
+C...  Suppress reconnection probability by 1/(1+P77*P2AVG)
             CRMODF=1D0/(1D0+PARP(77)**2*PT2AVG)
           ENDIF
           PKEEP = 1.0
@@ -46389,7 +46389,7 @@ C...We assume all upper case below. Rewrite CHINL to all upper case.
           DO 190 ICH=97,122
             IF (CHAR(ICH).EQ.CHINL(INL:INL)) CHINL(INL:INL)=CHAR(ICH-32)
   190     CONTINUE
-C...Extra safety. Chek for sensible input on line
+C...Extra safety. Check for sensible input on line
           IF (IGOOD.EQ.0) THEN
             DO 200 ICH=48,90
               IF (CHAR(ICH).EQ.CHINL(INL:INL)) IGOOD=1
@@ -46947,7 +46947,7 @@ C...  Set unrecognized block flag.
 C...DECAY TABLES
 C...Read in decay information
         ELSEIF (MUPDA.EQ.2.AND.MERR.EQ.0) THEN
-C...Read new decay chanel
+C...Read new decay channel
           IF(CHINL(1:1).EQ.' '.AND.CHBLCK(1:5).EQ.'DECAY') THEN
             NDC=NDC+1
 C...Read in branching ratio and number of daughters for this mode.
@@ -49333,7 +49333,7 @@ C...Find and solve two second-degree equations.
       X(3)=-P2/2D0+SQRT(P2**2/4D0-Q2)
       X(4)=-P2/2D0-SQRT(P2**2/4D0-Q2)
  
-C...Order eigenvalues in asceding mass.
+C...Order eigenvalues in ascending mass.
       W(1)=X(1)
       DO 150 I1=2,4
         DO 130 I2=I1-1,1,-1
@@ -49789,7 +49789,7 @@ c...and if IHIGGS=3, then h,H,A polarizations are computed
  
 C...Output: MH and MHP which are the lightest CP-even Higgs running
 C...and pole masses, respectively; HM and HMP are the heaviest CP-even
-C...Higgs running and pole masses, repectively; SA and CA are the
+C...Higgs running and pole masses, respectively; SA and CA are the
 C...SIN(ALPHA) and COS(ALPHA) where ALPHA is the Higgs mixing angle
 C...AMP is the CP-odd Higgs pole mass. STOP1,STOP2,SBOT1 and SBOT2
 C...are the stop and sbottom mass eigenvalues. Finally, TANBA is
@@ -55632,7 +55632,7 @@ C...Return if UED not switched on
         RETURN 
       ENDIF
 
-C...Energy scale of the parton processus
+C...Energy scale of the parton process
 C...taken equal to the mass of the final state kk
 c      Q2=XMNKK**2      
 
@@ -59243,7 +59243,7 @@ C...Second Dalitz variable for PYRVG4
 C*********************************************************************
  
 C...PYRVG4
-C...Integrand for true intereference contributions
+C...Integrand for true interference contributions
  
       FUNCTION PYRVG4(Y)
  
@@ -62923,7 +62923,7 @@ C...slightly higher, due to increased activity.
           IF (ITUNE.EQ.328) PARP(82) = 2.45D0
           IF (ITUNE.EQ.334) PARP(82) = 2.15D0
         ENDIF
-C...Professor-pT0 maintains low pT0 vaue
+C...Professor-pT0 maintains low pT0 value
         IF (ITUNE.EQ.329) PARP(82) = 1.85D0
         IF (ITUNE.EQ.335) PARP(82) = 2.10D0
         IF (ITUNE.EQ.336) PARP(82) = 1.83D0
@@ -63996,7 +63996,7 @@ C...No double-counting (default)
         MSTP(86) = 2
 C...Companion quark parent gluon (1-x) power
         MSTP(87) = 4
-C...Primordial kT compensation along chaings (default = 0 : uniform)
+C...Primordial kT compensation along chains (default = 0 : uniform)
         MSTP(90) = 1
 C...Colour Reconnections
         MSTP(95) = 1
@@ -65472,7 +65472,7 @@ C...Attempt at handling type > 3 junctions also. Not tested.
             ELSEIF (IFOUND.GE.2) THEN
               WRITE(CHTMP,'(I6)') JCT
               CALL PYERRM(12
-     &             ,'(PYPREP:) too many occurences of colour line: '//
+     &             ,'(PYPREP:) too many occurrences of colour line: '//
      &             CHTMP)
               IF(NERRPR.LT.5) THEN
                 NERRPR=NERRPR+1
@@ -68524,7 +68524,7 @@ C...Compensate for missing momentum in global scheme (3 options).
           P(I,4)=SQRT(P(I,1)**2+P(I,2)**2+P(I,3)**2+P(I,5)**2)
   370   CONTINUE
  
-C...Compensate for missing momentum withing each jet separately.
+C...Compensate for missing momentum within each jet separately.
       ELSEIF(MOD(MSTJ(3),5).EQ.4) THEN
         DO 390 I=N+1,N+NJET
           K(I,1)=0
@@ -75151,11 +75151,11 @@ C...Stop program in case of irreparable error.
 C...Formats for output.
  5000 FORMAT(/5X,'Advisory warning type',I2,' given after',I9,
      &' PYEXEC calls:'/5X,A)
- 5100 FORMAT(/5X,'Error type',I2,' has occured after',I9,
+ 5100 FORMAT(/5X,'Error type',I2,' has occurred after',I9,
      &' PYEXEC calls:'/5X,A)
  5200 FORMAT(5X,'Execution will be stopped after listing of last ',
      &'event!')
- 5300 FORMAT(/5X,'Fatal error type',I2,' has occured after',I9,
+ 5300 FORMAT(/5X,'Fatal error type',I2,' has occurred after',I9,
      &' PYEXEC calls:'/5X,A/5X,'Execution will now be stopped!')
  
       RETURN
@@ -80879,7 +80879,7 @@ C...Formats for output.
 C*********************************************************************
  
 C...PYSTOP
-C...Allows users to handle STOP statemens
+C...Allows users to handle STOP statements
  
       SUBROUTINE PYSTOP(MCOD)
  
@@ -81098,7 +81098,7 @@ c$$$     &  XMAXUP(IPR),LPRUP(IPR)
 c$$$  120 CONTINUE
 c$$$      RETURN
 c$$$
-c$$$C...Error exit: give up if initalization does not work.
+c$$$C...Error exit: give up if initialization does not work.
 c$$$  130 WRITE(*,*) ' Failed to read LHEF initialization information.'
 c$$$      WRITE(*,*) ' Event generation will be stopped.'
 c$$$      CALL PYSTOP(12)

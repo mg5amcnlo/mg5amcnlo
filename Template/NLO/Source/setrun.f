@@ -41,7 +41,7 @@ c Include all the parameters set in the run_card.dat
 
       include 'run_card.inc'
 c Set UPC parameter
-      if(lpp(1).eq.2.and.lpp(2).eq.2) then
+      if(abs(lpp(1)).eq.2.and.abs(lpp(2)).eq.2) then
         xiAI(1:2)=1d0 ! this should be an input in run_card.dat
         call get_nucleus_RA(nb_proton(1),nb_neutron(1),RAI(1))
         call get_nucleus_RA(nb_proton(2),nb_neutron(2),RAI(2))

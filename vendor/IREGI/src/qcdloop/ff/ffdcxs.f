@@ -20,7 +20,7 @@ c
      +						ii,ns,isoort,ier)
 ***#[*comment:***********************************************************
 *									*
-*	calculates the the difference of two S's with y(3,4),z(3,4) and *
+*	calculates the difference of two S's with y(3,4),z(3,4) and *
 *	y(4)z(3)-y(3)z(4) given.  Note the difference with ffdcxs4, in	*
 *	which the y's are the same and only the z's different.  Here	*
 *	both can be different.	Also we skip an intermediate level.	*
@@ -301,10 +301,10 @@ c
      +		cpi,cpiDpj,ii,ns,isoort,ier)
 ***#[*comment:***********************************************************
 *									*
-*	calculates the the difference of two S's with cy(3,4),cz(3,4),	*
+*	calculates the difference of two S's with cy(3,4),cz(3,4),	*
 *	cy(4)cz(3)-cy(3)cz(4) given.  Note the difference with ffdcs4,	*
 *	in which the cy's are the same and only the cz's different.	*
-*	Here both can be different.	Also we skip an intermediat	*
+*	Here both can be different.	Also we skip an intermediate	*
 *	level.								*
 *									*
 *	input:	cy(4,3:4)    (complex)	cy,1-cy in S with s3,s4		*

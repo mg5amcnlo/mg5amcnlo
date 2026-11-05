@@ -98,7 +98,7 @@ C
 C  COMMON/HISTO/  Histogram N
 C                           
 C   BOOK(N),      Three-letter character-string: 'NO' if histogram was not 
-C		  Booked, 'RES' if it was resetted, 'YES' otherwise
+C		  Booked, 'RES' if it was reset, 'YES' otherwise
 C   TITLE(N),     Title of the histogram
 C
 C   HMIN(N),      Min value of x range
@@ -461,9 +461,9 @@ c the average value of I to K and will put in J the quadratic dispersion.
       INCLUDE 'mcatnlo_hbook_gfortran8.inc'
       INTEGER NIN,NOUT,I
 C
-C If the histogram is not booked or resetted, do not copy it
+C If the histogram is not booked or reset, do not copy it
       IF(BOOK(NIN)(1:1).NE.'Y'.AND.BOOK(NIN)(1:1).NE.'R') RETURN
-C If the histogram was resetted without having being booked, do not copy it.
+C If the histogram was reset without having being booked, do not copy it.
 C This may happen if MFINAL is called prior to MCOPY
       IF(BOOK(NIN)(1:1).EQ.'R'.AND.HMIN(NIN).EQ.HMAX(NIN)) RETURN
       IF(BOOK(NOUT)(1:1).NE.'Y'.AND.BOOK(NOUT)(1:1).NE.'R') 
@@ -915,9 +915,9 @@ C Modified by SF on 10/8/2005; now similar to mfill()
       INCLUDE 'mcatnlo_hbook_gfortran8.inc'
       INTEGER NIN,NOUT,I,J
 C
-C If the histogram is not booked or resetted, do not copy it
+C If the histogram is not booked or reset, do not copy it
       IF(BOOK2(NIN)(1:1).NE.'Y'.AND.BOOK2(NIN)(1:1).NE.'R') RETURN
-C If the histogram was resetted without having being booked, do not copy it.
+C If the histogram was reset without having being booked, do not copy it.
 C This may happen if MFINAL2 is called prior to MCOPY2
       IF(BOOK2(NIN)(1:1).EQ.'R'.AND.
      &   HMIN2(1,NIN).EQ.HMAX2(1,NIN)) RETURN

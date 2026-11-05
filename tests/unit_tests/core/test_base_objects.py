@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -16,6 +16,7 @@
 
 from __future__ import absolute_import
 import copy
+import itertools
 import os
 
 import madgraph
@@ -146,7 +147,7 @@ class ParticleTest(unittest.TestCase):
             for x in test['right_list']:
                 self.assertTrue(temp_part.set(test['prop'], x))
             for x in test['wrong_list']:
-                self.assertFalse(temp_part.set(test['prop'], x), '%s not allowd for %s ' %(x, test['prop']))
+                self.assertFalse(temp_part.set(test['prop'], x), '%s not allowed for %s ' %(x, test['prop']))
 
     def test_representation(self):
         """Test particle object string representation."""
@@ -379,10 +380,10 @@ class InteractionTest(unittest.TestCase):
     'particles': [6,6,6,6],
     'color': [c0 = 1 f(1,2,3),c1 = 1 d(1,2,3)],
     'lorentz': ['L1', 'L2'],
-    'couplings': {(c0, L1): g00,
-                  (c0, L2): g01,
-                  (c1, L1): g10,
-                  (c1, L2): g11}
+    'couplings': {(c0, L1,): g00,
+                  (c0, L2,): g01,
+                  (c1, L1,): g10,
+                  (c1, L2,): g11}
     'orders': {'QCD': 1, 'QED': 1},
     'loop_particles': [[]],
     'type': 'base',
@@ -998,6 +999,153 @@ class ModelTest2(unittest.TestCase):
                 found += 1
         self.assertEqual(found, 2)
 
+    def test_merge_flavor(self):
+        """Check that merging particles is working"""
+        
+        ## this is some sanyty check that the default merging was going ok
+        self.assertEqual(len(self.model.get('interactions')), 39)
+        self.assertEqual(len(self.model.get('unmerged_interactions')), 29)
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in self.model.get('unmerged_interactions'):
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+            
+
+        model = copy.deepcopy(self.model)
+        n_particles = len(model['particles']) -3 # default merging is _quark, _lepton, _neutrino
+
+        ##
+        ## Check that unmerging is working 
+        ##
+        model.unmerge_flavors()
+        self.assertEqual(len(model.get('interactions')), 56)       
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertEqual(len(model['particles']), n_particles)
+        
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertNotIn(81, pdg_codes)
+        self.assertNotIn(82, pdg_codes)
+        self.assertNotIn(83, pdg_codes) 
+        self.assertEqual(model.get('merged_particles'), {})
+        if hasattr(model, 'unmerged_interactions'):
+            self.assertEqual(model['unmerged_interactions'], [])
+
+        # check that merged particles does not have interactions anymore
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in model['interactions']:
+            #print(inter)
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(81, parts)
+            self.assertNotIn(-81, parts)
+            self.assertNotIn(82, parts)
+            self.assertNotIn(-82, parts)
+            self.assertNotIn(83, parts)
+            self.assertNotIn(-83, parts)
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+
+        # check that unmerged twice is ok
+        model.unmerge_flavors()
+        self.assertEqual(len(model.get('interactions')), 56)       
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertEqual(len(model['particles']), n_particles)
+        
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertNotIn(81, pdg_codes)
+        self.assertNotIn(82, pdg_codes)
+        self.assertNotIn(83, pdg_codes) 
+        self.assertEqual(model.get('merged_particles'), {})
+        if hasattr(model, 'unmerged_interactions'):
+            self.assertEqual(model['unmerged_interactions'], [])
+
+        # check that merged particles does not have interactions anymore
+        has_inter_1 = 0
+        has_inter_n1 = 0
+        for inter in model['interactions']:
+            #print(inter)
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(81, parts)
+            self.assertNotIn(-81, parts)
+            self.assertNotIn(82, parts)
+            self.assertNotIn(-82, parts)
+            self.assertNotIn(83, parts)
+            self.assertNotIn(-83, parts)
+            if 1 in parts:
+                has_inter_1 += 1
+            if -1 in parts:
+                has_inter_n1 += 1
+        self.assertEqual(has_inter_1, has_inter_n1)
+        self.assertEqual(has_inter_1, 4)
+
+
+
+        ##
+        ## Check that merging is working
+        ##
+
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+
+        
+        model.merge_flavor([1,2,3,4])
+
+        # check that particles are kept in top of the merged one
+        self.assertEqual(len(model['particles']), n_particles +1)
+        pdg_codes = [p.get('pdg_code') for p in model['particles']]
+        self.assertIn(1, pdg_codes)
+        self.assertIn(2, pdg_codes)
+        self.assertIn(3, pdg_codes)
+        self.assertIn(4, pdg_codes)
+        self.assertIn(81, pdg_codes)
+        merged_quark = model.get_particle(81)
+        self.assertTrue(isinstance(merged_quark.get('charge'), tuple))
+        self.assertEqual(len(merged_quark.get('charge')), 2)
+        self.assertEqual(set([round(c * 3) for c in merged_quark.get('charge')]), set([-1, 2]))
+        self.assertIn('charge', model.get('conserved_charge'))
+
+        # check that original particles does not have interactions anymore
+        has_inter_81 = 0
+        has_inter_n81 = 0
+        for inter in model['interactions']:
+            parts = [p.get_pdg_code() for p in inter['particles']]
+            self.assertNotIn(1, parts)
+            self.assertNotIn(2, parts)
+            self.assertNotIn(3, parts)
+            self.assertNotIn(4, parts)
+            if 81 in parts:
+                has_inter_81 += 1
+            if -81 in parts:
+                has_inter_n81 += 1
+        self.assertEqual(has_inter_81, has_inter_n81)
+        self.assertEqual(has_inter_81, 5)
+
+        # check that unmerged vertex are kept
+        self.assertTrue(hasattr(model, 'unmerged_interactions'))
+        self.assertEqual(len(model.unmerged_interactions), 16)
+
+
+
+
+
+
 #===============================================================================
 # ModelTest
 #===============================================================================
@@ -1009,6 +1157,7 @@ class ModelTestRunning(unittest.TestCase):
         import madgraph.interface.master_interface as Cmd
         cmd = Cmd.MasterCmd() 
         cmd.do_import('model %s/tests/input_files/SMEFTatNLO_running/' % madgraph.MG5DIR)
+        self.cmd = cmd
         self.model = cmd._curr_model
         
     def test_get_running(self):
@@ -1041,6 +1190,100 @@ class ModelTestRunning(unittest.TestCase):
         self.assertEqual(len(out[1]),17)
         self.assertNotIn(out[0].pop(), out[1])
 
+    def test_depends_on_scale(self):
+        """A coupling depending on a parameter evolved by the RGE varies with
+        the event scale, exactly like one depending on aS: the madevent
+        writer must index it by event, whatever its other dependences."""
+
+        model = self.model
+        names = model.get_scale_dependent_parameters()
+        self.assertIn('aS', names)
+        self.assertIn('cQq81', names)
+        self.assertIn('cQt8', names)
+        self.assertNotIn('Gf', names)
+
+        self.assertTrue(model.depends_on_scale(('aS',)))
+        self.assertTrue(model.depends_on_scale(('Gf', 'cQq81')))
+        self.assertTrue(model.depends_on_scale(('cQt8',)))
+        self.assertFalse(model.depends_on_scale(('Gf',)))
+        self.assertFalse(model.depends_on_scale(()))
+
+        # the model of a process without running has only aS
+        plain = base_objects.Model()
+        self.assertEqual(plain.get_scale_dependent_parameters(), set(['aS']))
+        self.assertFalse(plain.depends_on_scale(('Gf',)))
+
+    def test_get_running_blocks(self):
+        """Only the blocks still holding an external parameter evolved by the
+        RGE need a reference scale: a restriction removing every parameter of
+        a block must not make the param_card ask for its scale."""
+
+        model = copy.copy(self.model)
+        self.assertEqual(model.get_running_blocks(), set(['DIM64F']))
+
+        # emulate a restriction which removes the whole dim64f block
+        model['parameters'] = dict(model['parameters'])
+        model['parameters'][('external',)] = [p for p in
+                         model['parameters'][('external',)]
+                         if p.lhablock.lower() != 'dim64f']
+        self.assertEqual(model.get_running_blocks(), set())
+        # the model itself is untouched
+        self.assertEqual(self.model.get_running_blocks(), set(['DIM64F']))
+
+    def test_rge_parameters_used(self):
+        """The outputs without RGE (mg7, madmatrix, ...) warn when the process
+        depends on a running Wilson coefficient; get_all_running_coupling
+        flags the couplings depending on them, not only those with aS."""
+
+        model = self.model
+        coupling_dep = model.get('coupling_dep')
+        running = [c for c, dep in coupling_dep.items()
+                   if 'aS' not in dep and model.depends_on_scale(dep)]
+        fixed = [c for c, dep in coupling_dep.items()
+                 if not model.depends_on_scale(dep)]
+        self.assertTrue(running)
+        self.assertTrue(model.get_rge_parameters_used(running[:1]))
+        self.assertTrue(model.get_rge_parameters_used(['-%s' % running[0]]))
+        self.assertEqual(model.get_rge_parameters_used(fixed), set())
+        self.assertNotIn('aS', model.get_rge_parameters_used(list(coupling_dep)))
+
+        all_running = model.get_all_running_coupling()
+        self.assertIn(running[0], all_running)
+        self.assertTrue(model.is_running_coupling(running[0], reset_cache=True))
+        self.assertFalse(model.is_running_coupling(fixed[0]))
+
+        cmd = self.cmd
+        cmd.do_generate('u u~ > t t~ NP=2 NP^2==2 QCD=2 QED=0')
+        self.assertIn('cQq81', cmd.get_rge_parameters_used())
+        cmd._export_format = 'mg7'
+        with self.assertLogs('cmdprint', level='WARNING') as log:
+            cmd.warn_rge_not_supported()
+        self.assertIn('cQq81', '\n'.join(log.output))
+
+        # no running Wilson coefficient in the diagrams: no warning
+        cmd.do_generate('u u~ > t t~ QCD=2 QED=0 NP=0')
+        self.assertEqual(cmd.get_rge_parameters_used(), set())
+
+    def test_running_coupling_indexed_by_event(self):
+        """The helas calls of a coupling depending on a running Wilson
+        coefficient but not on aS carry the event index, as the arrays of
+        coupl.inc do; without it the madevent matrix element mixes scalar
+        and array couplings and does not compile."""
+
+        import madgraph.core.helas_objects as helas_objects
+        self.cmd.do_generate('u u~ > t t~ NP=2 NP^2==2 QCD=2 QED=0')
+        me = helas_objects.HelasMatrixElement(self.cmd._curr_amps[0], gen_color=False)
+        coupling_dep = self.model.get('coupling_dep')
+        checked = 0
+        for amp in me.get_all_amplitudes():
+            call = amp.get_helas_call_dict()
+            dependence = coupling_dep[call['coup0'].lstrip('-')]
+            self.assertEqual(call['vec0'], '(ivec)' if self.model.depends_on_scale(dependence) else '')
+            if 'aS' not in dependence and self.model.depends_on_scale(dependence):
+                checked += 1
+        # the four-fermion vertices have no aS in their coupling
+        self.assertTrue(checked)
+
 
 #===============================================================================
 # LegTest
@@ -1060,6 +1303,7 @@ class LegTest(unittest.TestCase):
                       'onshell':None,                       
                       'loop_line':False,
                       'polarization':[],
+                      'flavor':[],
                       'onium': {},
                       'offshell':False}
 
@@ -1144,6 +1388,7 @@ class LegTest(unittest.TestCase):
     'loop_line': False,
     'onshell': None,
     'polarization': [],
+    'flavor': [],
     'onium': {}
 }"""
         
@@ -1211,6 +1456,7 @@ class MultiLegTest(unittest.TestCase):
         self.mydict = {'ids':[3, 2, 5],
                       'state':True,
                       'polarization':[],
+                      'flavor':[],
                       'onium': {},
                       'offshell':False}
 
@@ -1289,6 +1535,7 @@ class MultiLegTest(unittest.TestCase):
     'ids': [3, 2, 5],
     'state': True,
     'polarization': [],
+    'flavor': [],
     'onium': {},
     'offshell': False
 }"""
@@ -1587,7 +1834,9 @@ class ProcessTest(unittest.TestCase):
                        'overall_orders': {},
                        'born_sq_orders': {},
                        'NLO_mode':'tree',
-                       'split_orders':[]}
+                       'split_orders':[],
+                       'interference_mode': '',
+                       'interference_process': None}
 
         self.myprocess = base_objects.Process(self.mydict)
 
@@ -1675,7 +1924,9 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
         goal = goal + "    \'split_orders\': [],\n"
-        goal = goal + "    \'born_sq_orders\': {}\n}"
+        goal = goal + "    \'born_sq_orders\': {},\n"
+        goal = goal + "    \'interference_mode\': '',\n"
+        goal = goal + "    \'interference_process\': None\n}"
 
         for a, b in zip(goal.split('\n'), str(self.myprocess).split('\n')):
             self.assertEqual(a,b)
@@ -1713,7 +1964,71 @@ class ProcessTest(unittest.TestCase):
         goal_str = "2_cc_cxcc"
 
         self.assertEqual(goal_str, self.myprocess.shell_string())
-    
+
+    def test_shell_string_polarization_injective(self):
+        """The polarization part of a P<...> directory name must identify the
+        polarization *set*, not the order/duplicates the user typed.
+
+        A name moves iff the typed list differs from sorted(set(list)):
+        '{+-}'/'{-+}' and '{+}'/'{++}' are one restriction each, while
+        '{SS}' -> [9,9] and '{A}' -> [99] are two and used to share '99'.
+        """
+        shell_pol = base_objects.Process.shell_polarization
+
+        # unpolarized legs contribute nothing: names are unchanged
+        self.assertEqual('', shell_pol([]))
+
+        # the readable short-hands survive, whatever the spelling
+        self.assertEqual('T', shell_pol([1, -1]))
+        self.assertEqual('T', shell_pol([-1, 1]))
+        self.assertEqual('T', shell_pol([1, -1, 1]))
+        self.assertEqual('R', shell_pol([1]))
+        self.assertEqual('R', shell_pol([1, 1]))
+        self.assertEqual('L', shell_pol([-1]))
+        self.assertEqual('L', shell_pol([-1, -1]))
+
+        # the collision which used to be silent: {S,S} is the set {9},
+        # {A} is the set {99}; they must not share a directory name
+        self.assertEqual('9', shell_pol([9, 9]))
+        self.assertEqual('99', shell_pol([99]))
+        self.assertNotEqual(shell_pol([9, 9]), shell_pol([99]))
+
+        # ... and the same restriction always gives the same name
+        self.assertEqual(shell_pol([9, 99]), shell_pol([99, 9]))
+        self.assertEqual(shell_pol([0, -1, 1]), shell_pol([1, 0, -1]))
+
+        # exhaustive: every distinct set of allowed polarizations gets a
+        # distinct name
+        allowed = base_objects.Leg.list_of_allowed_polarizations
+        names = {}
+        for size in range(1, len(allowed) + 1):
+            for combi in itertools.combinations(sorted(allowed), size):
+                name = shell_pol(list(combi))
+                self.assertNotIn(name, names,
+                    "polarizations %s and %s both render as '%s'" % \
+                        (list(combi), names.get(name), name))
+                names[name] = list(combi)
+
+    def test_shell_string_polarization_in_dirname(self):
+        """The canonicalisation is actually applied by shell_string()."""
+
+        self.myprocess.set('id', 0)
+        legs = self.myprocess.get('legs')
+
+        legs[2].set('polarization', [1, -1])
+        first = self.myprocess.shell_string()
+        legs[2].set('polarization', [-1, 1])
+        self.assertEqual(first, self.myprocess.shell_string())
+        self.assertEqual('0_cc_cTcc', first)
+
+        legs[2].set('polarization', [9, 9])
+        ss = self.myprocess.shell_string()
+        legs[2].set('polarization', [99])
+        self.assertNotEqual(ss, self.myprocess.shell_string())
+        self.assertEqual('0_cc_c9cc', ss)
+        self.assertEqual('0_cc_c99cc', self.myprocess.shell_string())
+
+
     def test_long_shell_string(self):
         """Test Process nice_string representation"""
 
@@ -1944,7 +2259,9 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'overall_orders':{},
                        'sqorders_types':{},
                        'NLO_mode':'tree',
-                       'split_orders':[]}
+                       'split_orders':[],
+                       'interference_mode': '',
+                       'interference_process': None}
 
         self.my_process_definition = base_objects.ProcessDefinition(self.mydict)
 
@@ -2010,7 +2327,11 @@ class ProcessDefinitionTest(unittest.TestCase):
         myleglist = base_objects.LegList(mylist)
         my_new_process_definition = copy.copy(self.my_process_definition)
         my_new_process_definition['born_sq_orders'] = {'QCD':99, 'QED':99}
+        my_new_process_definition['interference_mode'] = 'treextree'
+        my_new_process_definition['interference_process'] = \
+                                       base_objects.ProcessDefinition({'id': 0})
         testproc = my_new_process_definition.get_process_with_legs(myleglist)
+        self.assertEqual(testproc['interference_mode'], 'treextree')
 
         for (k, v) in testproc.items():
             if k not in list(self.my_process_definition.keys()): continue
@@ -2018,6 +2339,29 @@ class ProcessDefinitionTest(unittest.TestCase):
                 self.assertEqual(my_new_process_definition[k], testproc[k])
             else:
                 self.assertEqual(myleglist, testproc[k])
+
+    def test_get_process_keeps_polarization(self):
+        """test that get_process carries the polarization of the multi-legs
+        over to the legs of the returned process."""
+
+        my_new_process_definition = copy.deepcopy(self.my_process_definition)
+        # one initial state and one final state leg are polarized
+        my_new_process_definition['legs'][1].set('polarization', [-1])
+        my_new_process_definition['legs'][3].set('polarization', [0])
+
+        testproc = my_new_process_definition.get_process([3, 3], [4, 5, 3])
+
+        self.assertEqual([l.get('id') for l in testproc.get('legs')],
+                         [3, 3, 4, 5, 3])
+        self.assertEqual([l.get('state') for l in testproc.get('legs')],
+                         [False, False, True, True, True])
+        self.assertEqual([l.get('polarization') for l in testproc.get('legs')],
+                         [[], [-1], [], [0], []])
+
+        # the process must not share the polarization list of the multi-leg
+        testproc.get('legs')[1].get('polarization').append(1)
+        self.assertEqual(my_new_process_definition['legs'][1].get('polarization'),
+                         [-1])
 
     def test_values_for_prop(self):
         """Test filters for process properties"""
@@ -2164,7 +2508,9 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'has_born\': True,\n"
         goal = goal + "    \'NLO_mode\': 'tree',\n"
         goal = goal + "    \'split_orders\': [],\n"                
-        goal = goal + "    \'born_sq_orders\': {}\n}"                
+        goal = goal + "    \'born_sq_orders\': {},\n"
+        goal = goal + "    \'interference_mode\': '',\n"
+        goal = goal + "    \'interference_process\': None\n}"                
         self.assertEqual(goal, str(self.my_process_definition))
 
 #===============================================================================

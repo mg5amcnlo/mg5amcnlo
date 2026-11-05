@@ -333,7 +333,7 @@ subroutine set_FxFx_scale(flag,p)
   real(8) :: p(0:3,*)
 end subroutine
 
-subroutine sborn_native(p,wgt)
+subroutine sborn_frame(p,wgt)
   use flow_test_state,only: refreshes
   implicit none
   real(8) :: p(0:3,*),wgt

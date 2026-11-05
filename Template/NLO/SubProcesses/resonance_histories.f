@@ -80,7 +80,7 @@ c have more diagrams than the local Born routine's to_amps COMMON.
       pas=0d0
       pas(:,1:nexternal-1)=p
       call set_alphas(pas)
-      call sborn_native(p,ans)
+      call sborn_frame(p,ans)
       total=0d0
       numerator=0d0
       do i=1,mapconfig(0)

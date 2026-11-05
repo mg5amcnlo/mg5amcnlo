@@ -22,7 +22,7 @@ c     local
 c
       integer nu
 c
-c     enternal
+c     external
 c
       double precision dot
       external dot

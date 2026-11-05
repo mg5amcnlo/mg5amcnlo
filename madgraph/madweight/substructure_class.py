@@ -52,7 +52,7 @@ class diagram:
 
 
     def define_level(self):
-        """ complete self.content[i].level:number a propa before a external particle, and the number of propa before
+        """ complete self.content[i].level:number a propa before an external particle, and the number of propa before
         (with himself for a propa)"""
 
         #level of a propagator
@@ -98,7 +98,7 @@ class diagram:
             self.ext_content+=dict_level_to_part.pop(level,[])
 
     def contains_particle(self,particle):
-        """ check if tha particle is in the diagram """
+        """ check if the particle is in the diagram """
         #note that content is a dict or list depending of the object
         if type(self.content)== dict: 
             if particle.MG in self.content:
@@ -121,7 +121,7 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
 
     def __init__(self,diag,chgt_var,neut_in_ecs,unaligned):
         """ create the ECS SECTOR
-            neut_in_ecs are the fondamental particle of the class (and so not always neutrino)
+            neut_in_ecs are the fundamental particle of the class (and so not always neutrino)
         """
         neut_in_class={'a':0,'b':1,'c':1,'d':2,'e':2,'f':2,'g':2}
         intrinsec_in_class={'a':2,'b':1,'c':1,'d':2,'e':2,'f':2,'g':2}#number of particles used to restore E-p conservation
@@ -227,15 +227,15 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
 
 
     def equivalent_ECS_1neut(self,use_noresonant=0):
-        """ 1) define completly the change of variable for the enlarged ECS
+        """ 1) define completely the change of variable for the enlarged ECS
                 -find which propagator aligned,...
             2) define equivalent solution if any (B->C)
         """
-        # 1.1) ->search for the two thiner propagator+ check if we can pass in C change of variable
+        # 1.1) ->search for the two thinner propagator+ check if we can pass in C change of variable
         thiner=self.main_content[0].mother.width
         part_thin=self.main_content[0].mother
-        thiner_bef_m0=500     #thiner propagator in ascendance of mass nul (for Case C)
-        thiner_m0=500         #thiner mother of a mass null particle (for Case C)
+        thiner_bef_m0=500     #thinner propagator in ascendance of mass nul (for Case C)
+        thiner_m0=500         #thinner mother of a mass null particle (for Case C)
         madeC=0
         motherX=self.main_content[0]
 
@@ -300,7 +300,7 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
 
 
     def equivalent_ECS_2neut(self):
-        """ 1) define completly the change of variable for the enlarged ECS
+        """ 1) define completely the change of variable for the enlarged ECS
                 -find which propagator aligned,...
             Each change of variable are factorized!!!
         """
@@ -314,11 +314,11 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
             #check validity from option
             if not self.opt.use_ecs_d:
                 return []
-            #find the two thiner propagator for each neutrino
+            #find the two thinner propagator for each neutrino
             for i in [0,1]:
                 thiner=500
                 thiner2=600               
-                #search thiner propa if option authorized
+                #search thinner propa if option authorized
                 if self.opt.ecs_fuse:
                     motherX=self.main_content[i]
                     for j in range(0,lim[i]):
@@ -330,7 +330,7 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
                             thiner2=motherX.width
                 #check number of find solution and reassign
                 if thiner==500:     #no propagator in S channel or don't use fuse
-                    thiner=self.main_content[i].mother.width         #order between thiner
+                    thiner=self.main_content[i].mother.width         #order between thinner
                     thiner2=self.main_content[i].mother.mother.width #is irrelevant at this stage
                 if thiner2==500:    #only one propagator in S channel
                     if thiner!=self.main_content[i].mother.width:
@@ -364,9 +364,9 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
             #check validity from option
             if not self.opt.use_ecs_e:
                 return []
-            #find the two thiner propagator
+            #find the two thinner propagator
             for i in [0,1]:
-                #search thiner propagator if option authorized
+                #search thinner propagator if option authorized
                 if self.opt.ecs_fuse:
                     motherX=self.main_content[i].mother
                     thiner=motherX.width
@@ -477,7 +477,7 @@ class ECS_sector_no_multi_channel(diagram,Level_generation):
         """ return some information about the ECS and the associated blob """
         num_in_part={'a':2,'b':2,'c':3,'d':6,'e':4,'f':4,'g':4}
         
-        text='\t** Enlarged Contraint Sector global information **\n\n'
+        text='\t** Enlarged Constraint Sector global information **\n\n'
         text+= 'Class: '+self.chgt_var.upper()+'\n'
         text+='particle in ECS : '
         for i in range(0,num_in_part[self.chgt_var]):
@@ -525,7 +525,7 @@ class blob_sector(diagram):
     """ blob structure """
     
     def __init__(self,particle,diag,ECS_sec=''):
-        """create completly a blob if he is not defined already """
+        """create completely a blob if he is not defined already """
 
         #Check if already defined + validity of the definition of a blob
         if particle.MG in diag.blob_content: # check if the blob is already defined
@@ -554,7 +554,7 @@ class blob_sector(diagram):
 
     def put_in_ecs(self,ECS_sec):
         """ put this blob in the blob content of ECS """
-        #option put in ECS-blob content ->remark the blob is independant of the ECS
+        #option put in ECS-blob content ->remark the blob is independent of the ECS
         if ECS_sec:
             if self not in ECS_sec.blob_content:
                 ECS_sec.blob_content.append(self)
@@ -586,7 +586,7 @@ class blob_sector(diagram):
 
 
     def supress_identical_solution(self):
-        """ supress identical solution """
+        """ suppress identical solution """
         
         del_sol=[]
         for i in range(0,len(self.solution)):
@@ -608,7 +608,7 @@ class blob_sector(diagram):
 class ECS_sector(ECS_sector_no_multi_channel):
     """ modify version of ECS sector, returning the different 
         possibility of unalignment in the black box 
-        (usefull for multichannel mode) 
+        (useful for multichannel mode)
     """
     
     def equivalent_ECS_1neut(self,use_noresonant=0):

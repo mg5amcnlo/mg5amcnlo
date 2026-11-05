@@ -3,6 +3,7 @@
 c*****************************************************************************
 c     Approximates matrix element by propagators
 c*****************************************************************************
+          use model_object
       implicit none
 c
 c     Constants
@@ -208,6 +209,7 @@ c         write(*,*) 'final cut_bw: ',nbw,lbw(nbw),xmass,onshell,OnBW(i),cut_bw
 c*****************************************************************************
 c     Attempts to determine peaks for this configuration
 c*****************************************************************************
+          use model_object
       implicit none
 c
 c     Constants
@@ -283,6 +285,8 @@ c
 
       double precision      spole(maxinvar),swidth(maxinvar),bwjac
       common/to_brietwigner/spole          ,swidth          ,bwjac
+      double precision      swinlo(maxinvar),swinhi(maxinvar),swinc(maxinvar)
+      common/to_bw_window/  swinlo        ,swinhi        ,swinc
 
 c     s-hat map with a knee (pole=-25, see transpole)
       double precision shat_knee_frac ! fraction of points below the knee
@@ -292,6 +296,13 @@ c     s-hat map with a knee (pole=-25, see transpole)
 
       integer        lbw(0:nexternal)  !Use of B.W.
       common /to_BW/ lbw
+c     Breit-Wigner map with off-shell tails (transpole) for a resonance free to
+c     go off shell; a forced (decay chain) or required on-shell one is cut
+c     outside its window, where the tails would only add vetoed points
+      logical bwtail(maxinvar)
+      common/to_bwtail/bwtail
+      logical tsoft(maxinvar)
+      common/to_tsoft/tsoft
 
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
@@ -367,6 +378,13 @@ c     Reset variables
          spole(i)=0
          swidth(i)=0
       enddo
+      do i=1,maxinvar
+         bwtail(i)=.false.
+         tsoft(i)=.false.
+      enddo
+      swinlo(:)=0d0
+      swinhi(:)=0d0
+      swinc(:)=1d0
 c     Find non-zero process number
       do iproc=1,maxsproc
          if(sprop(iproc,-1,iconfig).ne.0) goto 10
@@ -451,6 +469,10 @@ c----
                      write(*,*) 'Setting PDF BW',j,nbw,prmass(i,iconfig)
                      spole(j)=prmass(i,iconfig)*prmass(i,iconfig)/shat_unit
                      swidth(j) = prwidth(i,iconfig)*prmass(i,iconfig)/shat_unit ! keep the real width here (important for the jacobian)
+                     bwtail(j) = gforcebw(i,iconfig).ne.1 .and. lbw(nbw).ne.1
+                     if (gforcebw(i,iconfig).eq.2)
+     $                  call set_bw_window(j,prmass(i,iconfig),
+     $                  prwidth_tmp(i,iconfig),shat_unit)
                   endif
                else if((prmass(i,iconfig)+bwcut_for_PS(i)*prwidth_tmp(i,iconfig)).ge.xm(i)
      $                  .and. iden_part(i).eq.0 .or. lbw(nbw).eq.1) then
@@ -458,6 +480,10 @@ c              JA 02/13 Only allow BW if xm below M+5*Gamma
                   write(*,*) 'Setting BW',i,nbw,prmass(i,iconfig)
                   spole(-i)=prmass(i,iconfig)*prmass(i,iconfig)/stot
                   swidth(-i) = prwidth(i,iconfig)*prmass(i,iconfig)/stot ! keep the real width here (important for the jacobian)
+                  bwtail(-i) = gforcebw(i,iconfig).ne.1 .and. lbw(nbw).ne.1
+                  if (gforcebw(i,iconfig).eq.2)
+     $               call set_bw_window(-i,prmass(i,iconfig),
+     $               prwidth_tmp(i,iconfig),stot)
                endif
 c     JA 4/1/2011 Set grid in case there is no BW (radiation process)
                if (swidth(-i) .eq. 0d0 .and.
@@ -508,6 +534,7 @@ c              endif
             spmass = spmass+xbw(i)
 c            write(*,*) 'New mtot',i,mtot,xm(i)
          else                                        !t channel
+            tsoft(-i) = .true.
 c
 c     Check closest to p1
 c
@@ -625,6 +652,39 @@ c      read(*,*) xo
 c      if (xo .gt. 0) call setgrid(-i,xo,a,1)
 
       end
+
+      subroutine set_bw_window(j,mass,width,stot)
+c*****************************************************************************
+c     $-excluded propagator (gForceBW=2) sampled on invariant j: the matrix
+c     element vanishes for |sqrt(s)-M| < bwcutoff*Gamma, so sample that
+c     window flat instead of with the B.W. peak (see transpole_win).
+c*****************************************************************************
+      implicit none
+      include 'genps.inc'
+      include 'maxconfigs.inc'
+      include 'nexternal.inc'
+      include 'vector.inc'
+      include 'run.inc'
+      integer j
+      double precision mass, width, stot
+      double precision      swinlo(maxinvar),swinhi(maxinvar),swinc(maxinvar)
+      common/to_bw_window/  swinlo        ,swinhi        ,swinc
+
+      swinlo(j) = max(mass-bwcutoff*width,0d0)**2/stot
+      swinhi(j) = (mass+bwcutoff*width)**2/stot
+c     With sde_strategy=1 the channel weight of this config vanishes in
+c     the window (cut_bw rejects those points): do not sample it at all.
+c     With sde_strategy=2 the channel weight is not zero there while the
+c     non-resonant diagrams still contribute: keep it flat.
+      if (sde_strat.eq.1) then
+         swinc(j) = 0d0
+      else
+         swinc(j) = 1d0
+      endif
+      write(*,*) 'Window for $ B.W.',j,sqrt(swinlo(j)*stot),
+     $     sqrt(swinhi(j)*stot),' height factor',swinc(j)
+      end
+
 
       subroutine write_null_results()
       implicit none

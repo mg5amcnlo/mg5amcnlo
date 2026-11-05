@@ -591,7 +591,7 @@ C        ARGUMENTS
         # Now we write the lines defining the coefs of OUT(j,*,i) from those
         # of A(k,*,i) and B(j,*,k)
         # The dictionary below stores the position of the new coefficient 
-        # derived as keys and the list of the buidling blocks expressing
+        # derived as keys and the list of the building blocks expressing
         # them as values
         coef_expressions={}
         for coef_a in range(0,get_number_of_coefs_for_rank(r_1)):
@@ -708,7 +708,7 @@ C        ARGUMENTS
         return '\n'.join(lines)
     
 class FromIREGIFortranCodeGenerator():
-    """ Back up of the class Polynomial, which uses the same coefficeints orders with IREGI.
+    """ Back up of the class Polynomial, which uses the same coefficients orders with IREGI.
     It is useful in the case that the order of MadLoop coefficients changes in the future."""
     
     def __init__(self, rank):

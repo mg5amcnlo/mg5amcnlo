@@ -1,0 +1,107 @@
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Created originally by: S. Hageboeck (Nov 2020) for the MG5aMC CUDACPP plugin.
+# Further modified by: S. Hageboeck, D. Massaro, S. Roiser, A. Valassi, Z. Wettersten (2024-2025).
+# Integrated with the MadGraph7 project in Feb 2026.
+
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  debug_builds:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: [ epochX/cudacpp/ee_mumu.sa/SubProcesses/P1_Sigma_sm_epem_mupmum ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: make debug
+      run: make -C ${{ matrix.folder }} debug
+  CPU:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: [ epochX/cudacpp/ee_mumu.mad/SubProcesses/P1_epem_mupmum , epochX/cudacpp/gg_ttgg.mad/SubProcesses/P1_gg_ttxgg ]
+        precision: [ d , f , m ]
+        backend: [ cppnone, cppauto ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: github PR info
+      run: date; echo github.event.pull_request.head.sha='${{ github.event.pull_request.head.sha }}'
+    - name: make info
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk info
+    - name: make
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }}
+    - name: make test
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk test
+  CPU_ARM:
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      matrix:
+        folder: [ epochX/cudacpp/ee_mumu.mad/SubProcesses/P1_epem_mupmum , epochX/cudacpp/gg_ttgg.mad/SubProcesses/P1_gg_ttxgg ]
+        precision: [ d , f , m ]
+        backend: [ cppnone, cppsse4 ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: github PR info
+      run: date; echo github.event.pull_request.head.sha='${{ github.event.pull_request.head.sha }}'
+    - name: make info
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk info
+    - name: make
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }}
+    - name: make test
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk test
+  CPU_MAC:
+    runs-on: macos-latest
+    env:
+      FC: gfortran-14 # see #971
+    strategy:
+      matrix:
+        folder: [ epochX/cudacpp/ee_mumu.mad/SubProcesses/P1_epem_mupmum, epochX/cudacpp/gg_ttgg.mad/SubProcesses/P1_gg_ttxgg ]
+        precision: [ d , f , m ]
+        backend: [ cppnone, cppsse4 ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: github PR info
+      run: date; echo github.event.pull_request.head.sha='${{ github.event.pull_request.head.sha }}'
+    - name: make info
+      run: make BACKEND=${{ matrix.backend }} OMPFLAGS= FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk info
+    - name: make
+      run: make BACKEND=${{ matrix.backend }} OMPFLAGS= FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }}
+    - name: make test
+      run: make BACKEND=${{ matrix.backend }} OMPFLAGS= FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk test
+  GPU:
+    runs-on: self-hosted
+    # runs-on: madgraph5-h100
+    # container: registry.cern.ch/ngt/lxplus-like:9
+    env:
+      CUDA_HOME: /usr/local/cuda/
+      FC: gfortran
+    strategy:
+      matrix:
+        folder: [ epochX/cudacpp/ee_mumu.mad/SubProcesses/P1_epem_mupmum , epochX/cudacpp/gg_ttgg.mad/SubProcesses/P1_gg_ttxgg ]
+        precision: [ d , f , m ]
+        backend: [ cppauto, cuda ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: path
+      run: echo "PATH=$PATH"
+    - name: github PR info
+      run: date; echo github.event.pull_request.head.sha='${{ github.event.pull_request.head.sha }}'
+    - name: make info
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk info
+    - name: make
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }}
+    - name: make test
+      run: make BACKEND=${{ matrix.backend }} FPTYPE=${{ matrix.precision }} -C ${{ matrix.folder }} -f cudacpp.mk test

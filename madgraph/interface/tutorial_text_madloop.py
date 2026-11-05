@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -15,17 +15,17 @@
 
 tutorial_MadLoop = """
 You have entered tutorial mode. This will introduce you to the main
-syntax options for MadLoop which are mostly similar to the MadGraph5_aMC@NLO one. 
-If you have not done so already, please follow MadGraph5_aMC@NLO tutorial before 
+syntax options for MadLoop which are mostly similar to the MadGraph7 one. 
+If you have not done so already, please follow MadGraph7 tutorial before 
 this one.  
 
-Remember that exactly as in MadGraph5, you can learn more about the different 
+Remember that exactly as in MadGraph7, you can learn more about the different 
 options for any command by typing
-MG5_aMC> help A_CMD
+MadGraph7> help A_CMD
 And to see a list of all commands, use
-MG5_aMC> help 
+MadGraph7> help 
 
-MadLoop is the part of MadGraph5_aMC@NLO used to generate the code for
+MadLoop is the part of MadGraph7 used to generate the code for
 evaluating the loop diagrams. This tutorial teaches you how to use MadLoop
 as standalone tool for studying loops within particular processes.
 Therefore in this mode, you can only consider definite processes, meaning 
@@ -40,7 +40,7 @@ Let's start with the first point, how to generate a process with MadLoop in
 standalone mode. Keep in mind that this means only the loop and born diagrams
 are generated.
 
-MG5_aMC>generate g g > d d~ [virt=QCD]
+MadGraph7>generate g g > d d~ [virt=QCD]
 
 Note that a space is mandatory between the particle names and that '[virt=QCD]' 
 specifies that you want to consider QCD NLO corrections. The keyword option
@@ -53,17 +53,17 @@ tutorial = tutorial_MadLoop
 generate = """
 You have just generated a new process.
 You can find more information on supported syntax by using:
-MG5_aMC>help generate
+MadGraph7>help generate
 To list all defined processes, type
-MG5_aMC>display processes
+MadGraph7>display processes
 
 You can display a pictorial representation of the diagrams with 
-MG5_aMC> display diagrams
+MadGraph7> display diagrams
 Notice you can add the option 'loop' or 'born' if you only want those diagrams
 to be displayed.
 
 If you want to add a second process, you can use the add process command:
-MG5_aMC>add process e+ e- > d d~ [virt=QCD]
+MadGraph7>add process e+ e- > d d~ [virt=QCD]
 But keep in mind that you must still consider only virtual corrections and 
 cannot employ multiparticle labels. Also decay chains are not available for
 loops.
@@ -71,7 +71,7 @@ loops.
 At this stage you can export your processes.
 This is done simply by typing:
 
-MG5_aMC>output MY_FIRST_MADLOOP_RUN
+MadGraph7>output MY_FIRST_MADLOOP_RUN
 
 Notice that the standalone output mode (implicit in the above) is the only
 available for MadLoop standalone runs.
@@ -83,7 +83,7 @@ You have seen a list of the already defined processes.
 At this stage you can export your processes to different formats. 
 To create a MadLoop standalone output for these, simply type:
 
-MG5_aMC>output MY_FIRST_MADLOOP_RUN
+MadGraph7>output MY_FIRST_MADLOOP_RUN
 """
 
 display_diagrams = """
@@ -94,7 +94,7 @@ class of diagrams to be displayed.
 At this stage you can export your processes to different formats. 
 To create a MadLoop standalone output for these, simply type:
 
-MG5_aMC>output MY_FIRST_MADLOOP_RUN
+MadGraph7>output MY_FIRST_MADLOOP_RUN
 """
 
 add_process = """
@@ -103,19 +103,19 @@ You have added a process to your process list.
 At this stage you can export your processes.
 For this, simply type
 
-MG5_aMC>output MY_FIRST_MADLOOP_RUN
+MadGraph7>output MY_FIRST_MADLOOP_RUN
 """
 
 output = """
 If you are following the tutorial, a directory MY_FIRST_MADLOOP_RUN has
-been created under your MadGraph5_aMC@NLO installation directory.
+been created under your MadGraph7 installation directory.
 
 The code for the evaluation of the squared loop matrix element is in 
 'SubProcesses/P0_<shell_proc_name>/'. There, you can compile and edit 
 running parameters from 'MadloopParams.dat' and then run the code with './check'
 Alternatively, for a simple quick run, type:
 
-MG5_aMC>launch -f
+MadGraph7>launch -f
 
 This computes the squared matrix element for a given PS points.
 For the purpose of this tutorial, the option '-f' is added to automatically skip
@@ -123,7 +123,7 @@ the edition of the cards and phase-space point specification.
 """
 
 launch = """
-You just launched the MadLoop standalone evalutation of the squared loop matrix
+You just launched the MadLoop standalone evaluation of the squared loop matrix
 element for (a/many) specific process(es) for a random Phase-Space point.
 The two processes proposed in this tutorial were g g > d d~ and e+ e- > d d~.
 You can check that you get the right double pole normalized with respect to
@@ -133,7 +133,7 @@ Now this tutorial will introduce you to two checking functionalities for the
 evaluation of the contributions of virtual origin.
 Start by typing:
 
-MG5_aMC>check g g > d d~ [virt=QCD]
+MadGraph7>check g g > d d~ [virt=QCD]
 
 This will test lorentz and crossing invariance as well as of the gauge 
 invariance check from the ward identity for the initial state gluon.
@@ -144,12 +144,12 @@ runs (those with the 'virt=' option).
 
 check = """
 You have seen the results for the various consistency checks performed on the
-MadGraph5_aMC@NLO loop computation.
+MadGraph7 loop computation.
 You can now use the check command to obtain a full profiling of a given process
 including loop contributions.
 Simply type:
 
-MG5_aMC>check profile g g > d d~ [virt=QCD]
+MadGraph7>check profile g g > d d~ [virt=QCD]
 
 Notice that you can replace 'profile' by 'timing' or 'stability' if
 you only want timing or stability benchmarks about this process.
@@ -163,7 +163,7 @@ standalone runs.
 
 You just learned the basic commands for the MadLoop runs (i.e. with the 
 'virt=' option). You can close this tutorial by typing
-MG5_aMC>tutorial stop
+MadGraph7>tutorial stop
 Or exit MG5 with
-MG5_aMC>exit
+MadGraph7>exit
 """

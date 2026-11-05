@@ -96,7 +96,7 @@ C     used in the evaluation of the matrix element. The primary parameters of th
 C     models are read from Cards/param_card.dat. The secondary parameters are calculated
 C     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 C     in coupl.inc .
-C first call to setup the paramaters
+C first call to set up the parameters
       call setpara('param_card.dat')
 C set up masses
       include "pmass.inc"             

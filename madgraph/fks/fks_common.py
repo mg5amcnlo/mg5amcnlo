@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -24,6 +24,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.color_amp as color_amp
 import madgraph.core.color_algebra as color_algebra
 import madgraph.various.misc as misc
+import madgraph.various.banner as banner_mod
 from operator import itemgetter
 import copy
 import logging
@@ -44,7 +45,7 @@ def external_leg_identity(leg):
     exchanged just because their PDGs agree. Ignore number and the i/j flag.
     Statistical factors still come from the generated matrix elements.
     """
-    return (leg['id'], leg['state'], tuple(leg['polarization']),
+    return (leg['id'], leg['state'], MG.canonical_polarization(leg['polarization']),
             dict.get(leg, 'is_tagged', False), leg['onshell'])
 
 
@@ -161,7 +162,7 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
 
     # find the real diagrams that have i and j attached to the same vertex
     # check that the order of the interaction is QCD
-    # cehck also that the id of the third leg is id_ij
+    # check also that the id of the third leg is id_ij
     real_confs_new = copy.deepcopy(real_confs)
     for diag in real_confs_new:
         for vert in diag['diagram'].get('vertices'):
@@ -215,7 +216,7 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
             counts = []
             for il in range(nlegs_b):
                 counts.append([l['number'] for v in diag['diagram']['vertices'] for l in v['legs']].count(il+1))
-            # normally all the occurences should be odd (and !=0)
+            # normally all the occurrences should be odd (and !=0)
             # (each entry should be 1 for the external leg +2 for each internal one)
             even_list = [c / 2 * 2 == c for c in counts]
             if any(even_list):
@@ -239,14 +240,19 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
                                for d in born_confs]
 
 
-    real_tags = [FKSDiagramTag(d['diagram'], 
-                               real_amp.get('process').get('model')) \
-                               for d in good_diags ]
+    # Dropping a duplicated tag has to drop its diagram with it: the two are
+    # walked in lockstep below, real_tags.index giving the position popped out
+    # of good_diags, so a tag left without its diagram misaligns everything
+    # after it. Which of two equal tags survives is decided by the order they
+    # come in, so keeping them apart also made the result order dependent.
     real_tags = []
+    kept_diags = []
     for d in good_diags:
         tag = FKSDiagramTag(d['diagram'], real_amp.get('process').get('model'))
         if not tag in real_tags:
             real_tags.append(tag)
+            kept_diags.append(d)
+    good_diags = kept_diags
 
     # and compare them
     if len(born_tags) != len(real_tags):
@@ -378,6 +384,63 @@ def find_mothers(leg1, leg2, model, dict={}, pert='', mom_mass=''):
     return mothers
 
 
+def carry_polarization(mother, split): #test written
+    """Carries the polarization of the born leg ij onto the daughter j of one
+    splitting (split is ordered [j, i]).
+
+    In the singular limit the real's leg j *is* the born's leg ij: the two
+    matrix elements are subtracted against each other, so they have to fix the
+    same helicity state or the subtraction is comparing a fixed-helicity Born
+    with a helicity-summed real. This is only meaningful when j carries the
+    same identity as the mother, which for a massive QCD emitter in the FINAL
+    state is always the case (the only splitting is t -> t g).
+
+    Two families of mother do not satisfy it, and both are refused at
+    generation time by the polarization guard in
+    madgraph_interface.CheckValidForCmd.check_process_format. This function
+    raises rather than silently dropping the polarization, so that it stays a
+    backstop if that guard is ever relaxed:
+      - a MASSLESS coloured final-state mother. g -> q q~ turns the polarized
+        gluon into a quark pair, so there is no leg with the mother's identity
+        to transport the projection to.
+      - ANY coloured INITIAL-state mother, whatever its mass. The initial-state
+        splitting is read backwards, g -> q(-> born) q~: the polarized quark
+        that enters the born is an *internal* line of the real emission, so
+        there is no external leg to carry the projection at all. The raise is
+        all-or-nothing per leg: the same initial-state quark also has the
+        well-defined q -> q g splitting, but split_leg is called for every
+        splitting of the leg and the backward one raises, aborting the whole
+        call, so the initial state is refused wholesale rather than channel
+        by channel.
+    """
+    pol = mother.get('polarization')
+    if not pol:
+        return
+    j_leg = split[0]
+    if j_leg['id'] != mother['id'] or j_leg['state'] != mother['state']:
+        raise FKSProcessError(
+            'Cannot carry the polarization %s of the born leg with id %d '
+            'through the splitting into ids %s: the FKS emitter j is a '
+            'different particle, so the born and the real would not fix the '
+            'same helicity state.' % \
+            (pol, mother['id'], [l['id'] for l in split]))
+    # ... and it has to be j and not i: for g -> g g in the final state both
+    # daughters have the mother's identity and there is nothing to pick
+    # between them away from the soft limit. (Only split[1] is inspected;
+    # find_splittings can hand split_leg a 3-particle parts list -- the
+    # 4-gluon vertex -- whose split[2] would go unchecked. That is gluon-only,
+    # so a polarized mother reaching it is already refused by the guard.)
+    if len(split) > 1 and split[1]['id'] == mother['id'] and \
+       split[1]['state'] == mother['state']:
+        raise FKSProcessError(
+            'Cannot carry the polarization %s of the born leg with id %d '
+            'through the splitting into ids %s: both daughters have the '
+            'identity of the mother, so which one inherits the polarization '
+            'is not defined.' % \
+            (pol, mother['id'], [l['id'] for l in split]))
+    j_leg['polarization'] = copy.copy(pol)
+
+
 def split_leg(leg, parts, model): #test written
     """Splits the leg into parts, and returns the two new legs.
     """
@@ -412,6 +475,10 @@ def split_leg(leg, parts, model): #test written
                             to_fks_leg({'state': True, 
                                   'id': parts[1].get_anti_pdg_code(),
                                   'fks': 'i'}, model)])
+    # the born leg ij is replaced by the daughter j (see insert_legs), so any
+    # polarization it carries has to follow it there
+    for s in split:
+        carry_polarization(leg, s)
     return split
 
 
@@ -436,7 +503,7 @@ def ij_final(pair):
                 set = 1
 
 def insert_legs(leglist_orig, leg, split,pert='QCD'):
-    """Returns a new leglist with leg splitted into split.
+    """Returns a new leglist with leg split into split.
     The convention is to remove leg ij, replace it with leg j, and put
     i at the end of the group of legs with the same color(charge) representation
     """
@@ -571,7 +638,7 @@ def find_pert_particles_interactions(model, pert_order = 'QCD'): #test written
     pert_parts = []
     soft_parts = []
     for i, ii in model.get('interaction_dict').items():
-        # i want interections of pert_order: 1 (from LO to NLO), 
+        # i want interactions of pert_order: 1 (from LO to NLO),
         # without any other orders
         # and of "base" type
         if ii.get('type') != 'base': continue
@@ -695,6 +762,68 @@ def insert_color_links(col_basis, col_obj, links): #test written
 
 
 
+def born_basis_link_matrices(col_basis, links, Nc=3):
+    """Colour-link matrices expressed in the Born colour basis itself.
+
+    For each link (as returned by find_color_links) return the square matrix
+        S_ij = sum_k M_ik L_kj
+    such that the colour-linked Born is  sum_ij conj(JAMP_i) S_ij JAMP_j,
+    with the very same JAMPs as the Born. M is the rectangular matrix between
+    the Born basis and the link basis (insert_color_links' link_matrix) and L
+    expresses each link-basis element in terms of the Born basis elements:
+    inserting the link into the Born basis elements (used as "diagrams" with
+    unit coefficient) gives JAMP_link_k = sum_j L_kj JAMP_j by linearity,
+    which is exactly what the diagram-based link basis computes.
+
+    Rows/columns follow sorted(col_basis), the ordering of the Born JAMPs and
+    colour matrix. Entries are exact complex rationals, returned as
+    (real, imag) pairs of Fractions in a dict {(i, j): (re, im)}."""
+
+    born_keys = sorted(col_basis.keys())
+    # the Born basis elements, each one a "diagram" with coefficient 1
+    col_obj = []
+    for key in born_keys:
+        string = color_algebra.ColorString()
+        string.from_immutable(key)
+        col_obj.append({(0,): string})
+
+    def cmul(a, b):
+        return (a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0])
+
+    result = []
+    for link in insert_color_links(col_basis, col_obj, links):
+        link_keys = sorted(link['link_basis'].keys())
+        # L[k][j]: coefficient of Born element j in link-basis element k
+        L = []
+        for key in link_keys:
+            row = {}
+            for entry in link['link_basis'][key]:
+                j, coeff, is_imag, nc_power = entry[0], entry[2], entry[3], \
+                                              entry[4]
+                val = fractions.Fraction(coeff) * \
+                      fractions.Fraction(Nc) ** nc_power
+                val = (fractions.Fraction(0), val) if is_imag else \
+                      (val, fractions.Fraction(0))
+                old = row.get(j, (0, 0))
+                row[j] = (old[0] + val[0], old[1] + val[1])
+            L.append(row)
+        S = {}
+        for i in range(len(born_keys)):
+            for k in range(len(link_keys)):
+                m_val, m_imag = link['link_matrix'].col_matrix_fixed_Nc[(i, k)]
+                m = (fractions.Fraction(0), m_val) if m_imag else \
+                    (fractions.Fraction(m_val), fractions.Fraction(0))
+                if m == (0, 0):
+                    continue
+                for j, l in L[k].items():
+                    prod = cmul(m, l)
+                    old = S.get((i, j), (0, 0))
+                    S[(i, j)] = (old[0] + prod[0], old[1] + prod[1])
+        result.append({'link': link['link'], 'matrix': S,
+                       'ncolor': len(born_keys)})
+    return result
+
+
 def find_color_links(leglist, symm = False,pert = 'QCD'): #test written
     """Finds all the possible color(charge) links between any 
     two legs of the born.
@@ -795,6 +924,141 @@ def legs_to_color_link_string(leg1, leg2, pert = 'QCD'): #test written, all case
     dict['replacements'] = replacements
     dict['string'] = string  
     return dict
+
+
+def get_user_leg_order(process, pert = 'QCD'):
+    """Return, for each position of the FKS-sorted leg list, the number the
+    leg carried in the process as the user wrote it.
+
+    sort_proc() both permutes and renumbers the legs, so after it has run the
+    user's numbering is gone for good. me_frame in the run_card is expressed
+    in the user's numbering, so this mapping is what lets the fortran get back
+    to it; it is written out as frame_map_born in frame_info.inc.
+
+    The returned list is 0-indexed by FKS position: entry i is the user number
+    of the leg sitting at FKS position i+1.
+
+    Call this *before* sort_proc. to_fks_legs() copies the legs, so this does
+    not disturb the process it is given.
+    """
+    leglist = to_fks_legs(process.get('legs'), process.get('model'))
+    leglist.sort(pert = pert)
+    return [leg['number'] for leg in leglist]
+
+
+def me_frame_characteristics(processes, density=False,
+                             splitting_types=('QCD',)):
+    """What the run_card me_frame may mean for these NLO processes, in the
+    leg numbering of the process as the user wrote it (the numbering of
+    me_frame). Returns (cm_legs, unsafe_legs, default_legs), sorted lists.
+
+    default_legs: the default me_frame of the run_card. For a collision
+    with an initial-state QCD splitting, the massive final-state legs: e.g.
+    [3, 4] for p p > w+{0} w- [QCD], [3] for p p > w+{0} j [QCD] (the
+    Collins-Soper frame of the W). Infrared safe and the same in every FKS
+    sector, unlike the partonic c.m. (see cm_legs). Empty otherwise
+    (e+ e-, decays), meaning the partonic c.m., [1, 2], is kept. It does
+    not depend on whether real emission is computed, so that [LOonly=QCD]
+    and [QCD] samples of a merged set share one frame.
+
+    cm_legs: the legs whose rest frame stands for the partonic c.m., which
+    is how me_frame = [1, 2] is read.
+      - A decay: the decaying particle, [1].
+      - A collision with no initial-state QCD splitting (e+ e-): [1, 2].
+        Every FKS sector then hands the real emission its momenta in its
+        own c.m., so the partonic c.m. is one well defined frame.
+      - A collision with one: the Born final state. FKS hands the real of
+        an initial-state sector its momenta in the c.m. of that sector's
+        underlying Born, and that differs between sectors by a boost along
+        z, so 'the frame the momenta come in' depends on the subtraction
+        partition (+9.5% on p p > w+{0} j [QCD] when only fks_b changes).
+        The real's own c.m. is no way out: it moves by a finite boost when
+        an initial-state parton goes collinear, so it is not infrared safe.
+        The rest frame of the Born final state is the partonic c.m. for
+        the Born, the virtual and every counterterm, and for the real it
+        is a function of its physical momenta alone.
+
+    unsafe_legs: the legs whose momentum changes by a finite amount in an
+    infrared limit, so that a frame containing them is not infrared safe
+    once real emission is computed:
+      - massless final-state legs charged under the perturbation (a jet for
+        [QCD]): a collinear splitting shares their momentum;
+      - initial-state legs of a collision charged under it (the partons of
+        p p for [QCD]): the real emission and the reduced Born carry
+        different momentum fractions even in the collinear limit.
+    Never the decaying particle of a 1 -> n process, whatever its charge:
+    FKS does not split it (fks_base.find_reals), and its momentum is the
+    total momentum in every configuration. Nor a beam that is not charged
+    under the perturbation (e+ e- with [QCD]). When cm_legs contains an
+    unsafe leg, me_frame = [1, 2] has no infrared-safe NLO definition.
+
+    splitting_types: the kinds of splitting the real emission was
+    generated with (proc_characteristics), 'QCD' and/or 'QED'.
+
+    All three are empty when no massive particle is polarised and no
+    spin-density matrix is asked for (output --density, density=True): the
+    matrix elements are then Lorentz invariant, and the frame does not
+    matter.
+    Legs of a multiparticle label count as coloured or massless if any of
+    its particles is, and as massive if all of them are. If only some
+    processes have an initial-state QCD splitting (a photon in the
+    proton), the Born final state is used for all: it is the partonic c.m.
+    of every Born too.
+    """
+    # what splits is what FKS generated splittings for (the run's
+    # splitting_types), not perturbation_couplings: with the mixed expansion
+    # e+ e- > t t~ [QCD] carries ['QCD', 'QED'] there
+    def splits(p):
+        """the particle radiates or splits under the perturbation"""
+        return ('QCD' in splitting_types and p.get('color') != 1) or \
+               ('QED' in splitting_types and (p.get('charge') != 0 or
+                                              p.get('pdg_code') == 22))
+
+    # the run_card default: one rule for LO and NLO, so that they agree
+    default_legs = banner_mod.default_me_frame_for_process(
+                        processes, density=density, radiates=splits)
+    default_legs = default_legs if isinstance(default_legs, list) else []
+
+    cm_legs = set()
+    cm_legs_isr = set()
+    unsafe_legs = set()
+    for proc in processes:
+        model = proc.get('model')
+        legs = proc.get('legs')
+        particles = []
+        for leg in legs:
+            ids = leg.get('ids') if 'ids' in leg else [leg.get('id')]
+            particles.append([model.get_particle(i) for i in ids])
+
+        if not density and not any(
+                leg.get('polarization') and
+                any(p.get('mass').lower() != 'zero' for p in parts)
+                for leg, parts in zip(legs, particles)):
+            continue
+
+        initial = [n for n, leg in enumerate(legs, 1) if not leg.get('state')]
+        final = [n for n, leg in enumerate(legs, 1) if leg.get('state')]
+        # [LOonly=...]: no real emission, so nothing to be infrared safe for
+        has_real = proc.get('NLO_mode') != 'LOonly'
+        initial_radiates = any(splits(p) for n in initial
+                               for p in particles[n - 1])
+
+        if len(initial) == 2 and has_real and initial_radiates:
+            cm_legs_isr.update(final)
+        else:
+            cm_legs.update(initial)
+
+        if has_real:
+            unsafe_legs.update(
+                n for n in final if any(splits(p) and
+                                        p.get('mass').lower() == 'zero'
+                                        for p in particles[n - 1]))
+            if len(initial) == 2:
+                unsafe_legs.update(n for n in initial
+                                   if any(splits(p) for p in particles[n - 1]))
+
+    return (sorted(cm_legs_isr or cm_legs), sorted(unsafe_legs),
+            default_legs)
 
 
 def sort_proc(process,pert = 'QCD'):
@@ -916,7 +1180,7 @@ class FKSLegList(MG.LegList):
 
 
 class FKSLeg(MG.Leg):
-    """a class for FKS legs: it inherits from the ususal leg class, with two
+    """a class for FKS legs: it inherits from the usual leg class, with two
     extra keys in the dictionary: 
     -'fks', whose value can be 'i', 'j' or 'n' (for "normal" particles) 
     -'color', which gives the color of the leg

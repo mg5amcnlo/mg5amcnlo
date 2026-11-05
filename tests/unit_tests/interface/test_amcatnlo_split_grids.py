@@ -14,11 +14,13 @@ class TestSplitOrderGrids(unittest.TestCase):
         self.work = Path(self.tempdir.name)
         self.base = self.work / "all_G1"
         self.base.mkdir()
+        self.command = object.__new__(aMCatNLOCmd)
+        self.command.stop_for_runweb = True
         self.jobs = []
         for split in (1, 2):
             directory = self.work / ("all_G1_%d" % split)
             directory.mkdir()
-            self.jobs.append({"dirname": str(directory)})
+            self.jobs.append({"dirname": str(directory), "p_dir": "P0_test", "channel": "1"})
         self.mint_data = [
             b"AVE 1 3\nSUM 2 4\nMAX 7 5\nQSM 3 4\nIDE 2 3\nSPE 10 3 4\n"
             b"POL 2\nPOL 1.0 2.0\nPOL 3.0 4.0\n",
@@ -34,8 +36,7 @@ class TestSplitOrderGrids(unittest.TestCase):
                 else b"AVE 6 8\nSUM 5 7\n")
 
     def combine(self):
-        # The combiner depends only on its job argument, not command setup.
-        aMCatNLOCmd.combine_split_order_grids(None, self.jobs)
+        self.command.combine_split_order_grids(self.jobs)
 
     def assert_combined_numbers(self, content):
         self.assertEqual(content, (
@@ -69,3 +70,9 @@ class TestSplitOrderGrids(unittest.TestCase):
             self.combine()
         for name in ('mint_grids', 'grid.MC_integer'):
             self.assertEqual((self.base / name).read_bytes(), b'previous master\n')
+
+    def test_incomplete_sampling_record_is_rejected(self):
+        self.mint_data[1] = self.mint_data[1].replace(b'SPE 20 5 6\n', b'SPE 20 5 6 8\n')
+        self.write_split_grids([b'', b''])
+        with self.assertRaisesRegex(aMCatNLOError, 'different numbers of values'):
+            self.combine()

@@ -18,7 +18,7 @@ c     o) The first argument is an integer that labels the histogram. In
 c     the analysis_end and analysis_fill subroutines this label is used
 c     to keep track of the histogram. The label should be a number
 c     starting at 1 and be increased for each plot.
-c     o) The second argument is a string that will apear above the
+c     o) The second argument is a string that will appear above the
 c     histogram. Do not use brackets "(" or ")" inside this string.
 c     o) The third, forth and fifth arguments are the number of bis, the
 c     lower edge of the first bin and the upper edge of the last

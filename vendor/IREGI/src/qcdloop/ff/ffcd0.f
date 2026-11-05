@@ -404,7 +404,7 @@
 			ithres(iir(ir,1),iir(ir,3)) = 0
 			ithres(iir(ir,3),iir(ir,1)) = 0
 			if ( lwrite ) then
-			    print *,'ffcd0c: thresold of (m,m,0) type'
+			    print *,'ffcd0c: threshold of (m,m,0) type'
 			    print *,xpi(i),xpi(j),xpi(inx(i,j))
 			    print *,'made into C0 ',iir(ir,1),iir(ir,2),
      +				iir(ir,3),iir(ir,4)

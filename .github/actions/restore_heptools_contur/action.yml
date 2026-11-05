@@ -15,7 +15,9 @@ runs:
         setup_only:  ${{ inputs.setup_only }}
 
     - name: Set cache key
-      run: echo "CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV
+      # HEPTOOLS_IMAGE selects the python paths below: comparing CACHE_KEY
+      # instead would silently break whenever the key generation is bumped
+      run: echo "CACHE_KEY=contur-v2-$ImageOS" >> $GITHUB_ENV && echo "OLD_CACHE_KEY=contur-$ImageOS" >> $GITHUB_ENV && echo "HEPTOOLS_IMAGE=$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     # Generation-suffixed keys: see the comment in restore_heptools_lhapdf.
@@ -26,14 +28,15 @@ runs:
         key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
         restore-keys: |
           ${{ env.CACHE_KEY }}-
-          ${{ env.CACHE_KEY }}
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg5_configuration.txt
-        echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg5_configuration.txt
-        echo "yoda_path = /home/runner/.cache/HEPtools/yoda" >>  input/mg5_configuration.txt
-        echo "contur_path = /home/runner/.cache/HEPtools/contur" >>  input/mg5_configuration.txt
+        echo "hepmc3_path = /home/runner/.cache/HEPtools/hepmc3" >>  input/mg7_configuration.txt
+        echo "rivet_path = /home/runner/.cache/HEPtools/rivet" >>  input/mg7_configuration.txt
+        echo "yoda_path = /home/runner/.cache/HEPtools/yoda" >>  input/mg7_configuration.txt
+        echo "contur_path = /home/runner/.cache/HEPtools/contur" >>  input/mg7_configuration.txt
         # Only point MG5 at fastjet if it is really there.  The cache restore
         # above is best-effort (fail-on-cache-miss is false, and warm_cache
         # deletes the contur/heptools caches ~30 min before it re-saves them,
@@ -45,20 +48,20 @@ runs:
         # their own, but the numbered acceptance jobs no longer fail with them.
         FJ=/home/runner/.cache/HEPtools/fastjet/bin/fastjet-config
         if [ -x "$FJ" ]; then
-          echo "fastjet = $FJ" >>  input/mg5_configuration.txt
+          echo "fastjet = $FJ" >>  input/mg7_configuration.txt
         else
           echo "::warning::$FJ missing (cache miss?) - leaving MG5 on fjcore"
         fi
       shell: bash
 
     - name: set pythonpath for ubuntu22
-      if: ${{ env.CACHE_KEY  == 'contur-ubuntu22' }}
+      if: ${{ env.HEPTOOLS_IMAGE == 'ubuntu22' }}
       run: |
           echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.10/:/home/runner/.cache/HEPtools/rivet/python3.10/:/home/runner/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
       shell: bash
 
     - name: set pythonpath for ubuntu24
-      if: ${{ env.CACHE_KEY  == 'contur-ubuntu24' }}
+      if: ${{ env.HEPTOOLS_IMAGE == 'ubuntu24' }}
       run: |
           echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/contur/python3.12/:/home/runner/.cache/HEPtools/rivet/python3.12/:/home/runner/.cache/HEPtools/rivet/local/python3.10/" >> $GITHUB_ENV
       shell: bash

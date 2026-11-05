@@ -17,7 +17,7 @@
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
-!     Notice that any reduction tool not avaialble on the system will be automatically
+!     Notice that any reduction tool not available on the system will be automatically
 !     skipped. 
 
 !     When using quadruple precision with Ninja or CutTools, the reduction will 
@@ -41,7 +41,7 @@
 ! Default :: 2
 !     IREGIMODE=0, IBP reduction
 !     IREGIMODE=1, PaVe reduction
-!     IREGIMODE=2, PaVe reduction with stablility improved by IBP reduction
+!     IREGIMODE=2, PaVe reduction with stability improved by IBP reduction
 
 #IREGIRECY
 !.TRUE.
@@ -84,6 +84,9 @@
 !     You can add other evaluation method to check for the stability in DP and QP.
 !     Below you can chose if you want to use zero, one or two rotations of the PS point 
 !     in QP.
+!     When an external particle is exactly at rest (a polarised particle
+!     selected alone by me_frame), the rotations are taken about the z axis,
+!     where HELAS puts its spin axis, so they remain a symmetry.
 #NRotations_DP
 !0
 ! Default :: 0
@@ -165,7 +168,7 @@
 !10
 ! Default :: 10
 
-!     Setting the threshold for deciding wether a numerical contribution is analytically 
+!     Setting the threshold for deciding whether a numerical contribution is analytically
 !     zero or not.
 #ZeroThres
 !1.0d-9
@@ -181,7 +184,7 @@
 !     The setting below is recommended to be on as it allows to systematically used the 
 !     first PS point thrown at ML5 to be used for making sure that the helicity filter
 !     read from HelFilter.dat is consistent as it might be no longer up to date with
-!     certain changes of the paramaters by the user.
+!     certain changes of the parameters by the user.
 #DoubleCheckHelicityFilter
 !.TRUE.
 ! Default :: .TRUE.
@@ -222,7 +225,7 @@
 !.FALSE.
 ! Default :: .FALSE.
 
-!     This decides wether consecutive consistency for the helicity filtering setup is also 
+!     This decides whether consecutive consistency for the helicity filtering setup is also
 !     required. Better to set it to false as it can cause problems for unstable processes.
 #HelInitStartOver
 !.FALSE.
@@ -235,13 +238,13 @@
 !     =================================================================================
 
 !     Decide if COLLIER must be computed multiple times to evaluate the UV pole residues
-!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
+!     (Within a Monte-Carlo performed in MadGraph7, this is automatically disabled internally)
 #COLLIERComputeUVpoles
 !.TRUE.
 ! Default :: .TRUE.
 
 !     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
-!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
+!     (Within a Monte-Carlo performed in MadGraph7, this is automatically disabled internally)
 #COLLIERComputeIRpoles
 !.TRUE.
 ! Default :: .TRUE.
@@ -271,7 +274,7 @@
 !-1
 ! Default :: -1
 !     -1 : Enable the global cache for all loops 
-!      0 : Disable the global cache alltogether
+!      0 : Disable the global cache altogether
 !      N : Enable the global cache but only for up to N-loops
 
 !     Use the global cache when evaluating the poles as well (more memory consuming)

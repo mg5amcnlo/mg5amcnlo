@@ -7,7 +7,7 @@ cp gridpdfaux_$collider_name.f gridpdfaux.f
 cp calcpdf_$collider_name.f calcpdf.f
 
 make >/dev/null 2>&1
-echo -n "Totaly luminosity: for $collider_name is"
+echo -n "Total luminosity for $collider_name is"
 ./totlumi
 cp eepdf.f eepdf_$collider_name.f
 }

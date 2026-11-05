@@ -190,7 +190,7 @@ c     INPUT:
 c     input momenta:               pQCD(0:3,nexternal), energy is 0th component
 c     number of input momenta:     nQCD
 c     radius parameter:            rfj
-c     minumum jet pt:              sycut
+c     minimum jet pt:              sycut
 c     jet algorithm:               palg, 1.0=kt, 0.0=C/A, -1.0 = anti-kt
 c
 c     OUTPUT:

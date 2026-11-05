@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -909,7 +909,7 @@ class C(aloha_lib.FactoryLorentz):
 #===============================================================================
 # EPSILON  
 #===============================================================================
-#Helpfull function
+#Helpful function
 def give_sign_perm(perm0, perm1):
     """Check if 2 permutations are of equal parity.
 
@@ -1013,9 +1013,12 @@ class L_Metric(aloha_lib.LorentzObject):
                                              self.lorentz_ind,self.spin_ind)     
 
 class Metric(aloha_lib.FactoryLorentz):
-         
+
     object_class = L_Metric
-    
+    # g^{mu nu} is symmetric by definition -- which is why get_unique_name
+    # below sorts its two indices.
+    is_symmetric = True
+
     @classmethod
     def get_unique_name(cls,l1,l2):
 
@@ -1083,7 +1086,7 @@ class IdentityL(aloha_lib.FactoryLorentz):
 # ProjM 
 #===============================================================================    
 class L_ProjM(aloha_lib.LorentzObject):
-    """ A object for (1-gamma5)/2 """
+    """ An object for (1-gamma5)/2 """
     
     #projm = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
     projm= {(0,0): 1, (0,1): 0, (0,2): 0, (0,3): 0,\
@@ -1111,7 +1114,7 @@ class ProjM(aloha_lib.FactoryLorentz):
 # ProjP 
 #===============================================================================    
 class L_ProjP(aloha_lib.LorentzObject):
-    """A object for (1+gamma5)/2 """
+    """An object for (1+gamma5)/2 """
     
     #projp = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
     projp = {(0,0): 0, (0,1): 0, (0,2): 0, (0,3): 0,\

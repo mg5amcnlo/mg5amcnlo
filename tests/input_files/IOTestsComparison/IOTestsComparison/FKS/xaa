@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -87,7 +87,7 @@ class IOTest(object):
         self.hel_amp = hel_amp 
         self.helasModel = helasModel
         self.exporter = exporter
-        # Security mesure
+        # Security measure
         if not str(path.dirname(_file_path)) in str(outputPath) and \
                                         not str(outputPath).startswith('/tmp/'):
             raise MadGraph5Error, "OutputPath must be within MG directory or"+\
@@ -358,7 +358,7 @@ class IOTestManager(unittest.TestCase):
         return pjoin(file_name[1:].split('%'))
     
 #    def test_IOTests(self):
-#        """ A test function in the mother so that all childs automatically run
+#        """ A test function in the mother so that all children automatically run
 #        their tests when scanned with the test_manager. """
 #        
 #        # Set it to True if you want info during the regular test_manager.py runs
@@ -622,9 +622,9 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
+                    target = target.replace('MadGraph7 v. %(version)s, %(date)s'\
                                                            %misc.get_pkg_info(),
-                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
+                                          'MadGraph7 v. %(version)s, %(date)s')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

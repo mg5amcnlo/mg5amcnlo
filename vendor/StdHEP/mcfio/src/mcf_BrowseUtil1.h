@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* mcf_BrowseUtil1.h -- Utilities and auxillary Panels for NTuple Browser.      *			       *
+* mcf_BrowseUtil1.h -- Utilities and auxiliary Panels for NTuple Browser.      *			       *
 *									       *
 * Copyright (c) 1995, 1996 Universities Research Association, Inc.	       *
 * All rights reserved.							       *
@@ -60,7 +60,7 @@ typedef struct nTuBrowserInfoRec {
     int nHisto1D;	/* The number of 1D histo */
     int nHisto2D;       /* The number of 2D histo */
     int nHistoNtuples;  /* The number of Ntuples */
-    int sizeOfLists;    /* The size of the the following lists */
+    int sizeOfLists;    /* The size of the following lists */
     nTuBroHsGeneral **hsItemList;  
                  /* The list of structures containing info for hs histograms */
     int currentData;    /* A flag stating if the data is current */

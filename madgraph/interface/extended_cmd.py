@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -39,6 +39,135 @@ logger = logging.getLogger('cmdprint') # for stdout
 logger_stderr = logging.getLogger('fatalerror') # for stderr
 logger_tuto = logging.getLogger('tutorial') # for stdout
 logger_plugin = logging.getLogger('tutorial_plugin') # for stdout
+
+# Set by tutorial mode -- madgraph.interface.tutorials.mixin, on attach, and
+# cleared on detach. Module level rather than an attribute on the interface
+# because a question is often asked by a *different* object than the one the
+# tutorial is attached to: the launch card question belongs to the run
+# interface, not to the MG5 command the user typed `launch` at.
+#
+#   question_hint      str, or callable() -> str, shown under a question in
+#                      place of the generic "type 'help'" line
+#   question_progress  callable(line) -> str or None, called after each answer
+#                      inside a question, with what was just typed. Whatever it
+#                      returns is printed under the question as it is asked
+#                      again. This is how a lesson says the next thing once the
+#                      reader has done the previous one, instead of printing
+#                      everything it has at the top and hoping it is read.
+#   suppress_timeout   answer a question in your own time. Everywhere else MG7
+#                      times a question out so an unattended script cannot hang;
+#                      a tutorial is the opposite case, since there is someone
+#                      reading by definition.
+question_hint = None
+question_progress = None
+suppress_timeout = False
+
+
+# Options MG7 used to have and does not support any more. Setting one must not
+# be an error: old command files, old process directories and old configuration
+# files still carry them, and a crash there is far worse than a dead setting.
+# The value is dropped instead -- silently when it would only have switched the
+# option off, with a warning otherwise, so a user who really was relying on it
+# hears about it once.
+removed_options = {
+    'madanalysis_path': 'MadAnalysis4 support has been removed, use MadAnalysis5',
+    'td_path': 'topdrawer was only used by MadAnalysis4, which has been removed',
+    'mg5amc_py8_interface_path': 'the MG5aMC_PY8_interface has been removed, '
+                                 'Pythia8 showers run its main164',
+}
+
+
+def is_removed_option(name):
+    """True if `name` is an option that is not supported any more."""
+
+    return name in removed_options
+
+
+def warn_removed_option(name, value=None):
+    """Tell the user that a retired option is being ignored.
+
+    A value that would only have disabled the option (None/False/empty) says
+    nothing new -- the option is gone, so it is already off -- and stays quiet.
+    """
+
+    if not is_removed_option(name):
+        return
+    if str(value).strip().lower() in ('none', 'false', ''):
+        return
+    logger.warning("'%s' is not supported any more (%s). Ignoring it.",
+                   name, removed_options[name])
+
+
+class QuestionAnswer(str):
+    """A line of history that answered a question instead of being a command.
+
+    It is kept -- `history` has to replay the answers, or the file it writes
+    reruns a launch with the defaults -- but it is not a command of the prompt
+    whose history holds it.  `set width 6 auto` typed at the launch card
+    question is a card edit; replayed as an MG5 command it is an error.  So
+    everything that turns a history into commands for something else skips
+    these: the proc card an `output` writes (MadSpin and the reweighting replay
+    its `set` lines), and the `set` lines a launch copies into the run it
+    starts.  Test with is_question_answer(), which needs no import of this
+    module.
+    """
+
+    is_answer = True
+
+
+def is_question_answer(line):
+    """True for a history line recorded by record_answer_in_history()."""
+
+    return bool(getattr(line, 'is_answer', False))
+
+
+def record_answer_in_history(interface, answer):
+    """Append an answer to the history of `interface` and everything above it.
+
+    A question's mother is often a *child* interface -- the run interface that
+    `launch` created -- while the user types `history` at the one they started
+    from. Recording up the `mother` chain means the file is right wherever it
+    is written, and each interface has its own history so nothing is
+    duplicated within one file.
+    """
+
+    answer = str(answer).strip() if answer is not None else ''
+    if not answer:
+        return
+    answer = QuestionAnswer(answer)
+    seen = set()
+    while interface is not None and id(interface) not in seen:
+        seen.add(id(interface))
+        try:
+            interface.history.append(answer)
+        except Exception:
+            pass
+        interface = getattr(interface, 'mother', None)
+
+
+def get_question_hint():
+    """The line to show under a question. Never empty."""
+
+    hint = question_hint
+    if callable(hint):
+        try:
+            hint = hint()
+        except Exception:
+            hint = None
+    return hint or "Need help here? type 'help'"
+
+
+def get_question_progress(line):
+    """What to add under a question after `line` was answered to it, if
+    anything. None -- the usual answer -- prints nothing."""
+
+    hook = question_progress
+    if not callable(hook):
+        return None
+    try:
+        return hook(line)
+    except Exception:
+        return None
 
 try:
     import madgraph.various.misc as misc
@@ -483,8 +612,36 @@ class OriginalCmd(object):
 #===============================================================================
 # CmdExtended
 #===============================================================================
+# `help vi`: when a card opens in vi, these are the keys that get someone in and
+# out of it.  Answered at every prompt, the card question included.
+VI_BASICS = """vi, in the keys you need to edit a card:
+
+  i            start typing          (the bottom line says -- INSERT --)
+  Esc          stop typing, back to moving around
+  :wq  Enter   save the card and quit
+  :q!  Enter   quit without saving
+  /word Enter  search for "word"; n jumps to the next match
+  x    dd      delete a character / the whole line
+  u            undo
+
+Lost? Press Esc twice and type  :q!  Enter -- nothing is saved.
+Rather have another editor? `set text_editor nano` (or emacs, code, ...)."""
+
+
 class BasicCmd(OriginalCmd):
     """Simple extension for the readline"""
+
+    def help_vi(self, *args):
+        """`help vi`: the few keys needed to edit a card in vi"""
+        # *args: the launch switch question calls help_X with an argument
+        # (SmartQuestion.print_help_for_switch), the MG7 prompt without
+        logger.info(VI_BASICS)
+
+    # set by complete() and read back by print_suggestions, which readline
+    # calls on the object owning the completer. A question which is answered
+    # before any completion ever ran has never been through complete(), so the
+    # hook used to die with 'object has no attribute completion_matches'.
+    completion_matches = []
 
     def set_readline_completion_display_matches_hook(self):
         """ This has been refactorized here so that it can be called when another
@@ -698,7 +855,7 @@ class BasicCmd(OriginalCmd):
                 tmp += data
                 tmp = os.path.expanduser(os.path.expandvars(tmp))
                 out.append(tmp)
-                # Reinitialize tmp in case there is another differen argument
+                # Reinitialize tmp in case there is another different argument
                 # containing escape characters
                 tmp = ''
             else:
@@ -984,6 +1141,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                         line = 'EOF'
                     else:
                         line = line[:-1] # chop \n
+                # Coloured prompt
+                if not os.environ.get('MG7_NO_COLOR'):
+                    sys.stdout.write("\033[0m")
+                    sys.stdout.flush()
             try:
                 line = self.precmd(line)
                 stop = self.onecmd(line)
@@ -1100,10 +1261,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             path_msg = []
             
         if timeout is True:
-            try:
-                timeout = self.options['timeout']
-            except Exception:
-                pass
+            if suppress_timeout:
+                timeout = 0          # a tutorial waits for its reader
+            else:
+                try:
+                    timeout = self.options['timeout']
+                except Exception:
+                    pass
 
         # add choice info to the question
         if choices + path_msg:
@@ -1132,8 +1296,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
 
 
-        question_instance = obj(question, allow_arg=choices, default=default, 
+        # cleared so a construction failure can't leak a stale instance
+        self._last_ask_instance = None
+        question_instance = obj(question, allow_arg=choices, default=default,
                                                    mother_interface=self, **opt)
+        # stashed before the blocking input below, so callers can recover it
+        # if ask() is interrupted (ctrl-C) instead of returning normally
+        self._last_ask_instance = question_instance
         if fct_timeout is None:
             fct_timeout = lambda x: question_instance.postcmd(x, default) if x and default else False
         if first_cmd:
@@ -1151,6 +1320,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             answer = self.check_answer_in_input_file(question_instance, default, path_msg)
             if answer is not None:
+                # an answer read out of a script never reaches the question's
+                # cmdloop, so record it here for the same reason
+                # SmartQuestion.precmd records a typed one: `history` has to be
+                # able to reproduce the run either way
+                record_answer_in_history(self, answer)
                 if answer in alias:
                     answer = alias[answer]
                 if ask_class:
@@ -1563,17 +1737,42 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
 
 
+    def notify_failed_command(self, line):
+        """Hook: `line` raised instead of running.
+
+        Does nothing here. postcmd is not a substitute: it is skipped when a
+        command raises inside exec_cmd, and when it is reached -- the
+        interactive path -- it cannot tell a command that worked from one that
+        did not. The tutorial mode overrides this to say something instead of
+        leaving the user in front of a bare error message."""
+
+        pass
+
+    @staticmethod
+    def safe_notify_failed_command(interface, line):
+        """Tell `interface` that `line` raised, without ever replacing the
+        error the user is about to see by one of our own."""
+
+        notify = getattr(interface, 'notify_failed_command', None)
+        if notify is None:
+            return
+        try:
+            notify(line)
+        except Exception as error:
+            logger.debug('notify_failed_command failed: %s', error)
+
     def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
            
         try:
             return self.onecmd_orig(line, **opt)
         except BaseException as error: 
+            Cmd.safe_notify_failed_command(self, line)
             return self.error_handling(error, line)
             
     
     def stop_on_keyboard_stop(self):
-        """action to perform to close nicely on a keyboard interupt"""
+        """action to perform to close nicely on a keyboard interrupt"""
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
@@ -1591,14 +1790,34 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             current_interface = self
         if precmd:
             line = current_interface.precmd(line)
-        if errorhandling or \
-            (hasattr(self, 'options') and 'crash_on_error' in self.options and 
-             self.options['crash_on_error']=='never'):
-            stop = current_interface.onecmd(line, **opt)
-        else:
-            stop = Cmd.onecmd_orig(current_interface, line, **opt)
-        if postcmd:
-            stop = current_interface.postcmd(stop, line)
+        # How deep we are in exec_cmd.  A command MG5 runs for itself (the
+        # 'define p = ...' issued while importing a model, or the 'open' that
+        # 'display diagrams' does) is nested inside the command the user asked
+        # for, so depth tells the two apart.  A user command sits at depth 0 --
+        # typed interactively it never enters exec_cmd at all, and
+        # import_command_file arranges the same for a command file -- so
+        # anything above 0 is MG5 talking to itself.  The tutorial mode uses
+        # this to react to the user's commands only.
+        current_interface.exec_cmd_depth = \
+            getattr(current_interface, 'exec_cmd_depth', 0) + 1
+        try:
+            if errorhandling or \
+                (hasattr(self, 'options') and 'crash_on_error' in self.options and 
+                 self.options['crash_on_error']=='never'):
+                # onecmd catches the error itself, and has already told the hook
+                stop = current_interface.onecmd(line, **opt)
+            else:
+                try:
+                    stop = Cmd.onecmd_orig(current_interface, line, **opt)
+                except BaseException:
+                    # the error goes up to whoever asked for the command, but
+                    # not before the interface is told: postcmd is skipped here
+                    Cmd.safe_notify_failed_command(current_interface, line)
+                    raise
+            if postcmd:
+                stop = current_interface.postcmd(stop, line)
+        finally:
+            current_interface.exec_cmd_depth -= 1
         return stop      
 
     def run_cmd(self, line):
@@ -1631,6 +1850,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         args = self.split_arg(line)
         # Check arguments validity
         self.check_history(args)
+
+        # precmd has already recorded this command, and a history file that
+        # ends by rewriting itself is noise at best -- replaying it would
+        # overwrite the file being replayed. Drop it, as import_command_file
+        # drops the `import` that brought it in.
+        if self.history and self.history[-1].split()[:1] == ['history']:
+            self.history.pop()
 
         if len(args) == 0:
             logger.info('\n'.join(self.history))
@@ -1709,18 +1935,29 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # Note using "for line in open(filepath)" is not safe since the file
         # filepath can be overwritten during the run (leading to weird results)
         # Note also that we need a generator and not a list.
+        # The lines of a command file are the user's own commands, so they must
+        # run at the same depth an interactively typed one does, however deep
+        # the `import` that reached them was.  Interactively there is no
+        # exec_cmd at all -- cmdloop calls postcmd directly -- so a typed
+        # command sits at depth 0; exec_cmd increments on entry, hence -1 here.
+        # See exec_cmd, and the guard in tutorials/mixin.py.
+        outer_depth = getattr(self, 'exec_cmd_depth', 0)
         for line in self.inputfile:
             
             #remove pointless spaces and \n
             line = line.replace('\n', '').strip()
             # execute the line
-            if line:
-                self.exec_cmd(line, precmd=True)
-            stored = self.get_stored_line()
-            while stored:
-                line = stored
-                self.exec_cmd(line, precmd=True)
+            self.exec_cmd_depth = -1
+            try:
+                if line:
+                    self.exec_cmd(line, precmd=True)
                 stored = self.get_stored_line()
+                while stored:
+                    line = stored
+                    self.exec_cmd(line, precmd=True)
+                    stored = self.get_stored_line()
+            finally:
+                self.exec_cmd_depth = outer_depth
 
         # If a child was open close it
         if self.child:
@@ -1831,7 +2068,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     do_exit = do_quit
 
     def do_help(self, line):
-        """Not in help: propose some usefull possible action """
+        """Not in help: propose some useful possible action """
                 
         # if they are an argument use the default help
         if line:
@@ -1979,38 +2216,30 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if check:
             Cmd.check_save(self, args)
             
-        # find base file for the configuration
-        legacy_config_dir = os.path.join(os.environ['HOME'], '.mg5')
-
-        if os.path.exists(legacy_config_dir):
-            config_dir = legacy_config_dir
-        else:
-            config_dir = os.getenv('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config'))
-
-        config_file = os.path.join(config_dir, 'mg5_configuration.txt')
-
-        if 'HOME' in os.environ and os.environ['HOME'] and os.path.exists(config_file):
-            base = config_file
-            if hasattr(self, 'me_dir'):
-                basedir = self.me_dir
-            elif not MADEVENT:
-                basedir = MG5DIR
-            else:
-                basedir = os.getcwd()
-        elif MADEVENT:
-            # launch via ./bin/madevent
-            for config_file in ['me5_configuration.txt', 'amcatnlo_configuration.txt']:
-                if os.path.exists(pjoin(self.me_dir, 'Cards', config_file)): 
-                    base = pjoin(self.me_dir, 'Cards', config_file)
-            basedir = self.me_dir
-        else:
-            if hasattr(self, 'me_dir'):
+        # find base file for the configuration. The card of the directory we
+        # run in comes first: tool paths that are relative to a process
+        # directory have no business in the shared per-user file, and writing
+        # them there is what makes another installation pick them up.
+        base, basedir = None, None
+        if getattr(self, 'me_dir', None):
+            for name in ['me5_configuration.txt', 'amcatnlo_configuration.txt']:
+                if os.path.exists(pjoin(self.me_dir, 'Cards', name)):
+                    base = pjoin(self.me_dir, 'Cards', name)
+                    basedir = self.me_dir
+                    break
+        if base is None:
+            config_file = misc.user_config_file()
+            if config_file and os.path.exists(config_file):
+                base = config_file
+                basedir = os.getcwd() if MADEVENT else MG5DIR
+        if base is None:
+            if MADEVENT:
                 base = pjoin(self.me_dir, 'Cards', 'me5_configuration.txt')
-                if len(args) == 0 and os.path.exists(base):
-                    self.write_configuration(base, base, self.me_dir)
-            base = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-            basedir = MG5DIR
-            
+                basedir = self.me_dir
+            else:
+                base = misc.install_config_file(MG5DIR)
+                basedir = MG5DIR
+
         if len(args) == 0:
             args.append(base)
         self.write_configuration(args[0], base, basedir, self.options)
@@ -2018,7 +2247,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def write_configuration(self, filepath, basefile, basedir, to_keep):
         """Write the configuration file"""
         # We use the default configuration file as a template.
-        # to ensure that all configuration information are written we 
+        # to ensure that all configuration information is written we
         # keep track of all key that we need to write.
 
         logger.info('save configuration file to %s' % filepath)
@@ -2122,21 +2351,66 @@ class NotValidInput(Exception): pass
 #===============================================================================
 # Question with auto-completion
 #===============================================================================
+class _StdoutLineCounter(object):
+    """Buffers everything written to stdout while active, by patching
+    ``write`` in place (this also catches logger output, not just print()).
+    ``captured`` must be cleared by the owner once consumed. ``tainted`` is
+    only set explicitly, via SmartQuestion.invalidate_display().
+    """
+
+    def __init__(self):
+        self.captured = []
+        self.tainted = False
+        self._stream = None
+        self._orig_write = None
+
+    def __enter__(self):
+        self._stream = sys.stdout
+        self._orig_write = self._stream.write
+        def counting_write(data, _write=self._orig_write):
+            self.captured.append(data)
+            return _write(data)
+        self._stream.write = counting_write
+        return self
+
+    def __exit__(self, *exc_info):
+        if self._stream is not None and self._orig_write is not None:
+            self._stream.write = self._orig_write
+        return False
+
+
 class SmartQuestion(BasicCmd):
     """ a class for answering a question with the path autocompletion"""
 
     allowpath = False
+    # subclasses set this to redraw the question in place instead of reprinting it below
+    overwrite_display = False
+
+    def precmd(self, line):
+        """Record the answer in the *mother's* history.
+
+        A question runs its own cmdloop, so what is typed at it -- a `set`, a
+        switch name, the `done` that closes it -- never reached the history of
+        the interface that asked. `history` then wrote a file that could not
+        reproduce the run: replaying it would answer every question with the
+        default. Commands answered from a script are recorded by ask() for the
+        same reason.
+        """
+
+        record_answer_in_history(getattr(self, 'mother_interface', None), line)
+        return BasicCmd.precmd(self, line)
+
     def preloop(self):
         """Initializing before starting the main loop"""
         self.prompt = '>'
         self.value = None
         BasicCmd.preloop(self)
-        
+
     @property
     def answer(self):
         return self.value
 
-    def __init__(self, question, allow_arg=[], default=None, 
+    def __init__(self, question, allow_arg=[], default=None,
                                             mother_interface=None, *arg, **opt):
 
         self.question = question
@@ -2145,28 +2419,132 @@ class SmartQuestion(BasicCmd):
         self.history_header = ''
         self.default_value = str(default)
         self.mother_interface = mother_interface
+        self._redraw = None      # active _StdoutLineCounter, if any
+        self._has_drawn = False
+        self._answer_history = [] # blocks ('>answer\n' + anything it printed) redrawn in place
+        self._prev_box_lines = 0  # line count of the box as currently on screen
+        self._cmd_seq = 0        # bumped once per onecmd() call
+        self._history_seq = -1   # _cmd_seq already appended to _answer_history
 
         if 'case' in opt:
             self.casesensitive = opt['case']
             del opt['case']
         elif 'casesensitive' in opt:
             self.casesensitive = opt['casesensitive']
-            del opt['casesensitive']            
+            del opt['casesensitive']
         else:
             self.casesensistive = True
         super(SmartQuestion, self).__init__(*arg, **opt)
 
+    def invalidate_display(self):
+        """Call after handing the terminal to something this class can't
+        track (e.g. a text editor): the next redraw prints fresh instead
+        of trying to overwrite the previous display in place."""
+
+        if self._redraw is not None:
+            self._redraw.tainted = True
+
+    def display_question(self):
+        """Print self.question. When overwrite_display is on and stdout is
+        a tty, redraw it in place via ANSI cursor movement instead of
+        reprinting it below, keeping typed commands and anything they
+        printed visible in order. Falls back to a plain print otherwise.
+        """
+
+        text = self.question
+        if self._redraw is not None and self._has_drawn:
+            # postcmd() can call this twice for one input; only the first
+            # call followed a real input() prompt.
+            is_new_input = self._cmd_seq != self._history_seq
+            captured = ''.join(self._redraw.captured)
+            self._redraw.captured = []
+            interstitial_lines = captured.count('\n')
+            tainted = self._redraw.tainted
+            self._redraw.tainted = False
+            try:
+                nb_rows = int(os.popen('stty size', 'r').read().split()[0])
+            except Exception:
+                nb_rows = 0
+            box_lines = text.count('\n') + 1
+            margin = 2 # 1 free row + 1 so the next untracked echo line doesn't force a scroll
+
+            old_history = self._answer_history
+            new_block = None
+            if is_new_input and self.lastcmd:
+                new_block = '%s%s\n' % (self.prompt, self.lastcmd)
+                if captured:
+                    new_block += captured if captured.endswith('\n') else captured + '\n'
+
+            if new_block is not None:
+                updated_history = old_history + [new_block]
+            elif captured and old_history:
+                extra = captured if captured.endswith('\n') else captured + '\n'
+                updated_history = old_history[:-1] + [old_history[-1] + extra]
+            else:
+                updated_history = list(old_history)
+            updated_total = sum(e.count('\n') for e in updated_history)
+
+            if not tainted and (not nb_rows or box_lines + updated_total <= nb_rows - margin):
+                # everything fits: erase back past the box and its full history, rewrite both
+                n_up = self._prev_box_lines + sum(e.count('\n') for e in old_history) + interstitial_lines
+                if is_new_input:
+                    n_up += 1 # the '>answer' line, invisible to the hook
+                sys.stdout.write('\x1b[%dA\x1b[0J' % n_up)
+                sys.stdout.write(text + '\n')
+                for entry in updated_history:
+                    sys.stdout.write(entry)
+                self._answer_history = updated_history
+            else:
+                # tainted, or doesn't fit: give up erasing, print fresh, keep what fits
+                sys.stdout.write(text + '\n')
+                if tainted:
+                    kept = [new_block] if new_block is not None else []
+                elif nb_rows:
+                    budget = nb_rows - margin - box_lines
+                    kept = []
+                    total = 0
+                    for entry in reversed(updated_history):
+                        L = entry.count('\n')
+                        if total + L <= budget:
+                            kept.insert(0, entry)
+                            total += L
+                        else:
+                            break
+                else:
+                    kept = list(updated_history)
+                for entry in kept: # must be rewritten here, contiguous with the fresh box
+                    sys.stdout.write(entry)
+                self._answer_history = kept
+
+            self._prev_box_lines = box_lines
+            if is_new_input:
+                self._history_seq = self._cmd_seq
+            self._redraw.captured = []
+        else:
+            sys.stdout.write(text + '\n')
+            if self._redraw is not None:
+                self._prev_box_lines = text.count('\n') + 1
+                self._redraw.captured = []
+        self._has_drawn = True
+
     def __call__(self, question, reprint_opt=True, **opts):
-        
+
         self.question = question
         for key,value in opts:
             setattr(self, key, value)
-        if reprint_opt:
-            print(question)
-            logger_tuto.info("Need help here? type 'help'", '$MG:BOLD')
-            logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
-        return self.cmdloop()
-        
+        if self.overwrite_display and sys.stdout.isatty():
+            self._redraw = _StdoutLineCounter()
+            self._redraw.__enter__()
+        try:
+            if reprint_opt:
+                self.display_question()
+                logger_tuto.info(get_question_hint(), '$MG:BOLD')
+                logger_plugin.info("Need help here? type 'help'" , '$MG:BOLD')
+            return self.cmdloop()
+        finally:
+            if self._redraw is not None:
+                self._redraw.__exit__()
+                self._redraw = None
 
     def completenames(self, text, line, *ignored):
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -2211,6 +2589,7 @@ class SmartQuestion(BasicCmd):
             if cmd is None:
                 return self.default(line)
             self.lastcmd = line
+            self._cmd_seq += 1
             if cmd == '':
                 return self.default(line)
             else:
@@ -2224,7 +2603,15 @@ class SmartQuestion(BasicCmd):
             if __debug__:
                 raise
             
-    def reask(self, reprint_opt=True):
+    def reask(self, reprint_opt=True, line=None):
+        """Ask the question again after `line` was answered to it.
+
+        `line` is what the caller has just handled.  It is not self.lastcmd:
+        onecmd() only sets that one for a line parseline() recognises, and an
+        answer coming from a command file is handed to default() without
+        going through onecmd() at all.
+        """
+
         pat = re.compile(r'\[(\d*)s to answer\]')
         prev_timer = signal.alarm(0) # avoid timer if any
         
@@ -2235,7 +2622,11 @@ class SmartQuestion(BasicCmd):
         if reprint_opt:
             if not prev_timer:
                 self.question = pat.sub('',self.question)
-            print(self.question)
+            self.display_question()
+            # a lesson which has something to say about the answer just given
+            progress = get_question_progress(line)
+            if progress:
+                logger_tuto.info(progress, '$MG:BOLD')
 
         if self.mother_interface:
             answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
@@ -2299,9 +2690,9 @@ class SmartQuestion(BasicCmd):
                 self.value = self.default_value
                 return True
             elif line and hasattr(self, 'do_%s' % line.split()[0]):
-                return self.reask()
+                return self.reask(line=line)
             elif self.value in ['repeat', 'reask']:
-                return self.reask()
+                return self.reask(line=line)
             elif len(self.allow_arg)==0:
                 return True
             elif ' ' in line.strip() and '=' in self.value:
@@ -2423,7 +2814,7 @@ class OneLinePathCompletion(SmartQuestion):
             reprint_opt = False 
 
         if line != 'EOF':
-            return self.reask(reprint_opt)
+            return self.reask(reprint_opt, line=line)
 
             
 # a function helper
@@ -2447,7 +2838,7 @@ class ControlSwitch(SmartQuestion):
        color_for_XXXX(value)   -> return the representation on the screen for value
        get_cardcmd_for_XXXX(value)> return the command to run to customize the cards to 
                                   match the status
-       print_options_XXXX()    -> return the text to disply below "other options"
+       print_options_XXXX()    -> return the text to display below "other options"
                                   default is other possible value (ordered correctly)
 
        consistency_XX_YY(val_XX, val_YY)
@@ -2470,10 +2861,21 @@ class ControlSwitch(SmartQuestion):
            if (user) value not in that list.
               -> try to find the first entry matching up to the case
        for ans_XXX, set the value to lower case, but if case_XXX is set to True 
+
+       Note on user defaults:
+       ----------------------
+       whatever the set_default_XXXX() compute can be overwritten, once and for
+       all, by the user via input/default_switch.txt (see default_switch_file).
        """
        
     case_sensitive = False
     quit_on = ['0','done', 'EOF','','auto']
+    overwrite_display = True
+    # user/site defaults for the switches: "key = value" lines in
+    # input/<default_switch_file> of the MG5 installation (template:
+    # input/.default_switch.txt). Shared by the LO, NLO and mg7 questions --
+    # each simply ignores the keys it does not have. Set to None to opt out.
+    default_switch_file = 'default_switch.txt'
 
     def __init__(self, to_control, motherinstance, *args, **opts):
         """to_control is a list of ('KEY': 'Choose the shower/hadronization program')
@@ -2504,8 +2906,12 @@ class ControlSwitch(SmartQuestion):
         allowed_args = [ repr(i)+';' for i in range(1, 1+len(self.to_control))] 
         for key in self.switch:
             allowed_args += ['%s=%s;' % (key,s) for s in self.get_allowed(key)]
-        # adding special mode
-        allowed_args += [key[4:]+';' for key in dir(self) if key.startswith('ans_')]
+        # adding special mode ('@' is spelled '__at__' in the method name, e.g.
+        # ans_amc__at__nlo: accept the spelling users type as well as that one)
+        special = [key[4:] for key in dir(self) if key.startswith('ans_')]
+        allowed_args += [name+';' for name in special]
+        allowed_args += [name.replace('__at__', '@')+';' for name in special
+                         if '__at__' in name]
         allowed_args += [arg[:-1] for arg in allowed_args if arg[-1] == ';']
         if 'allow_arg' in opts:
             allowed_args += opts['allow_arg']
@@ -2516,7 +2922,7 @@ class ControlSwitch(SmartQuestion):
         self.options = self.mother_interface.options
 
     def special_check_answer_in_input_file(self, line, default):
-        """this is called after the standard check if the asnwer were not valid
+        """this is called after the standard check if the answer were not valid
            in particular all input in the auto-completion have been already validated.
            (this include all those with ans_xx and the XXXX=YYY for YYY in self.get_allowed(XXXX)
            We just check here the XXXX = YYYY for YYYY not in self.get_allowed(XXXX)
@@ -2547,9 +2953,39 @@ class ControlSwitch(SmartQuestion):
 
 
     def set_default_switch(self):
-        
+
+        self.compute_default_switch()
+        path, user_default = self.read_user_default_switch()
+        if not user_default:
+            return
+        applied = self.apply_user_default_switch(path, user_default)
+        if not applied:
+            return
+        # The automatic defaults of the switches the user file does NOT fix are
+        # recomputed on top of it, since they are allowed to depend on one
+        # another: an NLO "fixed_order = ON" has to drag the shower default OFF.
+        # Re-applying the file afterwards protects its own entries from a
+        # set_default_XXXX that writes into a switch other than its own (the LO
+        # detector default calls set_default_shower). The values are already
+        # validated at that point, so this second pass warns about nothing.
+        self.compute_default_switch(skip=applied)
+        self.remove_inconsistency()
+        self.apply_user_default_switch(path, applied)
+        # A conflict between two entries of the file, or between one of them and
+        # a switch it leaves alone, is resolved here and now: these are defaults,
+        # not a half-finished edit, so the question opens on a consistent set
+        # instead of reporting a conflict the user never created in front of it.
+        for key, value in self.inconsistent_keys.items():
+            self.switch[key] = value
+        self.remove_inconsistency()
+
+    def compute_default_switch(self, skip=()):
+        """Set the automatic default of every switch but those in `skip`."""
+
         for key,_ in self.to_control:
             key = key.lower()
+            if key in skip:
+                continue
             if hasattr(self, 'default_switch') and key in self.default_switch:
                 self.switch[key] = self.default_switch[key]
                 continue
@@ -2557,7 +2993,87 @@ class ControlSwitch(SmartQuestion):
                 getattr(self, 'set_default_%s' % key)()
             else:
                 self.default_switch_for(key)
-        
+
+    def get_user_default_switch_path(self):
+        """Path of the user/site switch default file, or None if there is
+        none. It lives in the input/ directory of the MG5 installation, next
+        to default_run_card_lo.dat -- both are "defaults I want for every
+        process I generate". A standalone process directory has no input/ of
+        its own, so it reaches back to the installation it was written by
+        (mg5_path in its me5/mg7_configuration.txt)."""
+
+        if not self.default_switch_file:
+            return None
+        roots = []
+        try:
+            from madgraph import MG5DIR
+        except ImportError:
+            pass  # standalone (MADEVENT/aMCatNLO) directory: mg5_path only
+        else:
+            if MG5DIR:
+                roots.append(MG5DIR)
+        options = getattr(self.mother_interface, 'options', None) or {}
+        if options.get('mg5_path'):
+            roots.append(options['mg5_path'])
+        for root in roots:
+            path = os.path.join(root, 'input', self.default_switch_file)
+            if os.path.exists(path):
+                return path
+        return None
+
+    def read_user_default_switch(self):
+        """Parse the user/site switch defaults ("key = value" lines, # for
+        comments). Returns (path, {key: value}), or (None, {}) when there is
+        no such file."""
+
+        path = self.get_user_default_switch_path()
+        if not path:
+            return None, {}
+        out = {}
+        try:
+            with open(path) as fsock:
+                for line in fsock:
+                    line = line.split('#', 1)[0].strip()
+                    if not line:
+                        continue
+                    if '=' not in line:
+                        logger.warning('%s: ignoring line without "=": %s',
+                                       path, line)
+                        continue
+                    key, value = line.split('=', 1)
+                    out[key.strip().lower()] = value.strip()
+        except IOError as error:
+            logger.warning('could not read %s: %s', path, error)
+            return None, {}
+        return path, out
+
+    def apply_user_default_switch(self, path, defaults):
+        """Apply the user/site defaults on top of the computed ones. Returns
+        the {key: value} that could actually be applied -- the entries that
+        name another question's switch, or a value this run cannot provide,
+        are dropped (with a warning for the latter)."""
+
+        applied = {}
+        for key, value in defaults.items():
+            if key not in self.switch:
+                # the file is shared by the LO/NLO/mg7 questions, which do not
+                # have the same switches (analysis vs madanalysis, ...)
+                logger.debug('%s: "%s" is not a switch of this question, ignored',
+                             path, key)
+                continue
+            if not hasattr(self, 'ans_%s' % key):
+                value = self.match_switch_case(key, value)
+                if not self.check_value(key, value):
+                    logger.warning('%s: "%s = %s" is not available here, keeping "%s".',
+                                   path, key, value, self.switch[key])
+                    continue
+            # user=True: an entry of the file is a user choice, so it goes
+            # through the same consistency resolution as one typed at the
+            # prompt (an NLO 'fixed_order = ON' switches the shower off).
+            self.set_switch(key, value, user=True)
+            applied[key] = value
+        return applied
+
     def default_switch_for(self, key):
         """use this if they are no dedicated function for such key"""
         
@@ -2597,7 +3113,7 @@ class ControlSwitch(SmartQuestion):
         
     def get_cardcmd(self):
         """ return the list of command that need to be run to have a consistent 
-            set of cards with the switch value choosen """
+            set of cards with the switch value chosen """
         
         switch = self.answer
         cmd= []
@@ -2696,6 +3212,21 @@ class ControlSwitch(SmartQuestion):
         else:
             logger.warning('Not valid command: %s' % line)
    
+    def match_switch_case(self, key, value):
+        """Return value with the case of the matching entry of
+        get_allowed(key), for a switch that is not case sensitive."""
+
+        allowed = self.get_allowed(key) or []
+        if not self.is_case_sensitive(key) and value not in allowed:
+            lower = [t.lower() for t in allowed]
+            try:
+                ind = lower.index(value.lower())
+            except ValueError:
+                pass # keep the current case, in case check_value accepts it anyway.
+            else:
+                value = allowed[ind]
+        return value
+
     def is_case_sensitive(self, key):
         """check if a key is case sensitive"""
         
@@ -2728,11 +3259,13 @@ class ControlSwitch(SmartQuestion):
     def postcmd(self, stop, line):
         
         # for diamond class arch where both branch defines the postcmd
-        # set it up to be in coop mode
-        try:
-            out = super(ControlSwitch,self).postcmd(stop, line)
-        except AttributeError:
-            pass
+        # set it up to be in coop mode. (Do not catch AttributeError around the
+        # call: it hid any error raised inside the other branch's postcmd --
+        # e.g. the auto-width computation -- behind an UnboundLocalError.)
+        out = None
+        parent = super(ControlSwitch, self)
+        if hasattr(parent, 'postcmd'):
+            out = parent.postcmd(stop, line)
         if out:
             return out
 
@@ -2743,7 +3276,7 @@ class ControlSwitch(SmartQuestion):
             return True
         if self.value != 'reask':
             self.create_question()
-            return self.reask(True)
+            return self.reask(True, line=line)
         return
 
     def set_switch(self, key, value, user=True):
@@ -2756,14 +3289,7 @@ class ControlSwitch(SmartQuestion):
                 value = value.lower()
             return getattr(self, 'ans_%s' % key)(value)
         
-        if not self.is_case_sensitive(key) and value not in self.get_allowed(key):
-            lower = [t.lower() for t in self.get_allowed(key)]
-            try:
-                ind = lower.index(value.lower())
-            except ValueError:
-                pass # keep the current case, in case check_value accepts it anyway.
-            else:
-                value = self.get_allowed(key)[ind]
+        value = self.match_switch_case(key, value)
         
         check = self.check_value(key, value) 
         if not check:
@@ -2989,7 +3515,7 @@ class ControlSwitch(SmartQuestion):
         logger.info("   You can type 'help NAME' for more help on a given switch")
         logger.info("")
         logger.info("  Special keyword:", '$MG:BOLD')
-        logger.info("    %s" % '\t'.join([p[4:] for p in dir(self) if p.startswith('ans_')]) )
+        logger.info("    %s" % '\t'.join([p[4:].replace('__at__', '@') for p in dir(self) if p.startswith('ans_')]) )
         logger.info("    type 'help  XXX' for more information")
         if list_command:
             super(ControlSwitch, self).do_help(line)
@@ -3027,16 +3553,16 @@ class ControlSwitch(SmartQuestion):
                                   lnb_key=0,
                                   key=None):
         r"""should return four lines:
-        1. The upper band (typically /========\ 
-        2. The lower band (typically \========/
-        3. The line without conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
-        4. The line with    conflict | %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |
-        # Be carefull to include the size of the color flag for the switch
-        green/red/yellow are  adding 9 in length 
-        
-        line should be like '| %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s |'
+        1. The upper band (typically ┌========┐
+        2. The lower band (typically └========┘
+        3. The line without conflict │ %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s │
+        4. The line with    conflict │ %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s │
+        # Be careful to include the size of the color flag for the switch
+        green/red/yellow are  adding 9 in length
 
-           the total lenght of the line (for defining the upper/lower line)
+        line should be like '│ %(nb)2d. %(descrip)-20s %(name)5s = %(switch)-10s │'
+
+           the total length of the line (for defining the upper/lower line)
            available key : nb
                            descrip
                            name
@@ -3065,7 +3591,7 @@ class ControlSwitch(SmartQuestion):
         list_length.append(lnb_key + ldescription+ lname + lswitch + 6)
         #1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT
         list_length.append(list_length[-1] - lswitch + max(lswitch,lpotential_switch))
-        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        #│ 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT │
         list_length.append(list_length[-1] +4)
         # 1. DESCRIP KEY = VALUE_MAXSIZE
         list_length.append(lnb_key + ldescription+ lname + max((2*lpotential_switch+3),lswitch) + 6)
@@ -3087,22 +3613,22 @@ class ControlSwitch(SmartQuestion):
         
         
         # default for upper/lower:
-        upper = "/%s\\" % ("=" * (size-2))
-        lower = "\\%s/" % ("=" * (size-2))        
-        
+        upper = "┌%s┐" % ("─" * (size-2))
+        lower = "└%s┘" % ("─" * (size-2))
+
         if selected==0:
             f1= '%(nb){0}d \x1b[1m%(name){1}s\x1b[0m=%(switch)-{2}s'.format(lnb_key,
                                                                   lname,lswitch)
             f2= f1
-        # | 1. KEY = VALUE |
+        # │ 1. KEY = VALUE │
         elif selected == 1:
-            upper = "/%s\\" % ("=" * (nb_col-2))
-            lower = "\\%s/" % ("=" * (nb_col-2))
+            upper = "┌%s┐" % ("─" * (nb_col-2))
+            lower = "└%s┘" % ("─" * (nb_col-2))
             to_add = nb_col -size
-            f1 = '| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s |'.format(lnb_key,
+            f1 = '│ %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(switch)-{2}s │'.format(lnb_key,
                                                                   lname,lswitch+9+to_add)
-            
-            f = u'| %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s |'
+
+            f = u'│ %(nb){0}d. \x1b[1m%(name){1}s\x1b[0m = %(conflict_switch)-{2}s \u21d0 %(strike_switch)-{3}s │'
             f2 =f.format(lnb_key, lname, len_cswitch+9, lswitch-len_cswitch+len_switch+to_add-1)
         #1. DESCRIP KEY = VALUE
         elif selected == 2:
@@ -3124,27 +3650,27 @@ class ControlSwitch(SmartQuestion):
                 ldescription -= (l_conflict_line - nb_col)
                 f = u'%(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s\u21d0 %(strike_switch)-{4}s'
                 f2 =f.format(lnb_key, ldescription,lname,len_cswitch+9, lpotential_switch)
-        #| 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT |
+        #│ 1. DESCRIP KEY = VALUE_SIZE_NOCONFLICT │
         elif selected == 4:
-            upper = "/%s\\" % ("=" * (nb_col-2))
-            lower = "\\%s/" % ("=" * (nb_col-2))
+            upper = "┌%s┐" % ("─" * (nb_col-2))
+            lower = "└%s┘" % ("─" * (nb_col-2))
             to_add = nb_col -size
-            f='| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f='│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s │'
             f1 = f.format(lnb_key,ldescription,lname,max(lpotential_switch, lswitch)+9+to_add)
             l_conflict_line = size-lpotential_switch+len_switch+len_cswitch+3+1
             if l_conflict_line <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+                f=u'│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s│'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
             elif l_conflict_line -1 <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f=u'│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
             elif l_conflict_line -3 <= nb_col:
-                f=u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f=u'│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m=%(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
                         
             else:
                 ldescription -= (l_conflict_line - nb_col)
-                f=u'| %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
+                f=u'│ %(nb){0}d. %(descrip)-{1}.{1}s. \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
                 f2 = f.format(lnb_key,ldescription,lname, len_cswitch+9, max(lswitch,lpotential_switch)-len_cswitch+len_switch+to_add-3+3)
                 
         # 1. DESCRIP KEY = VALUE_MAXSIZE
@@ -3153,36 +3679,38 @@ class ControlSwitch(SmartQuestion):
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch))
             f = u'%(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9, max(2*lpotential_switch+3, lswitch)-lpotential_switch+len_switch)
-        #| 1. DESCRIP KEY = VALUE_MAXSIZE |
+        #│ 1. DESCRIP KEY = VALUE_MAXSIZE │
         elif selected == 6: 
-            f= '| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |'
+            f= '│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s │'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9)
-            f= u'| %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|'
+            f= u'│ %(nb){0}d. %(descrip)-{1}s \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s│'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch)
-        #| 1. DESCRIP | KEY = VALUE_MAXSIZE |   INFO   |
+        #│ 1. DESCRIP │ KEY = VALUE_MAXSIZE │   INFO   │
         elif selected == 7:
             ladd_info = max(15,6+ladd_info)
-            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4,
-                                                    lname+max(2*lpotential_switch+3, lswitch)+5,
-                                                    ladd_info)
-            upper = upper.format(' Description ', ' values ', ' other options ') 
-            
-            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |   %(add_info)-{4}s |'
+            col0 = lnb_key+ldescription+4
+            col1 = lname+max(2*lpotential_switch+3, lswitch)+5
+            upper = "┌{0:─^%s}┬{1:─^%s}┬{2:─^%s}┐" % (col0, col1, ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ')
+            lower = "└%s┴%s┴%s┘" % ("─"*col0, "─"*col1, "─"*ladd_info)
+
+            f='│ %(nb){0}d. %(descrip)-{1}s │ \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s │   %(add_info)-{4}s │'
             f1 = f.format(lnb_key,ldescription,lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-4)
-            f= u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|   %(add_info)-{5}s |'
+            f= u'│ %(nb){0}d. %(descrip)-{1}s │ \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s│   %(add_info)-{5}s │'
             f2 = f.format(lnb_key,ldescription,lname,lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-4)
         elif selected == 8:
             ladd_info = max(15,10+ladd_info)
-            upper = "/{0:=^%s}|{1:=^%s}|{2:=^%s}\\" % (lnb_key+ldescription+4+5,
-                                                    lname+max(3+2*lpotential_switch,lswitch)+10,
-                                                    ladd_info)
-            upper = upper.format(' Description ', ' values ', ' other options ') 
-            lower = "\\%s/" % ("=" * (size-2)) 
-            
-            f='| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s |     %(add_info)-{4}s|'
+            col0 = lnb_key+ldescription+4+5
+            col1 = lname+max(3+2*lpotential_switch,lswitch)+10
+            upper = "┌{0:─^%s}┬{1:─^%s}┬{2:─^%s}┐" % (col0, col1, ladd_info)
+            upper = upper.format(' Description ', ' values ', ' other options ')
+            lower = "└%s┴%s┴%s┘" % ("─"*col0, "─"*col1, "─"*ladd_info)
+
+
+            f='│ %(nb){0}d. %(descrip)-{1}s │ \x1b[1m%(name){2}s\x1b[0m = %(switch)-{3}s │     %(add_info)-{4}s│'
             f1 = f.format(lnb_key,ldescription+5,5+lname,max(2*lpotential_switch+3,lswitch)+9, ladd_info-5)
-            f=u'| %(nb){0}d. %(descrip)-{1}s | \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s|     %(add_info)-{5}s|'
+            f=u'│ %(nb){0}d. %(descrip)-{1}s │ \x1b[1m%(name){2}s\x1b[0m = %(conflict_switch)-{3}s \u21d0 %(strike_switch)-{4}s│     %(add_info)-{5}s│'
             f2 = f.format(lnb_key,ldescription+5,5+lname,
                           lpotential_switch+9,
                           max(2*lpotential_switch+3,lswitch)-lpotential_switch+len_switch, ladd_info-5)
@@ -3236,9 +3764,9 @@ class ControlSwitch(SmartQuestion):
         f3 = 0 #formatting for hidden line
         
         text = \
-        ["The following switches determine which programs are run:",
+        ["\033[92m The following switches determine which programs are run\033[0m:",
          upper_line
-        ]                     
+        ]
 
 
         
@@ -3342,7 +3870,7 @@ class CmdFile(file):
         self.lines = self.text.split('\n')
     
     def readline(self, *arg, **opt):
-        """readline method treating correctly a line whithout \n at the end
+        """readline method treating correctly a line without \n at the end
            (add it)
         """
         if self.lines:

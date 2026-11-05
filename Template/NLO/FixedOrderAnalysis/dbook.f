@@ -1034,7 +1034,7 @@ c     PineAPPL commons
       logical pineappl
       common /for_pineappl/ pineappl
 c     Initialize the grids only if the switch "pineappl" is different from zero
-c     and if the title string containes the word "central" and does not contain
+c     and if the title string contains the word "central" and does not contain
 c     the word "Born". 
       if(pineappl.and.index(string,"central").ne.0.and.
      1                  index(string,"Born").eq.0)then

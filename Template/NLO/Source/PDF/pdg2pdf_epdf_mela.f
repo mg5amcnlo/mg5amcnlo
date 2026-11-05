@@ -173,7 +173,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
           !  the abs comes because photon from positron has -7
           id_epdf = 22
       else
-          ! this is tipically the case of e+ in e-, quarks in e-, etc
+          ! this is typically the case of e+ in e-, quarks in e-, etc
           ! for which we will return zero
           id_epdf = -1
       endif
@@ -232,7 +232,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
           !  the abs comes because photon from positron has -7
           id_epdf = 22
       else
-          ! this is tipically the case of e+ in e-, quarks in e-, etc
+          ! this is typically the case of e+ in e-, quarks in e-, etc
           ! for which we will return zero
           id_epdf = -1
       endif
@@ -247,7 +247,7 @@ C  PDFs with beamstrahlung use specific initialisation/evaluation
       ! the elpdfq2 call will return the pdf without the singular factor
       !  1/(1-x)^ps_expo, which is taken into account by the
       !  phase-space parameterization
-      ! In this case the frist argument is the BS component
+      ! In this case the first argument is the BS component
       ! the second is the parton id 
       ! the third is the beam_id (+-1 for electron/positron)
       call bs_elpdfq2(i_ee,id_epdf,ih,x,omx,xmu2,1d0-ps_expo,call_epdf_bs) 

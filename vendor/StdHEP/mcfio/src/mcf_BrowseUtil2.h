@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* mcf_BrowseUtil2.c -- Utilities and auxillary Panels for NTuple Browser.      *
+* mcf_BrowseUtil2.c -- Utilities and auxiliary Panels for NTuple Browser.      *
 *	Gives a short listing of the characteristic of the file header         *
 * Copyright (c) 1995, 1996 Universities Research Association, Inc.	       *
 * All rights reserved.							       *

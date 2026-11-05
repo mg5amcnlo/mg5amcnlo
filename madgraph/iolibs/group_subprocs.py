@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -43,7 +43,7 @@ import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
 
-import models.write_param_card as write_param_card
+import madgraph.models.write_param_card as write_param_card
 from madgraph import MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -60,7 +60,7 @@ class IdentifyConfigTag(diagram_generation.DiagramTag):
     @staticmethod
     def link_from_leg(leg, model):
         """Returns the end link for a leg needed to identify configs: 
-        ((leg numer, spin, mass, width, color), number)."""
+        ((leg number, spin, mass, width, color), number)."""
 
         part = model.get_particle(leg.get('id'))
         if abs(part.get('pdg_code')) in [23,25] and leg.get('state') == False:
@@ -235,8 +235,9 @@ class SubProcessGroup(base_objects.PhysicsObject):
         beam = [l.get('id') for l in process.get('legs') if not l.get('state')]
         fs = [(l.get('id'), l) for l in process.get('legs') if l.get('state')]
         name = ""
-        for beam in beam:
+        for i, beam in enumerate(beam):
             part = process.get('model').get_particle(beam)
+
             if criteria == 'gpu':
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
@@ -247,8 +248,21 @@ class SubProcessGroup(base_objects.PhysicsObject):
                 name += part.get_name().replace('~', 'x').\
                             replace('+', 'p').replace('-', 'm')
             elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
-                   part.get('color') == 1 and part.get('pdg_code') % 2 == 1:
-                name += "l"
+                   part.get('color') == 1 and \
+            (part.get('pdg_code') % 2 == 1 or abs(part.get('pdg_code')) == 82):
+                if abs(part.get('pdg_code')) == 82:
+                    flavor =process.get('legs')[i].get('flavor')
+                    if not flavor or len(flavor)>1:
+                        name += "l"
+                    else:
+                        part = process.get('model').get_particle(flavor[0])
+                        name += part.get_name().replace('+', 'p').replace('-', 'm')
+                else:
+                    # a charged lepton that is not flavour grouped (no merged
+                    # code 82): name it like the merged one, otherwise the beam
+                    # leaves no trace in the group name at all
+                    name += "l"
+
             elif part.get('mass').lower() == 'zero' and part.is_fermion() and \
                    part.get('color') == 1 and part.get('pdg_code') % 2 == 0:
                 name += "vl"
@@ -354,7 +368,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         for ime, me in enumerate(matrix_elements):
             # Define here a FDStructure repository which will be used for the 
             # tagging all the diagrams in get_contracted_loop_diagram. Remember
-            # the the tagging of each loop updates the FDStructre repository
+            # the tagging of each loop updates the FDStructre repository
             # with the new structures identified.
                                     
             if isinstance(me, loop_helas_objects.LoopHelasMatrixElement):
@@ -489,6 +503,27 @@ class SubProcessGroup(base_objects.PhysicsObject):
             fs_parts = [model.get_particle(l.get('id')) for l in \
                         process.get('legs') if l.get('state')]
 
+            # The processes inside one group are summed over (with their own
+            # PDF weight) in a single DSIGPROC, so two processes which differ
+            # by a polarization restriction must never land in the same
+            # group: adding up 't t~{R}' and 't t~{L}' just rebuilds the
+            # unpolarized cross section, and both would be written into the
+            # directory named after the first of them.
+            # Canonicalised exactly like Process.shell_polarization (which
+            # renders the directory name) and like
+            # helas_objects.IdentifyMETag.link_from_leg; an unpolarized leg
+            # contributes (), so the grouping of unpolarized processes is
+            # strictly unchanged.
+            pols = tuple(base_objects.canonical_polarization(
+                             l.get('polarization'))
+                         for l in process.get('legs'))
+            # Likewise an interference process ('[LIxtree=QCD]', '[treextree]')
+            # never shares a group with an ordinary one, even with the same
+            # '@N': the events of a group share the power of alpha_s of each
+            # channel (config_nqcd.inc), which differs between the two.
+            # Ordinary processes all have '' here: their grouping is unchanged.
+            interference = process.get_interference_mode()
+
             # This is where the requirements for which particles to
             # combine are defined. Include p.get('is_part') in
             # is_parts selection to distinguish between q and qbar,
@@ -502,12 +537,12 @@ class SubProcessGroup(base_objects.PhysicsObject):
                              abs(p.get('color')),l.get('onshell'),l.get('onium').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
-                           process.get('id')]
+                           process.get('id'), pols, interference]
             if (criteria=="madweight"):
               proc_class = [ [(abs(p.get('pdg_code'))==5, abs(p.get('pdg_code'))==11, 
                            abs(p.get('pdg_code'))==13, abs(p.get('pdg_code'))==15) for p in \
                             fs_parts],
-                           amplitude.get('process').get('id')]
+                           amplitude.get('process').get('id'), pols]
             
             if (criteria == "gpu"):
               proc_class = [ [(p.is_fermion(),) \
@@ -517,7 +552,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
                              abs(p.get('color')),l.get('onshell'),l.get('onium').get('id')) for (p, l) \
                              in zip(is_parts + fs_parts, process.get('legs'))],
                            amplitude.get('process').get('id'),
-                           process.get('id')]
+                           process.get('id'), pols, interference]
 
             try:
                 amplitude_classes[iamp] = proc_classes.index(proc_class)
@@ -540,9 +575,26 @@ class SubProcessGroupList(base_objects.PhysicsObjectList):
 
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
+        # before was now handling special error when flavor drop subset
+        #return helas_objects.HelasMatrixElementList(\
+        #    sum([group.get('matrix_elements') for group in self], []))
 
-        return helas_objects.HelasMatrixElementList(\
-            sum([group.get('matrix_elements') for group in self], []))
+        last_error = None
+        to_sum = helas_objects.HelasMatrixElementList()
+        for group in self:       
+            try: 
+                to_add = group.get('matrix_elements')
+            except helas_objects.HelasMatrixElement.NoFlavorError as error:
+                misc.sprint("Warning: no diagram left for group %s after flavor restriction, skipping group"%(group.get('name')))
+                last_error = error
+                continue
+            except Exception as error:
+                raise error
+            to_sum+= to_add
+        if not to_sum and last_error:
+            raise last_error
+
+        return to_sum
 
     def get_used_lorentz(self):
         """Return the list of ALOHA routines used in these matrix elements"""
@@ -765,7 +817,11 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         assert isinstance(decay_chain_amps, diagram_generation.DecayChainAmplitudeList), \
                   "Argument to group_amplitudes must be DecayChainAmplitudeList"
-        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp', False]:
+        # `criteria` is an exporter's grouped_mode, not an output format name:
+        # the only values ever passed are False, 'madevent' and 'madweight'
+        # ('gpu' is mapped to 'madevent' by the caller). Normalise the falsy
+        # case the same way SubProcessGroup.group_amplitudes does.
+        if not criteria:
             criteria = 'madevent'
         assert criteria in ['madevent', 'madweight']
         

@@ -31,7 +31,7 @@ namespace LHEF {
 struct XMLTag {
 
   /**
-   * Convenient typdef.
+   * Convenient typedef.
    */
   typedef std::string::size_type pos_t;
 
@@ -174,7 +174,7 @@ struct XMLTag {
 	std::string name = str.substr(curr, tend - curr);
 	curr = str.find("=", curr) + 1;
 
-	// OK now find the beginning and end of the atribute.
+	// OK now find the beginning and end of the attribute.
 	curr = str.find("\"", curr);
 	if ( curr == end || curr >= close ) break;
 	pos_t bega = ++curr;
@@ -240,7 +240,7 @@ struct XMLTag {
 struct XSecInfo {
 
   /**
-   * Intitialize default values.
+   * Initialize default values.
    */
   XSecInfo(): neve(-1), maxweight(1.0), meanweight(1.0), negweights(false), 
 	      varweights(false) {}
@@ -314,7 +314,7 @@ struct XSecInfo {
 struct Cut {
 
   /**
-   * Intitialize default values.
+   * Initialize default values.
    */
   Cut(): min(-0.99*std::numeric_limits<double>::max()),
 	 max(0.99*std::numeric_limits<double>::max()) {}
@@ -550,7 +550,7 @@ struct Cut {
 struct ProcInfo {
 
   /**
-   * Intitialize default values.
+   * Initialize default values.
    */
   ProcInfo(): iproc(0), loops(0), qcdorder(-1), eworder(-1) {}
 
@@ -633,7 +633,7 @@ struct ProcInfo {
 struct MergeInfo {
 
   /**
-   * Intitialize default values.
+   * Initialize default values.
    */
   MergeInfo(): iproc(0), mergingscale(0.0), maxmult(false) {}
 
@@ -664,7 +664,7 @@ struct MergeInfo {
   int iproc;
 
   /**
-   * The sceme used to reweight events.
+   * The scheme used to reweight events.
    */
   std::string scheme;
 
@@ -814,7 +814,7 @@ struct Weight {
   }
 
   /**
-   * The identifyer for this set of weights.
+   * The identifier for this set of weights.
    */
   std::string name;
 
@@ -1847,7 +1847,7 @@ public:
     eup.NUP = 0;
 
     // Keep reading lines until we hit the next event or the end of
-    // the event block. Save any inbetween lines. Exit if we didn't
+    // the event block. Save any in between lines. Exit if we didn't
     // find an event.
     while ( getline() && currentLine.find("<event") == std::string::npos &&
       currentLine.find("</eventgroup>") == std::string::npos )

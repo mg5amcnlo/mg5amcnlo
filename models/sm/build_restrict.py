@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2012 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2012 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -18,12 +18,12 @@ This files defines how the restrict card can be build automatically """
 ### Important Warning ###
 # When you develop such file. Please cross check that they are NO
 # unwanted simplification to your model. This can happen especially
-# if a bunch of value are set to 1.0 by default. This YOUR responsability
+# if a bunch of values are set to 1.0 by default. This is YOUR responsibility
 # to check that you get the expected behavior
 ### Important Warning ###
 
 from __future__ import absolute_import
-import models.build_restriction_lib as build_restrict_lib
+import madgraph.models.build_restriction_lib as build_restrict_lib
 all_categories = []
 
 

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2026 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2026 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -27,11 +27,9 @@ The bugs this file exists for were all silent or near-silent:
 * MadSpin's density modes read their leg positions off the LHE record while the
   momenta went through ``get_momenta``: every top's density block contracted
   with an anti-top's decay, the spin correlations gone and nothing else moved;
-* ``get_momenta``, ``get_helicity`` and ``get_all_momenta`` each carried their
-  own copy of the slot assignment, and the copies had drifted: on a
-  charge-reversed order ``get_momenta`` returned a Fortran-formatted *string*
-  (its retry went through ``get_momenta_str``) and ``get_all_momenta`` could
-  not map it at all. All three now go through ``get_mapping``.
+* ``get_helicity`` and ``get_all_momenta`` each carried their own copy of the
+  slot assignment, and the copies drifted from ``get_mapping`` -- neither could
+  map a charge-reversed order (plus merged flavours, for ``get_helicity``).
 
 The tests below are therefore phrased as invariants over *permutations of the
 event's lines*, not as fixed expected lists: a new accessor, or a change in the
@@ -84,17 +82,27 @@ def _external(event):
     return [p for p in event if abs(p.status) == 1]
 
 
+def _mapped(pid, merged_map):
+    if not merged_map:
+        return pid
+    if pid in merged_map:
+        return merged_map[pid]
+    if -pid in merged_map:
+        return -merged_map[-pid]
+    return pid
+
+
 class TestOneSlotAssignment(unittest.TestCase):
-    """get_mapping, get_momenta, get_helicity and get_all_momenta describe ONE
-    assignment of the event's particles to the matrix element's
+    """get_mapping, get_momenta, get_helicity, get_all_momenta and get_pdg
+    describe ONE assignment of the event's particles to the matrix element's
     legs, and it is flavour-correct."""
 
     # the density matrix element MadSpin generates for p p > t t~ t t~
     TTTT = [(21, 21), (6, -6, 6, -6)]
 
-    def assertOneAssignment(self, event, order):
+    def assertOneAssignment(self, event, order, merged_map=None):
         """The invariant, checked accessor by accessor against get_mapping."""
-        mapping, inverse = event.get_mapping(order)
+        mapping, inverse = event.get_mapping(order, merged_map=merged_map)
         ext = _external(event)
         flat = list(order[0]) + list(order[1])
         self.assertEqual(sorted(mapping), list(range(len(ext))))
@@ -107,7 +115,7 @@ class TestOneSlotAssignment(unittest.TestCase):
         signs = set()
         for i, part in enumerate(ext):
             leg = flat[mapping[i]]
-            pid = part.pid
+            pid = _mapped(part.pid, merged_map)
             self.assertIn(leg, (pid, -pid),
                           'particle %d (pid %d) put on a leg %d'
                           % (i, part.pid, leg))
@@ -117,9 +125,10 @@ class TestOneSlotAssignment(unittest.TestCase):
         # ones), never only some
         self.assertEqual(len(signs), 1)
 
-        momenta = event.get_momenta(order)
-        helicities = event.get_helicity(order)
-        all_momenta = event.get_all_momenta(order)
+        momenta = event.get_momenta(order, merged_map=merged_map)
+        helicities = event.get_helicity(order, merged_map=merged_map)
+        all_momenta = event.get_all_momenta(order, merged_map=merged_map)
+        pdgs = event.get_pdg(momenta)
         self.assertIsInstance(momenta, list)
         for i, part in enumerate(ext):
             slot = mapping[i]
@@ -129,6 +138,7 @@ class TestOneSlotAssignment(unittest.TestCase):
             self.assertEqual(helicities[slot], int(part.helicity),
                              'get_helicity: slot %d does not hold particle %d'
                              % (slot, i))
+            self.assertEqual(pdgs[slot], part.pid)
         self.assertIn(momenta, [list(p) for p in all_momenta],
                       'get_all_momenta does not contain get_momenta\'s ordering')
 
@@ -160,9 +170,8 @@ class TestOneSlotAssignment(unittest.TestCase):
 
     def test_a_charge_reversed_order(self):
         """MadSpin evaluates a t~ decay with the t matrix element when only
-        that one exists (get_pdir's anti-particle fallback). get_momenta used
-        to return a Fortran-formatted string here and get_all_momenta to
-        raise, and calculate_matrix_element goes through the latter."""
+        that one exists (get_pdir's anti-particle fallback). get_all_momenta
+        used to raise here, and calculate_matrix_element goes through it."""
         self.assertOneAssignment(_event([-6], [-24, -5]), [(6,), (24, 5)])
         self.assertOneAssignment(_event([-24], [11, -12]), [(24,), (-11, 12)])
         self.assertOneAssignment(_event([2, -2], [-6, -6, 6, 6]),
@@ -179,6 +188,26 @@ class TestOneSlotAssignment(unittest.TestCase):
                                  [(21, 21), (-6, 6, 25)])
         self.assertOneAssignment(_event([-1, 2], [25, -24, 22]),
                                  [(1, -2), (25, 24, 22)])
+    def test_merged_flavours(self):
+        """apply_flavor_grouping: the matrix element carries 81 for every
+        light quark, the event the concrete flavours."""
+        merged = {1: 81, 2: 81, 3: 81, 4: 81}
+        self.assertOneAssignment(_event([2, -1], [2, -1]),
+                                 [(81, -81), (81, -81)], merged)
+        for final in set(itertools.permutations([2, -1, 3, -4])):
+            with self.subTest(final=final):
+                self.assertOneAssignment(_event([21, 21], final),
+                                         [(21, 21), (81, -81, 81, -81)], merged)
+
+    def test_merged_flavours_with_a_charge_reversed_order(self):
+        """A W- decay evaluated with the W+ matrix element, light quarks merged
+        into 81: only the charge-reversed order holds the W, and get_helicity's
+        own reversed retry dropped merged_map, so this could not be mapped."""
+        merged = {1: 81, 2: 81, 3: 81, 4: 81}
+        self.assertOneAssignment(_event([-24], [1, -2]),
+                                 [(24,), (81, -81)], merged)
+        self.assertOneAssignment(_event([-24], [-2, 1]),
+                                 [(24,), (81, -81)], merged)
 
 
 class TestIdenticalParticleTieBreak(unittest.TestCase):
@@ -232,6 +261,41 @@ class TestGetAllMomenta(unittest.TestCase):
             flat = list(order[0]) + list(order[1])
             for slot, mom in enumerate(perm):
                 self.assertEqual(flat[base.index(mom)], flat[slot])
+
+
+class TestBasicEventOrdering(unittest.TestCase):
+    """NLO_PARTIALWEIGHT.BasicEvent keeps its own get_mapping and get_momenta
+    (it has no status column); they must describe the same assignment."""
+
+    class _FakeWgt(object):
+        def __init__(self, pdgs):
+            self.pdgs = list(pdgs)
+            self.born_related = 1
+            self.real_related = 2
+            self.momenta_config = 2   # == real_related: no merging
+            self.to_merge_pdg = [1, 2]
+            self.merge_new_pdg = 21
+            self.type = 1
+
+    def _basic(self, pdgs):
+        event = _event(pdgs[:2], pdgs[2:])
+        momenta = [lhe_parser.FourMomentum(*_mom(p)) for p in _external(event)]
+        return lhe_parser.NLO_PARTIALWEIGHT.BasicEvent(
+            momenta, [self._FakeWgt(pdgs)], event), momenta
+
+    def test_get_momenta_follows_get_mapping(self):
+        order = [(21, 21), (6, -6, 6, -6)]
+        for final in set(itertools.permutations([6, 6, -6, -6])):
+            with self.subTest(final=final):
+                basic, momenta = self._basic([21, 21] + list(final))
+                mapping, _ = basic.get_mapping(order)
+                got = basic.get_momenta(order)
+                for i, mom in enumerate(momenta):
+                    self.assertEqual(got[mapping[i]],
+                                     (mom.E, mom.px, mom.py, mom.pz))
+                flat = list(order[0]) + list(order[1])
+                for i, pdg in enumerate([21, 21] + list(final)):
+                    self.assertEqual(flat[mapping[i]], pdg)
 
 
 def _chain_event(layout):

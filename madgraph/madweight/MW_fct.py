@@ -306,7 +306,7 @@ def get_all_permutations(cat_list):
     # create the category names and the id to permute for each category
     nb_cat = collections.defaultdict(list)
     for i,cat in enumerate(cat_list):
-        nb_cat[cat].append(i+1) #+1 in order to be in Fortan convention
+        nb_cat[cat].append(i+1) #+1 in order to be in Fortran convention
     cat_names = list(nb_cat.keys())
     # build an iterator for each category
     iterator = dict([(cat, itertools.permutations(value)) 

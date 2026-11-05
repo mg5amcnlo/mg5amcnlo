@@ -296,7 +296,7 @@ CONTAINS
     !
     IMPLICIT NONE
     !
-    ! CONSTANS
+    ! CONSTANTS
     !
     ! MAX RANK SET AS 10
     ! Sum((3+r)*(2+r)*(1+r)/6,{r,0,10})=1001 
@@ -578,7 +578,7 @@ CONTAINS
     ! SHIFT MOMENTUM MOM
     IMPLICIT NONE
     !
-    ! CONSTANS
+    ! CONSTANTS
     !
     ! MAX RANK SET AS 10
     ! Sum((3+r)*(2+r)*(1+r)/6,{r,0,10})=1001 --> LOOPMAXCOEFS_IREGI
@@ -594,7 +594,7 @@ CONTAINS
     ! i=0-3 -> number of lorentz indices =i
     ! i=4 -> the position of TICOEFS that should be multiplied
     ! e.g. (q+MOM)^mu1(q+MOM)^mu2...(q+MOM)^muk
-    ! it can be splitted into q^mu1...q^muk+q^mu1...q^mui Mom^mui+1 ...q^muk ...
+    ! it can be split into q^mu1...q^muk+q^mu1...q^mui Mom^mui+1 ...q^muk ...
     ! for some specific term configurateion mu1=0,mu2=0,...muk=3
     ! NTERM stores the total number of terms
     ! SPLIT_FACTOR is the factor for each term

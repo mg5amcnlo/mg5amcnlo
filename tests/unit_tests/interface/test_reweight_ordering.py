@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2026 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2026 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -30,6 +30,15 @@ pdg, POS of GET_DENSITY -- is laid out in the matrix element's leg order:
 
 The tests feed the same physical event written in several line orders and
 require identical answers.
+
+The original matrix element must also be put in the frame the events were
+generated in, which was read from the wrong place: ``frame_id`` is only computed
+when the include files are written, so a run_card read back from an LHE banner
+always said 6 (the partonic c.m.), and an mg7 banner has none, while there
+``me_frame = []`` means no boost at all. And the frame has to be reached the way
+the generation reached it, along the beam to zero rapidity of the selected legs
+and then transversely: a single boost straight from the lab (or from the
+partonic c.m.) leaves a Wigner rotation behind.
 """
 
 from __future__ import absolute_import
@@ -37,6 +46,7 @@ import math
 import unittest
 
 import madgraph
+import madgraph.various.banner as banner_mod
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph.interface.reweight_interface as reweight_interface
 
@@ -73,17 +83,36 @@ def _rest(momenta, legs):
     return [sum(momenta[leg][k] for leg in legs) for k in (1, 2, 3)]
 
 
+def _zboost(momenta, rapidity):
+    """``momenta`` boosted along z by ``rapidity``: the same event seen from a
+    lab frame in which the partonic system moves along the beam"""
+    ch, sh = math.cosh(rapidity), math.sinh(rapidity)
+    return [(e * ch + pz * sh, px, py, pz * ch + e * sh)
+            for e, px, py, pz in momenta]
+
+
+def _mg7_card(me_frame):
+    card = banner_mod.RunCardMG7()
+    card['run']['me_frame'] = me_frame
+    return card
+
+
 class _BaseStub(object):
     class _Banner(object):
-        def __init__(self, frame_id):
-            self.run_card = {'frame_id': frame_id}
+        def __init__(self, run_card):
+            self.run_card = run_card
 
-    def __init__(self, frame_id):
-        self.banner = self._Banner(frame_id)
+    def __init__(self, run_card):
+        """``run_card`` a RunCardMG7, or a plain dict standing for a legacy
+        (LO/NLO) one; a list is taken as the legacy me_frame"""
+        if isinstance(run_card, list):
+            run_card = {'me_frame': run_card}
+        self.banner = self._Banner(run_card)
         self.keep_ordering = False
         self.boost_event = False
 
     method_boost_event = reweight_interface.ReweightInterface.method_boost_event
+    get_me_frame = reweight_interface.ReweightInterface.get_me_frame
     boost_momenta_to_rest_frame = staticmethod(
         reweight_interface.ReweightInterface.boost_momenta_to_rest_frame)
     boost_momenta_to_me_frame = classmethod(
@@ -91,30 +120,28 @@ class _BaseStub(object):
 
 
 class TestFrameIdBoost(unittest.TestCase):
-    """me_frame / frame_id in the reweighting: bit n is leg n of the matrix
-    element, counted from 1."""
+    """me_frame in the reweighting: entry n is leg n of the matrix element,
+    counted from 1."""
 
-    def _boosted(self, frame_id, layout, resonance=False):
+    def _boosted(self, run_card, layout, resonance=False, rapidity=0.):
         event = _event(layout, resonance)
-        all_p = [event.get_momenta(ORDER)]
-        return _BaseStub(frame_id).method_boost_event(event, all_p, ORDER, 0)
+        all_p = [_zboost(event.get_momenta(ORDER), rapidity)]
+        return _BaseStub(run_card).method_boost_event(event, all_p, ORDER, 0)
 
     def test_the_chosen_legs_end_up_at_rest(self):
         """me_frame = [3, 4]: the first top and first anti-top of the matrix
         element, whichever LHE line they sit on."""
-        frame_id = 2 ** 3 + 2 ** 4
         for layout in LAYOUTS:
-            out = self._boosted(frame_id, layout)
+            out = self._boosted([3, 4], layout)
             self.assertEqual(len(out), 1)
             for comp in _rest(out[0], [2, 3]):
                 self.assertAlmostEqual(comp, 0., places=8)
 
     def test_the_line_order_does_not_matter(self):
-        frame_id = 2 ** 3 + 2 ** 4
-        ref = self._boosted(frame_id, LAYOUTS[0])
+        ref = self._boosted([3, 4], LAYOUTS[0])
         for layout in LAYOUTS[1:]:
             for resonance in (False, True):
-                out = self._boosted(frame_id, layout, resonance)
+                out = self._boosted([3, 4], layout, resonance)
                 for a, b in zip(out[0], ref[0]):
                     for x, y in zip(a, b):
                         self.assertAlmostEqual(x, y, places=8)
@@ -122,16 +149,53 @@ class TestFrameIdBoost(unittest.TestCase):
     def test_a_single_leg_is_exactly_at_rest(self):
         """HELAS takes the frame's z axis only for a momentum exactly at rest;
         the boost arithmetic alone leaves ~1e-14."""
-        out = self._boosted(2 ** 5, LAYOUTS[1])
+        out = self._boosted([5], LAYOUTS[1], rapidity=0.8)
         self.assertEqual(out[0][4][1:], (0., 0., 0.))
         self.assertAlmostEqual(out[0][4][0], 173., places=8)
 
-    def test_no_selected_leg_changes_nothing(self):
+    def test_frame_id_is_not_read(self):
+        """frame_id is only computed when the include files are written: a
+        run_card read back from an LHE banner keeps its default 6 whatever
+        me_frame says. me_frame is what decides."""
+        out = self._boosted({'me_frame': [5], 'frame_id': 6}, LAYOUTS[0])
+        self.assertEqual(out[0][4][1:], (0., 0., 0.))
+
+    def test_the_partonic_cm_is_left_to_the_zboost(self):
+        """[1, 2] -- frame_id 6, which madevent and aMC@NLO skip outright,
+        decays included -- and [] (no leg selected, so no boost of momenta
+        already in the partonic c.m.) both mean the partonic c.m. at LO/NLO,
+        and so do legs the matrix element does not have."""
+        for me_frame in ([1, 2], [2, 1], [], [7]):
+            stub = _BaseStub(me_frame)
+            self.assertIsNone(stub.get_me_frame(2, 6), me_frame)
+            self.assertIsNone(stub.get_me_frame(1, 6), me_frame)
+        self.assertIsNone(_BaseStub({}).get_me_frame(2, 6))
+
+    def test_mg7_default_applies_no_boost(self):
+        """mg7's [] means the matrix element saw the lab-frame momenta it
+        wrote out, not madevent's partonic c.m. -- for both matrix elements
+        of the weight"""
         event = _event(LAYOUTS[0])
-        all_p = [event.get_momenta(ORDER)]
-        # bit 0 is not a leg
-        self.assertIs(_BaseStub(1).method_boost_event(event, all_p, ORDER, 0),
-                      all_p)
+        lab = _zboost(event.get_momenta(ORDER), 0.6)
+        for hypp_id in (0, 1):
+            all_p = [list(lab)]
+            out = _BaseStub(_mg7_card([])).method_boost_event(event, all_p,
+                                                              ORDER, hypp_id)
+            self.assertIs(out, all_p)
+            self.assertEqual(out[0], lab)
+
+    def test_mg7_frame(self):
+        stub = _BaseStub(_mg7_card([5]))
+        self.assertEqual(stub.get_me_frame(2, 6), [5])
+        out = self._boosted(_mg7_card([5]), LAYOUTS[0], rapidity=0.6)
+        self.assertEqual(out[0][4][1:], (0., 0., 0.))
+        # unlike at LO, [1, 2] of a decay is a real frame in mg7 -- the
+        # decaying particle and its first product -- while [1] is the
+        # decaying particle's rest frame, i.e. no frame to reach
+        self.assertEqual(_BaseStub(_mg7_card([1, 2])).get_me_frame(1, 4),
+                         [1, 2])
+        self.assertIsNone(_BaseStub(_mg7_card([1])).get_me_frame(1, 4))
+        self.assertIsNone(_BaseStub(_mg7_card([1, 2])).get_me_frame(2, 6))
 
 
 class _DensityStub(object):
@@ -142,14 +206,8 @@ class _DensityStub(object):
         self.keep_ordering = False
 
     method_boost_event = reweight_interface.DensityInterface.method_boost_event
-    chose_particle_user_input = \
-        reweight_interface.DensityInterface.chose_particle_user_input
-    find_position_particles_default_order = \
-        reweight_interface.DensityInterface.find_position_particles_default_order
-    find_position_particles_new_order = \
-        reweight_interface.DensityInterface.find_position_particles_new_order
-    find_position_particles_with_observable = \
-        reweight_interface.DensityInterface.find_position_particles_with_observable
+    chose_particle_user_input = staticmethod(
+        reweight_interface.DensityInterface.chose_particle_user_input)
     _boost_to_chosen_legs = reweight_interface.DensityInterface._boost_to_chosen_legs
     boost_momenta_to_rest_frame = staticmethod(
         reweight_interface.ReweightInterface.boost_momenta_to_rest_frame)
@@ -157,17 +215,14 @@ class _DensityStub(object):
 
 class TestDensityInterfaceLegs(unittest.TestCase):
 
-    PROPERTIES = [p for p in dir(lhe_parser.FourMomentum)
-                  if isinstance(getattr(lhe_parser.FourMomentum, p), property)]
     PDG = list(ORDER[0]) + list(ORDER[1])
 
     def _choose(self, layout, user_input, resonance=False, fortran=False):
         event = _event(layout, resonance)
         lab_p = event.get_momenta(ORDER)
         stub = _DensityStub(user_input)
-        return stub.chose_particle_user_input(lab_p, self.PDG, self.PROPERTIES,
-                                              ORDER, user_input, 'test',
-                                              fortran), lab_p, event
+        return stub.chose_particle_user_input(lab_p, self.PDG, user_input,
+                                              'test', fortran), lab_p, event
 
     def test_ranked_choice_is_the_same_particle_in_every_layout(self):
         """'the hardest top' names one particle, however the LHE lists them."""
@@ -204,8 +259,8 @@ class TestDensityInterfaceLegs(unittest.TestCase):
                     self.assertAlmostEqual(comp, 0., places=8)
 
     def test_boost_keeps_the_momenta_it_was_given(self):
-        """the momenta boosted are the ones given, not the event's own read
-        back from a boosted copy of it, as this did"""
+        """all_p carries the Monte-Carlo-mass projection; boosting the event
+        and reading the momenta back from it, as this did, threw it away."""
         user_input = [[6], '', []]
         positions, lab_p, event = self._choose(LAYOUTS[1], user_input)
         shifted = [tuple(x * 1.01 for x in p) for p in lab_p]
@@ -250,15 +305,22 @@ WZ_LAYOUTS = [['u', 'dx', 'W', 'Z'], ['dx', 'u', 'Z', 'W'],
 
 def _madevent_frame(lab, legs):
     """What madevent hands the matrix element: the momenta in the partonic
-    CM (genps.f), then boost_to_frame on the legs selected, a single one set
-    exactly at rest -- written out independently of the code under test."""
+    CM (genps.f), then boost_to_frame on the legs selected -- along z to
+    their zero rapidity, then transversely to their rest frame -- a single
+    one set exactly at rest. Written out independently of the code under
+    test."""
     pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
     cm = [lhe_parser.FourMomentum(p).zboost(pcm) for p in lab]
     pboost = lhe_parser.FourMomentum()
     for n in legs:
         pboost += cm[n - 1]
-    neg = lhe_parser.FourMomentum(pboost.E, -pboost.px, -pboost.py, -pboost.pz)
-    out = [p.boost(neg) for p in cm]
+    rapidity = 0.5 * math.log((pboost.E + pboost.pz) / (pboost.E - pboost.pz))
+    ch, sh = math.cosh(rapidity), math.sinh(rapidity)
+    along_z = [lhe_parser.FourMomentum(p.E * ch - p.pz * sh, p.px, p.py,
+                                       p.pz * ch - p.E * sh) for p in cm]
+    mt = math.sqrt(pboost.E ** 2 - pboost.pz ** 2)
+    neg = lhe_parser.FourMomentum(mt, -pboost.px, -pboost.py, 0.)
+    out = [p.boost(neg) for p in along_z]
     out = [(p.E, p.px, p.py, p.pz) for p in out]
     if len(legs) == 1:
         out[legs[0] - 1] = (out[legs[0] - 1][0], 0., 0., 0.)
@@ -275,7 +337,7 @@ class TestMeFrameConvention(unittest.TestCase):
     def _boosted(self, me_frame, layout=WZ_LAYOUTS[0], hypp_id=0, stub=None):
         event = _wz_event(layout)
         all_p = [event.get_momenta(WZ_ORDER)]
-        stub = stub or _BaseStub(sum(2 ** n for n in me_frame))
+        stub = stub or _BaseStub(me_frame)
         return stub.method_boost_event(event, all_p, WZ_ORDER, hypp_id)[0]
 
     def assertMomentaEqual(self, first, second, places=8):
@@ -283,22 +345,28 @@ class TestMeFrameConvention(unittest.TestCase):
             for x, y in zip(a, b):
                 self.assertAlmostEqual(x, y, places=places)
 
-    def test_the_frame_goes_through_the_partonic_cm(self):
-        """madevent boosts to the frame from the partonic CM. Straight from
-        the lab is another frame -- a Wigner rotation, 2.8 degrees here -- and
-        turns the quantisation axis of a leg at rest with it."""
+    def test_the_frame_is_reached_along_the_beam(self):
+        """madevent boosts to the frame along the beam first, so the frame is
+        the same from the lab the events come in. A single boost straight from
+        the lab, or from the partonic CM, is another frame -- a Wigner
+        rotation -- and turns the quantisation axis of a leg at rest with
+        it."""
         for me_frame in ([3], [4], [3, 4]):
             lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
             ref = _madevent_frame(lab, me_frame)
             for layout in WZ_LAYOUTS:
                 self.assertMomentaEqual(self._boosted(me_frame, layout), ref)
-        # the test can tell: from the lab, the beam is not where madevent has it
+        # the test can tell: with a single boost, the beam is not where
+        # madevent has it, whether from the lab or from the partonic CM
         lab = _wz_event(WZ_LAYOUTS[0]).get_momenta(WZ_ORDER)
-        direct = _BaseStub(8).boost_momenta_to_rest_frame(
-                                lab, lhe_parser.FourMomentum(lab[2]), 2)
         ref = _madevent_frame(lab, [3])
-        self.assertGreater(max(abs(x - y) for a, b in zip(direct, ref)
-                               for x, y in zip(a, b)), 10.)
+        pcm = lhe_parser.FourMomentum(lab[0]) + lhe_parser.FourMomentum(lab[1])
+        cm = [lhe_parser.FourMomentum(p).zboost(pcm).get_tuple() for p in lab]
+        for start in (lab, cm):
+            direct = _BaseStub([3]).boost_momenta_to_rest_frame(
+                                    start, lhe_parser.FourMomentum(start[2]), 2)
+            self.assertGreater(max(abs(x - y) for a, b in zip(direct, ref)
+                                   for x, y in zip(a, b)), 1.)
 
     def test_a_single_leg_is_exactly_at_rest(self):
         for leg in (3, 4):
@@ -315,7 +383,7 @@ class TestMeFrameConvention(unittest.TestCase):
     def test_a_boost_set_for_the_new_matrix_element_wins(self):
         """'change boost' (boost_event) is the user's explicit choice for the
         new matrix element; True means: leave the momenta as they are"""
-        stub = _BaseStub(8)
+        stub = _BaseStub([3])
         stub.boost_event = True
         event = _wz_event(WZ_LAYOUTS[0])
         all_p = [event.get_momenta(WZ_ORDER)]
@@ -339,10 +407,10 @@ class TestMeFrameConvention(unittest.TestCase):
         event = _event(LAYOUTS[0])
         all_p = [event.get_momenta(ORDER)]
         # leg 1, a gluon
-        self.assertRaises(madgraph.InvalidCmd, _BaseStub(2).method_boost_event,
+        self.assertRaises(madgraph.InvalidCmd, _BaseStub([1]).method_boost_event,
                           event, all_p, ORDER, 0)
         self.assertRaises(madgraph.InvalidCmd,
-                          _BaseStub(2).boost_momenta_to_rest_frame,
+                          _BaseStub([1]).boost_momenta_to_rest_frame,
                           all_p[0], lhe_parser.FourMomentum(all_p[0][0]))
 
     def test_each_assignment_gets_its_own_frame(self):
@@ -353,7 +421,7 @@ class TestMeFrameConvention(unittest.TestCase):
         first = event.get_momenta(ORDER)
         swapped = list(first)
         swapped[2], swapped[4] = swapped[4], swapped[2]
-        for stub, hypp_id in ((_BaseStub(2 ** 3), 0), (_BaseStub(2 ** 3), 1)):
+        for stub, hypp_id in ((_BaseStub([3]), 0), (_BaseStub([3]), 1)):
             out = stub.method_boost_event(event, [first, swapped], ORDER,
                                           hypp_id)
             for p in out:

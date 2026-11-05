@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -185,18 +185,20 @@ class FortranWriter(FileWriter):
         pass
 
     # Parameters defining the output of the Fortran writer
-    keyword_pairs = {r'^if.+then\s*$': ('^end\s*if', 2),
+    keyword_pairs = {r'^if.+then\s*$': (r'^end\s*if', 2),
                      r'^type(?!\s\()\s.+\s*$': ('^endtype', 2),
                      r'^do(?!\s+\d+)\s+': (r'^end\s*do\s*$', 2),
                      '^subroutine': (r'^end\s*$', 0),
                      '^module': (r'^end\s*$', 0),
-                     'function': (r'^end\s*$', 0)}
+                     'function': (r'^end\s*$', 0),
+                     r'^select\s+case': (r'^end\s+select\s*$', 2)}
     single_indents = {r'^else\s*$':-2,
-                      r'^else\s*if.+then\s*$':-2}
+                      r'^else\s*if.+then\s*$':-2,
+                      r'^case\s*(\(.+\)|default)\s*$': -2}
     number_re = re.compile(r'^(?P<num>\d+)\s+(?P<rest>.*)')
     line_cont_char = '$'
     comment_char = 'c'
-    uniformcase = True #force everyting to be lower/upper case 
+    uniformcase = True #force everything to be lower/upper case
     downcase = False
     line_length = 71
     max_split = 20
@@ -208,6 +210,15 @@ class FortranWriter(FileWriter):
     __keyword_list = []
     __comment_pattern = re.compile(r"^(\s*#|c\$|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*|\s*!|!\$)", re.IGNORECASE)
     __continuation_line = re.compile(r"(?:     )[$&]")
+    # A floating-point literal whose value is zero can be written with a
+    # negative sign (-0.000...D+00) depending on the host's round-off / numpy
+    # version. That spurious sign is not only cosmetic: the extra character can
+    # tip a line over line_length and change where it is split, making the whole
+    # generated source host-dependent. Normalise such negative zeros to +0 (the
+    # leading '-' is only stripped when it is a unary sign, i.e. preceded by an
+    # opening parenthesis, comma, '=', an arithmetic operator or a space).
+    __neg_zero_re = re.compile(
+        r"(?<=[(,=*/+\- ])-(0\.0+(?:[dDeE][-+]?\d+)?)(?![.\w])")
 
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -271,7 +282,12 @@ class FortranWriter(FileWriter):
     
                 myline = "\'".join(splitline).rstrip()
 
-            # Check if line starts with dual keyword and adjust indent 
+            # Normalise negative-zero literals (-0.000...D+00 -> 0.000...D+00)
+            # before the line is split, so neither the value nor the resulting
+            # line wrapping depends on the host's sign of zero.
+            myline = self.__neg_zero_re.sub(r'\1', myline)
+
+            # Check if line starts with dual keyword and adjust indent
             if self.__keyword_list and re.search(self.keyword_pairs[\
                 self.__keyword_list[-1]][0], myline.lower()):
                 key = self.__keyword_list.pop()
@@ -677,7 +693,7 @@ class CPPWriter(FileWriter):
                 res_lines.extend(self.write_line(myline))
             return res_lines
 
-        # Check if line starts with keyword with parentesis
+        # Check if line starts with keyword with parentheses
         for key in self.indent_par_keywords.keys():
             if re.search(key, myline):
                 # Step through to find end of parenthesis

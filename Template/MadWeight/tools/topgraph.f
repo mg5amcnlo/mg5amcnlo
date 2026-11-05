@@ -10,7 +10,7 @@ c
       character*40 t1, t2, t3, t4, t0
       integer i
 c
-c     gobal
+c     global
 c
       double precision GeVbin, etabin, xbin
       common/to_bin/ GeVbin, etabin, xbin
@@ -84,12 +84,12 @@ c
       character*30 BUFFER
       character istring
 c
-c     gobal
+c     global
 c
       double precision GeVbin, etabin, xbin
       common/to_bin/ GeVbin, etabin, xbin
 c     
-c     include histo globlal
+c     include histo global
 c      
       include 'dbook.inc'
 
@@ -158,12 +158,12 @@ c
       character*30 BUFFER
       character istring
 c
-c     gobal
+c     global
 c
       double precision GeVbin, etabin, xbin
       common/to_bin/ GeVbin, etabin, xbin
 c     
-c     include histo globlal
+c     include histo global
 c      
       include 'dbook.inc'
 c      call MFINAL(i)
@@ -180,7 +180,7 @@ c      call MFINAL(-1*i)
       call MOPERA(k, 200,'/',-200,200,1d0,1d0)
       call MOPERA(k, channel_pos,'+',200,channel_pos,1d0,1d0)
 
-      !define a unity histogram in 200 (after simply redifine to zero)
+      !define a unity histogram in 200 (after simply redefine to zero)
       call MOPERA(k, -200,'I',-200,-200,1d0,1d0)
       call MOPERA(k, -1*channel_pos,'+',-200,-1*channel_pos,1d0,1d0)
 

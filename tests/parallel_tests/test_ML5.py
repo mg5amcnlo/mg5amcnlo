@@ -351,7 +351,7 @@ class ML5Test(unittest.TestCase):
                filename = 'ptest_long_sm_vs_ml4_%s'%proc, chosen_runner = 'ML4')
 
     #===========================================================================
-    # Now the long checks against results previsouly generated in MadLoop 5.
+    # Now the long checks against results previously generated in MadLoop 5.
     #===========================================================================
 
 #   ('g g > g t t~ ',{'QED':0,'QCD':3},['QCD'],{'QCD':8,'QED':0})

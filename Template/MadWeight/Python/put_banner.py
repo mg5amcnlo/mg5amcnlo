@@ -50,7 +50,7 @@
 ##     |   put in variable full_banner_txt the version information      ##
 ##     |                                                                ##
 ##     +put_info_card:                                                  ##
-##     |   put in variable full_banner_txt the copy of the card betwenn ##
+##     |   put in variable full_banner_txt the copy of the card between ##
 ##     |   xml tag. defined in self.card_info                           ##
 ##     |   if self.mod_TAG(filepos) is defined the information between  ##
 ##     |   the tag is the output of that function                       ##
@@ -83,7 +83,7 @@
 ##     |   banner                                                       ##
 ##     |                                                                ##
 ##     + mod_MGRUnGrid(filepos):                                        ##
-##     |   modify the seed of the run_card (if needed) and retrun the   ##
+##     |   modify the seed of the run_card (if needed) and return the   ##
 ##     |   modify (or original) run_card.dat                            ##
 ##                                                                      ##
 ##---MW_Banner:---------------------------------------------------------##
@@ -159,7 +159,7 @@ class Banner:
 
     #2 #######################################################################        
     def put_info_card(self):
-        """    |   put in variable full_banner_txt the copy of the card betwenn ##
+        """    |   put in variable full_banner_txt the copy of the card between ##
         ##     |   xml tag. defined in self.card_info                           ##
         ##     |   if self.mod_TAG(filepos) is defined the information between  ##
         ##     |   the tag is the output of that function                       ##
@@ -252,7 +252,7 @@ class ME_Banner(Banner):
 
     #2 #######################################################################        
     def mod_MGRunCard(self,inputfile):
-        """    |   modify the seed of the run_card (if needed) and retrun the   ##
+        """    |   modify the seed of the run_card (if needed) and return the   ##
         ##     |   modify (or original) run_card.dat                            ##
         """
 

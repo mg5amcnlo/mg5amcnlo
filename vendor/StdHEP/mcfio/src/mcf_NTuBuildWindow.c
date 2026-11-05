@@ -400,7 +400,7 @@ nTuBuildWindow *CreateNTuBuildWindow(Display *display, char *title,
     	    XmNrightAttachment, XmATTACH_POSITION,
     	    XmNrightPosition, 100, 0);
     /*
-    **   Create the descrption label and text widget, for the selected
+    **   Create the description label and text widget, for the selected
     **   Variable.
     */
     window->descriptVarW  = XtVaCreateManagedWidget("CommentW",
@@ -431,7 +431,7 @@ nTuBuildWindow *CreateNTuBuildWindow(Display *display, char *title,
     
    /*
    ** Next is a complicated row for the Name field, ,
-   ** and the type and dimension option menus, and wether this is a 
+   ** and the type and dimension option menus, and whether this is a
    ** fixed size Variable or not...
    */ 
     
@@ -985,7 +985,7 @@ static void changeCB(Widget w, nTuBuildWindow *window, caddr_t call_data)
         for (i=0; i<variable->numDim; i++) {
               if (variable->dimensions[i] <= 0) 
               DialogF(DF_ERR, window->shell,1,
-            " Wrong or missing dimension related to arrary index number %d !",
+            " Wrong or missing dimension related to array index number %d !",
                "Acknowledged", i);
            }    
     }                 

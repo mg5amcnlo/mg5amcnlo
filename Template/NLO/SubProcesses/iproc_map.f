@@ -63,7 +63,7 @@ c     gluon splitting
 c     final state gluon emitted
                      id_current(i,j)=idup(j_fks,j)
                   elseif(idup(j_fks,j).eq.21.or.idup(j_fks,j).eq.22) then 
-c     intial state g->qqbar splitting
+c     initial state g->qqbar splitting
                      id_current(i,j)=-idup(i_fks,j)
                   else
                      write (*,*) 'Error #1 in unwgt_table',nFKSprocess
@@ -209,7 +209,7 @@ c Print the map to the screen
 
 ************************************************************************
 *     The following routine sets up the flavour map that needs to be
-*     feeded to PineAPPL in the initialization stage.
+*     fed to PineAPPL in the initialization stage.
 ************************************************************************
       subroutine setup_flavourmap
 *
@@ -360,7 +360,7 @@ c Print the map to the screen
          endif
 
 *     Be careful with all possible permutations in initial_parton_map!
-*     Check all possible npdflumi conbinations until a match is found
+*     Check all possible npdflumi combinations until a match is found
          do kpdflumi=1,npdflumi
 
 *     Initialization

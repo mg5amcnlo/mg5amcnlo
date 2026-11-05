@@ -1,0 +1,64 @@
+{
+  "_comment": "Reference cross-sections (pb) for systematic MG7 testing. Source of truth: #28. Reference runs used fixed scale (mu = 91.188 GeV, pinned by the test; the run_card.toml default is now dynamical HT/2), e_cm = 13000 GeV, NNPDF23_lo_as_0130_qed (also pinned by the test, so these values stay valid if the run_card.toml default PDF changes), 1M events. decay_cuts: [phasespace] cut_decays (default false, as MadEvent's cut_decays) leaves the products of on-shell decay-chain propagators out of the cuts; its references were cross-checked against madevent at the same fixed scale with nn23lo1 and mmll / cut_decays set alike.",
+  "defines": [],
+  "sections": {
+    "3jets": [
+      {"id": "ppjjj",              "process": "p p > j j j",                                        "cross": 4.666752e+07, "error": 1.483246e+04, "madnis": false},
+      {"id": "ggggg",             "process": "g g > g g g",                                        "cross": 2.452197e+07, "error": 8.062063e+03},
+      {"id": "gg_g_q_qbar",       "process": "g g > g _quark _anti_quark",                         "cross": 2.149105e+06, "error": 9.714602e+02},
+      {"id": "gq_ggq",            "process": "g _quark > g g _quark",                              "cross": 6.301271e+06, "error": 1.727337e+03},
+      {"id": "gq_qqqbar",         "process": "g _quark > _quark _quark _anti_quark",               "cross": 2.603030e+05, "error": 8.336939e+01, "madnis": false},
+      {"id": "gqbar_ggqbar",      "process": "g _anti_quark > g g _anti_quark",                    "cross": 2.207568e+06, "error": 7.145333e+02, "madnis": false},
+      {"id": "gqbar_qqbarqbar",   "process": "g _anti_quark > _quark _anti_quark _anti_quark",     "cross": 9.683060e+04, "error": 3.748526e+01},
+      {"id": "qq_gqq",            "process": "_quark _quark > g _quark _quark",                    "cross": 1.047030e+06, "error": 2.733671e+02, "madnis": false},
+      {"id": "qqbar_ggg",         "process": "_quark _anti_quark > g g g",                         "cross": 5.962900e+03, "error": 2.417462e+00},
+      {"id": "qqbar_gqqbar",      "process": "_quark _anti_quark > g _quark _anti_quark",          "cross": 5.319036e+05, "error": 1.625111e+02, "madnis": false},
+      {"id": "qbarqbar_gqbarqbar","process": "_anti_quark _anti_quark > g _anti_quark _anti_quark","cross": 1.932270e+05, "error": 5.542612e+01}
+    ],
+    "ttx1j": [
+      {"id": "pp_ttxj",     "process": "p p > t t~ j",                     "cross": 9.975605e+02,    "error": 3.466937e-01},
+      {"id": "gg_ttxg",     "process": "g g > t t~ g",                     "cross": 7.254015e+02,  "error": 2.574346e-01},
+      {"id": "gq_ttxq",     "process": "g _quark > t t~ _quark",           "cross": 9.883968e+01,  "error": 2.751505e-02},
+      {"id": "gqbar_ttxqbar","process": "g _anti_quark > t t~ _anti_quark","cross": 2.008517e+01,  "error": 6.169201e-03},
+      {"id": "qqbar_ttxg",  "process": "_quark _anti_quark > t t~ g",      "cross": 1.705355e+01,  "error": 5.165248e-03}
+    ],
+    "ttx2j": [
+      {"id": "pp_ttxjj",              "process": "p p > t t~ j j",                                 "cross": 9.121110e+02, "error": 2.812386e-01, "madnis": false},
+      {"id": "gg_ttxgg",              "process": "g g > t t~ g g",                                 "cross": 5.504411e+02,   "error": 1.675165e-01},
+      {"id": "gg_ttxqqbar",           "process": "g g > t t~ _quark _anti_quark",                  "cross": 1.803285e+01, "error": 5.726600e-03, "madnis": false},
+      {"id": "gq_ttxgq",              "process": "g _quark > t t~ g _quark",                       "cross": 1.321121e+02, "error": 3.812476e-02, "madnis": false},
+      {"id": "gqbar_ttxgqbar",        "process": "g _anti_quark > t t~ g _anti_quark",             "cross": 2.229987e+01,  "error": 7.492226e-03},
+      {"id": "qq_ttxqq",              "process": "_quark _quark > t t~ _quark _quark",             "cross": 1.538213e+01, "error": 4.752644e-03, "madnis": false},
+      {"id": "qqbar_ttxgg",           "process": "_quark _anti_quark > t t~ g g",                  "cross": 5.972852e+00, "error": 2.246637e-03},
+      {"id": "qqbar_ttxqqbar",        "process": "_quark _anti_quark > t t~ _quark _anti_quark",   "cross": 3.628487e+00, "error": 1.056035e-03, "madnis": false},
+      {"id": "qbarqbar_ttxqbarqbar",  "process": "_anti_quark _anti_quark > t t~ _anti_quark _anti_quark", "cross": 5.175790e-01, "error": 1.637376e-04}
+    ],
+    "ttx_decay": [
+      {"id": "pp_had",    "process": "p p > t t~, ( t > W+ b, W+ > j j), ( t~ > W- b~, W- > j j)", "cross": 2.917350e+02, "error": 6.803565e-02, "disable_jet_cuts": true, "madnis": false},
+      {"id": "gg_had",    "process": "g g > t t~, ( t > W+ b, W+ > _quark _anti_quark), ( t~ > W- b~, W- > _quark _anti_quark)", "cross": 2.577130e+02, "error": 4.846681e-02, "disable_jet_cuts": true},
+      {"id": "qqbar_had", "process": "_quark _anti_quark > t t~, ( t > W+ b, W+ > _quark _anti_quark), ( t~ > W- b~, W- > _quark _anti_quark)", "cross": 1.697800e+01, "error": 2.574500e-03, "disable_jet_cuts": true}
+    ],
+    "dy1j": [
+      {"id": "pp_eej",      "process": "p p > e+ e- j",                    "cross": 2.577744e+02, "error": 1.139998e-01},
+      {"id": "gq_eeq",      "process": "g _quark > e+ e- _quark",          "cross": 5.902350e+01, "error": 2.871650e-02},
+      {"id": "gqbar_eeqbar","process": "g _anti_quark > e+ e- _anti_quark","cross": 3.750350e+01, "error": 1.669092e-02},
+      {"id": "qqbar_eeg",   "process": "_quark _anti_quark > e+ e- g",     "cross": 3.237690e+01, "error": 1.358018e-02}
+    ],
+    "dy2j": [
+      {"id": "pp_eejj",              "process": "p p > e+ e- j j",                                  "cross": 1.166098e+02, "error": 3.796051e-02, "madnis": false},
+      {"id": "gg_eeqqbar",          "process": "g g > e+ e- _quark _anti_quark",                   "cross": 8.640863e+00,  "error": 3.329273e-03},
+      {"id": "gq_eegq",             "process": "g _quark > e+ e- g _quark",                        "cross": 2.741127e+01, "error": 9.483737e-03, "madnis": false},
+      {"id": "gqbar_eegqbar",       "process": "g _anti_quark > e+ e- g _anti_quark",              "cross": 1.368337e+01, "error": 4.916584e-03},
+      {"id": "qq_eeqq",             "process": "_quark _quark > e+ e- _quark _quark",              "cross": 7.561400e+00, "error": 1.970118e-03, "madnis": false},
+      {"id": "qqbar_eegg",          "process": "_quark _anti_quark > e+ e- g g",                   "cross": 3.963127e+00,  "error": 1.265152e-03},
+      {"id": "qqbar_eeqqbar",       "process": "_quark _anti_quark > e+ e- _quark _anti_quark",    "cross": 4.431955e+00, "error": 1.230064e-03, "madnis": false},
+      {"id": "qbarqbar_eeqbarqbar", "process": "_anti_quark _anti_quark > e+ e- _anti_quark _anti_quark", "cross": 1.477210e+00, "error": 4.279026e-04}
+    ],
+    "decay_cuts": [
+      {"id": "zj_ee_mmll",            "process": "p p > z j, z > e+ e-", "cross": 3.998940e+02, "error": 1.043795e-01, "cuts": {"lepton-sfos_pair_mass.min": 100.0}, "cut_decays": false},
+      {"id": "zj_ee_mmll_cut_decays", "process": "p p > z j, z > e+ e-", "cross": 6.689723e+00, "error": 1.846906e-03,  "cuts": {"lepton-sfos_pair_mass.min": 100.0}, "cut_decays": true},
+      {"id": "wj_had",                "process": "p p > w+ j, w+ > j j", "cross": 1.415209e+04, "error": 3.891570e+00, "cut_decays": false},
+      {"id": "wj_had_cut_decays",     "process": "p p > w+ j, w+ > j j", "cross": 9.463383e+03, "error": 3.147889e+00,  "cut_decays": true}
+    ]
+  }
+}

@@ -2,13 +2,13 @@
 
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -19,9 +19,9 @@
 and call immediately the command line interface scripts"""
 
 import sys
-if sys.version_info < (3, 7):
-    sys.exit('MadGraph/MadEvent 5 works only with python 3.7 or later.\n\
-               Please upgrate your version of python.')
+if sys.version_info < (3, 12):
+    sys.exit('MadGraph/MadEvent 5 works only with python 3.12 or later.\n\
+               Please upgrade your version of Python.')
 
 
     
@@ -56,6 +56,9 @@ parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
                  help='force to launch debug mode')
+parser.add_option("","--allow-stdin", action="store_true", default=False, dest='allow_stdin',
+                  help='read the commands, or the answers to the questions, piped or redirected '
+                       'into stdin, as an interactive session: invalid "set" commands then only warn')
 parser_error = ''
 done = False
 for i in range(len(sys.argv)-1):
@@ -76,6 +79,53 @@ if not done:
 
 if len(args) == 0:
     args = ''
+
+def stdin_is_redirected():
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+def stdin_has_input():
+    """True when something is waiting on stdin. A forced (-f) run never reads
+    stdin, so a closed or idle pipe (CI runners, agents) is harmless there,
+    but piped answers would be silently dropped."""
+    import select
+    try:
+        if not select.select([sys.stdin], [], [], 0)[0]:
+            return False
+        return bool(os.read(sys.stdin.fileno(), 1))
+    except (OSError, ValueError, AttributeError):
+        return False
+
+def is_forced(args):
+    """True when the arguments ask for a forced run: -f, alone or among
+    combined short options (-fp), or --force."""
+    for arg in args:
+        if arg == '--force':
+            return True
+        # "-n myrun" may come as a single argument
+        option = (arg.split() or [''])[0]
+        if option.startswith('-') and not option.startswith('--') and 'f' in option[1:]:
+            return True
+    return False
+
+# Unless they come from a file, the commands, and the answers to the questions
+# of a command given on the command line, are read from stdin as in an
+# interactive session, where a command that cannot be applied (e.g. an invalid
+# "set") is only a warning: refuse that mode unless asked for, before the -O
+# re-execution below. treatcards is run by Source/makefile, which inherits the
+# stdin of the run that compiles.
+if not options.web and not options.allow_stdin and stdin_is_redirected() and \
+        not (args and (os.path.isfile(args[0]) or args[0] == 'treatcards')) and \
+        not (args and is_forced(args[1:]) and not stdin_has_input()):
+    sys.exit("Reading the commands or the answers to the questions from stdin is not "
+             "supported: write them to a file and run '%s PATH' instead, so that an "
+             "invalid command stops the run.\nUse --allow-stdin to read stdin as an "
+             "interactive session (invalid commands then only warn)." % sys.argv[0])
 
 import subprocess
 
@@ -180,7 +230,7 @@ try:
 except ImportError:
     pass
 else:
-    logger.getLogger('madgraph').error('Looks like you do have madgraph in your PYTHONPATH (or you run this executable from the main MG5aMC directory). This executable will likely not work in such case.')
+    logging.getLogger('madgraph').error('Looks like you do have madgraph in your PYTHONPATH (or you run this executable from the main MadGraph7 directory). This executable will likely not work in such case.')
 
 
 
@@ -232,7 +282,7 @@ try:
                 cmd_line = launch_interface(force_run=True)
                 cmd_line.cmdloop()
 except KeyboardInterrupt:
-    print( 'writting history and directory and quit on KeyboardInterrupt' )
+    print( 'writing history and directory and quit on KeyboardInterrupt' )
     pass
 except cmd_interface.MadEventAlreadyRunning  as  error:
     logging.error(str(error))

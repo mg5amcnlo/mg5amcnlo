@@ -1,0 +1,270 @@
+#! /usr/bin/env python3
+from __future__ import absolute_import
+import time
+import logging
+start = time.time()
+
+################################################################################
+#
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
+#
+# This file is a part of the MadGraph7 project, an application which 
+# automatically generates Feynman diagrams and matrix elements for arbitrary
+# high-energy processes in the Standard Model and beyond.
+#
+# It is subject to the MadGraph7 license which should accompany this 
+# distribution.
+#
+# For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
+#
+################################################################################
+"""This is the main executable, a simple frontend to set up the PYTHONPATH
+and call immediately the command line interface scripts"""
+
+import sys
+import logging
+import logging.config
+if sys.version_info < (3, 12):
+   sys.exit('MadGraph7 works with python 3.12 or higher.\n\
+              Please upgrade your version of Python.')
+
+
+import os
+import optparse
+
+# Get the parent directory (mg root) of the script real path (bin)
+# and add it to the current PYTHONPATH
+
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+sys.path.insert(0, root_path)
+
+
+# Write out nice usage message if called with -h or --help
+usage = "usage: %prog [options] [FILE] "
+parser = optparse.OptionParser(usage=usage)
+parser.add_option("-l", "--logging", default='INFO',
+                  help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+parser.add_option("-f", "--file", default='',
+                    help="Use script file FILE")
+parser.add_option("-d", "--mgme_dir", default='', dest = 'mgme_dir',
+                  help="Use MG_ME directory MGME_DIR")
+parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                 help='force to be in secure mode')
+parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                 help='force to launch debug mode')
+parser.add_option("-m", "--mode", dest="plugin",
+                  help="Define some additional command provide by a PLUGIN")
+parser.add_option("-s", "--nocaffeinate", action="store_false", default=True, dest='nosleep',
+                  help='For mac user, forbids to use caffeinate when running with a script')
+parser.add_option("","--plain", action="store_true", default=False, dest='plain',
+                  help='disable coloured output')
+parser.add_option("","--allow-stdin", action="store_true", default=False, dest='allow_stdin',
+                  help='read the commands piped or redirected into stdin, as an interactive '
+                       'session: invalid "set" commands then only warn')
+(options, args) = parser.parse_args()
+if len(args) == 0:
+    args = ''
+
+if options.plain:
+    # disable color
+    os.environ['MG7_NO_COLOR'] = '1'
+
+def stdin_is_redirected():
+    """True when stdin is a pipe, a socket or a file, i.e. neither a terminal
+    nor a character device such as /dev/null (batch jobs)."""
+    import stat
+    try:
+        return not stat.S_ISCHR(os.fstat(sys.stdin.fileno()).st_mode)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+# Commands read from stdin go through the interactive loop, where a command
+# that cannot be applied (e.g. an invalid "set") is only a warning: refuse
+# that mode unless asked for, before the -O re-execution below.
+if not (options.file or args) and not options.web and not options.allow_stdin \
+        and stdin_is_redirected():
+    sys.exit("Reading the commands from stdin is not supported: write them to a "
+             "file and run '%s PATH' instead, so that an invalid command stops the "
+             "run.\nUse --allow-stdin to read stdin as an interactive session "
+             "(invalid commands then only warn)." % sys.argv[0])
+
+import subprocess
+
+# Check if optimize mode is (and should be) activated
+if __debug__ and not options.debug and \
+    (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
+        import subprocess
+        command = '%s -O -W ignore::DeprecationWarning -W ignore::SyntaxWarning %s' % (sys.executable, ' '.join(sys.argv))
+        result = subprocess.Popen(command, shell=True)
+        result.communicate()
+        return_code = result.returncode
+        sys.exit(return_code)
+
+import madgraph.interface.coloring_logging
+
+
+if ' ' in os.getcwd():
+    cwd_warning = "The current working directory (%s) does contain spaces. We advise that you change the location of the code/working area to avoid to have space in such path."
+    if not options.plain:
+        cwd_warning = "\033[91m" + cwd_warning + "\033[0m"
+    logging.warning(cwd_warning, os.getcwd())
+
+
+
+try:
+    # Prefer a real GNU readline
+    import gnureadline
+    sys.modules['readline'] = gnureadline
+except ImportError:
+    pass
+
+try:
+    import readline
+except ImportError:
+    try:
+        import pyreadline as readline
+    except:
+        print( "For tab completion and history, install module readline.")
+else:
+    import rlcompleter
+
+    if 'r261:67515' in sys.version and  'GCC 4.2.1 (Apple Inc. build 5646)' in sys.version:
+        readline.parse_and_bind("bind ^I rl_complete")
+        readline.__doc__ = 'libedit'  
+    
+    elif hasattr(readline, '__doc__'):
+        if 'libedit' not in readline.__doc__:
+            readline.parse_and_bind("tab: complete")
+        else:
+            readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.__doc__ = 'GNU'
+        readline.parse_and_bind("tab: complete")
+        
+    # charge history file
+    try:
+        # MG7 keeps its state to itself: nothing is read from or written into
+        # MadGraph7's ~/.mg5.
+        state_dir = os.getenv('XDG_STATE_HOME')
+        if state_dir:
+            state_dir = os.path.join(state_dir, 'mg7')
+        else:
+            state_dir = os.path.join(os.environ['HOME'], '.mg7')
+
+        history_file = os.path.join(state_dir, "mg7history")
+        if os.path.exists(history_file):
+            readline.read_history_file(history_file)
+    except:
+        pass
+
+try:
+   import psyco
+   psyco.full()
+except:
+   pass
+
+if __debug__:
+        print( 'Running MG7 in debug mode')
+
+# Set logging level according to the logging level given by options
+#logging.basicConfig(level=vars(logging)[options.logging])
+try:
+    if __debug__ and options.logging == 'INFO':
+        options.logging = 'DEBUG'    
+    if options.logging.isdigit():
+        level = int(options.logging)
+    else:
+        level = eval('logging.' + options.logging)
+
+    logging.config.fileConfig(os.path.join(root_path, 'madgraph', 'interface', '.mg5_logging.conf'))
+    logging.root.setLevel(level)
+    logging.getLogger('madgraph').setLevel(level)
+    logging.getLogger('madevent').setLevel(level)
+except:
+    pass
+
+import madgraph.interface.master_interface as interface
+
+if __debug__ and time.time() - start > 0.5:
+    print(( 'WARNING: loading of madgraph too slow!!!', time.time() - start))
+
+try:
+    import madgraph.various.misc as misc
+    misc.EasterEgg('loading')
+except:
+    pass
+
+
+if options.plugin:
+    if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
+        try:
+            __import__('MG5aMC_PLUGIN.%s' % options.plugin)
+            plugin = sys.modules['MG5aMC_PLUGIN.%s' % options.plugin]
+        except:
+            print( "ERROR: %s is not present in the PLUGIN directory. Please install it first" % options.plugin)
+            sys.exit()
+    else:
+        __import__('PLUGIN.%s' % options.plugin)
+        plugin = sys.modules['PLUGIN.%s' % options.plugin]
+    if not plugin.new_interface:
+        logging.warning("Plugin: %s do not define dedicated interface and should be used without the --mode options" % options.plugin)
+        sys.exit()
+    import madgraph.various.misc as misc
+    if not misc.is_plugin_supported(plugin):
+        sys.exit()
+    cmd_line = plugin.new_interface(mgme_dir = options.mgme_dir)
+    cmd_line.plugin=options.plugin
+elif options.web:
+    cmd_line = interface.MasterCmdWeb()
+else: 
+    cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
+
+
+
+# Call the cmd interface main loop
+try:
+    if options.file or args:
+        if sys.platform == "darwin" and options.nosleep:
+            logging.getLogger('madgraph').warning("launching caffeinate to prevent idle sleep when MadGraph7 is running. Run './bin/madgraph -s' to prevent this.")
+            pid = os.getpid()
+            subprocess.Popen(['caffeinate', '-i', '-w', str(pid)])
+        # They are an input file 
+        if args:
+            input_file = os.path.realpath(args[0])
+        else:
+            input_file = os.path.realpath(options.file)
+        if options.web:
+            cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
+            cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
+            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
+        else:
+            cmd_line.use_rawinput = False
+            cmd_line.haspiping = False
+            cmd_line.run_cmd('import ' + input_file)
+            cmd_line.run_cmd('quit')
+    else:
+        # Interactive mode
+        if options.web:
+            if 'MADGRAPH_DATA' not in os.environ:
+                os.environ['MADGRAPH_DATA'] = root_path
+                os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
+                os.environ['REMOTE_USER'] = 'webmode'
+            cmd_line.cmdloop()
+        else:
+            cmd_line.cmdloop()
+except KeyboardInterrupt:
+    print('writing history and quit on KeyboardInterrupt')
+    pass
+
+try:
+    cmd_line.exec_cmd('quit all', printcmd=False)
+    readline.set_history_length(100)
+    os.makedirs(state_dir, exist_ok=True)
+    readline.write_history_file(history_file)
+except Exception as error:
+    pass
+
+
+    

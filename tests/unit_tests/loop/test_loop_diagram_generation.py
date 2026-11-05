@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -40,7 +40,7 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.iolibs.save_load_object as save_load_object
-import models.import_ufo as models
+import madgraph.models.import_ufo as models
 from madgraph import MadGraph5Error
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
@@ -959,7 +959,7 @@ class LoopDiagramGenerationTest(unittest.TestCase):
             #                                  legend=myloopamplitude.get('process').input_string())
             #plot.draw(opt=options)
 
-            ### This is to display some informations
+            ### This is to display some information
             #mydiag1=myloopamplitude.get('loop_diagrams')[0]
             #mydiag2=myloopamplitude.get('loop_diagrams')[5]      
             #print "I got tag for diag 1=",mydiag1['canonical_tag']

@@ -302,7 +302,7 @@ int HandleCustomExistFileSB(Widget existFileSB, char *filename)
        the "OK" button.  Dynamic defaulting will restore it as the default
        button after the keyboard focus is established.  Note the voodoo
        below: calling XmProcess traversal extra times (a recommendation from
-       OSF technical support) somehow succeedes in giving the file list focus */
+       OSF technical support) somehow succeeds in giving the file list focus */
     XtVaSetValues(existFileSB, XmNdefaultButton, NULL, 0);
     for (i=1; i<30; i++)
     	XmProcessTraversal(XmFileSelectionBoxGetChild(existFileSB,
@@ -336,7 +336,7 @@ int HandleCustomExistFileSB(Widget existFileSB, char *filename)
 /*  if he/she wants to overwrite the file.  Answering no, allows the user  */
 /*  to select a new filename.  GetNewFilename also checks that the file    */
 /*  name specified by the user can be created, and allows re-entry if not. */
-/*  When the user presses the OK button to a filename satisying the above  */
+/*  When the user presses the OK button to a filename satisfying the above  */
 /*  criteria, GetNewFilename returns the selected filename and GFN_OK.     */
 /*  If the user presses the cancel button, the return value is GFN_CANCEL, */
 /*  and the filename character string supplied in the call is not altered. */
@@ -423,7 +423,7 @@ int GetNewFilename (Widget parent, char *promptString, char *filename)
        the "OK" button.  Dynamic defaulting will restore it as the default
        button after the keyboard focus is established.  Note the voodoo
        below: calling XmProcess traversal FOUR times (a recommendation from
-       OSF technical support) somehow succeedes in changing the focus */
+       OSF technical support) somehow succeeds in changing the focus */
     XtVaSetValues(newFileSB, XmNdefaultButton, NULL, 0);
     for (i=1; i<30; i++)
     	XmProcessTraversal(XmFileSelectionBoxGetChild(newFileSB, XmDIALOG_TEXT),
@@ -501,7 +501,7 @@ static void createErrorDialog(Widget parent)
     XtAddCallback (ErrorDialog, XmNokCallback, (XtCallbackProc)errorOKCB, NULL);
     XtUnmanageChild(XmMessageBoxGetChild(ErrorDialog, XmDIALOG_CANCEL_BUTTON));
     XtUnmanageChild(XmMessageBoxGetChild(ErrorDialog, XmDIALOG_HELP_BUTTON));
-    buttonString = XmStringCreateLtoR ("Acknowleged", XmSTRING_DEFAULT_CHARSET);
+    buttonString = XmStringCreateLtoR ("Acknowledged", XmSTRING_DEFAULT_CHARSET);
     SET_ONE_RSRC(ErrorDialog, XmNokLabelString, buttonString);
     XmStringFree(buttonString);
 }

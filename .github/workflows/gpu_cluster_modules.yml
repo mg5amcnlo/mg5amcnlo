@@ -1,0 +1,41 @@
+# List the modules available on manneback / lemaitre4, to choose the `modules`
+# input of the GPU CI (gpu_manneback_cuda.yml, gpu_lemaitre4_hip.yml).
+# With a partition, the list is made on a compute node of that partition (srun).
+
+name: GPU CI - list cluster modules
+
+on:
+  workflow_dispatch:
+    inputs:
+      cluster:
+        type: choice
+        options: [manneback, lemaitre4]
+        default: manneback
+      pattern:
+        description: 'Case-insensitive regexp on the module names'
+        type: string
+        default: 'cuda|rocm|hip|python|gcc|cmake|releases'
+      partition:
+        description: 'Empty = login node; otherwise list on a node of this partition (gpu, apu, ...)'
+        type: string
+        default: ''
+      gres:
+        description: 'Slurm --gres when a partition is given (e.g. gpu:1)'
+        type: string
+        default: ''
+
+jobs:
+  modules:
+    # the vmadgraph runner of the cluster, whose ceci-gate holds the CECI ssh key
+    runs-on: [self-hosted, vmadgraph, "vmadgraph-${{ inputs.cluster }}"]
+    timeout-minutes: 30
+    env:
+      CLUSTER: ${{ inputs.cluster }}
+      PATTERN: ${{ inputs.pattern }}
+      PARTITION: ${{ inputs.partition }}
+      GRES: ${{ inputs.gres }}
+    steps:
+      - name: module avail
+        run: |
+          sudo -n -u ceci /usr/local/sbin/ceci-gate modules "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
+            --pattern="$PATTERN" --partition="$PARTITION" --gres="$GRES"

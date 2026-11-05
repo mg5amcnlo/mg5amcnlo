@@ -27,6 +27,7 @@ class TestMCHistoryWeights(unittest.TestCase):
                 'pmass.inc': 'pmass=0d0\npmass(3)=test_mass',
                 'run.inc': 'integer ickkw,lpp(2)\n'
                            'double precision scale,q2fact(2),xbk(2)\n'
+                           'double precision real_channels_x0\nparameter(real_channels_x0=0d0)\n'
                            'common/test_run/scale,q2fact,xbk,ickkw,lpp',
                 'q_es.inc': 'double precision QES2\ncommon/test_qes/QES2',
                 'fks_info.inc': 'integer fks_i_d(1)\nparameter(fks_i_d=[5])',
@@ -46,14 +47,17 @@ class TestMCHistoryWeights(unittest.TestCase):
                 'integer :: VetoedContributionTypes(0:1)=0,SelectedContributionTypes(0:1)=0\n'
                 'integer :: SelectedCouplingOrders(2,0:1)=0\n'
                 'integer :: QCD_squared_selected=-1,QED_squared_selected=-1\nend module\n'
-                'module mint_module\nlogical :: pass_cuts_check=.false.\nend module\n'
+                'module mint_module\nlogical :: pass_cuts_check=.false.,fixed_order=.false.\nend module\n'
                 'module mc_counterterms\n'
                 'double precision :: gfactsf,gfactcl,gfactazi\nend module\n')
             routines = ('compute_native_NLOPS_weights', 'compute_real_emission',
                         'compute_soft_counter_term', 'compute_collinear_counter_term',
                         'compute_soft_collinear_counter_term', 'add_wgt')
             (work / 'weights.f').write_text('\n'.join(
-                fortran_routine(TEMPLATE / 'fks_singular.f', name) for name in routines))
+                fortran_routine(TEMPLATE / 'fks_singular.f', name) for name in routines) +
+                '\n      double precision function real_channel_soft_fraction(p)\n'
+                '      double precision p(0:3,5)\n'
+                '      real_channel_soft_fraction=1d0\n      end\n')
             executable = work / 'check_history_weights'
             result = subprocess.run([
                 shutil.which('gfortran'), str(TEMPLATE.parent / 'Source/timing.f'), '-O2', '-std=legacy', '-fcheck=all',

@@ -13,8 +13,8 @@ c list  - output - list of stdhep indices of the stable descendants.
 c
 c WARNING this code assumes that:
 c  a) both jdahep(1,k) and jmohep(1,k) are correct for all k
-c  b) all daughters of a given particle are continguous in the stdhep list.
-c Sometimes b) may not be statisfied in stdhep; however it does seem to
+c  b) all daughters of a given particle are contiguous in the stdhep list.
+c Sometimes b) may not be satisfied in stdhep; however it does seem to
 c hold for all weak and strongs decays of hadrons.
 c
 c 
@@ -24,7 +24,7 @@ c    - or perhaps off the end of the list entirely.
 c    Go up a level on the recursion stack and check the next daughter 
 c    of the previous mother.
 c 2) The particle is stable.
-c    Add this particle to the list and chekc the next daughter of this mother.
+c    Add this particle to the list and check the next daughter of this mother.
 c 3) The particle is not stable.
 c    Check its daughters.
 c
@@ -44,7 +44,7 @@ c     ! Index of mother and daughter at current level of recurrsion.
 c     ! Level of recursion.
       integer level
 
-c     ! Maximum number of levels of recurssion.
+c     ! Maximum number of levels of recursion.
       integer mxlevel
       parameter ( mxlevel = 20 )
 

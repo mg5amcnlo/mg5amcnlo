@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: 0BSD
+# Built-in Standard Model default-recurrence generation with NLC contraction.
+# Resolved runtime output has one contracted color entry per helicity.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "u u~ > g g", name = "uubar_gg_nlc" }]
+
+[color]
+accuracy = "nlc"
+
+[generation]
+output = "artifacts/builtin_sm_nlc"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+
+[evaluator.jit]
+optimization_level = 2
+compress = false
+
+[output]
+progress = "log"

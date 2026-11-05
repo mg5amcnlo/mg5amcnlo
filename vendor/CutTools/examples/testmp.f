@@ -73,7 +73,7 @@
 !
 !         real*8  limitvalue -> limit of precision below which
 !                               the PS point is considered stable
-!                               by tha A=A test.      
+!                               by the A=A test.
 !
 !         integer scaloop    -> library used to compute the scalar 
 !                               1-loop functions:  
@@ -188,7 +188,7 @@
 !! Tests:                                                                     !
 !!                                                                            !
 !! -The N=N test is a test on the reconstructed OPP integrand performed       !
-!!  by comparing original and reconstacted integrands at an arbirtary value   !
+!!  by comparing original and reconstructed integrands at an arbitrary value   !
 !!  of the integration momentum.                                              !
 !!                                                                            ! 
 !! -The A=A test checks the 2 amplitudes obtained with dir and inv orders     !

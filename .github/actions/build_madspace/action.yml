@@ -1,0 +1,76 @@
+name: Build madspace
+description: >
+  Build the madspace install prefix once per commit and cache it
+  (content-addressed on the madspace source). Shared by the build_madspace job
+  of every mg7 workflow so the build logic lives in exactly one place. Test jobs
+  restore the result with the install_madspace action (they must `needs:` the
+  job that runs this action). Assumes the repository is already checked out.
+
+inputs:
+  enable_docs:
+    description: >
+      Build with ENABLE_DOCS=ON: pybind11 docstrings extracted from the Doxygen
+      comments plus .pyi stubs. doxygen must already be on PATH -- CMake runs
+      generate_docstrings.py --require-doxygen, which hard-fails without it.
+      Folded into the cache key so a docs build can never be satisfied by (nor
+      poison) a normal, docstring-less one. Empty suffix when false, so every
+      existing cache entry keeps its exact key.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # Cache key must match the one used by the install_madspace action exactly,
+    # otherwise the later restore misses.
+    - name: madspace cache key
+      run: |
+        echo "MS_PY=$(python3 -c 'import sys;print(f"{sys.version_info.major}{sys.version_info.minor}")')" >> $GITHUB_ENV
+        # -simd: the install includes the SIMD CPU backends; a separate suffix so
+        # that a cached install from before SIMD was enabled is never restored
+        echo "MS_VARIANT=${{ inputs.enable_docs == 'true' && '-docs' || '' }}-simd" >> $GITHUB_ENV
+      shell: bash
+
+    # Cache the installed madspace/install prefix directly (not just a wheel), so
+    # every test job restores a ready-to-use install and skips pip entirely.
+    # hashFiles is evaluated before the build step creates madspace/install, so
+    # the key is the clean-source hash and matches the install_madspace action.
+    - name: Cache madspace install
+      id: cache-madspace
+      uses: actions/cache@v5
+      with:
+        path: madspace/install
+        key: madspace${{ env.MS_VARIANT }}-${{ runner.os }}-py${{ env.MS_PY }}-${{ hashFiles('madspace/**') }}
+
+    # generate_docstrings.py --require-doxygen (invoked by CMake when
+    # ENABLE_DOCS=ON) hard-fails if doxygen isn't on PATH -- check early with a
+    # clear message instead of a buried cmake error.
+    - name: Assert doxygen is on PATH
+      if: inputs.enable_docs == 'true' && steps.cache-madspace.outputs.cache-hit != 'true'
+      run: doxygen --version
+      shell: bash
+
+    # Built from the in-tree source (scikit-build-core / cmake). Upgrade pip +
+    # packaging first: the runner ships an ancient pip whose build isolation does
+    # not provide packaging>=22, which scikit-build-core's vendored
+    # pyproject_metadata requires.
+    #
+    # ENABLE_OPENBLAS=ON builds OpenBLAS from source and links it statically into
+    # the extension (see madspace/CMakeLists.txt), so the cached install is
+    # self-contained and needs no system libopenblas at runtime. This avoids a
+    # dynamic dependency that would otherwise only be satisfied on cache miss
+    # (when apt installed libopenblas-dev) and missing on cache hit.
+    #
+    # --target installs into madspace/install, the prefix the mg7 runtime and
+    # madspace/install.py expect.
+    - name: Build and install madspace (only on cache miss)
+      if: steps.cache-madspace.outputs.cache-hit != 'true'
+      run: |
+        cd $GITHUB_WORKSPACE
+        python3 -m pip install --upgrade pip packaging
+        python3 -m pip install ./madspace \
+          -Ccmake.define.ENABLE_OPENBLAS=ON \
+          -Ccmake.define.ENABLE_SIMD=ON \
+          ${{ inputs.enable_docs == 'true' && '-Ccmake.define.ENABLE_DOCS=ON' || '' }} \
+          --target="$GITHUB_WORKSPACE/madspace/install"
+      shell: bash

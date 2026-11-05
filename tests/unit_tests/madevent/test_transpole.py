@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2026 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2026 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -98,7 +98,9 @@ class TestShatKneeMap(unittest.TestCase):
         try:
             with open(pjoin(tmp, 'driver.f'), 'w') as f:
                 f.write(DRIVER % {'xc': xc, 'xb': xb})
-            subprocess.check_call(['gfortran', '-O0', '-o', pjoin(tmp, 'test'),
+            # the line length of Source/make_opts: transpole.f goes past column 72
+            subprocess.check_call(['gfortran', '-O0', '-ffixed-line-length-132',
+                                   '-o', pjoin(tmp, 'test'),
                                    pjoin(tmp, 'driver.f'),
                                    pjoin(MG5DIR, 'Template', 'LO', 'Source', 'transpole.f')],
                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)

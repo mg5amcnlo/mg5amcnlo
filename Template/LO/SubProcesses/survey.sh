@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 
 # For support of LHAPATH in cluster mode
-if [ $CLUSTER_LHAPATH ]; then 
+# LHAPDF 6 only falls back to LHAPATH when LHAPDF_DATA_PATH is unset, so
+# extend that one too when the node inherited it.
+if [ $CLUSTER_LHAPATH ]; then
+  if [ $LHAPDF_DATA_PATH ]; then
+    export LHAPDF_DATA_PATH=$LHAPDF_DATA_PATH:$CLUSTER_LHAPATH;
+  fi
   export LHAPATH=$CLUSTER_LHAPATH;
 fi
 

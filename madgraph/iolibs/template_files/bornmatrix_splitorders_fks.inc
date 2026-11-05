@@ -137,7 +137,7 @@ enddo
 do i = 1, nsqampso
  if (keep_order(i)) then
     ANS_SUMMED = ANS_SUMMED + ANS(1,I)
-C   keep track of the separate pieces correspoinding to different coupling combinations
+C   keep track of the separate pieces corresponding to different coupling combinations
     do j = 1, nsplitorders
       amp_orders(j) = GETORDPOWFROMINDEX_B(j, i)
     enddo
@@ -150,7 +150,7 @@ if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 wgt_me_born=ans_summed
 
 C fill the amp2 and jamp2 arrays
-amp2(1:ngraphs)=amp2b(1:ngraphs)! amp2 just needs to be copyed
+amp2(1:ngraphs)=amp2b(1:ngraphs)! amp2 just needs to be copied
 
 do i = 0, int(jamp2b(0,0))
 jamp2(i)=0d0
@@ -464,6 +464,7 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -494,9 +495,12 @@ C
       INTEGER IC(NEXTERNAL-1),nmo
       parameter (nmo=nexternal-1)
       data ic /nmo*1/
+      INTEGER FLAVOR(NEXTERNAL-1)
+      DATA FLAVOR /NMO*1/
       INTEGER CF(NCOLOR*(NCOLOR+1)/2)
       INTEGER CF_INDEX, DENOM   
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS), jamph(2, ncolor,nampso)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR,NAMPSO), jamph(2, ncolor,nampso)
+      type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP(%(nb_temp_jamp)i)
 C  
 C GLOBAL VARIABLES

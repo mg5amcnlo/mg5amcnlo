@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -28,8 +28,8 @@ import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.various.process_checks as process_checks
-import models.import_ufo as import_ufo
-import models.model_reader as model_reader
+import madgraph.models.import_ufo as import_ufo
+import madgraph.models.model_reader as model_reader
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 
@@ -42,7 +42,7 @@ class TestColorSextetModel(unittest.TestCase):
 
     def setUp(self):
         m_path = import_ufo.find_ufo_path('sextet_diquarks')
-        self.base_model = import_ufo.import_model(m_path)
+        self.base_model = import_ufo.import_model(m_path, options={'apply_flavor_grouping':False})
     
     def test_uu_to_six_g(self):
         """Test the process u u > six g against literature expression"""
@@ -169,7 +169,7 @@ class TestColorSextetModel(unittest.TestCase):
         myamp = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \
@@ -221,7 +221,7 @@ class TestColorSextetModel(unittest.TestCase):
         myamp = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \
@@ -276,7 +276,7 @@ class TestColorSextetModel(unittest.TestCase):
         self.assertEqual(len(myamp.get('diagrams')), 5)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \
@@ -312,7 +312,7 @@ class TestColorSextetModel(unittest.TestCase):
         myamp = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \
@@ -360,7 +360,7 @@ class TestColorTripletModel(unittest.TestCase):
 
     def setUp(self):
         m_path = import_ufo.find_ufo_path('triplet_diquarks')
-        self.base_model = import_ufo.import_model(m_path)
+        self.base_model = import_ufo.import_model(m_path, options={'apply_flavor_grouping':False})
         self.full_model = model_reader.ModelReader(self.base_model)
         self.full_model.set_parameters_and_couplings()
         # Set top quark mass to 0 to compare with literature expression
@@ -460,7 +460,7 @@ class TestColorTripletModel(unittest.TestCase):
         myamp = diagram_generation.Amplitude(myproc)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \
@@ -502,7 +502,7 @@ class TestColorTripletModel(unittest.TestCase):
         self.assertEqual(len(myamp.get('diagrams')), 5)
         matrix_element = helas_objects.HelasMatrixElement(myamp)
         
-        # First build a color representation dictionnary
+        # First build a color representation dictionary
         repr_dict = {}
         for l in myleglist:
             repr_dict[l.get('number')] = \

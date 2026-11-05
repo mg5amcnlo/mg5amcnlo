@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -14,6 +14,7 @@
 ################################################################################
 from __future__ import division
 from __future__ import absolute_import
+import glob
 import subprocess
 import unittest
 import os
@@ -33,6 +34,7 @@ import madgraph.interface.master_interface as MGCmd
 import madgraph.interface.amcatnlo_run_interface as NLOCmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.various.misc as misc
+import madgraph.core.color_amp as color_amp
 import tests.IOTests as IOTests
 import madgraph.various.lhe_parser as lhe_parser
 
@@ -186,6 +188,235 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+    def test_improve_ps_keeps_a_leg_at_rest(self):
+        """IMPROVE_PS_POINT_PRECISION must not destroy an exactly-zero
+        three-momentum.
+
+        A polarised matrix element is evaluated in a frame where the selected
+        leg is at rest, and boost_to_frame puts its three-momentum at exactly
+        zero on purpose: HELAS reads the spin quantisation axis of a massive
+        vector off 'pp.eq.rZero'. The PSMC branch of improve_ps used to
+        restore momentum conservation by dumping the residual into leg
+        NEXTERNAL unconditionally, so whenever the at-rest leg was the last
+        one its exact zero came back as a ~1e-14 vector and the longitudinal
+        polarisation vector was built along rounding noise. On g g > z{0}
+        z{0} [noborn=QCD] that split me_frame=[3] from me_frame=[4] by 26%%.
+
+        This drives the routine directly, so the check is exact rather than
+        statistical, and it covers both entry points: the double precision
+        wrapper and the quad routine reached through SET_MP_PS on the
+        stability-escalation path.
+        """
+        out_dir = pjoin(self.tmpdir, 'ML_improve_ps')
+        self.do('import model loop_sm')
+        self.do('generate g g > z z [sqrvirt=QCD]')
+        self.do('output standalone %s -f' % out_dir)
+
+        proc_dir = pjoin(out_dir, 'SubProcesses', 'P0_gg_zz')
+        prefix = open(pjoin(proc_dir, 'proc_prefix.txt')).read().strip()
+
+        # SET_MP_PS is the second entry point; it improves the raw momenta in
+        # quad, so it has to reach the same routine the driver calls.
+        loop_matrix = open(pjoin(proc_dir, 'loop_matrix.f')).read()
+        set_mp_ps = loop_matrix.split('SUBROUTINE %sSET_MP_PS(P)' % prefix)[1]
+        set_mp_ps = set_mp_ps.split('\n      END\n')[0]
+        self.assertIn('CALL %sMP_IMPROVE_PS_POINT_PRECISION' % prefix,
+                      set_mp_ps)
+
+        driver = open(pjoin(_pickle_path,
+                            'improve_ps_at_rest_driver.f')).read()
+        driver = driver.replace('__PFX__', prefix)
+        driver_path = pjoin(proc_dir, 'improve_ps_at_rest_driver.f')
+        open(driver_path, 'w').write(driver)
+
+        exe = pjoin(proc_dir, 'improve_ps_at_rest')
+        compile = subprocess.Popen(
+            ['gfortran', '-ffixed-line-length-132',
+             '-I%s' % proc_dir, '-I%s' % pjoin(out_dir, 'SubProcesses'),
+             driver_path, pjoin(proc_dir, 'improve_ps.f'), '-o', exe],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=proc_dir)
+        (out, _) = compile.communicate()
+        self.assertEqual(compile.returncode, 0,
+                         'could not build the improve_ps driver:\n%s'
+                         % out.decode())
+
+        run = subprocess.Popen([exe], stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, cwd=proc_dir)
+        (out, _) = run.communicate()
+        out = out.decode()
+        self.assertEqual(run.returncode, 0, out)
+
+        results = [l.split() for l in out.split('\n')
+                   if l.startswith('RESULT ')]
+        # 2 at-rest legs x 2 ImprovePSPoint settings x 2 entry points
+        self.assertEqual(len(results), 8, out)
+        for _, entry, leg, mode, px, py, pz in results:
+            for label, value in (('px', px), ('py', py), ('pz', pz)):
+                self.assertEqual(
+                    float(value), 0.0,
+                    'improve_ps moved leg %s off rest (%s, entry %s, '
+                    'ImprovePSPoint=%s): %s = %s'
+                    % (leg, label, entry, mode, label, value))
+
+    def test_polarised_rotation_stability_leg_at_rest(self):
+        """MadLoop's rotation stability test must remain a symmetry when a
+        polarised massive particle is exactly at rest.
+
+        A one-leg me_frame puts the selected particle at rest, and HELAS then
+        takes its spin axis from the frame z axis instead of its momentum.
+        NRotations_DP/QP used to re-evaluate the loop after axis permutations
+        that move z, i.e. in a different polarisation state. On
+        u u~ > z{0} z{0} [virt=QCD] with leg 3 at rest this returned code 420
+        (EPS), a relative accuracy of 6.1, and a finite part 56%% off.
+        ROTATE_PS now rotates about z whenever a leg is exactly at rest.
+
+        The point is the boost_to_frame configuration: a c.m. point boosted
+        into the rest frame of leg 3, its three-momentum then set to exactly
+        zero.
+        """
+        import math
+        out_dir = pjoin(self.tmpdir, 'ML_rotation_at_rest')
+        self.do('import model loop_sm')
+        self.do('generate u u~ > z{0} z{0} [virt=QCD]')
+        self.do('output standalone %s -f' % out_dir)
+        proc_dir = pjoin(out_dir, 'SubProcesses', 'P0_uux_z0z0')
+
+        # check reads PS.input only when READPS is set
+        check_sa = pjoin(proc_dir, 'check_sa.f')
+        text = open(check_sa).read()
+        self.assertIn('PARAMETER (READPS = .FALSE.)', text)
+        open(check_sa, 'w').write(text.replace('PARAMETER (READPS = .FALSE.)',
+                                               'PARAMETER (READPS = .TRUE.)'))
+        make = subprocess.Popen(['make', 'check'], stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, cwd=proc_dir)
+        (out, _) = make.communicate()
+        self.assertEqual(make.returncode, 0, out.decode())
+
+        mz = None
+        in_mass = False
+        for line in open(pjoin(out_dir, 'Cards', 'param_card.dat')):
+            fields = line.split()
+            if line.lower().startswith('block'):
+                in_mass = fields[1].lower() == 'mass'
+            elif in_mass and fields and fields[0] == '23':
+                mz = float(fields[1])
+        self.assertIsNotNone(mz)
+
+        energy = 250.0
+        k = math.sqrt(energy**2 - mz**2)
+        theta, phi = 0.7, 0.3
+        p3 = [energy, k*math.sin(theta)*math.cos(phi),
+              k*math.sin(theta)*math.sin(phi), k*math.cos(theta)]
+        ps = [[energy, 0., 0., energy], [energy, 0., 0., -energy],
+              p3, [energy, -p3[1], -p3[2], -p3[3]]]
+        beta = [p3[i]/p3[0] for i in (1, 2, 3)]
+        beta2 = sum(b*b for b in beta)
+        gamma = 1.0/math.sqrt(1.0 - beta2)
+        def boost(p):
+            bp = sum(beta[i]*p[i+1] for i in range(3))
+            shift = (gamma - 1.0)*bp/beta2 - gamma*p[0]
+            return [gamma*(p[0] - bp)] + [p[i+1] + shift*beta[i]
+                                          for i in range(3)]
+        at_rest = [boost(p) for p in ps]
+        at_rest[2] = [mz, 0.0, 0.0, 0.0]
+
+        def write_point(point):
+            with open(pjoin(proc_dir, 'PS.input'), 'w') as handle:
+                for p in point:
+                    handle.write(' '.join('%.17E' % x for x in p) + '\n')
+
+        params = [f for f in glob.glob(pjoin(out_dir, '**', 'MadLoopParams.dat'),
+                                       recursive=True)
+                  if 'default' not in os.path.basename(f)]
+        self.assertTrue(params)
+
+        def evaluate(nrot):
+            for path_ in params:
+                lines = open(path_).read().split('\n')
+                for key in ('#NRotations_DP', '#NRotations_QP'):
+                    lines[lines.index(key) + 1] = str(nrot)
+                open(path_, 'w').write('\n'.join(lines))
+            run = subprocess.Popen(['./check'], stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, cwd=proc_dir)
+            (out, _) = run.communicate()
+            out = out.decode()
+            self.assertEqual(run.returncode, 0, out)
+            # check evaluates the point NPSPOINTS times; the last one is
+            # past MadLoop's initialisation
+            finite = [float(l.split()[4]) for l in out.split('\n')
+                      if 'Matrix element finite' in l][-1]
+            # no accuracy line while MadLoop is still initialising
+            accuracy = ([float(l.split()[3]) for l in out.split('\n')
+                         if 'Relative accuracy' in l] or [None])[-1]
+            code = [int(l.split()[-1]) for l in out.split('\n')
+                    if 'MadLoop return code' in l][-1]
+            return finite, accuracy, code
+
+        # Leave MadLoop's initialisation stage (return code 1xx, filters not
+        # yet written) on an ordinary point, so both measured evaluations
+        # below run the real stability test.
+        write_point(ps)
+        for attempt in range(6):
+            code = evaluate(0)[2]
+            if code // 100 != 1:
+                break
+        self.assertNotEqual(code // 100, 1,
+            'MadLoop did not leave its initialisation stage: code %d' % code)
+
+        write_point(at_rest)
+        finite0, _, code0 = evaluate(0)
+        finite2, accuracy2, code2 = evaluate(2)
+        self.assertEqual(code0 // 100, 2,
+            'reference evaluation not stable: return code %d' % code0)
+        self.assertEqual(code2 // 100, 2,
+            'rotations flagged the at-rest point: return code %d, relative '
+            'accuracy %.2e' % (code2, accuracy2))
+        self.assertLess(accuracy2, 1e-6)
+        self.assertLess(abs(finite2/finite0 - 1.0), 1e-8,
+            'rotations changed the finite part: %.16e vs %.16e'
+            % (finite2, finite0))
+
+    def test_generate_output_semicolon_preserves_loop_process(self):
+        """Regression test for combined generate/output in one command line."""
+
+        with self.assertRaises(InvalidCmd) as ctx:
+            self.interface.exec_cmd(
+                'import model sm;generate e+ e- > t t~ [virt=QCD]; output bad>path',
+                precmd=True,
+                errorhandling=False
+            )
+
+        self.assertIn('not allowed in the output path', str(ctx.exception))
+        self.assertNotIn('No processes generated', str(ctx.exception))
+        self.assertTrue(self.interface._curr_amps)
+
+    def test_loop_nc_memo_not_poisoned_across_generations(self):
+        """Two loop generations in one process. The first one runs with
+        compute_loop_nc=False; it must not pin loop_Nc_power in the
+        process-wide color memo for the loop-induced generation that follows,
+        which needs the real value to write coloramps.inc.
+
+        Value-level discrimination lives in the unit test
+        (test_color_amp.LoopNcMemoTest); this one guards the reported crash."""
+
+        # The poisoning generation must be the one that fills the memo: if a
+        # good value lands first the poisoning is inert and this test would
+        # pass on a broken tree.
+        color_amp.ColorBasis._canonical_dict.clear()
+
+        self.do('import model loop_sm')
+        self.do('generate g g > h [sqrvirt=QCD]')
+        self.do('output standalone_fortran %s -f' % pjoin(self.tmpdir, 'sqrvirt'))
+
+        self.do('generate g g > h [noborn=QCD]')
+        self.do('output madevent %s -f' % pjoin(self.tmpdir, 'noborn'))
+
+        coloramps = glob.glob(pjoin(self.tmpdir, 'noborn', 'SubProcesses',
+                                    'P*', 'coloramps.inc'))
+        self.assertTrue(coloramps)
+        for f in coloramps:
+            self.assertIn('ICOLAMP', open(f).read())
+
     def test_ML_check_full_epem_ttx(self):
         """ Test that check full e+ e- > t t~ works fine """
         
@@ -214,6 +445,111 @@ class TestCmdLoop(unittest.TestCase):
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+    def test_ML_gauge_invariance_epem_ttx_all_modes(self):
+        """Cross-check e+ e- > t t~ [virt=QCD] in all four combinations
+        of gauge (Feynman/Unitary) and output mode (optimized/non-optimized).
+
+        The matrix element squared should be identical (up to numerical
+        noise) across all four combinations.  In particular, the
+        non-optimized Unitary path goes through the bare-L ALOHA helpers
+        and the type(aloha) / type(mp_aloha) WL wavefunction arrays — it
+        is the path that the recent refactor specifically targets, and
+        any layout / accessor mismatch there will show up as a finite
+        relative deviation from the other three configurations."""
+
+        import aloha
+        import madgraph.various.process_checks as pcheck
+        import madgraph.loop.loop_diagram_generation as ldg
+        import madgraph.loop.loop_helas_objects as lho
+
+        self.setup_logFile_for_logger('madgraph.check_cmd')
+        try:
+            self.do('import model loop_sm')
+
+            # Build the loop amplitude once; we reuse it in every mode.
+            self.interface.exec_cmd('generate e+ e- > t t~ [virt=QCD]')
+            process = self.interface._curr_amps[0].get('process')
+
+            cuttools_dir = pjoin(MG5DIR, 'vendor', 'CutTools')
+            mg_options = self.interface.options
+
+            orig_optimized = mg_options.get('loop_optimized_output')
+            orig_unitary = aloha.unitary_gauge
+
+            # Generate a shared phase-space point so the four evaluations
+            # are comparable.
+            tmp_evaluator = pcheck.LoopMatrixElementEvaluator(
+                cuttools_dir=cuttools_dir,
+                cmd=self.interface,
+                model=self.interface._curr_model,
+                auth_skipping=False,
+                output_path=MG5DIR,
+                reuse=False)
+            shared_p, _ = tmp_evaluator.get_momenta(process)
+
+            results = {}
+            try:
+                for optimized in (True, False):
+                    for unitary in (False, True):
+                        label = ('opt' if optimized else 'noopt') + \
+                                ('_unitary' if unitary else '_feynman')
+
+                        aloha.unitary_gauge = unitary
+                        mg_options['loop_optimized_output'] = optimized
+
+                        amplitude = ldg.LoopAmplitude(process)
+                        matrix_element = lho.LoopHelasMatrixElement(
+                            amplitude, optimized_output=optimized)
+
+                        # Each evaluator gets its own temporary export
+                        # directory; do not let proliferation reuse a
+                        # directory generated under a different gauge.
+                        for d in misc.glob('TMP_CHECK*', MG5DIR):
+                            if path.isdir(d):
+                                shutil.rmtree(d, ignore_errors=True)
+                        evaluator = pcheck.LoopMatrixElementEvaluator(
+                            cuttools_dir=cuttools_dir,
+                            cmd=self.interface,
+                            model=self.interface._curr_model,
+                            auth_skipping=False,
+                            output_path=MG5DIR,
+                            reuse=False)
+
+                        data = evaluator.evaluate_matrix_element(
+                            matrix_element, p=shared_p,
+                            output='jamp')
+                        self.assertIsNotNone(
+                            data,
+                            '%s: evaluator returned None' % label)
+                        self.assertIn(
+                            'm2', data,
+                            '%s: no m2 key in evaluator output' % label)
+                        results[label] = data['m2']
+
+                        for d in misc.glob('TMP_CHECK*', MG5DIR):
+                            if path.isdir(d):
+                                shutil.rmtree(d, ignore_errors=True)
+            finally:
+                mg_options['loop_optimized_output'] = orig_optimized
+                aloha.unitary_gauge = orig_unitary
+
+            # All four answers should agree to a few parts per million.
+            self.assertEqual(len(results), 4)
+            ref_label, ref_value = next(iter(results.items()))
+            tol = 1e-6
+            for label, value in results.items():
+                denom = max(abs(value), abs(ref_value), 1e-30)
+                relerr = abs(value - ref_value) / denom
+                self.assertLess(
+                    relerr, tol,
+                    'm2 mismatch: %s=%.10e vs %s=%.10e (relerr=%.3e). '
+                    'Full table: %s' %
+                    (label, value, ref_label, ref_value, relerr, results))
+        except:
+            self.setup_logFile_for_logger('madgraph.check_cmd', restore=True)
+            raise
+        self.setup_logFile_for_logger('madgraph.check_cmd', restore=True)
 
     def test_ML_check_timing_epem_ttx(self):
         """ Test that check timing e+ e- > t t~ works fine """
@@ -310,6 +646,12 @@ class TestCmdLoop(unittest.TestCase):
         try:
             self.setup_logFile_for_logger('madgraph.check_cmd')
             cwd = os.getcwd()
+            # Disable flavor grouping so multiparticles like l- expand to
+            # individual flavors (e-, mu-) rather than the merged _lepton PDG.
+            # Merged particles are not supported for CMS checks and would cause
+            # only a single merged process to be tested instead of all flavor
+            # combinations.
+            self.do('set apply_flavor_grouping False')
             # Change this when we will make the CMS-ready EW model the default
             self.do('import model sm')
             self.do('define l- = e- mu-')
@@ -539,7 +881,7 @@ class TestCmdLoop(unittest.TestCase):
                 shutil.rmtree(self.out_dir)
             self.do('import model loop_sm')
             self.do('generate g g > e+ e- g / a [sqrvirt=QCD]') ## Photon is removed to have only the z propagator
-            self.run_cmd(f'output standalone {self.out_dir} -f')
+            self.run_cmd(f'output standalone_fortran {self.out_dir} -f')
 
             path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_epemg_no_a/PS.input")
             with open(path_PS_card, 'w') as psinput:
@@ -560,7 +902,7 @@ class TestCmdLoop(unittest.TestCase):
             command_card.close()
 
             logfile = 'test_madspin_full.log'
-            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'),
                             f'{self.out_dir}/mg5_cmd_full.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
             with open(pjoin(self.out_dir, "SubProcesses/P0_gg_epemg_no_a/result.dat"), "r") as result:
@@ -588,7 +930,7 @@ class TestCmdLoop(unittest.TestCase):
                 shutil.rmtree(self.out_dir)
             self.do('import model loop_sm')
             self.do('generate g g > z* g  [sqrvirt=QCD]')
-            self.run_cmd(f'output standalone {self.out_dir} --density=3 -f')
+            self.run_cmd(f'output standalone_fortran {self.out_dir} --density=3 -f')
 
             path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_zg/PS.input")
             with open(path_PS_card, 'w') as psinput:
@@ -608,7 +950,7 @@ class TestCmdLoop(unittest.TestCase):
             command_card.close()
 
             logfile = 'test_madspin_convolution.log'
-            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'),
                             f'{self.out_dir}/mg5_cmd_prod.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
 
@@ -636,7 +978,7 @@ class TestCmdLoop(unittest.TestCase):
                 shutil.rmtree(self.out_dir)
 
             self.do('generate z* > e+ e-')
-            self.run_cmd(f'output standalone {self.out_dir} --density=1 -f')
+            self.run_cmd(f'output standalone_fortran {self.out_dir} --density=1 -f')
             path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_z_epem/PS.input")
             with open(path_PS_card, 'w') as psinput:
                 psinput.write(str(momenta_decay[0]).strip("[],") + "\n")
@@ -653,7 +995,7 @@ class TestCmdLoop(unittest.TestCase):
             command_card.close()
 
             logfile = 'test_madspin_convolution.log'
-            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'),
+            subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'),
                             f'{self.out_dir}/mg5_cmd_decay.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
             density_card_path = pjoin(self.out_dir, "SubProcesses/P0_z_epem/Density_matrix.dat")
@@ -683,13 +1025,28 @@ class TestCmdLoop(unittest.TestCase):
         def propagator(Q2, mz, gammaz):
             return 1/((Q2 - mz**2)**2 + mz**2 * gammaz**2)
 
-    #We check that the mass, the decay and the transfered mommentum of the z are the same in the decay and the production for each of the 5 events
+    #We check that the mass, the decay and the transferred momentum of the z are the same in the decay and the production for each of the 5 events
         for i in range(5):
             self.assertAlmostEqual(p2_decay[i], p2_production[i], places=7)
             comparison = 3 * propagator(p2_decay[i], 9.118800e+01, gammaz_decay) * convolution(rho_production[i], rho_decay[i])
             self.assertAlmostEqual(comparison.imag, 0., places=12)
             self.assertAlmostEqual(matrix_element_prod_and_decay[i], comparison.real)
 
+
+    def test_standalone_rw_tree_then_virt(self):
+        """The calls of a tree standalone_rw output (fk_ tag of the widths)
+        must not leak into the next MadLoop output (NLO reweighting)"""
+
+        self.do('import model loop_sm')
+        self.do('generate u u~ > e+ e-')
+        self.do('output standalone_rw %s -f' % pjoin(self.tmpdir, 'TREE'))
+        self.do('generate u u~ > e+ e- [virt=QCD]')
+        self.do('output standalone_rw %s -f' % pjoin(self.tmpdir, 'VIRT'))
+
+        born = open(pjoin(self.tmpdir, 'VIRT', 'SubProcesses', 'P0_uux_epem',
+                          'born_matrix.f')).read()
+        self.assertEqual([l.strip() for l in born.split('\n') if 'FK_' in l.upper()], [])
+        self.assertIn('MDL_MZ,MDL_WZ,', born)
 
     def test_density_mode_loop_induced_standalone1(self):
         """ Testing the density mode in standalone mode for loop induced.
@@ -704,7 +1061,7 @@ class TestCmdLoop(unittest.TestCase):
 
         self.do('import model loop_sm')
         self.do('generate g g > h  [sqrvirt=QCD]')
-        self.run_cmd(f'output standalone {short_path} --density=1,2 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
+        self.run_cmd(f'output standalone_fortran {short_path} --density=1,2 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
         self.run_cmd(f'launch {short_path} -f ')
 
         devnull = open(os.devnull,'w')    
@@ -762,7 +1119,7 @@ class TestCmdLoop(unittest.TestCase):
 
         self.do('import model loop_sm')
         self.do('generate g g > w+ w-  [sqrvirt=QCD]')
-        self.run_cmd(f'output standalone {short_path} --density=3,4 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
+        self.run_cmd(f'output standalone_fortran {short_path} --density=3,4 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
         self.run_cmd(f'launch {short_path} -f ')
 
         devnull = open(os.devnull,'w')    
@@ -827,7 +1184,7 @@ class TestCmdLoop(unittest.TestCase):
 
         self.do('import model loop_sm')
         self.do('generate p p > h j  [sqrvirt=QCD]')
-        self.run_cmd(f'output standalone {short_path} --density=2,4 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
+        self.run_cmd(f'output standalone_fortran {short_path} --density=2,4 -f') # we need run_cmd here, else HelicityFilterLevel is not set to 1.
         self.run_cmd(f'launch {short_path} -f ')
 
         # the result of the run is stored inside the file result.dat
@@ -970,18 +1327,18 @@ class TestCmdLoop(unittest.TestCase):
 
         text = f""" import model loop_sm
                     generate g g > w+ w- [noborn=QCD]
-                    output {self.out_dir}
+                    output madevent {self.out_dir}
                     launch
                     set run_card nevents 1
                     set run_card use_syst False
                 """
 
-        #This bloc of code launches MadGraph with the commands written in mg5_cmd.txt
+        #This block of code launches MadGraph with the commands written in mg5_cmd.txt
         command_card = open('/tmp/mg5_cmd.txt','w')
         command_card.write(text)
         command_card.close()
 
-        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'), 
                         '/tmp/mg5_cmd.txt'])
         
 
@@ -996,13 +1353,13 @@ set reweight_card particle_in_density_matrix [24, -24]
 set reweight_card order_helicities [-1, 1, -1, 0, -1, -1, 0, 1, 0, 0, 0, -1, 1, 1, 1, 0, 1, -1]
 set matrix_normalisation False
 """
-        #This bloc of code launches MadGraph with the commands written in mg5_cmd_rwgt.txt
+        #This block of code launches MadGraph with the commands written in mg5_cmd_rwgt.txt
         command_card_rwgt = open('/tmp/mg5_cmd_rwgt.txt','w')
         command_card_rwgt.write(text_rwgt)
         command_card_rwgt.close()
 
         logfile = 'test_density_mode_LIvsSA.log'
-        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'), 
                          '/tmp/mg5_cmd_rwgt.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
 
         # We read the reweighted event with the density matrix computed with the python interface
@@ -1021,7 +1378,7 @@ set matrix_normalisation False
         
         self.do('import model loop_sm')
         self.do('generate g g > w+ w-  [sqrvirt=QCD]')
-        self.run_cmd(f'output standalone {self.out_dir} --density=3,4 -f')
+        self.run_cmd(f'output standalone_fortran {self.out_dir} --density=3,4 -f')
         
         path_PS_card = pjoin(self.out_dir, "SubProcesses/P0_gg_wpwm/PS.input")
         with open(path_PS_card, 'w') as psinput:
@@ -1041,7 +1398,7 @@ set matrix_normalisation False
         command_card_bis.close()
 
         logfile = 'test_density_vs_LI_standalone.log'
-        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','mg5_aMC'), 
+        subprocess.call([sys.executable,pjoin(MG5DIR,'bin','madgraph'), 
                         '/tmp/mg5_cmd_bis.txt'], stdout=open(logfile, 'w'), stderr=subprocess.STDOUT)
         
 
@@ -1087,6 +1444,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
             target: TEST/SubProcesses/P0_wpwm_wpwm/[.+\.(inc|f)]"""
         
         cmd = """
+        set apply_flavor_grouping False
         import model sm
         generate w+ w- > w+ w- @0
         output matchbox %(path)s/TEST --postpone_model
@@ -1131,8 +1489,29 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         IOTests.IOTest.remove_f77_function_from_file(
                     pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
                     'PRINT_MADLOOP_BANNER')
-        
 
+    @IOTests.createIOTest(groupName='MadLoop_output_from_the_interface')
+    def testIO_loop_induced_standalone_output(self):
+        r""" target: gghLI_IOTest/SubProcesses/P0_gg_h/[(check_sa|loop_matrix)\.f]
+        """
+        # A loop-induced ([noborn=]) process is exported from the MadGraph
+        # interface, which used to hand the loop matrix element to the
+        # tree-level standalone exporter and crash.
+        interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = interface, log='stdout')
+        misc.deactivate_dependence('golem', cmd = interface, log='stdout')
+        misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)
+
+        # no 'import model': validate_model must bootstrap sm -> loop_sm itself
+        interface.exec_cmd('generate g g > h [noborn=QCD]', errorhandling=False,
+                           printcmd=False, precmd=True, postcmd=True)
+        interface.onecmd('output standalone_fortran %s -f' %
+                                    str(pjoin(self.IOpath,'gghLI_IOTest')))
+        
 
 
 

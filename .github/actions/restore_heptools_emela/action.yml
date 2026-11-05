@@ -18,7 +18,7 @@ runs:
         setup_only:  ${{ inputs.setup_only }}
 
     - name: Set cache key
-      run: echo "CACHE_KEY=emela-$ImageOS" >> $GITHUB_ENV
+      run: echo "CACHE_KEY=emela-v2-$ImageOS" >> $GITHUB_ENV && echo "OLD_CACHE_KEY=emela-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     # Generation-suffixed keys: see the comment in restore_heptools_lhapdf.
@@ -29,9 +29,10 @@ runs:
         key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
         restore-keys: |
           ${{ env.CACHE_KEY }}-
-          ${{ env.CACHE_KEY }}
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "eMELA = /home/runner/.cache/HEPtools/bin/eMELA-config" >>       input/mg5_configuration.txt
+        echo "eMELA = /home/runner/.cache/HEPtools/bin/eMELA-config" >>       input/mg7_configuration.txt
       shell: bash

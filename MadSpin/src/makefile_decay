@@ -1,5 +1,7 @@
 include ../../Source/make_opts
 
+FFLAGS += -I../../Source/MODEL -I../../Source/DHELAS
+
 LIBDIR = ../../lib/
 PROG   = check
 INIT   = init

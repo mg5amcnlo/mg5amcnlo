@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -38,7 +38,7 @@ class IOImportV4Test(unittest.TestCase):
     def test_read_particles(self):
         """Test the output of import particles.dat file"""
 
-        particles_dat_str = """# Test string with particles.dat formating
+        particles_dat_str = """# Test string with particles.dat formatting
                                 ve ve~ F S ZERO ZERO S ve 12
                                 w+ w- V W MW WW S W 24
                                 T1 T1 T D ZERO ZERO O T1 8000002

@@ -16,7 +16,7 @@ HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
 GENERIC = $(alfas_functions).o transpole.o \
            rw_routines.o kin_functions.o open_file.o  setrun.o \
-          run_printout.o 
+          run_printout.o mg5_citation.o
 
 INCLUDEF= coupl.inc genps.inc hbook.inc DECAY/decay.inc psample.inc cluster.inc sudgrid.inc
 

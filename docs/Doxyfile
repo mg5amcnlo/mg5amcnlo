@@ -1,0 +1,31 @@
+PROJECT_NAME           = madspace
+JAVADOC_AUTOBRIEF      = YES
+INPUT                  = ../madspace/include/madspace/
+RECURSIVE              = YES
+
+# The generated instruction methods live in function_builder_mixin.inc, which is
+# #included into the FunctionBuilder class body. Let the preprocessor pull it in
+# from the build tree so those methods render on the FunctionBuilder page. The
+# path is only present after `python madspace/install.py --source`; without it
+# Doxygen just skips the include.
+ENABLE_PREPROCESSING   = YES
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           = ../madspace/install/madspace/include/madspace/compgraphs \
+                         ../madspace/build/generated/compgraphs
+
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES
+XML_OUTPUT             = build/doxygenxml
+XML_PROGRAMLISTING     = YES
+
+# Keep member initializers out of the XML: Breathe's C++ parser chokes on
+# things like `static const std::vector<Enum> x = {A::b, ...}`.
+MAX_INITIALIZER_LINES  = 0
+
+ALIASES                = "rst=\verbatim embed:rst"
+ALIASES               += "endrst=\endverbatim"
+
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO

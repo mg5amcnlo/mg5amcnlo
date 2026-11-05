@@ -165,7 +165,7 @@ c Convert parm(i) to uppercase
             write(*,*)'**** WARNING ****'
             write(*,*)'Your input for Lambda_5:          ',xpdflam5
             write(*,*)'Lambda_5 relevant to this pdf set:',xlam5
-            write(*,*)'Your imput is will be used'
+            write(*,*)'Your input will be used'
           endif
           nlf=5
           as=fk88alfa(xmb,xpdflam5,nlf)
@@ -175,7 +175,7 @@ c Convert parm(i) to uppercase
             write(*,*)'**** WARNING ****'
             write(*,*)'Your input for Lambda_4:          ',xpdflam4
             write(*,*)'Lambda_4 relevant to this pdf set:',xlam4
-            write(*,*)'Your imput is will be used'
+            write(*,*)'Your input will be used'
           endif
           nlf=4
           as=fk88alfa(xmb,xpdflam4,nlf)

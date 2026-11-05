@@ -25,7 +25,7 @@ c
 c dimension fermionic particle:
 c      parameter ( DIM_F=6 )
 c
-c demension tensor particle:
+c dimension tensor particle:
 c      parameter ( DIM_T=18 )
 c
 

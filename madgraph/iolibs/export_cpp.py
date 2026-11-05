@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -16,29 +16,37 @@
 and C++ Standalone format."""
 
 from __future__ import absolute_import
+import copy
 import fractions
 import glob
 import itertools
 import logging
-from math import fmod
+from math import fmod, factorial
 import os
 import re
 import shutil
 import subprocess
+import sys
+import json
+from collections import defaultdict
 
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.iolibs.group_subprocs as group_subprocs
 import madgraph.iolibs.drawing_eps as draw
+import madgraph.iolibs.drawing_svg as draw_svg
 import madgraph.iolibs.files as files
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.iolibs.file_writers as writers
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.various.banner as banner_mod
 from madgraph import MadGraph5Error, InvalidCmd, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 
+import madgraph.iolibs.export_v4 as export_v4
 from madgraph.iolibs.export_v4 import VirtualExporter, ProcessExporterFortran
 import madgraph.various.misc as misc
 
@@ -73,7 +81,8 @@ class UFOModelConverterCPP(object):
 
     # Dictionary from Python type to C++ type
     type_dict = {"real": "double",
-                 "complex": "std::complex<double>"}
+                 "complex": "std::complex<double>",
+                 "FLV_COUPLING": "FLV_COUPLING"}
 
     # Regular expressions for cleaning of lines from Aloha files
     compiler_option_re = re.compile(r'^#\w')
@@ -96,7 +105,6 @@ class UFOModelConverterCPP(object):
     def __init__(self, model, output_path, wanted_lorentz = [],
                  wanted_couplings = [], replace_dict={}):
         """ initialization of the objects """
-
         self.model = model
         self.model_name = ProcessExporterCPP.get_model_name(model['name'])
 
@@ -112,6 +120,16 @@ class UFOModelConverterCPP(object):
         self.coups_indep = []  # base_objects.ModelVariable
         self.params_dep = []   # base_objects.ModelVariable
         self.params_indep = [] # base_objects.ModelVariable
+        self.coups_flv_dep = []    # (name, object, [couplings])
+        self.coups_flv_indep = []  # (name, object, [couplings])
+        self.params_ext_names = [] # names of independent parameters read directly
+                                    # from the SLHA card (as opposed to internal
+                                    # parameters/couplings derived from them);
+                                    # these are the only ones settable by name
+                                    # at runtime (e.g. via the UMAMI interface)
+        self.params_ext_slha = []  # (name, lhablock.lower(), lhacode) for the same
+                                    # parameters, so they can also be addressed by
+                                    # their SLHA card location (block + index)
         self.p_to_cpp = parsers.UFOExpressionParserCPP()
 
         # Prepare parameters and couplings for writeout in C++
@@ -174,6 +192,18 @@ class UFOModelConverterCPP(object):
                               % (param.name, param.lhablock.lower(), param.value.real)
             else:
                 raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
+            # Track which independent parameters were read directly from the
+            # SLHA card (as opposed to internal parameters derived from them):
+            # these are the only ones settable by name at runtime (e.g. via
+            # the UMAMI set_parameter interface). NB: this list is consumed
+            # only by write_set_parameters() below, not by param.expr itself,
+            # since other UFOModelConverterCPP subclasses (e.g. the MadMatrix/
+            # cudacpp backend) read param.expr directly for purposes (like
+            # generating hardcoded/constexpr parameter mirrors) that require
+            # it to remain a single plain assignment.
+            self.params_ext_names.append(param.name)
+            self.params_ext_slha.append((param.name, param.lhablock.lower(),
+                                          list(param.lhacode)))
             self.params_indep.insert(0,
                                    base_objects.ModelVariable(param.name,
                                                    expression,
@@ -189,7 +219,8 @@ class UFOModelConverterCPP(object):
         for key, coup_list in self.model['couplings'].items():
             if "aS" in key:
                 for c in coup_list:
-                    if not wanted_couplings or c.name in wanted_couplings:
+                    if not wanted_couplings or c.name in wanted_couplings \
+                        or f"-{c.name}" in wanted_couplings:
                         self.coups_dep[c.name] = base_objects.ModelVariable(\
                                                                    c.name,
                                                                    c.expr,
@@ -197,16 +228,29 @@ class UFOModelConverterCPP(object):
                                                                    c.depend)
             else:
                 for c in coup_list:
-                    if not wanted_couplings or c.name in wanted_couplings:
+                    if not wanted_couplings or c.name in wanted_couplings \
+                        or f"-{c.name}" in wanted_couplings:
                         self.coups_indep.append(base_objects.ModelVariable(\
                                                                    c.name,
                                                                    c.expr,
                                                                    c.type,
                                                                    c.depend))
 
+        # Handle flavor couplings
+        # strategy picke one of the actual coupling and check if this is a running one or not
+        flavor_couplings = [c for c in wanted_couplings if isinstance(c, base_objects.FLV_Coupling)]
+        deps = [c.name for c in self.coups_dep.values()]
+        for one_flv in flavor_couplings:
+            one_coupling = one_flv.get_one_coupling()
+            if one_coupling in deps:
+                self.coups_flv_dep.append( one_flv)
+            else:
+                self.coups_flv_indep.append(one_flv)
+
         # Convert coupling expressions from Python to C++
         for coup in list(self.coups_dep.values()) + self.coups_indep:
             coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
+
 
     # Routines for writing the parameter files
 
@@ -253,7 +297,7 @@ class UFOModelConverterCPP(object):
 
         replace_dict = self.default_replace_dict
 
-        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['info_lines'] = self.get_mg5_info_lines()
         replace_dict['model_name'] = self.model_name
 
         replace_dict['independent_parameters'] = \
@@ -271,6 +315,12 @@ class UFOModelConverterCPP(object):
                                    "// Model couplings dependent on aS\n" + \
                                    self.write_parameters(list(self.coups_dep.values()))
 
+        replace_dict['flavor_independent_couplings'] = \
+                                    "// Model flavor couplings independent of aS\n" + \
+                                    self.write_parameters([c for c in self.coups_flv_indep])
+        replace_dict['flavor_dependent_couplings'] = \
+                                    "// Model flavor couplings dependent of aS\n" + \
+                                    self.write_parameters([c for c in self.coups_flv_dep])                                    
         replace_dict['set_independent_parameters'] = \
                                self.write_set_parameters(self.params_indep)
         replace_dict['set_independent_couplings'] = \
@@ -279,6 +329,18 @@ class UFOModelConverterCPP(object):
                                self.write_set_parameters(self.params_dep)
         replace_dict['set_dependent_couplings'] = \
                                self.write_set_parameters(list(self.coups_dep.values()))
+        # Only independent flavored couplings use the FLV_COUPLING value[] pointer mechanism;
+        # dependent (running-alphas) ones are gathered event-by-event (see model_handling / Step 3).
+        replace_dict['set_flv_couplings'] = \
+                                self.write_flv_couplings(self.coups_flv_indep)
+
+        replace_dict['register_parameters'] = \
+                               self.write_register_parameters(
+                                   self.params_indep + self.params_dep + \
+                                   self.coups_indep + list(self.coups_dep.values()),
+                                   self.params_ext_names)
+        replace_dict['register_slha_keys'] = \
+                               self.write_register_slha_keys(self.params_ext_slha)
 
         replace_dict['print_independent_parameters'] = \
                                self.write_print_parameters(self.params_indep)
@@ -307,8 +369,12 @@ class UFOModelConverterCPP(object):
         type_param_dict = {}
 
         for param in params:
-            type_param_dict[param.type] = \
-                  type_param_dict.setdefault(param.type, []) + [param.name]
+            if hasattr(param, 'type'):
+                type_param_dict[param.type] = \
+                    type_param_dict.setdefault(param.type, []) + [param.name]
+            elif isinstance(param, base_objects.FLV_Coupling):
+                type_param_dict['FLV_COUPLING'] = \
+                    type_param_dict.setdefault('FLV_COUPLING', []) + [param.name]
 
         # For each parameter type, write out the definition string
         # type parameters;
@@ -322,11 +388,21 @@ class UFOModelConverterCPP(object):
     def write_set_parameters(self, params):
         """Write out the lines of independent parameters"""
 
-        # For each parameter, write name = expr;
+        # For each parameter, write name = expr;, unless a runtime override
+        # was set by name for this (necessarily independent, SLHA-card-level)
+        # parameter (e.g. via the UMAMI set_parameter interface), in which
+        # case the override takes precedence over the value read from the
+        # param card
 
         res_strings = []
         for param in params:
-            res_strings.append("%s" % param.expr)
+            if param.name in self.params_ext_names:
+                res_strings.append(
+                    "if (m_param_overrides.find(\"%s\") != m_param_overrides.end())\n"
+                    "%s = m_param_overrides[\"%s\"];\nelse\n%s" %
+                    (param.name, param.name, param.name, param.expr))
+            else:
+                res_strings.append("%s" % param.expr)
 
         # Correct width sign for Majorana particles (where the width
         # and mass need to have the same sign)        
@@ -338,6 +414,110 @@ class UFOModelConverterCPP(object):
                                    {"width": particle.get('width')})
 
         return "\n".join(res_strings)
+
+    def write_register_parameters(self, params, ext_names, complex_map_name='m_complex_params'):
+        """Write out the code that registers name->pointer entries for every
+        scalar parameter and coupling (independent or dependent), and marks
+        which independent parameters were read directly from the SLHA card
+        (as opposed to being derived internally). This lookup-by-name table
+        backs runtime access to parameters/couplings, e.g. through the UMAMI
+        set_parameter/get_parameter interface. FLV_COUPLING entries are
+        skipped: they are not simple scalar values.
+
+        complex_map_name: which C++ map a complex-valued param's pointer
+        gets registered into (default 'm_complex_params'). Model parameters
+        (mdl_*) and derived couplings (GC_*) are *not* interchangeable
+        here in the mg7/madmatrix backend: couplings are declared cxtype
+        (which the caller may have templated to a non-double precision --
+        see model_handling.py's own 'cxsmpl<double>' -> 'cxtype' rewrite
+        for independent couplings specifically), while parameters always
+        stay plain cxsmpl<double> for numerical accuracy (matching
+        m_real_params' own always-double real-parameter pointers) -- so a
+        caller registering both groups needs two separate calls, one per
+        map, each with its own C++ declaration of matching pointer type;
+        passing both groups into a single call/map only compiles by
+        accident whenever cxtype happens to resolve to cxsmpl<double> too
+        (FPTYPE=m/d), and fails to compile at FPTYPE=f."""
+
+        lines = []
+        for param in params:
+            if not hasattr(param, 'type'):
+                continue
+            map_name = 'm_real_params' if param.type == 'real' \
+                       else complex_map_name
+            lines.append('%s["%s"] = &%s;' % (map_name, param.name, param.name))
+        for name in ext_names:
+            lines.append('m_settable_params.insert("%s");' % name)
+
+        return "\n".join(lines)
+
+    def write_register_slha_keys(self, params_ext_slha):
+        """Write out the code that registers a lookup from SLHA (block, index[,
+        index2]) key strings to parameter names, so that a settable parameter
+        can also be addressed by its location in the SLHA param card (e.g. "mass
+        6") rather than only by its model name (e.g. "mdl_MT")."""
+
+        lines = []
+        for name, block, lhacode in params_ext_slha:
+            key = block + "".join(" %d" % i for i in lhacode)
+            lines.append('m_slha_key_to_name["%s"] = "%s";' % (key, name))
+
+        return "\n".join(lines)
+
+    def _assert_flv_couplings_supported(self, params):
+        """Refuse, with a clear and actionable message, the merged-flavor
+        coupling structures the C++ (mg7/standalone) backend cannot yet
+        generate correctly, instead of crashing or emitting wrong/uncompilable
+        code.
+
+        Supported: one- and two-merged-leg "partner" vertices, with either
+        flavor-*independent* or *dependent* (event-by-event, running-alphas)
+        couplings. Single-merged-leg vertices (one merged fermion + an unmerged
+        partner, e.g. the electroweak MSSM squark-quark-neutralino vertices) are
+        serialized like the Fortran side (the unmerged partner is given flavor
+        index 1) and gated by the merged leg (see get_coupling_def). Dependent
+        flavored couplings (e.g. the SUSY-QCD MSSM gluino-squark-quark vertices)
+        are gathered event-by-event into cDPF_* / flvCOUPs_dep (Step 3).
+
+        Not yet supported (raises):
+
+          * a vertex with more than two merged-flavor legs (never seen so far).
+
+        The Fortran 'madevent'/'standalone_fortran' output supports the remaining cases.
+        See docs/mg7_merged_flavor_mssm_design.md.
+        """
+        for coupl in params:
+            for key in coupl.flavors:
+                nb_merged = len([i for i in key if i != 0])
+                if nb_merged in (1, 2):
+                    continue
+                raise InvalidCmd(
+                    "merged-flavor C++ output (mg7/standalone) does not yet "
+                    "support this process: flavor coupling %s connects %d "
+                    "merged-flavor legs; only one or two are supported. Use "
+                    "'output madevent' or 'output standalone_fortran' for this process. "
+                    "See docs/mg7_merged_flavor_mssm_design.md for details."
+                    % (coupl.name, nb_merged))
+
+    def write_flv_couplings(self, params):
+        """Write out the lines of independent parameters"""
+
+        self._assert_flv_couplings_supported(params)
+        def_flv = []
+        # For each parameter, write name = expr;
+        for coupl in params:
+            for key, c in coupl.flavors.items():
+                # Same (k1, k2) derivation as the Fortran/Python backends: for a
+                # single merged leg the unmerged partner is flavor index 1 and
+                # the PARTNER/PARTNER2 direction depends on which fermion carries
+                # the merged leg (see FLV_Coupling.get_partner_indices).
+                k1, k2 = base_objects.FLV_Coupling.get_partner_indices(key)
+                def_flv.append('%(name)s.partner[%(in)i] = %(out)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
+                def_flv.append('%(name)s.partner2[%(out)i] = %(in)i;' % {'name': coupl.name,'in': k1-1, 'out': k2-1})
+                def_flv.append('%(name)s.val[%(in)i]  =  &%(coupl)s;' % {'name': coupl.name,'in': k1-1, 'coupl': c})
+
+        return "\n".join(def_flv)
+
 
     def write_print_parameters(self, params):
         """Write out the lines of independent parameters"""
@@ -369,17 +549,22 @@ class UFOModelConverterCPP(object):
         replace_dict = {}
 
         replace_dict['output_name'] = self.output_name
-        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['info_lines'] = self.get_mg5_info_lines()
         replace_dict['namespace'] = self.namespace
         replace_dict['model_name'] = self.model_name
 
         # Read in the template .h and .cc files, stripped of compiler
         # commands and namespaces
-        template_h_files = self.read_aloha_template_files(ext = 'h')
-        template_cc_files = self.read_aloha_template_files(ext = 'cc')
+        import aloha
+        if aloha.unitary_gauge == 3:
+            template_h_files = self.read_aloha_template_files(ext = 'fd_h')
+            template_cc_files = self.read_aloha_template_files(ext = 'fd_cc')
+        else:
+            template_h_files = self.read_aloha_template_files(ext = 'h')
+            template_cc_files = self.read_aloha_template_files(ext = 'cc')
 
-        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'),
-                                                      explicit_combine=True)
+        aloha_model = create_aloha.AbstractALOHAModel.from_model(self.model,
+                                                        explicit_combine=True)
         aloha_model.add_Lorentz_object(self.model.get('lorentz'))
         
         if self.wanted_lorentz:
@@ -470,6 +655,12 @@ class UFOModelConverterCPP(object):
 
         return line
 
+    def get_mg5_info_lines(self):
+        """Return info lines for MG5, suitable to place at beginning of
+        Fortran files"""
+
+        return OneProcessExporterCPP.get_mg5_info_lines()
+
     #===============================================================================
     # Global helper methods
     #===============================================================================
@@ -478,7 +669,6 @@ class UFOModelConverterCPP(object):
         """Open a template file and return the contents."""
          
         return OneProcessExporterCPP.read_template_file(filename, classpath)
-
 
 #===============================================================================
 # UFOModelConverterGPU
@@ -532,7 +722,7 @@ class OneProcessExporterCPP(object):
     process_dir = '.'
     include_dir = '.'
     template_path = os.path.join(_file_path, 'iolibs', 'template_files')
-    __template_path = os.path.join(_file_path, 'iolibs', 'template_files') 
+    _template_path = os.path.join(_file_path, 'iolibs', 'template_files')
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
@@ -542,6 +732,8 @@ class OneProcessExporterCPP(object):
     single_process_template = 'cpp_process_matrix.inc'
     cc_ext = 'cc'
     support_multichannel = False
+    imaginary_unit = "std::complex<double>(0,1)"
+    use_flavor_mask = True
 
     class ProcessExporterCPPError(Exception):
         pass
@@ -563,6 +755,19 @@ class OneProcessExporterCPP(object):
 
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
+
+        self._original_wf_numbers = []
+        self._original_amp_numbers = []
+        seen = set()
+        for me in self.matrix_elements:
+            for wf in me.get_all_wavefunctions():
+                if id(wf) not in seen:
+                    self._original_wf_numbers.append((wf, wf.get('number')))
+                    seen.add(id(wf))
+            for amp in me.get_all_amplitudes():
+                if id(amp) not in seen:
+                    self._original_amp_numbers.append((amp, amp.get('number')))
+                    seen.add(id(amp))
 
         self.model = self.matrix_elements[0].get('processes')[0].get('model')
         self.model_name = ProcessExporterCPP.get_model_name(self.model.get('name'))
@@ -660,7 +865,7 @@ class OneProcessExporterCPP(object):
             filename = filename[1]
         elif isinstance(filename, str):
             if classpath:
-                file_path = cls.__template_path
+                file_path = cls._template_path
             else:
                 file_path = cls.template_path
         else:
@@ -668,6 +873,23 @@ class OneProcessExporterCPP(object):
         
         return open(os.path.join(file_path, filename)).read()
         
+
+    @staticmethod
+    def get_mg5_info_lines():
+        info = misc.get_pkg_info()
+        info_lines = ""
+        if info and 'version' in info and  'date' in info:
+            info_lines = "//  MadGraph7 v. %s, %s\n" % \
+                         (info['version'], info['date'])
+            info_lines = info_lines + \
+                         "//  By the MadGraph7 Development Team\n" + \
+                         "//  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
+        else:
+            info_lines = "//  MadGraph7\n" + \
+                         "//  By the MadGraph7 Development Team\n" + \
+                         "//  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
+
+        return info_lines
         
                   
     @staticmethod
@@ -680,24 +902,26 @@ class OneProcessExporterCPP(object):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
 
-        # Create the files
-        if not os.path.isdir(os.path.join(self.path, self.include_dir)):
-            os.makedirs(os.path.join(self.path, self.include_dir))
-        filename = os.path.join(self.path, self.include_dir,
-                                '%s.h' % self.process_class)
+        try:
+            # Create the files
+            if not os.path.isdir(os.path.join(self.path, self.include_dir)):
+                os.makedirs(os.path.join(self.path, self.include_dir))
+            filename = os.path.join(self.path, self.include_dir,
+                                    '%s.h' % self.process_class)
 
-        
-        self.write_process_h_file(writers.CPPWriter(filename))
+            self.write_process_h_file(writers.CPPWriter(filename))
 
-        if not os.path.isdir(os.path.join(self.path, self.process_dir)):
-            os.makedirs(os.path.join(self.path, self.process_dir))
-        filename = os.path.join(self.path, self.process_dir,
-                                '%s.%s' % (self.process_class, self.cc_ext)) 
-        self.write_process_cc_file(writers.CPPWriter(filename))
+            if not os.path.isdir(os.path.join(self.path, self.process_dir)):
+                os.makedirs(os.path.join(self.path, self.process_dir))
+            filename = os.path.join(self.path, self.process_dir,
+                                    '%s.%s' % (self.process_class, self.cc_ext))
+            self.write_process_cc_file(writers.CPPWriter(filename))
 
-        logger.info('Created files %(process)s.h and %(process)s.cc in' % \
-                    {'process': self.process_class} + \
-                    ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+            logger.info('Created files %(process)s.h and %(process)s.cc in' % \
+                        {'process': self.process_class} + \
+                        ' directory %(dir)s' % {'dir': os.path.split(filename)[0]})
+        finally:
+            self.restore_original_numbering()
 
     def generate_process_files_madevent(self, proc_id, config_map, subproc_number):
 
@@ -705,6 +929,13 @@ class OneProcessExporterCPP(object):
         self.include_multi_channel = config_map
         self.generate_process_files() 
 #        raise Exception("working fine but not fully implemented so far")
+
+    def restore_original_numbering(self):
+        for wf, number in self._original_wf_numbers:
+            wf.set('number', number)
+            wf.set('me_id', number)
+        for amp, number in self._original_amp_numbers:
+            amp.set('number', number)
 
 
     def get_default_converter(self):
@@ -727,7 +958,7 @@ class OneProcessExporterCPP(object):
         replace_dict = self.get_default_converter()
 
         # Extract version number and date from VERSION file
-        info_lines = get_mg5_info_lines()
+        info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
 
         # Extract model name
@@ -763,7 +994,7 @@ class OneProcessExporterCPP(object):
         replace_dict = self.get_default_converter()
 
         # Extract version number and date from VERSION file
-        info_lines = get_mg5_info_lines()
+        info_lines = self.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
 
         # Extract process file name
@@ -824,7 +1055,8 @@ class OneProcessExporterCPP(object):
         replace_dict['nprocesses'] = self.nprocesses
         
 
-        color_amplitudes = self.matrix_elements[0].get_color_amplitudes()
+        color_amplitudes = self.matrix_elements[0].get_color_amplitudes(
+            merge_quartic_amplitudes=False)
         # Number of color flows
         replace_dict['ncolor'] = len(color_amplitudes)
 
@@ -840,14 +1072,13 @@ class OneProcessExporterCPP(object):
             
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int perm[], const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[], const int flavor[]);
                           static const int nwavefuncs = %(nwfct)d;
-                          std::complex<double> w[nwavefuncs][%(sizew)d];
-                          static const int namplitudes = %(namp)d;
-                          std::complex<double> amp[namplitudes];""" % \
+                          MG5_%(model_name)s::ALOHAOBJ w[nwavefuncs];
+                          """ % \
                           {'nwfct':len(self.wavefunctions),
                           'sizew': wfct_size,
-                          'namp':len(self.amplitudes.get_all_amplitudes())
+                          'model_name': self.model_name
                           }
 
             replace_dict['all_matrix_definitions'] = \
@@ -856,9 +1087,22 @@ class OneProcessExporterCPP(object):
                                       replace("0_", "") \
                                       for me in self.matrix_elements])
 
+            replace_dict['ncomb'] = (
+                self.matrix_elements[0].get_helicity_combinations()
+            )
+            replace_dict['namp'] = len(
+                self.amplitudes.get_all_amplitudes()
+            )
+            replace_dict['ndiag'] = len(
+                self.matrix_elements[0].get("diagrams")
+            )
+            replace_dict['nflav'] = len(
+                self.matrix_elements[0].get_external_flavors_with_iden()
+            )
+
         else:
             replace_dict['all_sigma_kin_definitions'] = \
-                          "\n".join(["void sigmaKin_%s();" % \
+                          "\n".join(["void sigmaKin_%s(int* flavor );" % \
                                      me.get('processes')[0].shell_string().\
                                      replace("0_", "") \
                                      for me in self.matrix_elements])
@@ -890,12 +1134,14 @@ class OneProcessExporterCPP(object):
         # Extract process class name (for the moment same as file name)
         replace_dict['process_class_name'] = self.process_name
 
-        color_amplitudes = [me.get_color_amplitudes() for me in \
+        color_amplitudes = [me.get_color_amplitudes(merge_quartic_amplitudes=False) for me in \
                             self.matrix_elements]
 
         replace_dict['initProc_lines'] = \
                                 self.get_initProc_lines(self.matrix_elements[0],
                                                         color_amplitudes)
+        replace_dict['refreshMasses_lines'] = \
+                                self.get_refresh_masses_lines(self.matrix_elements[0])
         replace_dict['reset_jamp_lines'] = \
                                      self.get_reset_jamp_lines(color_amplitudes)
         replace_dict['sigmaKin_lines'], other_replace = \
@@ -909,6 +1155,11 @@ class OneProcessExporterCPP(object):
                                                               'CPPProcess')
         
         replace_dict['nexternal'] = len(self.matrix_elements[0].get('processes')[0].get('legs'))
+        _, nincoming = self.matrix_elements[0].get_nexternal_ninitial()
+        replace_dict['nincoming'] = nincoming
+        process = self.matrix_elements[0].get('processes')[0]
+        sym_data = ProcessExporterFortran._get_broken_symmetry_data(process, nincoming)
+        ProcessExporterFortran._fill_broken_sym_replace_dict(replace_dict, sym_data)
     
         if write:
             file = self.read_template_file(self.process_definition_template) %\
@@ -949,8 +1200,8 @@ class OneProcessExporterCPP(object):
         if proc_number != 0:
             process_string = "%d_%s" % (proc_number, process_string)
 
-        process_string = "Sigma_%s_%s" % (self.model_name,
-                                          process_string)
+        #process_string = "Sigma_%s_%s" % (self.model_name,
+                                          #process_string)
         return process_string
 
     def get_process_info_lines(self, matrix_element):
@@ -968,20 +1219,36 @@ class OneProcessExporterCPP(object):
         initProc_lines.append("// Set external particle masses for this matrix element")
 
         for part in matrix_element.get_external_wavefunctions():
-            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
-        for i, colamp in enumerate(color_amplitudes):
-            initProc_lines.append("jamp2[%d] = new double[%d];" % \
-                                  (i, len(colamp)))
+            initProc_lines.append("mME.push_back(pars.%s);" % part.get('mass'))
+        #for i, colamp in enumerate(color_amplitudes):
+        #    initProc_lines.append("jamp2 = new double[%d];" % \
+        #                          (i, len(colamp)))
+        initProc_lines.append("jamp2 = new double[%d];" % len(color_amplitudes[0]))
 
         return "\n".join(initProc_lines)
+
+    # Companion to get_initProc_lines: the same external-mass push_back list, without the
+    # jamp2 allocation (jamp2 is allocated once in the constructor and must not be
+    # reallocated every time CPPProcess::refreshMasses() re-populates mME).
+    def get_refresh_masses_lines(self, matrix_element):
+        """Get refreshMasses_lines for function definition for CPPProcess::refreshMasses"""
+
+        lines = []
+        for part in matrix_element.get_external_wavefunctions():
+            lines.append("mME.push_back(pars.%s);" % part.get('mass'))
+        return "\n".join(lines)
 
     def get_reset_jamp_lines(self, color_amplitudes):
         """Get lines to reset jamps"""
 
         ret_lines = ""
+        #for icol, col_amp in enumerate(color_amplitudes):
+        #    ret_lines+= """for(int i=0;i < %(ncolor)d; i++)
+        #    jamp2[%(proc_number)d][i]=0.;\n""" % \
+        #    {"ncolor": len(col_amp), "proc_number": icol}
         for icol, col_amp in enumerate(color_amplitudes):
             ret_lines+= """for(int i=0;i < %(ncolor)d; i++)
-            jamp2[%(proc_number)d][i]=0.;\n""" % \
+            jamp2[i]=0.;\n""" % \
             {"ncolor": len(col_amp), "proc_number": icol}
         return ret_lines
         
@@ -993,17 +1260,36 @@ class OneProcessExporterCPP(object):
         replace_dict = {}
 
         replace_dict['nwavefuncs'] = len(wavefunctions)
+        replace_dict['flavor_mask_decl'] = ''
+        replace_dict['flavor_mask_setup'] = ''
         
         #ensure no recycling of wavefunction ! incompatible with some output
         for me in self.matrix_elements:
             me.restore_original_wavefunctions()
 
-        replace_dict['wavefunction_calls'] = "\n".join(\
-            self.helas_call_writer.get_wavefunction_calls(\
-            helas_objects.HelasWavefunctionList(wavefunctions)))
+        if len(self.matrix_elements) == 1:
+            mask_decl, mask_setup, n_flavors, active_flavor_mask = \
+                    self.get_flavor_mask_blocks(self.matrix_elements[0])
+            replace_dict['flavor_mask_decl'] = mask_decl
+            replace_dict['flavor_mask_setup'] = mask_setup
+        else:
+            n_flavors = 0
+            active_flavor_mask = None
 
-        replace_dict['amplitude_calls'] = "\n".join(\
-            self.helas_call_writer.get_amplitude_calls(amplitudes))
+        self.helas_call_writer.use_flavor_mask = (n_flavors > 0)
+        self.helas_call_writer.me_n_flavors = n_flavors
+        self.helas_call_writer.me_active_flavor_mask = active_flavor_mask
+        try:
+            replace_dict['wavefunction_calls'] = "\n".join(\
+                self.helas_call_writer.get_wavefunction_calls(\
+                helas_objects.HelasWavefunctionList(wavefunctions)))
+
+            replace_dict['amplitude_calls'] = "\n".join(\
+                self.helas_call_writer.get_amplitude_calls(amplitudes))
+        finally:
+            self.helas_call_writer.use_flavor_mask = False
+            self.helas_call_writer.me_n_flavors = 0
+            self.helas_call_writer.me_active_flavor_mask = None
 
         if write:
             file = self.read_template_file(self.process_wavefunction_template) % \
@@ -1011,6 +1297,197 @@ class OneProcessExporterCPP(object):
             return file
         else:
             return replace_dict
+
+    def _cpp_flav_rows(self, matrix_element, allowed_flavors):
+        """Return the per-flavor group-position rows (as C++ initialiser
+        strings like '{0, 0, 1, 1}') for *allowed_flavors*. Group positions are
+        0-based, matching the convention used by the C++ flavor-mask table and
+        the HELAS ixxxxx/oxxxxx flv argument."""
+        model = matrix_element.get('processes')[0].get('model')
+        merged_particles = model.get('merged_particles') or {}
+        pdg_to_group_index = {}
+        max_group_size = 0
+        for merged_id, members in merged_particles.items():
+            members = list(members)
+            if members:
+                max_group_size = max(max_group_size, len(members))
+                pdg_to_group_index[int(merged_id)] = 0
+                pdg_to_group_index[-int(merged_id)] = 0
+            for pos, pdg in enumerate(members):
+                pdg = int(pdg)
+                pdg_to_group_index[pdg] = pos
+                pdg_to_group_index[-pdg] = pos
+        flav_rows = []
+        for flavor in allowed_flavors:
+            row = []
+            for p in flavor:
+                p = int(p)
+                if p in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[p]))
+                elif abs(p) in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[abs(p)]))
+                elif max_group_size and 1 <= abs(p) <= max_group_size:
+                    row.append(str(abs(p) - 1))
+                else:
+                    row.append('0')
+            flav_rows.append('{%s}' % ', '.join(row))
+        return flav_rows
+
+    def _cpp_sigmakin_flavor(self, matrix_element):
+        """Return (n_flavors, flav_rows, n_legs) for the always-on per-flavor
+        good-helicity filter in sigmaKin. n_flavors is always >= 1: an ME with
+        no merged-particle variants is a single flavor whose group index is 0 on
+        every leg (C++ group indices are 0-based), matching the flavor[] = 0
+        convention the callers use for an unmerged leg. n_legs is the number of
+        external legs (the length of each flav_table row), returned explicitly
+        so callers need not infer it from the initialiser string."""
+        nexternal = matrix_element.get_nexternal_ninitial()[0]
+        allowed_flavors = matrix_element.compute_flavor_masks()
+        if not allowed_flavors:
+            return (1, ['{%s}' % ', '.join(['0'] * nexternal)], nexternal)
+        return (len(allowed_flavors),
+                self._cpp_flav_rows(matrix_element, allowed_flavors),
+                len(allowed_flavors[0]))
+
+    def get_flavor_mask_blocks(self, matrix_element):
+        """Return declaration/setup blocks for C++ flavor-mask guards."""
+
+        if not getattr(self, 'use_flavor_mask', False):
+            return ('', '', 0, 0)
+
+        allowed_flavors = matrix_element.compute_flavor_masks()
+        if not allowed_flavors:
+            return ('', '', 0, 0)
+
+        if matrix_element.flavor_mask_is_trivial():
+            return ('', '', len(allowed_flavors), (1 << len(allowed_flavors)) - 1)
+
+        n_flavors = len(allowed_flavors)
+        n_wfs = matrix_element.get_number_of_wavefunctions()
+        n_amps = matrix_element.get_number_of_amplitudes()
+        nwords_wf = max(1, (n_wfs + 63) // 64)
+        nwords_amp = max(1, (n_amps + 63) // 64)
+
+        wf_masks = [0] * n_wfs
+        amp_masks = [0] * n_amps
+        for wf in matrix_element.get_all_wavefunctions():
+            idx = wf.get('number')
+            if isinstance(idx, int) and idx > 0:
+                wf_masks[idx - 1] = wf['flavor_mask'] if 'flavor_mask' in wf else 0
+        for amp in matrix_element.get_all_amplitudes():
+            idx = amp.get('number')
+            if isinstance(idx, int) and idx > 0:
+                amp_masks[idx - 1] = amp['flavor_mask'] if 'flavor_mask' in amp else 0
+
+        active_flavor_mask = 0
+        for amp_mask in amp_masks:
+            active_flavor_mask |= amp_mask
+        if active_flavor_mask == 0:
+            active_flavor_mask = (1 << n_flavors) - 1
+
+        wf_index_masks = [[0] * nwords_wf for _ in range(n_flavors)]
+        amp_index_masks = [[0] * nwords_amp for _ in range(n_flavors)]
+        for flav_idx in range(n_flavors):
+            bit = 1 << flav_idx
+            for obj_idx, mask in enumerate(wf_masks):
+                if mask & bit:
+                    word = obj_idx // 64
+                    pos = obj_idx % 64
+                    wf_index_masks[flav_idx][word] |= (1 << pos)
+            for obj_idx, mask in enumerate(amp_masks):
+                if mask & bit:
+                    word = obj_idx // 64
+                    pos = obj_idx % 64
+                    amp_index_masks[flav_idx][word] |= (1 << pos)
+
+        active_wf_index_masks = [0] * nwords_wf
+        active_amp_index_masks = [0] * nwords_amp
+        for flav_mask in wf_index_masks:
+            for word, value in enumerate(flav_mask):
+                active_wf_index_masks[word] |= value
+        for flav_mask in amp_index_masks:
+            for word, value in enumerate(flav_mask):
+                active_amp_index_masks[word] |= value
+
+        def fmt_uint64_2d(dtype, name, matrix):
+            rows = ['{%s}' % ', '.join('%dULL' % v for v in row) for row in matrix]
+            return '%s %s[%d][%d] = {%s};' % (
+                dtype, name, len(matrix), len(matrix[0]), ', '.join(rows))
+
+        model = matrix_element.get('processes')[0].get('model')
+        merged_particles = model.get('merged_particles') or {}
+        pdg_to_group_index = {}
+        max_group_size = 0
+        for merged_id, members in merged_particles.items():
+            members = list(members)
+            if members:
+                max_group_size = max(max_group_size, len(members))
+                # C++ flavor indices are 0-based (first merged member -> 0).
+                pdg_to_group_index[int(merged_id)] = 0
+                pdg_to_group_index[-int(merged_id)] = 0
+            for pos, pdg in enumerate(members):
+                pdg = int(pdg)
+                pdg_to_group_index[pdg] = pos
+                pdg_to_group_index[-pdg] = pos
+
+        flav_rows = []
+        for flavor in allowed_flavors:
+            row = []
+            for p in flavor:
+                p = int(p)
+                if p in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[p]))
+                elif abs(p) in pdg_to_group_index:
+                    row.append(str(pdg_to_group_index[abs(p)]))
+                elif max_group_size and 1 <= abs(p) <= max_group_size:
+                    row.append(str(abs(p) - 1))
+                else:
+                    row.append('0')
+            flav_rows.append('{%s}' % ', '.join(row))
+        decl_lines = [
+            '// Flavor-mask machinery (compute_flavor_masks).',
+            'const int nmask_flav = %d;' % n_flavors,
+            'const int nwords_wf = %d;' % nwords_wf,
+            'const int nwords_amp = %d;' % nwords_amp,
+            fmt_uint64_2d('static const unsigned long long', 'wf_index_mask',
+                          wf_index_masks),
+            fmt_uint64_2d('static const unsigned long long', 'amp_index_mask',
+                          amp_index_masks),
+            'static const int flav_table[%d][%d] = {%s};' % (
+                n_flavors, len(allowed_flavors[0]), ', '.join(flav_rows)),
+            'static const unsigned long long active_wf_mask[%d] = {%s};' % (
+                nwords_wf, ', '.join('%dULL' % v for v in active_wf_index_masks)),
+            'static const unsigned long long active_amp_mask[%d] = {%s};' % (
+                nwords_amp, ', '.join('%dULL' % v for v in active_amp_index_masks)),
+            'unsigned long long current_wf_mask[nwords_wf];',
+            'unsigned long long current_amp_mask[nwords_amp];',
+        ]
+
+        setup_lines = [
+            'for (int mask_k = 0; mask_k < nwords_wf; ++mask_k) current_wf_mask[mask_k] = active_wf_mask[mask_k];',
+            'for (int mask_k = 0; mask_k < nwords_amp; ++mask_k) current_amp_mask[mask_k] = active_amp_mask[mask_k];',
+            'int flav_idx_lookup = -1;',
+            'for (int mask_i = 0; mask_i < nmask_flav; ++mask_i) {',
+            '  bool flav_match = true;',
+            '  for (int mask_j = 0; mask_j < nexternal; ++mask_j) {',
+            '    if (flavor[mask_j] != flav_table[mask_i][mask_j]) {',
+            '      flav_match = false;',
+            '      break;',
+            '    }',
+            '  }',
+            '  if (flav_match) {',
+            '    flav_idx_lookup = mask_i;',
+            '    break;',
+            '  }',
+            '}',
+            'if (flav_idx_lookup >= 0) {',
+            '  for (int mask_k = 0; mask_k < nwords_wf; ++mask_k) current_wf_mask[mask_k] = wf_index_mask[flav_idx_lookup][mask_k];',
+            '  for (int mask_k = 0; mask_k < nwords_amp; ++mask_k) current_amp_mask[mask_k] = amp_index_mask[flav_idx_lookup][mask_k];',
+            '}',
+        ]
+
+        return ('\n'.join(decl_lines), '\n'.join(setup_lines),
+                n_flavors, active_flavor_mask)
        
 
     def get_sigmaKin_lines(self, color_amplitudes, write=True):
@@ -1022,6 +1499,7 @@ class OneProcessExporterCPP(object):
         
         if self.single_helicities:
             replace_dict = {}
+            assert len(self.matrix_elements) == 1
 
             # Number of helicity combinations
             replace_dict['ncomb'] = \
@@ -1038,14 +1516,16 @@ class OneProcessExporterCPP(object):
             replace_dict['helicity_matrix'] = \
                             self.get_helicity_matrix(self.matrix_elements[0])
 
+            replace_dict['flavor_table'] = self.get_flavor_table(self.matrix_elements[0])
+
             # Extract denominator
             den_factors = [str(me.get_denominator_factor()) for me in \
                                self.matrix_elements]
-            if self.nprocesses != len(self.matrix_elements):
-                den_factors.extend(den_factors)
+            #if self.nprocesses != len(self.matrix_elements):
+            #    den_factors.extend(den_factors)
             replace_dict['den_factors'] = ",".join(den_factors)
             replace_dict['get_matrix_t_lines'] = "\n".join(
-                     ["t[%(iproc)d]=matrix_%(proc_name)s();" % \
+                     ["double t = matrix_%(proc_name)s();" % \
                      {"iproc": i, "proc_name": \
                       me.get('processes')[0].shell_string().replace("0_", "")} \
                      for i, me in enumerate(self.matrix_elements)])
@@ -1065,11 +1545,16 @@ class OneProcessExporterCPP(object):
 """             // Mirror initial state momenta for mirror process
                 perm[0]=1;
                 perm[1]=0;
+                int flv_tmp = flavor[0];
+                flavor[0] = flavor[1];  
+                flavor[1] = flv_tmp;
                 // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
+                calculate_wavefunctions(perm, helicities[ihel], flavor);
                 // Mirror back
                 perm[0]=0;
                 perm[1]=1;
+                flavor[1] = flavor[0];
+                flavor[0] = flv_tmp;
                 // Calculate matrix elements
                 """
                 
@@ -1085,6 +1570,60 @@ class OneProcessExporterCPP(object):
                                         for m in self.matrix_elements])
             replace_dict['nb_amp'] = len(self.amplitudes.get_all_amplitudes())
             replace_dict['nexternal'] = len(self.processes[0].get('legs'))
+
+            # Always-on per-flavor good-helicity filter: goodhel/ntry/igood/
+            # ngood/sum_hel/jhel are indexed by a per-point flav_idx resolved
+            # from flavor[] via sk_flav_table, so a helicity that is zero for one
+            # flavor is never dropped for another. nflav is >= 1 (an unmerged ME
+            # is a single flavor); for nproc > 1 there is no single flavor table,
+            # so fall back to one flavor (flav_idx stays 0).
+            single_me = len(self.matrix_elements) == 1
+            if single_me:
+                sk_nflav, sk_flav_rows, n_legs = \
+                    self._cpp_sigmakin_flavor(self.matrix_elements[0])
+            else:
+                n_legs = replace_dict['nexternal']
+                sk_nflav, sk_flav_rows = \
+                    (1, ['{%s}' % ', '.join(['0'] * n_legs)])
+            replace_dict['cpp_goodhel_decl'] = (
+                "const int nflav = %d;\n" % sk_nflav +
+                "static const int sk_flav_table[nflav][%d] = {%s};\n"
+                % (n_legs, ', '.join(sk_flav_rows)) +
+                "static bool goodhel[nflav][ncomb] = {};\n"
+                "static int ntry[nflav] = {}, sum_hel[nflav] = {}, ngood[nflav] = {};\n"
+                "static int igood[nflav][ncomb];\n"
+                "static int jhel[nflav];")
+            # Resolve flavor[] -> flav_idx via sk_flav_table. For the single-ME
+            # case a flavor absent from the table is not an allowed combination
+            # (its |M|^2 is zero): flav_idx stays -1 and we short-circuit to a
+            # zero matrix element before indexing the per-flavor goodhel/ntry
+            # arrays. For the multi-ME fallback there is a single (all-zero) row
+            # and no real per-flavor split, so flav_idx defaults to 0.
+            if single_me:
+                replace_dict['cpp_flav_idx_compute'] = (
+                    "int flav_idx = -1;\n"
+                    "for (int fi = 0; fi < nflav; ++fi) {\n"
+                    "  bool fmatch = true;\n"
+                    "  for (int fj = 0; fj < %d; ++fj) {\n" % n_legs +
+                    "    if (flavor[fj] != sk_flav_table[fi][fj]) { fmatch = false; break; }\n"
+                    "  }\n"
+                    "  if (fmatch) { flav_idx = fi; break; }\n"
+                    "}\n"
+                    "if (flav_idx < 0) {\n"
+                    "  for (int i = 0; i < nprocesses; i++) matrix_element[i] = 0.;\n"
+                    "  return;\n"
+                    "}\n")
+            else:
+                replace_dict['cpp_flav_idx_compute'] = (
+                    "int flav_idx = 0;\n"
+                    "for (int fi = 0; fi < nflav; ++fi) {\n"
+                    "  bool fmatch = true;\n"
+                    "  for (int fj = 0; fj < %d; ++fj) {\n" % n_legs +
+                    "    if (flavor[fj] != sk_flav_table[fi][fj]) { fmatch = false; break; }\n"
+                    "  }\n"
+                    "  if (fmatch) { flav_idx = fi; break; }\n"
+                    "}\n")
+
             if write:
                 file = \
                  self.read_template_file(\
@@ -1105,6 +1644,25 @@ class OneProcessExporterCPP(object):
             else:
                 replace_dict['get_mirror_matrix_lines'] = ret_lines
                 return replace_dict
+
+    def get_flavor_table(self, matrix_element):
+        flavors = list(matrix_element.get_external_flavors_with_iden())
+        flavor_dict = {
+            1: 0, 2: 1, 3: 2, 4: 3, # quarks
+            11: 0, 13: 1, 15: 2,    # charged leptons
+            12: 0, 14: 1, 16: 2,    # neutrinos
+        }
+        flavor_table = []
+        flavor_mirror_table = []
+        for flavor in flavors:
+            aloha_flavor = [flavor_dict.get(abs(f), 0) for f in flavor[0]]
+            flavor_table.append(",".join(str(f) for f in aloha_flavor))
+        full_flavor_table = "{{" + "}, {".join(flavor_table) + "}}"
+        flavor_count = len(flavor_table)
+        ext_count = len(flavors[0][0])
+        return f"""
+        static const int flavor_table[{flavor_count}][{ext_count}] = {full_flavor_table};
+        """
               
     def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
@@ -1112,7 +1670,7 @@ class OneProcessExporterCPP(object):
         ret_lines = []
         if self.single_helicities:
             ret_lines.append(\
-                "void %s::calculate_wavefunctions(const int perm[], const int hel[]){" % \
+                "void %s::calculate_wavefunctions(const int perm[], const int hel[], const int flavor[]){" % \
                 class_name)
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
@@ -1207,6 +1765,11 @@ class OneProcessExporterCPP(object):
                                      
         replace_dict['jamp_lines'] = self.get_jamp_lines(color_amplitudes)
 
+        # The color sum may run on a smaller basis than the one the color flow
+        # is picked among (see the madmatrix override)
+        self.set_color_flow_lines_cpp(matrix_element, replace_dict)
+
+        replace_dict['amp2_lines'] = self.get_amp2_lines(matrix_element)
 
         #specific exporter hack
         replace_dict =  self.get_class_specific_definition_matrix(replace_dict, matrix_element)
@@ -1327,20 +1890,20 @@ class OneProcessExporterCPP(object):
             return "\n".join([denom_string, matrix_string])
 
 
-    @staticmethod
-    def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
+    @classmethod
+    def coeff(cls, ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         """Returns a nicely formatted string for the coefficients in JAMP lines"""
     
         total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
     
         if total_coeff == 1:
             if is_imaginary:
-                return '+std::complex<double>(0,1)*'
+                return f'+{cls.imaginary_unit}*'
             else:
                 return '+'
         elif total_coeff == -1:
             if is_imaginary:
-                return '-std::complex<double>(0,1)*'
+                return f'-{cls.imaginary_unit}*'
             else:
                 return '-'
     
@@ -1351,13 +1914,22 @@ class OneProcessExporterCPP(object):
             res_str = res_str + '/%i.' % total_coeff.denominator
     
         if is_imaginary:
-            res_str = res_str + '*std::complex<double>(0,1)'
+            res_str = res_str + f'*{cls.imaginary_unit}'
     
         return res_str + '*'
 
 
 
             
+    def set_color_flow_lines_cpp(self, matrix_element, replace_dict):
+        """Tell the process template that the color sum and the color flow use
+        the same basis. Overridden by the backends which can put the color sum
+        on a smaller one."""
+
+        replace_dict['ncolor_flow'] = replace_dict['ncolor']
+        replace_dict['jampflow_lines'] = ''
+        replace_dict['jamp_flow'] = 'jamp_sv'
+
     def get_jamp_lines(self, color_amplitudes):
         """Return the jamp = sum(fermionfactor * amp[i]) lines"""
 
@@ -1399,417 +1971,34 @@ class OneProcessExporterCPP(object):
             res_list.append(res)
 
         return "\n".join(res_list)
-    
-coeff = OneProcessExporterCPP.coeff
 
-class OneProcessExporterGPU(OneProcessExporterCPP):
-
-    # Static variables (for inheritance)
-    process_dir = '.'
-    include_dir = '.'
-    template_path = os.path.join(_file_path, 'iolibs', 'template_files')
-    __template_path = os.path.join(_file_path, 'iolibs', 'template_files') 
-    process_template_h = 'gpu/process_h.inc'
-    process_template_cc = 'gpu/process_cc.inc'
-    process_class_template = 'gpu/process_class.inc'
-    process_definition_template = 'gpu/process_function_definitions.inc'
-    process_wavefunction_template = 'cpp_process_wavefunctions.inc'
-    process_sigmaKin_function_template = 'gpu/process_sigmaKin_function.inc'
-    single_process_template = 'gpu/process_matrix.inc'
-    cc_ext = 'cu'
-    support_multichannel = True
-    multichannel_var = ',fptype& multi_chanel_num, fptype& multi_chanel_denom'
-
-    def __init__(self, *args, **opts):
-        
-        super(OneProcessExporterGPU, self).__init__(*args, **opts)
-        self.process_class = "gCPPProcess"
-
-    def generate_process_files(self):
-        
-        if self.matrix_elements[0].get('has_mirror_process'):
-            self.matrix_elements[0].set('has_mirror_process', False)
-            self.nprocesses/=2
-
-        super(OneProcessExporterGPU, self).generate_process_files()
-
-        self.edit_check_sa()
-        self.edit_mgonGPU()
-        
-        # add symbolic link for C++
-        files.ln(pjoin(self.path, 'gcheck_sa.cu'), self.path, 'check_sa.cc')
-        files.ln(pjoin(self.path, 'gCPPProcess.cu'), self.path, 'CPPProcess.cc')
-    
-
-    def edit_check_sa(self):
-        
-        template = open(pjoin(self.template_path,'gpu','check_sa.cu'),'r').read()
-        replace_dict = {}
-        replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
-        replace_dict['model'] = self.model_name
-        replace_dict['numproc'] = len(self.matrix_elements)
-
-        ff = open(pjoin(self.path, 'gcheck_sa.cu'),'w')
-        ff.write(template)
-        ff.close()
-        
-    def edit_mgonGPU(self):
-        
-        template = open(pjoin(self.template_path,'gpu','mgOnGpuConfig.h'),'r').read()
-        replace_dict = {}
-        nexternal, nincoming = self.matrix_elements[0].get_nexternal_ninitial()
-        replace_dict['nincoming'] = nincoming
-        replace_dict['noutcoming'] = nexternal - nincoming
-        
-        # Number of helicity combinations
-        replace_dict['nbhel'] = \
-                            self.matrix_elements[0].get_helicity_combinations()
-        replace_dict['nwavefunc'] = \
-                          self.matrix_elements[0].get_number_of_wavefunctions()
-        replace_dict['wavefuncsize'] = 6
-        
-        
-        ff = open(pjoin(self.path, '..','..','src','mgOnGpuConfig.h'),'w')
-        ff.write(template % replace_dict)
-        ff.close()        
-        
-
-    def get_initProc_lines(self, matrix_element, color_amplitudes):
-        """Get initProc_lines for function definition for Pythia 8 .cc file"""
-
-        initProc_lines = []
-
-        initProc_lines.append("// Set external particle masses for this matrix element")
-
-        for part in matrix_element.get_external_wavefunctions():
-            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
-        #for i, colamp in enumerate(color_amplitudes):
-        #    initProc_lines.append("jamp2[%d] = new double[%d];" % \
-        #                          (i, len(colamp)))
-
-        return "\n".join(initProc_lines)
-
-    def get_reset_jamp_lines(self, color_amplitudes):
-        """Get lines to reset jamps"""
-
-        ret_lines = ""
-        return ret_lines
-    
-    def get_sigmaKin_lines(self, color_amplitudes, write=True):
-        """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
-
-
-
-        replace_dict =  super().get_sigmaKin_lines(color_amplitudes, write=False)
-
-        if self.include_multi_channel:
-            replace_dict['madE_var_reset'] = """
-            fptype multi_chanel_num = 0.;
-            fptype multi_chanel_denom = 0.;
-            """
-            replace_dict['madE_caclwfcts_call'] = '&multi_chanel_num, &multi_chanel_denom'
-            replace_dict['madE_update_answer'] = '   allMEs[iproc*nprocesses + ievt] *= multi_chanel_num/multi_chanel_denom;'
-
-            multi_channel = self.get_multi_channel_dictionary(self.matrix_elements[0].get('diagrams'), self.include_multi_channel)
-            replace_dict['nb_channel'] = len(multi_channel)
-            replace_dict['nb_color'] = max(1, len(self.matrix_elements[0].get('color_basis')))
-
-
-        if write:
-            file = \
-                self.read_template_file(\
-                        self.process_sigmaKin_function_template) %\
-                        replace_dict
-            return file, replace_dict
-        else:
-            return replace_dict
-
-        if not write:
-            return replace_dict, other_replace
-        else:
-            raise Exception
-
-
-    @staticmethod
-    def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
-        """Returns a nicely formatted string for the coefficients in JAMP lines"""
-    
-        total_coeff = ff_number * frac * fractions.Fraction(Nc_value) ** Nc_power
-    
-        if total_coeff == 1:
-            if is_imaginary:
-                return '+cxtype(0,1)*'
-            else:
-                return '+'
-        elif total_coeff == -1:
-            if is_imaginary:
-                return '-cxtype(0,1)*'
-            else:
-                return '-'
-    
-        res_str = '%+i.' % total_coeff.numerator
-    
-        if total_coeff.denominator != 1:
-            # Check if total_coeff is an integer
-            res_str = res_str + '/%i.' % total_coeff.denominator
-    
-        if is_imaginary:
-            res_str = res_str + '*cxtype(0,1)'
-    
-        return res_str + '*'
-
-
-
-    def get_process_function_definitions(self, write=True):
-        """The complete Pythia 8 class definition for the process"""
-
-        replace_dict = super(OneProcessExporterGPU,self).get_process_function_definitions(write=False)
-
-
-        replace_dict['ncouplings'] = len(self.couplings2order)
-        replace_dict['ncouplingstimes2'] = 2 *  replace_dict['ncouplings']
-        replace_dict['nparams'] = len(self.params2order)
-        replace_dict['nmodels'] = replace_dict['nparams'] + replace_dict['ncouplings']
-        replace_dict['coupling_list'] = ' '
-
-        coupling = [''] * len(self.couplings2order)
-        params = [''] * len(self.params2order)
-        for coup, pos in self.couplings2order.items():
-            coupling[pos] = coup
-        coup_str = "static cxtype tIPC[%s] = {pars->%s};\n"\
-            %(len(self.couplings2order), ',pars->'.join(coupling))
-        for para, pos in self.params2order.items():
-            params[pos] = para            
-        param_str = "static double tIPD[%s] = {pars->%s};\n"\
-            %(len(self.params2order), ',pars->'.join(params))            
-        
-        
-        replace_dict['assign_coupling'] = coup_str + param_str
-        replace_dict['all_helicities'] = self.get_helicity_matrix(self.matrix_elements[0])
-        replace_dict['all_helicities'] = replace_dict['all_helicities'] .replace("helicities", "tHel")
-        
-        file = self.read_template_file(self.process_definition_template) %\
-               replace_dict
-
-        return file
-
-    def get_process_class_definitions(self, write=True):
-        
-        replace_dict = super(OneProcessExporterGPU,self).get_process_class_definitions(write=False)
-
-        replace_dict['nwavefuncs'] = replace_dict['wfct_size']
-        replace_dict['namp'] = len(self.amplitudes.get_all_amplitudes())
-        replace_dict['model'] = self.model_name
-        
-        replace_dict['sizew'] = self.matrix_elements[0].get_number_of_wavefunctions()
-        replace_dict['nexternal'], _ = self.matrix_elements[0].get_nexternal_ninitial()
-        replace_dict['ncomb'] = len([x for x in self.matrix_elements[0].get_helicity_matrix()])
-        
-        replace_dict['all_sigma_kin_definitions'] = \
-                          """// Calculate wavefunctions
-                          __device__ void calculate_wavefunctions(int ihel, double local_mom[%(nexternal)i][3],
-                                        cxtype amp[%(namp)d])
-                          {
-                          const int ncolor =  %(ncolor)d;
-                          cxtype jamp[ncolor];
-
-                            cxtype w[%(nwfct)d][%(sizew)d];
-                            """ % \
-                          {'nwfct':len(self.wavefunctions),
-                          'sizew': replace_dict['wfct_size'],
-                          'nexternal':replace_dict['nexternal'],
-                          'namp':len(self.amplitudes),
-                          'ncolor': len(self.matrix_elements[0].get_color_amplitudes())
-                          }
-
-        if write:
-            file = self.read_template_file(self.process_class_template) % replace_dict
-            return file
-        else:
-            return replace_dict
-        
-        
-#     def get_calculate_wavefunctions(self, wavefunctions, amplitudes, write=True):
-#         """Return the lines for optimized calculation of the
-#         wavefunctions for all subprocesses"""
-# 
-#         raise Exception
-#         replace_dict = {}
-# 
-#         replace_dict['nwavefuncs'] = len(wavefunctions)
-#         
-#         #ensure no recycling of wavefunction ! incompatible with some output
-#         #for me in self.matrix_elements:
-#         #    me.restore_original_wavefunctions()
-# 
-#         replace_dict['wavefunction_calls'] = "\n".join(\
-#             self.helas_call_writer.get_wavefunction_calls(\
-#             helas_objects.HelasWavefunctionList(wavefunctions)))
-# 
-#         replace_dict['amplitude_calls'] = "\n".join(\
-#             self.helas_call_writer.get_amplitude_calls(amplitudes))
-# 
-#         if write:
-#             file = self.read_template_file(self.process_wavefunction_template) % \
-#                 replace_dict
-#             return file
-#         else:
-#             return replace_dict
-    
-    def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
-        """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
+    def get_amp2_lines(self, matrix_element):
+        """Return the amp2(i) = sum(amp for diag(i))^2 lines"""
 
         ret_lines = []
-        if self.single_helicities:
-            
-            template = "__device__ void calculate_wavefunctions(int ihel, const fptype* allmomenta,fptype &meHelSum \n#ifndef __CUDACC__\n                                , const int ievt\n#endif\n %(multi_channel)s                               )\n{"
-            
-            if self.include_multi_channel:
-                info = {'multi_channel': self.multichannel_var}  
-            else:
-                info = {'multi_channel': ''}
+        # Get minimum legs in a vertex
+        
+        #vert_list = [max(diag.get_vertex_leg_numbers()) for diag in \
+           #matrix_element.get('diagrams') if diag.get_vertex_leg_numbers()!=[]]
+        #minvert = min(vert_list) if vert_list!=[] else 0
 
-            ret_lines.append( template % info)
+        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+            # Ignore any diagrams with 4-particle vertices.
+            #if diag.get_vertex_leg_numbers()!=[] and \
+                               #max(diag.get_vertex_leg_numbers()) > minvert:
+                #continue
+            # Now write out the expression for AMP2, meaning the sum of
+            # squared amplitudes belonging to the same diagram
+            line = "amp2[%d] += " % (idiag)
+            line += "+".join(["norm(amp[%(num)d])" % \
+                              {"num": a.get('number')-1} for a in \
+                              diag.get('amplitudes')])
+            line += ";"
+            ret_lines.append(line)
 
-            ret_lines.append(" using namespace MG5_%s;" % self.model_name)
-            ret_lines.append("mgDebug( 0, __FUNCTION__ );")
-            ret_lines.append("cxtype amp[1]; // was %i" % len(self.matrix_elements[0].get_all_amplitudes()))
-            ret_lines.append("const int ncolor =  %i;" % len(color_amplitudes[0]))
-            ret_lines.append("cxtype jamp[ncolor];")
-            ret_lines.append("// Calculate wavefunctions for all processes")
-            ret_lines.append("using namespace MG5_%s;" % self.model_name)
-
-
-            multi_channel = None
-            if self.include_multi_channel:
-                if not self.support_multichannel:
-                    raise Exception("link with madevent not supported")
-                multi_channel = self.get_multi_channel_dictionary(self.matrix_elements[0].get('diagrams'), self.include_multi_channel)
-
-            helas_calls = self.helas_call_writer.get_matrix_element_calls(\
-                                                    self.matrix_elements[0],
-                                                    color_amplitudes[0],
-                                                    multi_channel_map = multi_channel
-                                                    )
-            assert len(self.matrix_elements) == 1 # how to handle if this is not true?
-
-            self.couplings2order = self.helas_call_writer.couplings2order
-            self.params2order = self.helas_call_writer.params2order
-            nwavefuncs = self.matrix_elements[0].get_number_of_wavefunctions()
-            ret_lines.append("cxtype w[nwf][nw6];")
-
-
-            ret_lines += helas_calls
-            #ret_lines.append(self.get_calculate_wavefunctions(\
-            #    self.wavefunctions, self.amplitudes))
-            #ret_lines.append("}")
-        else:
-            ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
-                                  for i, me in enumerate(self.matrix_elements)])
-        to_add = []
-        to_add.extend([self.get_matrix_single_process(i, me,
-                                                         color_amplitudes[i],
-                                                         class_name) \
-                                for i, me in enumerate(self.matrix_elements)])
-        ret_lines.extend([self.get_matrix_single_process(i, me,
-                                                         color_amplitudes[i],
-                                                         class_name) \
-                                for i, me in enumerate(self.matrix_elements)])
         return "\n".join(ret_lines)
-
-    def write_process_h_file(self, writer):
-        """Write the class definition (.h) file for the process"""
-        
-        replace_dict = super(OneProcessExporterGPU, self).write_process_h_file(False)
-        try:
-            replace_dict['helamps_h'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.h' % self.model_name)).read()
-        except FileNotFoundError:
-            replace_dict['helamps_h'] = "\n#include \"../../src/HelAmps_%s.h\"" % self.model_name
-        
-        if writer:
-            file = self.read_template_file(self.process_template_h) % replace_dict
-            # Write the file
-            writer.writelines(file)
-        else:
-            return replace_dict
     
-    def write_process_cc_file(self, writer):
-        """Write the class member definition (.cc) file for the process
-        described by matrix_element"""
-        
-                
-        replace_dict = super(OneProcessExporterGPU, self).write_process_cc_file(False)
-        #try:
-        #    replace_dict['hel_amps_def'] = open(pjoin(self.path, os.pardir, os.pardir,'src','HelAmps_%s.cu' % self.model_name)).read()
-        #except FileNotFoundError:
-        replace_dict['hel_amps_def'] = "\n#include \"../../src/HelAmps_%s.cu\"" % self.model_name
-            
-        if writer:
-            file = self.read_template_file(self.process_template_cc) % replace_dict
-            # Write the file
-            writer.writelines(file)
-        else:
-            return replace_dict
-
-
-    def get_icolamp_lines(self, mapconfigs, matrix_element, num_matrix_element):
-        """Return the ICOLAMP matrix, showing which JAMPs contribute to
-        which configs (diagrams)."""
-
-        ret_list = []
-
-        booldict = {False: "false", True: "true"}
-
-        # Only want to include leading color flows, so find max_Nc
-        color_basis = matrix_element.get('color_basis')
-        if not color_basis:
-            # No color, so only one color factor. Simply write a ".true." 
-            # for each config (i.e., each diagram with only 3 particle
-            # vertices
-            text = " {{%s}}" % ','.join(['true']* len(mapconfigs))
-            return text
-
-
-        # There is a color basis - create a list showing which JAMPs have
-        # contributions to which configs
-        # We don't want to include the power of Nc's which come from the potential
-        # loop color trace (i.e. in the case of a closed fermion loop for example)
-        # so we subtract it here when computing max_Nc
-        max_Nc = max(sum([[(v[4]-v[5]) for v in val] for val in 
-                                                      color_basis.values()],[]))
-
-        # Create dictionary between diagram number and JAMP number
-        diag_jamp = {}
-        for ijamp, col_basis_elem in \
-                enumerate(sorted(matrix_element.get('color_basis').keys())):
-            for diag_tuple in matrix_element.get('color_basis')[col_basis_elem]:
-                # Only use color flows with Nc == max_Nc. However, notice that
-                # we don't want to include the Nc power coming from the loop
-                # in this counting.
-                if (diag_tuple[4]-diag_tuple[5]) == max_Nc:
-                    diag_num = diag_tuple[0] + 1
-                    # Add this JAMP number to this diag_num
-                    diag_jamp[diag_num] = diag_jamp.setdefault(diag_num, []) + \
-                                          [ijamp+1]
-                #else:
-                #    self.proc_characteristic['single_color'] = False
-
-        colamps = ijamp + 1
-        for iconfig, num_diag in enumerate(mapconfigs):  
-            # mapconfigs can be a list or a dictionary.
-            # In case of dictionary the num_diag will be the key of the dictionary.    
-            if num_diag == 0:
-                continue
-
-            # List of True or False 
-            bool_list = [(i + 1 in diag_jamp[num_diag]) for i in range(colamps)]
-            # Add line
-            ret_list.append("{%s};" % ','.join(["%s" % booldict[b] for b in bool_list]))
-
-
-
-        return '{%s};' % ','.join(ret_list)
-
+coeff = OneProcessExporterCPP.coeff
 
 class OneProcessExporterMatchbox(OneProcessExporterCPP):
     """Class to take care of exporting a set of matrix elements to
@@ -1828,7 +2017,7 @@ class OneProcessExporterMatchbox(OneProcessExporterCPP):
         initProc_lines.append("// Set external particle masses for this matrix element")
 
         for part in matrix_element.get_external_wavefunctions():
-            initProc_lines.append("mME.push_back(pars->%s);" % part.get('mass'))
+            initProc_lines.append("mME.push_back(pars.%s);" % part.get('mass'))
         return "\n".join(initProc_lines)
 
 
@@ -2003,7 +2192,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         if self.single_helicities:
             replace_dict['all_sigma_kin_definitions'] = \
                           """// Calculate wavefunctions
-                          void calculate_wavefunctions(const int perm[], const int hel[]);
+                          void calculate_wavefunctions(const int perm[], const int hel[], const int flavor[]);
                           static const int nwavefuncs = %d;
                           std::complex<double> w[nwavefuncs][18];
                           static const int namplitudes = %d;
@@ -2048,7 +2237,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         # Extract process class name (for the moment same as file name)
         replace_dict['process_class_name'] = self.process_name
 
-        color_amplitudes = [me.get_color_amplitudes() for me in \
+        color_amplitudes = [me.get_color_amplitudes(merge_quartic_amplitudes=False) for me in \
                             self.matrix_elements]
 
         replace_dict['initProc_lines'] = \
@@ -2411,7 +2600,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                 # If no color basis, just output trivial color flow
                 res_lines.append("setColAcol(%s);" % ",".join(["0"]*2*self.nfinal))
             else:
-                # Else, build a color representation dictionnary
+                # Else, build a color representation dictionary
                 repr_dict = {}
                 legs = proc.get_legs_with_decays()
                 for l in legs:
@@ -2463,7 +2652,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                 # If no color basis, just output trivial color flow
                 res_lines.append("setColAcol(%s);" % ",".join(["0"]*2*self.nfinal))
             else:
-                # Else, build a color representation dictionnary
+                # Else, build a color representation dictionary
                 repr_dict = {}
                 legs = proc.get_legs_with_decays()
                 legs[0:2] = [legs[1],legs[0]]
@@ -2554,12 +2743,15 @@ class ProcessExporterCPP(VirtualExporter):
     
     oneprocessclass = OneProcessExporterCPP
     s= _file_path + 'iolibs/template_files/'
-    from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc'],
-                     'SubProcesses': [s+'check_sa.cpp']}
-    to_link_in_P = ['check_sa.cpp', 'Makefile']
+    dirs_to_create = ['src', 'lib', 'Cards', 'SubProcesses']
+    from_template = {'src': [s+'rambo.h', s+'rambo.cc', s+'read_slha.h', s+'read_slha.cc',
+                             s+'mg5_citation.h', s+'mg5_citation.cc'],
+                     'SubProcesses': []}
+    to_link_in_P = ['Makefile']
     template_src_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_src')
     template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','Makefile_sa_cpp_sp') 
     create_model_class =  UFOModelConverterCPP
+    _check_sa_cpp_template = pjoin(_file_path, 'iolibs', 'template_files', 'check_sa.cpp')
     
 
     def __init__(self, dir_path = "", opt=None):
@@ -2574,6 +2766,9 @@ class ProcessExporterCPP(VirtualExporter):
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()    
+        output_options = self.opt.get('output_options')
+        self.proc_characteristic['density_matrix'] = \
+            isinstance(output_options, dict) and 'density' in output_options
 
     def copy_template(self, model):
         """Prepare export_dir as standalone_cpp directory, including:
@@ -2590,15 +2785,19 @@ class ProcessExporterCPP(VirtualExporter):
         with misc.chdir(self.dir_path):
             logger.info('Creating subdirectories in directory %s' % self.dir_path)
 
-            for d in ['src', 'lib', 'Cards', 'SubProcesses']:
+            for d in self.dirs_to_create:
                 try:
                     os.mkdir(d)
                 except os.error as error:
                     logger.warning(error.strerror + " " + self.dir_path)
     
-            # Write param_card
-            open(os.path.join("Cards","param_card.dat"), 'w').write(\
-                                                       model.write_param_card())
+            # Write param_card, and keep a pristine copy of it beside the
+            # one the user edits: that is what `set param_card default` at the
+            # launch question restores, and what says which values a run was
+            # not the model's own. The Fortran standalone has always done it.
+            card = model.write_param_card()
+            for name in ("param_card.dat", "param_card_default.dat"):
+                open(os.path.join("Cards", name), 'w').write(card)
 
     
             # Copy the needed src files
@@ -2609,16 +2808,20 @@ class ProcessExporterCPP(VirtualExporter):
             if self.template_src_make:
                 # Copy src Makefile
                 makefile = self.read_template_file(self.template_src_make) % \
-                               {'model': self.get_model_name(model.get('name')),
-                                'cpp_compiler': self.opt['cpp_compiler'] if self.opt['cpp_compiler'] else 'g++'}
+                                        self.get_makefile_replace_dict(model)
                 open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
             if self.template_Sub_make:
                 # Copy SubProcesses Makefile
                 makefile = self.read_template_file(self.template_Sub_make) % \
-                                        {'model': self.get_model_name(model.get('name')),
-                                         'cpp_compiler': self.opt['cpp_compiler'] if self.opt['cpp_compiler'] else 'g++'}
+                                        self.get_makefile_replace_dict(model)
                 open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
+
+    def get_makefile_replace_dict(self, model):
+        """Template replacements for the src and SubProcesses makefiles."""
+
+        return {'model': self.get_model_name(model.get('name')),
+                'cpp_compiler': self.opt['cpp_compiler'] if self.opt['cpp_compiler'] else 'g++'}
 
     #===========================================================================
     # Helper functions
@@ -2650,22 +2853,110 @@ class ProcessExporterCPP(VirtualExporter):
         """Open a template file and return the contents."""
          
         return cls.oneprocessclass.read_template_file(*args, **opts) 
+
+    @classmethod
+    def get_mg5_info_lines(cls):
+        return cls.oneprocessclass.get_mg5_info_lines()
         
     #===============================================================================
     # generate_subprocess_directory
     #===============================================================================
+    def write_check_sa_cpp(self, matrix_element, dirpath):
+        """Write a per-process check_sa.cpp with flavor arrays filled in.
+
+        This mirrors the Fortran ``write_check_sa`` in ``export_v4.py``:
+        it reads the template ``check_sa.cpp``, fills in ``%(maxflavor)d``,
+        ``%(nexternal)d``, ``%(flavor_arr)s``, and ``%(pdg_arr)s``, then
+        writes the result into *dirpath*/check_sa.cpp.
+
+        The resulting binary is invoked as ``./check [energy]``; when *energy*
+        is omitted it defaults to 1500 GeV.
+        """
+        template = open(self._check_sa_cpp_template).read()
+
+        # Get the model from the matrix element (self.model may not be set yet).
+        model = (self.model if self.model is not None else
+                 matrix_element.get('processes')[0].get('model'))
+
+        all_flavors = matrix_element.get_external_flavors(all_perm=False)
+        all_pdgs    = [l.get('id') for l in
+                       matrix_element.get('processes')[0].get('legs_with_decays')]
+        nexternal   = len(all_pdgs)
+
+        # Deduplicate flavor combinations (same logic as the Fortran exporter):
+        # two different (flv1, flv2, …) tuples that give the same coupling are
+        # collapsed to a single entry.
+        map_all_flv = {}
+        for flv1 in all_flavors:
+            coup = matrix_element.get_coupling_for_flv(flv1, model)
+            if coup not in map_all_flv:
+                map_all_flv[coup] = flv1
+
+        unique_flavors = list(map_all_flv.values())
+        maxflavor = max(len(unique_flavors), 1)
+
+        # Map individual PDG → flavor index (0-based) inside each merged group.
+        # The C++ ALOHA routines index their val[] and partner[] arrays from 0,
+        # so the first member of a merged group gets index 0, the second gets 1,
+        # etc.  Non-merged particles keep the sentinel value 0 (they never
+        # participate in flavor-indexed val[] lookups).
+        pdg_to_flv_index = {}
+        merged = (model.get('merged_particles') or {}) if model is not None else {}
+        for group_id, sub_ids in merged.items():
+            for j, pdg in enumerate(sub_ids):
+                pdg_to_flv_index[pdg] = j          # 0-based
+
+        # Build the C++ 2-D array initialisers.
+        if not unique_flavors:
+            # Non-merged model: single default flavor (all zeros → default C++
+            # sigmaKin behavior).
+            flavor_rows = ['{' + ', '.join(['0'] * nexternal) + '}']
+            pdg_rows    = ['{' + ', '.join(str(p) for p in all_pdgs) + '}']
+        else:
+            flavor_rows = []
+            pdg_rows    = []
+            for flv_tuple in unique_flavors:
+                f_row = []
+                p_row = []
+                for j, flv_idx in enumerate(flv_tuple):
+                    raw_pdg = all_pdgs[j]
+                    sign    = 1 if raw_pdg >= 0 else -1
+                    if abs(raw_pdg) in merged:
+                        # Merged particle: look up 0-based flavor index.
+                        f_row.append(str(pdg_to_flv_index.get(flv_idx, 0)))
+                        p_row.append(str(sign * flv_idx))
+                    else:
+                        # Non-merged particle: 0 means "not flavor-merged".
+                        f_row.append('0')
+                        p_row.append(str(raw_pdg))
+                flavor_rows.append('{' + ', '.join(f_row) + '}')
+                pdg_rows.append('{' + ', '.join(p_row) + '}')
+
+        flavor_arr_str = '{' + ', '.join(flavor_rows) + '}'
+        pdg_arr_str    = '{' + ', '.join(pdg_rows)    + '}'
+
+        content = template % {
+            'maxflavor': maxflavor,
+            'nexternal': nexternal,
+            'flavor_arr': flavor_arr_str,
+            'pdg_arr':    pdg_arr_str,
+        }
+        with open(pjoin(dirpath, 'check_sa.cpp'), 'w') as fout:
+            fout.write(content)
+
     def generate_subprocess_directory(self, matrix_element, cpp_helas_call_writer,
                                       proc_number=None):
         """Generate the Pxxxxx directory for a subprocess in C++ standalone,
         including the necessary .h and .cc files"""
 
-        
+        #matrix_element = copy.deepcopy(matrix_element)
         process_exporter_cpp = self.oneprocessclass(matrix_element,cpp_helas_call_writer)
 
         
         # Create the directory PN_xx_xxxxx in the specified path
-        dirpath = pjoin(self.dir_path, 'SubProcesses', "P%d_%s" % (process_exporter_cpp.process_number, 
-                                             process_exporter_cpp.process_name))
+        proc_dir_name = "P%d_%s" % (process_exporter_cpp.process_number, 
+                                    process_exporter_cpp.process_name)
+        dirpath = pjoin(self.dir_path, 'SubProcesses', proc_dir_name)
         try:
             os.mkdir(dirpath)
         except os.error as error:
@@ -2677,8 +2968,10 @@ class ProcessExporterCPP(VirtualExporter):
             # Create the process .h and .cc files
             process_exporter_cpp.generate_process_files()
             for file in self.to_link_in_P:
-                ln('../%s' % file) 
-        return
+                ln('../%s' % file)
+        # Write a per-process check_sa.cpp with flavor info filled in
+        self.write_check_sa_cpp(matrix_element, dirpath)
+        return proc_dir_name
 
     @staticmethod
     def get_model_name(name):
@@ -2748,7 +3041,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
     
         # Extract version number and date from VERSION file
-        info_lines = get_mg5_info_lines()
+        info_lines = ProcessExporterPythia8.get_mg5_info_lines()
         replace_dict['info_lines'] = info_lines
     
         # Extract model name
@@ -2803,7 +3096,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict = {}
     
         # Extract version number and date from VERSION file
-        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['info_lines'] = ProcessExporterPythia8.get_mg5_info_lines()
     
         replace_dict['main_file'] = main_file
     
@@ -2831,471 +3124,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     def finalize(self, *args, **opts):
         pass
   
-def get_mg5_info_lines():
-    """Return info lines for MG5, suitable to place at beginning of
-    Fortran files"""
-
-    info = misc.get_pkg_info()
-    info_lines = ""
-    if info and 'version' in info and  'date' in info:
-        info_lines = "#  MadGraph5_aMC@NLO v. %s, %s\n" % \
-                     (info['version'], info['date'])
-        info_lines = info_lines + \
-                     "#  By the MadGraph5_aMC@NLO Development Team\n" + \
-                     "#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"
-    else:
-        info_lines = "#  MadGraph5_aMC@NLO\n" + \
-                     "#  By the MadGraph5_aMC@NLO Development Team\n" + \
-                     "#  Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch"        
-
-    return info_lines
-
-
-
-
-#===============================================================================
-# ProcessExporterGPU
-#===============================================================================
-class ProcessExporterGPU(ProcessExporterCPP):
-    """Class to take care of exporting a set of matrix elements to
-    Fortran (v4) format."""
-
-    grouped_mode = False
-    exporter = 'gpu'
-
-    default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False,
-                        'v5_model': True
-                        }
-    
-    oneprocessclass = OneProcessExporterGPU
-    s= _file_path + 'iolibs/template_files/'
-    from_template = {'src': [s+'gpu/rambo.h', s+'gpu/rambo.cc', s+'read_slha.h', s+'read_slha.cc',
-                             s+'gpu/mgOnGpuTypes.h', s+'gpu/grambo.cu'],
-                    'SubProcesses': [s+'gpu/timer.h', s+'gpu/Makefile', s+'gpu/nvtx.h',
-                                     s+'gpu/nvtx.h', s+'gpu/check.cc',
-                                     s+'gpu/timermap.h', s+'gpu/profile.sh',
-                                     s+'gpu/perf.py', s+ 'gpu/Memory.h', s + 'gpu/runTest.cc']}
-    to_link_in_P = ['Makefile', 'timer.h', 'timermap.h', 'nvtx.h', 'perf.py', 'Memory.h', 'runTest.cc']
-
-    template_src_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile_src')
-    template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files','gpu','Makefile')
-    create_model_class =  UFOModelConverterGPU
-    
-    def compile_model(self):
-        return 
-
-class UFOModelConverterCPP(object):
-    """ A converter of the UFO-MG5 Model to the C++ format """
-
-    # Static variables (for inheritance)
-    output_name = 'C++ Standalone'
-    namespace = 'MG5'
-
-    # Dictionary from Python type to C++ type
-    type_dict = {"real": "double",
-                 "complex": "std::complex<double>"}
-
-    # Regular expressions for cleaning of lines from Aloha files
-    compiler_option_re = re.compile(r'^#\w')
-    namespace_re = re.compile('^using namespace')
-
-    slha_to_depend = {('SMINPUTS', (3,)): ('aS',),
-                      ('SMINPUTS', (1,)): ('aEM',)}
-
-    # Template files to use
-    include_dir = '.'
-    cc_file_dir = '.'
-    param_template_h = 'cpp_model_parameters_h.inc'
-    param_template_cc = 'cpp_model_parameters_cc.inc'
-    aloha_template_h = 'cpp_hel_amps_h.inc'
-    aloha_template_cc = 'cpp_hel_amps_cc.inc'
-
-    copy_include_files = []
-    copy_cc_files = []
-
-    def __init__(self, model, output_path, wanted_lorentz = [],
-                 wanted_couplings = [], replace_dict={}):
-        """ initialization of the objects """
-
-        self.model = model
-        self.model_name = ProcessExporterCPP.get_model_name(model['name'])
-
-        self.dir_path = output_path
-        self.default_replace_dict = dict(replace_dict)
-        # List of needed ALOHA routines
-        self.wanted_lorentz = wanted_lorentz
-
-        # For dependent couplings, only want to update the ones
-        # actually used in each process. For other couplings and
-        # parameters, just need a list of all.
-        self.coups_dep = {}    # name -> base_objects.ModelVariable
-        self.coups_indep = []  # base_objects.ModelVariable
-        self.params_dep = []   # base_objects.ModelVariable
-        self.params_indep = [] # base_objects.ModelVariable
-        self.p_to_cpp = parsers.UFOExpressionParserCPP()
-
-        # Prepare parameters and couplings for writeout in C++
-        self.prepare_parameters()
-        self.prepare_couplings(wanted_couplings)
-
-    def write_files(self):
-        """Create all necessary files"""
-
-        # Write Helas Routines
-        self.write_aloha_routines()
-
-        # Write parameter (and coupling) class files
-        self.write_parameter_class_files()
-
-    # Routines for preparing parameters and couplings from the model
-
-    def prepare_parameters(self):
-        """Extract the parameters from the model, and store them in
-        the two lists params_indep and params_dep"""
-
-        # Keep only dependences on alphaS, to save time in execution
-        keys = list(self.model['parameters'].keys())
-        keys.sort(key=len)
-        params_ext = []
-        for key in keys:
-            if key == ('external',):
-                params_ext += [p for p in self.model['parameters'][key] if p.name]
-            elif 'aS' in key:
-                for p in self.model['parameters'][key]:
-                    self.params_dep.append(base_objects.ModelVariable(p.name,
-                                              p.name + " = " + \
-                                              self.p_to_cpp.parse(p.expr) + ";",
-                                              p.type,
-                                              p.depend))
-            else:
-                for p in self.model['parameters'][key]:
-                    if p.name == 'ZERO':
-                        continue
-                    self.params_indep.append(base_objects.ModelVariable(p.name,
-                                              p.name + " = " + \
-                                              self.p_to_cpp.parse(p.expr) + ";",
-                                              p.type,
-                                              p.depend))
-
-        # For external parameters, want to read off the SLHA block code
-        while params_ext:
-            param = params_ext.pop(0)
-            # Read value from the slha variable
-            expression = ""
-            assert param.value.imag == 0
-            if len(param.lhacode) == 1:
-                expression = "%s = slha.get_block_entry(\"%s\", %d, %e);" % \
-                             (param.name, param.lhablock.lower(),
-                              param.lhacode[0], param.value.real)
-            elif len(param.lhacode) == 2:
-                expression = "indices[0] = %d;\nindices[1] = %d;\n" % \
-                             (param.lhacode[0], param.lhacode[1])
-                expression += "%s = slha.get_block_entry(\"%s\", indices, %e);" \
-                              % (param.name, param.lhablock.lower(), param.value.real)
-            else:
-                raise MadGraph5Error("Only support for SLHA blocks with 1 or 2 indices")
-            self.params_indep.insert(0,
-                                   base_objects.ModelVariable(param.name,
-                                                   expression,
-                                                              'real'))
-            
-    def prepare_couplings(self, wanted_couplings = []):
-        """Extract the couplings from the model, and store them in
-        the two lists coups_indep and coups_dep"""
-
-        # Keep only dependences on alphaS, to save time in execution
-        keys = list(self.model['couplings'].keys())
-        keys.sort(key=len)
-        for key, coup_list in self.model['couplings'].items():
-            if "aS" in key:
-                for c in coup_list:
-                    if not wanted_couplings or c.name in wanted_couplings:
-                        self.coups_dep[c.name] = base_objects.ModelVariable(\
-                                                                   c.name,
-                                                                   c.expr,
-                                                                   c.type,
-                                                                   c.depend)
-            else:
-                for c in coup_list:
-                    if not wanted_couplings or c.name in wanted_couplings:
-                        self.coups_indep.append(base_objects.ModelVariable(\
-                                                                   c.name,
-                                                                   c.expr,
-                                                                   c.type,
-                                                                   c.depend))
-
-        # Convert coupling expressions from Python to C++
-        for coup in list(self.coups_dep.values()) + self.coups_indep:
-            coup.expr = coup.name + " = " + self.p_to_cpp.parse(coup.expr) + ";"
-
-    # Routines for writing the parameter files
-
-    def write_parameter_class_files(self):
-        """Generate the parameters_model.h and parameters_model.cc
-        files, which have the parameters and couplings for the model."""
-
-        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
-            os.makedirs(os.path.join(self.dir_path, self.include_dir))
-        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
-            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
-
-        parameter_h_file = os.path.join(self.dir_path, self.include_dir,
-                                    'Parameters_%s.h' % self.model_name)
-        parameter_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'Parameters_%s.cc' % self.model_name)
-
-        file_h, file_cc = self.generate_parameters_class_files()
-
-        # Write the files
-        writers.CPPWriter(parameter_h_file).writelines(file_h)
-        writers.CPPWriter(parameter_cc_file).writelines(file_cc)
-
-        # Copy additional needed files
-        for copy_file in self.copy_include_files:
-            shutil.copy(os.path.join(_file_path, 'iolibs',
-                                         'template_files',copy_file),
-                        os.path.join(self.dir_path, self.include_dir))
-        # Copy additional needed files
-        for copy_file in self.copy_cc_files:
-            shutil.copy(os.path.join(_file_path, 'iolibs',
-                                         'template_files',copy_file),
-                        os.path.join(self.dir_path, self.cc_file_dir))
-
-        logger.info("Created files %s and %s in directory" \
-                    % (os.path.split(parameter_h_file)[-1],
-                       os.path.split(parameter_cc_file)[-1]))
-        logger.info("%s and %s" % \
-                    (os.path.split(parameter_h_file)[0],
-                     os.path.split(parameter_cc_file)[0]))
-
-    def generate_parameters_class_files(self):
-        """Create the content of the Parameters_model.h and .cc files"""
-
-        replace_dict = self.default_replace_dict
-
-        replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['model_name'] = self.model_name
-
-        replace_dict['independent_parameters'] = \
-                                   "// Model parameters independent of aS\n" + \
-                                   self.write_parameters(self.params_indep)
-        replace_dict['independent_couplings'] = \
-                                   "// Model parameters dependent on aS\n" + \
-                                   self.write_parameters(self.params_dep)
-        replace_dict['dependent_parameters'] = \
-                                   "// Model couplings independent of aS\n" + \
-                                   self.write_parameters(self.coups_indep)
-        replace_dict['dependent_couplings'] = \
-                                   "// Model couplings dependent on aS\n" + \
-                                   self.write_parameters(list(self.coups_dep.values()))
-
-        replace_dict['set_independent_parameters'] = \
-                               self.write_set_parameters(self.params_indep)
-        replace_dict['set_independent_couplings'] = \
-                               self.write_set_parameters(self.coups_indep)
-        replace_dict['set_dependent_parameters'] = \
-                               self.write_set_parameters(self.params_dep)
-        replace_dict['set_dependent_couplings'] = \
-                               self.write_set_parameters(list(self.coups_dep.values()))
-
-        replace_dict['print_independent_parameters'] = \
-                               self.write_print_parameters(self.params_indep)
-        replace_dict['print_independent_couplings'] = \
-                               self.write_print_parameters(self.coups_indep)
-        replace_dict['print_dependent_parameters'] = \
-                               self.write_print_parameters(self.params_dep)
-        replace_dict['print_dependent_couplings'] = \
-                               self.write_print_parameters(list(self.coups_dep.values()))
-
-        if 'include_prefix' not in replace_dict:
-            replace_dict['include_prefix'] = ''
-
-
-        file_h = self.read_template_file(self.param_template_h) % \
-                 replace_dict
-        file_cc = self.read_template_file(self.param_template_cc) % \
-                  replace_dict
-        
-        return file_h, file_cc
-
-    def write_parameters(self, params):
-        """Write out the definitions of parameters"""
-
-        # Create a dictionary from parameter type to list of parameter names
-        type_param_dict = {}
-
-        for param in params:
-            type_param_dict[param.type] = \
-                  type_param_dict.setdefault(param.type, []) + [param.name]
-
-        # For each parameter type, write out the definition string
-        # type parameters;
-        res_strings = []
-        for key in type_param_dict:
-            res_strings.append("%s %s;" % (self.type_dict[key],
-                                          ",".join(type_param_dict[key])))
-
-        return "\n".join(res_strings)
-
-    def write_set_parameters(self, params):
-        """Write out the lines of independent parameters"""
-
-        # For each parameter, write name = expr;
-
-        res_strings = []
-        for param in params:
-            res_strings.append("%s" % param.expr)
-
-        # Correct width sign for Majorana particles (where the width
-        # and mass need to have the same sign)        
-        for particle in self.model.get('particles'):
-            if particle.is_fermion() and particle.get('self_antipart') and \
-                   particle.get('width').lower() != 'zero':
-                res_strings.append("if (%s < 0)" % particle.get('mass'))
-                res_strings.append("%(width)s = -abs(%(width)s);" % \
-                                   {"width": particle.get('width')})
-
-        return "\n".join(res_strings)
-
-    def write_print_parameters(self, params):
-        """Write out the lines of independent parameters"""
-
-        # For each parameter, write name = expr;
-
-        res_strings = []
-        for param in params:
-            res_strings.append("cout << setw(20) << \"%s \" << \"= \" << setiosflags(ios::scientific) << setw(10) << %s << endl;" % (param.name, param.name))
-
-        return "\n".join(res_strings)
-
-    # Routines for writing the ALOHA files
-
-    def write_aloha_routines(self):
-        """Generate the hel_amps_model.h and hel_amps_model.cc files, which
-        have the complete set of generalized Helas routines for the model"""
-        
-        if not os.path.isdir(os.path.join(self.dir_path, self.include_dir)):
-            os.makedirs(os.path.join(self.dir_path, self.include_dir))
-        if not os.path.isdir(os.path.join(self.dir_path, self.cc_file_dir)):
-            os.makedirs(os.path.join(self.dir_path, self.cc_file_dir))
-
-        model_h_file = os.path.join(self.dir_path, self.include_dir,
-                                    'HelAmps_%s.h' % self.model_name)
-        model_cc_file = os.path.join(self.dir_path, self.cc_file_dir,
-                                     'HelAmps_%s.cc' % self.model_name)
-
-        replace_dict = {}
-
-        replace_dict['output_name'] = self.output_name
-        replace_dict['info_lines'] = get_mg5_info_lines()
-        replace_dict['namespace'] = self.namespace
-        replace_dict['model_name'] = self.model_name
-
-        # Read in the template .h and .cc files, stripped of compiler
-        # commands and namespaces
-        template_h_files = self.read_aloha_template_files(ext = 'h')
-        template_cc_files = self.read_aloha_template_files(ext = 'cc')
-
-        aloha_model = create_aloha.AbstractALOHAModel(self.model.get('name'))
-        aloha_model.add_Lorentz_object(self.model.get('lorentz'))
-        
-        if self.wanted_lorentz:
-            aloha_model.compute_subset(self.wanted_lorentz)
-        else:
-            aloha_model.compute_all(save=False, custom_propa=True)
-            
-        for abstracthelas in dict(aloha_model).values():
-            h_rout, cc_rout = abstracthelas.write(output_dir=None, language='CPP', 
-                                                              mode='no_include')
-
-            template_h_files.append(h_rout)
-            template_cc_files.append(cc_rout)
-            
-            #aloha_writer = aloha_writers.ALOHAWriterForCPP(abstracthelas,
-            #                                               self.dir_path)
-            #header = aloha_writer.define_header()
-            #template_h_files.append(self.write_function_declaration(\
-            #                             aloha_writer, header))
-            #template_cc_files.append(self.write_function_definition(\
-            #                              aloha_writer, header))
-
-        replace_dict['function_declarations'] = '\n'.join(template_h_files)
-        replace_dict['function_definitions'] = '\n'.join(template_cc_files)
-
-        file_h = self.read_template_file(self.aloha_template_h) % replace_dict
-        file_cc = self.read_template_file(self.aloha_template_cc) % replace_dict
-
-        # Write the files
-        writers.CPPWriter(model_h_file).writelines(file_h)
-        writers.CPPWriter(model_cc_file).writelines(file_cc)
-
-        logger.info("Created files %s and %s in directory" \
-                    % (os.path.split(model_h_file)[-1],
-                       os.path.split(model_cc_file)[-1]))
-        logger.info("%s and %s" % \
-                    (os.path.split(model_h_file)[0],
-                     os.path.split(model_cc_file)[0]))
-
-
-    def read_aloha_template_files(self, ext):
-        """Read all ALOHA template files with extension ext, strip them of
-        compiler options and namespace options, and return in a list"""
-
-        template_files = []
-        for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
-            file = open(filename, 'r')
-            template_file_string = ""
-            while file:
-                line = file.readline()
-                if len(line) == 0: break
-                line = self.clean_line(line)
-                if not line:
-                    continue
-                template_file_string += line.strip() + '\n'
-            template_files.append(template_file_string)
-
-        return template_files
-
-#    def write_function_declaration(self, aloha_writer, header):
-#        """Write the function declaration for the ALOHA routine"""
-#
-#        ret_lines = []
-#        for line in aloha_writer.write_h(header).split('\n'):
-#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-#                # Strip out compiler flags and namespaces
-#                continue
-#            ret_lines.append(line)
-#        return "\n".join(ret_lines)
-#
-#    def write_function_definition(self, aloha_writer, header):
-#        """Write the function definition for the ALOHA routine"""
-#
-#        ret_lines = []
-#        for line in aloha_writer.write_cc(header).split('\n'):
-#            if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-#                # Strip out compiler flags and namespaces
-#                continue
-#            ret_lines.append(line)
-#        return "\n".join(ret_lines)
-
-    def clean_line(self, line):
-        """Strip a line of compiler options and namespace options."""
-
-        if self.compiler_option_re.match(line) or self.namespace_re.match(line):
-            return ""
-
-        return line
-
-    #===============================================================================
-    # Global helper methods
-    #===============================================================================
-    @classmethod
-    def read_template_file(cls, filename, classpath=False):
-        """Open a template file and return the contents."""
-         
-        return OneProcessExporterCPP.read_template_file(filename, classpath)
-
 
 #===============================================================================
 # UFOModelConverterPythia8
@@ -3429,7 +3257,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
 
         replace_dict = {}
 
-        replace_dict['info_lines'] = get_mg5_info_lines()
+        replace_dict['info_lines'] = self.get_mg5_info_lines()
         replace_dict['model'] = self.model_name
 
         if self.default_replace_dict['version'] == "8.2":
@@ -3467,26 +3295,616 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
          
         return OneProcessExporterPythia8.read_template_file(*args, **opts)
 
+
+def mg7_launcher_source(interpreter, mg5_dir):
+    """The text of bin/generate_events for an mg7 output.
+
+    `interpreter` is the python MadGraph7 itself is running: a run needs the
+    packages of *that* environment (matplotlib for the plots, the LHAPDF
+    bindings, madspace), which the "python3" of the PATH may well not have.
+    It is written as the shebang and, because a shebang is only a default --
+    it is bypassed by "python3 bin/generate_events" and ignored by the kernel
+    when the path is too long -- the script also re-executes itself through it
+    when it finds it is running somewhere else.
+
+    The path is deliberately NOT resolved through its symlinks: in a virtual
+    environment sys.executable points at the environment, and the base
+    interpreter it links to does not see the environment's site-packages.
+
+    Pinning it costs no portability that this directory had: it already holds
+    an absolute MG5DIR. The gridpack is the portable artefact, and keeps its
+    "/usr/bin/env python3".
+    """
+
+    interpreter = os.path.normpath(interpreter) if interpreter else ''
+    return (
+        "#! %s\n" % (interpreter or "/usr/bin/env python3")
+        + "import sys, os\n"
+        + "_INTERPRETER = %r\n" % interpreter
+        + "if _INTERPRETER and os.path.exists(_INTERPRETER) \\\n"
+          "        and os.path.normpath(sys.executable or '') != _INTERPRETER:\n"
+          "    os.execv(_INTERPRETER, [_INTERPRETER,\n"
+          "                            os.path.abspath(__file__)] + sys.argv[1:])\n"
+        + "sys.path.append(%r)\n" % mg5_dir
+        + "from madgraph.mg7.launch import main\n"
+          "if __name__ == '__main__':\n"
+          "    os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))\n"
+          "    try:\n"
+          "        main()\n"
+          "    except KeyboardInterrupt:\n"
+          "        pass\n"
+    )
+
+
+class ProcessExporterMG7(ProcessExporterCPP):
+    """ Extends the standalone CPP exporter to add files needed to run madevent7 / madnis """
+
+    s= _file_path + 'iolibs/template_files/'
+    dirs_to_create = ['bin', 'src', 'lib', 'Cards', 'SubProcesses']
+    # mg7_v5 builds api.so in the P* folders (instead of the standalone_cpp
+    # 'check' driver)
+    template_Sub_make = pjoin(_file_path, 'iolibs', 'template_files',
+                              'Makefile_sa_cpp_sp_api')
+    # NB: Cards/run_card.toml is NOT copied verbatim here; it is generated in
+    # finalize() from the run_card.toml template via banner.RunCardMG7, so that
+    # process-dependent defaults are filled in (see create_run_card).
+    from_template = {'src': [s+'read_slha.h', s+'read_slha.cc', s+'mg7/api.h'],
+                     'SubProcesses': [s+'mg7/api.cpp'],
+                     'Cards': []}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.me_lib_format = args[1].get("me_lib_format", None) or pjoin("SubProcesses", "{process_id}", "api.so")
+        self.process_info = []
+        self.merged_subprocesses = defaultdict(list)
+        # Lazy import: madgraph.iolibs.export_mg7 imports export_cpp itself, so a top-level
+        # import here would be circular. Without this, oneprocessclass silently falls back
+        # to the base ProcessExporterCPP.oneprocessclass (OneProcessExporterCPP), which lacks
+        # the .name attribute (and other MG7-specific behaviour) generate_subprocess_directory
+        # needs. Only apply the fallback when nothing more specific was set: subclasses such
+        # as madmatrix.output.ProcessExporterMadMatrix set their own oneprocessclass (with the
+        # coloramps.h/epoch_process_id.h/color_sum.cc/makefile-symlink logic in
+        # OneProcessExporterMadMatrix.generate_process_files()) and that must not be clobbered.
+        if self.oneprocessclass is OneProcessExporterCPP:
+            from madgraph.iolibs import export_mg7
+            self.oneprocessclass = export_mg7.OneProcessExporterMG7
+
+    def generate_subprocess_directory(
+        self, matrix_element, cpp_helas_call_writer, proc_number=None
+    ):
+        """ Override of super().generate_subprocess_directory """
+        process_exporter_mg7 = self.oneprocessclass(
+            matrix_element,
+            cpp_helas_call_writer,
+            merge_same_topologies=self.opt.get('merge_same_topologies', True)
+        )
+
+        # Create the directory PN_xx_xxxxx in the specified path
+        proc_dir_name = process_exporter_mg7.name
+        dirpath = pjoin(self.dir_path, 'SubProcesses', proc_dir_name)
+        # self.model/self.model_name aren't reliably set on this class by the
+        # time subprocess directories are generated (see eg
+        # write_check_sa_cpp()'s own "self.model may not be set yet" fallback
+        # above); the matrix element's own model is always available though,
+        # and is what %(model)s in template_Sub_make/template_src_make is
+        # substituted from too (via copy_template()'s model parameter).
+        model = matrix_element.get('processes')[0].get('model')
+
+        try:
+            os.mkdir(dirpath)
+        except os.error as error:
+            logger.warning(error.strerror + " " + dirpath)
+        with misc.chdir(dirpath):
+            logger.info('Creating files in directory %s' % dirpath)
+            process_exporter_mg7.path = dirpath
+            # Create the process .h and .cc files
+            process_exporter_mg7.generate_process_files()
+            for file in self.to_link_in_P:
+                ln('../%s' % file)
+
+        # Generate SVG Feynman diagrams (diagrams.svg + diagrams.json)
+        if not self.opt.get('output_options', {}).get('noeps') == 'True':
+            svg_stem = pjoin(dirpath, 'diagrams')
+            diagrams = matrix_element.get('base_amplitude').get('diagrams')
+            logger.info('Generating Feynman diagrams for %s' %
+                        matrix_element.get('processes')[0].nice_string())
+            plot = draw_svg.MultiSVGDiagramDrawer(diagrams, svg_stem,
+                                                  model=model, amplitude=True)
+            plot.draw()
+
+        # me_lib_format may (eg madmatrix/output.py's ProcessExporterMadMatrix)
+        # carry a {model} placeholder alongside {process_id}, resolved here to
+        # the same sanitized model name template_Sub_make's %(model)s uses;
+        # harmless (str.format ignores unused kwargs) for exporters whose
+        # me_lib_format has no {model} placeholder at all.
+        # kept for the exporters that name the libraries elsewhere too (the
+        # process table of madmatrix/output.py's standalone exporter)
+        self.lib_model_name = self.get_model_name(model.get('name'))
+        me_lib_path = self.me_lib_format.format(
+            process_id=proc_dir_name, model=self.lib_model_name
+        )
+        # Store the path relative to the process directory (like me_path): an
+        # absolute path would break as soon as the process directory is moved.
+        rel_dirpath = pjoin('SubProcesses', proc_dir_name)
+        subproc_info, diagram_tags, subproc_class = process_exporter_mg7.get_subprocess_info(rel_dirpath, me_lib_path)
+        self.merged_subprocesses[subproc_class].append(
+            (len(self.process_info), diagram_tags)
+        )
+        self.process_info.append(subproc_info)
+
+    def copy_template(self, model):
+        super().copy_template(model)
+
+        # TODO: for now, we import the files from madgraph. eventually, we should copy
+        # the files instead to allow for modification
+        with misc.chdir(self.dir_path):
+            madnis_bin = os.path.join("bin", "generate_events")
+            with open(madnis_bin, "w") as f:
+                f.write(mg7_launcher_source(sys.executable, MG5DIR))
+            os.chmod(madnis_bin, 0o755)
+
+            npy_bin = os.path.join("bin", "npy_to_lhe")
+            with open(npy_bin, "w") as f:
+                f.write(
+                    "#! /usr/bin/env python3\n"
+                    "import sys, os\n"
+                    f"sys.path.append('{MG5DIR}')\n"
+                    "from madgraph.mg7.npy_to_lhe import main\n"
+                    "if __name__ == '__main__':\n"
+                    "    main(me_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__))))\n"
+                )
+            os.chmod(npy_bin, 0o755)
+
+            custom_bin = os.path.join("bin", "init_custom_func")
+            with open(custom_bin, "w") as f:
+                f.write(
+                    "#! /usr/bin/env python3\n"
+                    "import sys, os\n"
+                    f"sys.path.append('{MG5DIR}')\n"
+                    "from madgraph.mg7.init_custom_func import main\n"
+                    "if __name__ == '__main__':\n"
+                    "    sys.exit(main(me_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))\n"
+                )
+            os.chmod(custom_bin, 0o755)
+
+    # Recorded in Cards/me5_configuration.txt: the tools a run needs but cannot
+    # rediscover on its own. LHAPDF above all -- bin/generate_events may be
+    # driven from a shell that never sourced anything MadGraph-related.
+    _me5_config_keys = ('lhapdf', 'lhapdf_py3', 'lhapdf_py2',
+                        'heptools_install_dir')
+
+    def write_me5_configuration(self):
+        """Cards/me5_configuration.txt: read by CommonRunCmd.set_configuration
+        and by the mg7 launcher (load_mg5_options). Edit it to move the
+        directory to a machine where the tools sit elsewhere."""
+
+        lines = ['# configuration for the mg7 run time and post-processing tools',
+                 '# written at output time; edit if you move this directory',
+                 'mg5_path = %s' % MG5DIR]
+        for key in self._me5_config_keys:
+            value = self.opt.get(key)
+            if not value or str(value).strip().lower() in ('none', 'auto'):
+                continue
+            lines.append('%s = %s' % (key, self._portable_tool_value(value)))
+        try:
+            with open(pjoin(self.dir_path, 'Cards',
+                            'me5_configuration.txt'), 'w') as fsock:
+                fsock.write('\n'.join(lines) + '\n')
+        except Exception as error:
+            logger.warning('could not write me5_configuration.txt: %s', error)
+
+    @staticmethod
+    def _portable_tool_value(value):
+        """Make a configuration value usable from another working directory.
+
+        A value relative to MG5DIR ('./HEPTools') becomes absolute; a bare
+        program name ('lhapdf-config', the shipped default) is left alone,
+        since resolving it would freeze this machine's PATH into the output.
+        A trailing '--python=X.Y' filter is preserved -- the readers know it.
+        """
+
+        exe, sep, flags = str(value).strip().partition(' ')
+        if not os.path.isabs(exe) and (os.sep in exe or exe.startswith('.')):
+            exe = os.path.realpath(pjoin(MG5DIR, exe))
+        return exe + sep + flags
+
+    def get_merged_info(self):
+        merged_subproc_info = []
+        for subprocesses in self.merged_subprocesses.values():
+            channels = []
+            flavors = []
+            subproc_indices = []
+            unique_diagram_tags = []
+            unique_diagrams = []
+            for subproc_index_in_group, (subproc_index, diagram_tags) in enumerate(
+                subprocesses
+            ):
+                subproc_indices.append(subproc_index)
+                subproc_info = self.process_info[subproc_index]
+                flavor_offset = len(flavors)
+                flavors.extend(
+                    {
+                        "subprocess": subproc_index_in_group,
+                        "flavor": ps_flavor,
+                    }
+                    for ps_flavor, flavor in enumerate(
+                        subproc_info["flavors"]
+                    )
+                )
+
+                for unmerged_chan_index, (chan_info, chan_tags) in enumerate(
+                    zip(subproc_info["channels"], diagram_tags)
+                ):
+                    chan_index = len(channels)
+
+                    same_diags = []
+                    for tag in chan_tags:
+                        try:
+                            index = unique_diagram_tags.index(tag)
+                            chan_index, diag_index = unique_diagrams[index]
+                            same_diags.append(diag_index)
+                        except ValueError:
+                            same_diags.append(None)
+
+                    if chan_index == len(channels):
+                        channels.append(
+                            {
+                                "subprocess": subproc_index,
+                                "channel": unmerged_chan_index,
+                                "diagrams": [],
+                            }
+                        )
+
+                    diagrams = channels[chan_index]["diagrams"]
+                    for diag_info, same_diag, tag in zip(
+                        chan_info["diagrams"], same_diags, chan_tags
+                    ):
+                        if same_diag is None:
+                            unique_diagram_tags.append(tag)
+                            diag_index = len(diagrams)
+                            unique_diagrams.append((chan_index, diag_index))
+                            diagrams.append(
+                                {
+                                    "diagram": [-1] * len(subprocesses),
+                                    "permutation": diag_info["permutation"],
+                                    "active_flavors": [],
+                                }
+                            )
+                        else:
+                            diag_index = same_diag
+                        diag_dict = diagrams[diag_index]
+                        diag_dict["diagram"][subproc_index_in_group] = diag_info["diagram"]
+                        diag_dict["active_flavors"].extend(
+                            flavor_offset + flav for flav in diag_info["active_flavors"]
+                        )
+
+            merged_subproc_info.append({
+                "incoming": subproc_info["incoming"],
+                "outgoing": subproc_info["outgoing"],
+                "subprocesses": subproc_indices,
+                "channels": channels,
+                "flavors": flavors,
+            })
+        return merged_subproc_info
+
+    def finalize(self, matrix_elements=None, history='', *args, **kwargs):
+        self.export_amplicol()
+        file_name = os.path.normpath(os.path.join(
+            self.dir_path, "SubProcesses", "subprocesses.json"
+        ))
+        with open(file_name, 'w') as f:
+            json.dump(self.process_info, f)
+
+        merged_file_name = os.path.normpath(os.path.join(
+            self.dir_path, "SubProcesses", "merged_subprocesses.json"
+        ))
+        with open(merged_file_name, 'w') as f:
+            json.dump(self.get_merged_info(), f)
+
+        # SubProcesses/proc_characteristics: needed by the CommonRunCmd-based
+        # post-processing driver (get_characteristics) so that the madevent
+        # tool interface can run on this directory.
+        # NB: this must come *before* create_run_card: it is what fills in
+        # self.proc_characteristic, and the run_card defaults are derived from
+        # it (e.g. ninitial == 1 -> a decay, which gets no cuts at all).
+        self.create_proc_characteristics(matrix_elements)
+
+        # Generate Cards/run_card.toml from the template, filling in
+        # process-dependent defaults (mirrors the LO run_card.dat logic).
+        self.create_run_card(matrix_elements, history)
+
+        self.write_me5_configuration()
+
+        # MadAnalysis5 default analysis cards, tailored to this process. This
+        # must run *before* history.write() below: writing the proc_card cleans
+        # the history in place (dropping the multiparticle 'define' lines that
+        # MA5 needs to resolve p/j/... in the process).
+        self.create_ma5_default_cards(matrix_elements, history)
+
+        # Record the generation commands (proc_card_mg5.dat) so that the model
+        # and process end up in the LHE banner (needed by MadSpin/reweight/...).
+        try:
+            if history:
+                history.write(os.path.join(self.dir_path, 'Cards',
+                                           'proc_card_mg5.dat'))
+        except Exception as error:
+            logger.warning('could not write proc_card_mg5.dat: %s', error)
+
+        # we don't call super().finalize() since it would call ProcessExporterCPP.finalize()
+        # which would compile the model in src/, and we don't want that
+
+    def pass_information_from_cmd(self, cmd):
+        """Capture the process definitions from the command interface; needed to
+        generate the MadAnalysis5 default cards at output time, and the
+        [amplicol] processes."""
+        self.proc_defs = getattr(cmd, '_curr_proc_defs', None)
+        self.amplicol_defs = getattr(cmd, '_curr_amplicol_defs', None) or []
+        # without MG diagrams there is no madmatrix code to write or build
+        self.has_madmatrix = bool(cmd._curr_amps) or not self.amplicol_defs
+        self.amplicol_model = cmd._curr_model
+        self.amplicol_multiparticles = dict(getattr(cmd, '_multiparticles', {}))
+        # how pyamplicol is installed if it is missing
+        self.amplicol_install = {
+            'interactive': bool(getattr(cmd, 'use_rawinput', False)),
+            'jobs': getattr(cmd, 'options', {}).get('nb_core'),
+        }
+
+    def amplicol_processes(self):
+        """MG processes standing for the [amplicol] processes (built once: for
+        p p it is the product of all initial-state flavours)."""
+        if not getattr(self, 'amplicol_defs', None):
+            return []
+        cached = getattr(self, '_amplicol_processes', None)
+        if cached is None or cached[0] is not self.amplicol_defs:
+            import madgraph.iolibs.export_amplicol as export_amplicol
+            cached = (self.amplicol_defs, export_amplicol.representative_processes(
+                self.amplicol_defs, self.amplicol_model))
+            self._amplicol_processes = cached
+        return cached[1]
+
+    def export_amplicol(self):
+        """The [amplicol] processes, as subprocesses after the madmatrix ones."""
+        if not getattr(self, 'amplicol_defs', None):
+            return
+        import madgraph.iolibs.export_amplicol as export_amplicol
+        for entry in export_amplicol.export_amplicol_processes(
+                self.dir_path, self.amplicol_defs, self.amplicol_model,
+                self.amplicol_multiparticles,
+                **getattr(self, 'amplicol_install', {})):
+            # never merged with another subprocess
+            self.merged_subprocesses[('amplicol', len(self.process_info))].append(
+                (len(self.process_info), []))
+            self.process_info.append(entry)
+
+    def create_ma5_default_cards(self, matrix_elements, history):
+        """Call MadAnalysis5 to write process-tailored default analysis cards
+        (parton + hadron), like the madevent exporter does. Falls back silently
+        to the generic default cards if MA5 is unavailable or fails."""
+        ma5_path = self.opt.get('madanalysis5_path')
+        proc_defs = getattr(self, 'proc_defs', None)
+        if not ma5_path or proc_defs is None:
+            return
+
+        processes = None
+        try:
+            if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+                processes = [me.get('processes') for megroup in matrix_elements
+                             for me in megroup['matrix_elements']]
+            elif matrix_elements:
+                processes = [me.get('processes')
+                             for me in matrix_elements['matrix_elements']]
+        except (KeyError, TypeError):
+            processes = None
+
+        # expand merged-flavor beam codes (81/82/...) so MA5 recognises the legs
+        proc_defs = self.expand_merged_particle_legs(proc_defs)
+
+        try:
+            from madgraph.interface import common_run_interface as common_run
+            ma5 = common_run.CommonRunCmd.get_MadAnalysis5_interpreter(
+                MG5DIR, ma5_path, loglevel=100)
+            if ma5 is None:
+                return
+            logger.info('Generating MadAnalysis5 default cards tailored to this process')
+            for lvl in ('parton', 'hadron'):
+                try:
+                    text = ma5.main.madgraph.generate_card(history, proc_defs,
+                                                           processes, lvl)
+                except (Exception, SystemExit):
+                    import traceback as _tb
+                    logger.debug('MA5 %s card error:\n%s', lvl, _tb.format_exc())
+                    logger.warning('MadAnalysis5 failed to write a %s-level default '
+                                   'analysis card for this process.', lvl)
+                    continue
+                out = os.path.join(self.dir_path, 'Cards',
+                                   'madanalysis5_%s_card_default.dat' % lvl)
+                with open(out, 'w') as fsock:
+                    fsock.write(text)
+        except (Exception, SystemExit) as error:
+            logger.warning('MadAnalysis5 default card generation failed: %s', error)
+
+    def write_model_reference(self, model):
+        """Write SubProcesses/model.txt: the reference `import model`
+        understands (line 1) and a hash of the model's python source (line 2),
+        so that the runtime can reload the model and detect one that changed
+        since output."""
+
+        try:
+            try:
+                model_path = model.get('modelpath')
+                model_hash = misc.hash_model_files(model_path)
+            except Exception:
+                model_path, model_hash = None, None
+            # the restriction is part of the model the process was
+            # generated with ('sm-no_b_mass' is not 'sm'), so store the
+            # reference that reproduces it, not the bare UFO directory.
+            try:
+                model_ref = model.get('modelpath+restriction')
+            except Exception:
+                model_ref = model_path or model.get('name')
+            if model_ref:
+                with open(pjoin(self.dir_path, 'SubProcesses', 'model.txt'), 'w') as f:
+                    f.write(model_ref + '\n' + (model_hash or '') + '\n')
+        except Exception as error:
+            logger.debug('could not record the model: %s', error)
+
+    def create_run_card(self, matrix_elements, history):
+        """Write Cards/run_card.toml from the run_card.toml template via
+        banner.RunCardMG7, applying process-dependent defaults."""
+
+        run_card = banner_mod.RunCardMG7()
+
+        processes = None
+        try:
+            if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+                processes = [me.get('processes') for megroup in matrix_elements
+                             for me in megroup['matrix_elements']]
+            elif matrix_elements:
+                processes = [me.get('processes')
+                             for me in matrix_elements['matrix_elements']]
+        except (KeyError, TypeError):
+            processes = None
+        amplicol_procs = self.amplicol_processes()
+        amplicol = bool(amplicol_procs)
+        if amplicol:
+            processes = (processes or []) + [amplicol_procs]
+
+        if processes:
+            run_card.create_default_for_process(self.proc_characteristic,
+                                                history, processes,
+                                                amplicol=amplicol)
+            # persist the model so the runtime can reload it: to compute the
+            # widths set to 'auto' in the param_card (and recompute them at
+            # each scan point) and to reset the parameters the model derives
+            # from the free ones (launch.MG7Cmd.get_model). A hash of the
+            # model's python source is stored on the second line so the runtime
+            # can detect a model that changed since output.
+            self.write_model_reference(processes[0][0].get('model'))
+
+        template = pjoin(_file_path, 'iolibs', 'template_files',
+                         'mg7', 'run_card.toml')
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.toml'),
+                       template=template)
+        # Also write a concrete default card so the interactive card editor
+        # can offer "set <param> default" (mirrors run_card_default.dat at LO).
+        run_card.write(pjoin(self.dir_path, 'Cards', 'run_card_default.toml'),
+                       template=template)
+
+    def create_proc_characteristics(self, matrix_elements):
+        """Populate and write SubProcesses/proc_characteristics. This is the
+        file CommonRunCmd.get_characteristics() reads to learn ninitial /
+        nexternal / initial-state PDGs, so that the reused madevent tool
+        interface can drive post-processing on this (C++/madspace) output."""
+        pc = self.proc_characteristic
+
+        if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            me_list = [me for megroup in matrix_elements
+                       for me in megroup['matrix_elements']]
+        elif matrix_elements:
+            me_list = list(matrix_elements['matrix_elements'])
+        else:
+            me_list = []
+
+        procs = list(self.amplicol_processes())
+        amplicol_nexternal = max((len(p.get('legs')) for p in procs), default=0)
+        qcd_orders = set(entry['qcd_power'] for entry in self.process_info
+                         if entry.get('backend') == 'amplicol')
+        if procs:
+            pc['nexternal'] = max(pc['nexternal'], amplicol_nexternal)
+            pc['ninitial'] = 2
+        for me in me_list:
+            if not me.get('processes'):
+                continue
+            nexternal, ninitial = me.get_nexternal_ninitial()
+            pc['nexternal'] = max(pc['nexternal'], nexternal)
+            pc['ninitial'] = ninitial
+            procs.extend(me.get('processes'))
+            # power of alpha_s in |M|^2 = QCD coupling order of the amplitude;
+            # collect it over every diagram so we can tell whether it is uniform.
+            # Never let this break the output: on any surprise just fall back to
+            # -1 (systematics then simply cannot reconstruct the reweighting).
+            try:
+                me_qcd_orders = [diagram.calculate_orders().get('QCD', 0)
+                                 for diagram in me.get('diagrams')]
+                qcd_orders.update(me_qcd_orders)
+            except Exception as error:
+                logger.debug('could not determine the QCD order: %s', error)
+                qcd_orders.add(None)
+                me_qcd_orders = []
+            # the number of jets an MLM matching has to match in the shower
+            # (Pythia8's JetMatching:nJetMax), as export_v4.write_auto_dsig_file
+            # counts it: light coloured final-state partons, at most the QCD
+            # order of the amplitude
+            try:
+                model = me.get('processes')[0].get('model')
+
+                def is_light_parton(pid):
+                    particle = model.get_particle(pid)
+                    return (particle is not None
+                            and particle.get('mass') == 'ZERO'
+                            and particle.get('color') > 1)
+
+                n_partons = max(
+                    len([1 for pid in proc.get_final_ids() if is_light_parton(pid)])
+                    for proc in me.get('processes'))
+                pc['max_n_matched_jets'] = max(
+                    pc['max_n_matched_jets'],
+                    min(max(me_qcd_orders, default=0), n_partons))
+            except Exception as error:
+                logger.debug('could not count the matched jets: %s', error)
+
+        # a single value of alpha_s (uniform QCD power) lets systematics
+        # reconstruct the LO reweighting info without an <mgrwt> block
+        pc['single_qcd_order'] = (qcd_orders.pop()
+                                  if len(qcd_orders) == 1 and None not in qcd_orders
+                                  else -1)
+
+        if procs:
+            pc['pdg_initial1'] = [p.get_initial_pdg(1) for p in procs
+                                  if p.get_initial_pdg(1)]
+            pc['pdg_initial2'] = [p.get_initial_pdg(2) for p in procs
+                                  if p.get_initial_pdg(2)]
+            model = procs[0].get('model')
+            colored = set(abs(p.get('pdg_code')) for p in model.get('particles')
+                          if p.get('color') > 1)
+            pc['colored_pdgs'] = sorted(colored)
+            # ISR/FSR presence drives (e.g.) the shower's initial/final radiation
+            pc['has_isr'] = any(abs(pid) in colored
+                                for pid in pc['pdg_initial1'] + pc['pdg_initial2'])
+            pc['has_fsr'] = any(abs(fid) in colored
+                                for p in procs for fid in p.get_final_ids())
+
+        pc.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
+
 def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
     """ Determine which Export class is required. cmd is the command 
-        interface containing all potential usefull information.
+        interface containing all potential useful information.
     """
 
     opt = dict(cmd.options)
     opt['output_options'] = cmd_options
     cformat = cmd._export_format
-    
+
+    # No C++ exporter has a MadLoop backend (the mg7 one cannot even index the
+    # loop legs: it builds its edge names from the external legs alone).
+    if cformat not in export_v4.LOOP_INDUCED_FORMATS and cmd._curr_amps and \
+       isinstance(cmd._curr_amps[0], loop_diagram_generation.LoopAmplitude):
+        raise InvalidCmd(export_v4.loop_induced_not_supported_msg(
+                                     cformat, cmd._curr_amps[0].get('process')))
+
     if cformat == 'pythia8':
         return ProcessExporterPythia8(cmd._export_dir, opt)
-    elif cformat == 'standalone_cpp':
-        return  ProcessExporterCPP(cmd._export_dir, opt)
-    elif cformat == 'standalone_gpu':
-        return  ProcessExporterGPU(cmd._export_dir, opt)
     elif cformat == 'matchbox_cpp':
         return  ProcessExporterMatchbox(cmd._export_dir, opt)
+    elif cformat == 'mg7_v5':
+        return ProcessExporterMG7(cmd._export_dir, opt)
+    elif cformat == 'mg7':
+        from madmatrix.output import ProcessExporterMadMatrix
+        return ProcessExporterMadMatrix(cmd._export_dir, opt)
+    elif cformat == 'standalone':
+        from madmatrix.output import ProcessExporterMadMatrixStandalone
+        return ProcessExporterMadMatrixStandalone(cmd._export_dir, opt)
     else:
         return cmd._export_plugin(cmd._export_dir, opt)
 
     
-
-

@@ -1,0 +1,10 @@
+#title testing a HEFT process gg>aa in double precision
+import model heft
+                 set automatic_html_opening False --no_save
+                 set notification_center False --no_save
+                 generate g g > h > a a
+                 output madevent_simd %s -f -nojpeg
+                 launch
+                 set nevents 100
+                 set floating_type d
+#check run_01 0.01859 0.0002853789088650386 100

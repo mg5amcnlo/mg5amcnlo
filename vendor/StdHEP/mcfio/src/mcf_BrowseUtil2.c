@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* mcf_BrowseUtil2.c -- Utilities and auxillary Panels for NTuple Browser.      *
+* mcf_BrowseUtil2.c -- Utilities and auxiliary Panels for NTuple Browser.      *
 *	Gives a short listing of the characteristic of the file header         *
 *									       *
 * Copyright (c) 1995, 1996 Universities Research Association, Inc.	       *
@@ -815,7 +815,7 @@ static void createOneDHistActual(int newHisto)
      if (GetIntText(OneDHistMultW, &im) == TEXT_READ_OK) {
         if (im > dNTu->maxMultiplicity) {
              DialogF(DF_WARN, OneDHistShellW, 1, 
- "Incorrect instance, above maximum Multiplicty.","Acknowledged");
+ "Incorrect instance, above maximum Multiplicity.","Acknowledged");
              return;
         } else im--;
       } else {

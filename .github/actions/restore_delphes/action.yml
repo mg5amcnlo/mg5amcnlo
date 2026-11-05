@@ -36,5 +36,5 @@ runs:
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "delphes_path = $HOME/.cache/Delphes/Delphes" >> input/mg5_configuration.txt
+        echo "delphes_path = $HOME/.cache/Delphes/Delphes" >> input/mg7_configuration.txt
       shell: bash

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: 0BSD
+# One UFO-SM artifact containing 2-to-2 and 2-to-3 processes.
+# Generation can reuse proven final-state permutations within the set.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "models/json/sm/sm.json"
+restriction = "default"
+
+[process]
+entries = [
+  { expression = "u u~ > Z g", name = "uubar_Zg" },
+  { expression = "u u~ > Z g g", name = "uubar_Zgg" },
+]
+flavor_scheme = 5
+max_quark_lines = 2
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/mixed_multiplicity"
+workers = "auto"
+emit_api_bundle = true
+
+[generation.validation]
+enabled = true
+samples = 3
+seed = 12345
+
+[evaluator]
+backend = "jit"
+execution_mode = "compiled"
+batch_size = 128

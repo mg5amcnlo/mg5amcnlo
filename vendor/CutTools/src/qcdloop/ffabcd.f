@@ -492,10 +492,10 @@
 	    endif
 	endif
 *  #] check output: 
-*  #[ and tne final answer:
+*  #[ and the final answer:
   990	continue
 	call ffroot(dum,aijkl,xa,xb,xc,xd,ier)
-*  #] and tne final answer: 
+*  #] and the final answer:
 *###] ffabcd: 
 	end
 

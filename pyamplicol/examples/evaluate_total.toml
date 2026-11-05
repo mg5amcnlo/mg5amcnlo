@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: 0BSD
+# Fully summed evaluation of one UFO-SM pp -> Zjj subprocess.
+
+schema_version = 1
+action = "evaluate"
+
+[evaluation]
+artifact = "artifacts/pp_zjj"
+process = "d d~ > g z g"
+precision = 16
+resolved = false
+model_parameters = "data/model_parameters.json"
+momenta = "data/pp_zjj_momenta.json"
+
+[output]
+format = "human"
+color = "auto"
+progress = "off"

@@ -4,7 +4,7 @@
 //This code can be executed directly from a shell with the command:
 //   root -l -b convert_root_td.C
 //
-//It has beed tested on SLC6 machines with root v5.34.11. 
+//It has been tested on SLC6 machines with root v5.34.11.
 //It may not work with older versions
 
 #include <TCanvas.h>

@@ -49,7 +49,10 @@ except Exception as error:
 
 
 logger = logging.getLogger("madgraph.lhe_parser")
-_ENABLE_LHE_TIMERS = False
+# Parsing/writing timers. Off by default (the perf_counter calls are not free
+# on the per-particle path); set MG_LHE_TIMERS=1 in the environment to collect
+# them. MadSpin prints the summary through _log_lhe_timers at the end of a run.
+_ENABLE_LHE_TIMERS = os.environ.get('MG_LHE_TIMERS', '') not in ('', '0', 'false', 'False')
 _LHE_TIMERS = collections.defaultdict(float)
 _LHE_TIMER_COUNTS = collections.defaultdict(int)
 
@@ -285,7 +288,6 @@ class EventFile(object):
             except IOError as error:
                 raise
             except Exception as error:
-                misc.sprint(error)
                 if mode == 'r':
                     misc.gunzip(path)
                 else:
@@ -478,7 +480,7 @@ class EventFile(object):
     
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
-            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the list of the highest weight (of size trunc_error*NB_EVENT
             - the cross-section by type of process
             - the total number of events in the file
             """
@@ -617,6 +619,89 @@ class EventFile(object):
             return ''.join(lines)
 
         raise ValueError("Failed to locate event header line in raw event block")
+
+    # entries of <rwgt> that multiply the central weight instead of replacing
+    # it (see correct_bias): they do not follow a change of normalisation
+    rwgt_multiplicative = ('bias',)
+    # on the raw bytes of the events: (<event> line + NUP IDPRUP) XWGTUP
+    _raw_event_wgt_pattern = re.compile(
+        rb'(<event(?:[ \t][^>\n]*)?>[ \t]*\r?\n[ \t]*\S+[ \t]+\S+[ \t]+)(\S+)')
+    # and the <wgt> of <rwgt>: open tag, id, ..., value, close tag
+    _raw_rwgt_wgt_pattern = re.compile(
+        rb'''(<\s*wgt id=['"])([^'"]+)(['"]\s*>\s*)([\ded+-.]+)(\s*</wgt>)''', re.I)
+
+    def _iter_raw_event_chunks(self, size=1<<22):
+        """Yield the events of the file, as raw bytes, by chunks of complete
+        events: the file between the banner and </LesHouchesEvents>, as it is.
+        Raise EOFError if the file ends inside an event (truncated file: not
+        the ValueError of a format the raw path does not understand)."""
+        opener = gzip.open if self.zip_mode else open
+        with opener(self.path, 'rb') as fsock:
+            carry = b''
+            for line in fsock:
+                low = line.lower()
+                if b'<event' in low:
+                    carry = line
+                    break
+                if b'</init>' in low:
+                    break
+            while True:
+                data = fsock.read(size)
+                buf = carry + data
+                carry = buf
+                # cut after the end of the line of the last </event>
+                end = buf.rfind(b'</event>')
+                if end != -1:
+                    newline = buf.find(b'\n', end)
+                    if newline != -1:
+                        carry = buf[newline+1:]
+                        yield buf[:newline+1]
+                    elif not data:
+                        end += len(b'</event>')
+                        carry = buf[end:]
+                        yield buf[:end] + b'\n'
+                if not data:
+                    break
+            if b'<event' in carry:
+                raise EOFError("%s ends inside an event" % self.path)
+
+    def _scan_raw_weights(self):
+        """Number of events and sum of |central weight| of the file, from its
+        raw bytes. Raise ValueError if an event header is not understood."""
+        nb_event, sum_abs = 0, 0.
+        for chunk in self._iter_raw_event_chunks():
+            wgts = [w for _, w in self._raw_event_wgt_pattern.findall(chunk)]
+            if len(wgts) != chunk.count(b'</event>'):
+                raise ValueError("unexpected event format in %s" % self.path)
+            nb_event += len(wgts)
+            sum_abs += math.fsum(abs(float(w)) for w in wgts)
+        return nb_event, sum_abs
+
+    def _write_raw_rescaled_events(self, out, factor):
+        """Write the events of the file to out (binary mode), with the central
+        weight and the weights of <rwgt> (but the multiplicative ones)
+        multiplied by factor; copied as they are for factor 1.
+        Return the number of events."""
+        multiplicative = [key.encode() for key in self.rwgt_multiplicative]
+
+        def rescale(match):
+            return match.group(1) + b'%+13.7e' % (float(match.group(2))*factor)
+        nb_event = 0
+        for chunk in self._iter_raw_event_chunks():
+            nb = chunk.count(b'</event>')
+            if factor != 1:
+                chunk, nb_sub = self._raw_event_wgt_pattern.subn(rescale, chunk)
+                if nb_sub != nb:
+                    raise ValueError("unexpected event format in %s" % self.path)
+                # [text, open, id, ..., value, close, text, open, ...]
+                parts = self._raw_rwgt_wgt_pattern.split(chunk)
+                for i in range(2, len(parts), 6):
+                    if parts[i] not in multiplicative:
+                        parts[i+2] = b'%+.7e' % (float(parts[i+2])*factor)
+                chunk = b''.join(parts)
+            out.write(chunk)
+            nb_event += nb
+        return nb_event
 
     def _iter_raw_events_direct(self):
         """Yield (raw_event, ievent, wgt, header_meta) via one-pass stream scanning.
@@ -855,9 +940,25 @@ class EventFile(object):
             outfile.write('</LesHouchesEvents>\n')
         return outputpath
 
+    def _weights_above(self, get_wgt, floor, use_fast_second_pass):
+        """sorted abs(wgt) of the events heavier than floor (read-only scan;
+        the random stream is left untouched)"""
+        state = random.getstate()
+        try:
+            self.seek(0)
+            if use_fast_second_pass:
+                wgts = (wgt for _r, _i, wgt, _m in self._iter_raw_events_for_unweight())
+            else:
+                wgts = (get_wgt(event) for event in self)
+            above = sorted(abs(w) for w in wgts if abs(w) > floor)
+        finally:
+            random.setstate(state)
+            self.seek(0)
+        return above
+
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0,
                  event_target=0, log_level=logging.INFO, normalization='average',
-                 keep_overshoot=False, nb_output=1):
+                 keep_overshoot=False, nb_output=1, keep_overweight_weight=False):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -868,6 +969,11 @@ class EventFile(object):
         (round-robin) instead of a single one -- useful when they are going to be
         read back by that many parallel consumers, since each then reads only its
         own file. nb_output=1 (the default) keeps the historical single file.
+        keep_overweight_weight: with event_target, an event heavier than the
+        maximum weight keeps its weight (in units of the written weight) instead
+        of being truncated to one unit, and all weights are scaled so that their
+        mean stays the cross-section. Nothing is truncated, so the maximum weight
+        is chosen only to reach event_target (trunc_error is not a floor then).
         """
         self.parsing = 'wgt_only'
         nb_output = max(1, int(nb_output))
@@ -887,14 +993,8 @@ class EventFile(object):
             unwgt_name = get_wgt.__name__
 
         # check which weight to write
-        # An accepted event is written with weight x = sign(w)*max(|w|, max_wgt).
-        # With self.written_weight (the common weight of the final sample) x is
-        # expressed in units of max_wgt: an overweight event (|w| > max_wgt)
-        # keeps |w|/max_wgt units of the common weight instead of being
-        # truncated to one. The normalisation of the sample is fixed once all
-        # the events are written (see below).
         if hasattr(self, "written_weight"):
-            written_weight = lambda x: math.copysign(self.written_weight * (abs(float(x))/max_wgt), float(x))
+            written_weight = lambda x: math.copysign(self.written_weight,float(x))
         else: 
             written_weight = lambda x: x
                     
@@ -951,14 +1051,8 @@ class EventFile(object):
                 banner = self.banner
             if banner_module:
                 # modify the lha strategy
-                # 'unit'/'sum' keep 3 even if overweight events (weight above
-                # the common one) are written: 4 means that the cross section
-                # is the average weight, wrong for those normalisations. A
-                # reader applying IDWTUP=3 strictly (weight +-1, e.g. Pythia6)
-                # sees those events with the common weight, as when they were
-                # truncated; XWGTUP keeps the correct weight for the others.
                 curr_strategy = banner.get_lha_strategy()
-                if normalization in ['unit', 'sum']:
+                if normalization in ['unit', 'unity', 'sum']:
                     strategy = 3
                 else:
                     strategy = 4
@@ -967,6 +1061,25 @@ class EventFile(object):
                 else:
                     banner.set_lha_strategy(-1*abs(strategy))
                 
+        # with keep_overweight_weight the LHA strategy follows the written weights:
+        # a sample with an event heavier than ow_threshold units is weighted
+        # (strategy 4); otherwise it is written with unit weights and keeps the
+        # strategy of its normalisation (3 for 'sum'/'unit')
+        ow_threshold = 1.01
+        lha_strategy = None
+        if self.banner and banner_module:
+            lha_strategy = (strategy, 1 if curr_strategy > 0 else -1)
+        ow_on = False
+        nb_below = 1
+        # ow_known: every abs(wgt) above ow_floor (the largest weights of the
+        # initial scan; complete if that scan kept them all). Each pass records
+        # the weights above half its max_wgt, so the overweight excess of the
+        # next pass is exact without an extra read unless max_wgt drops below
+        # ow_floor. There are at most 2*cross/max_wgt of them, about twice the
+        # number of unweighted events.
+        ow_known = all_wgt
+        ow_floor = all_wgt[0] if len(all_wgt) < nb_event else 0
+
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
@@ -978,6 +1091,12 @@ class EventFile(object):
                 if i==0:
                     max_wgt = max_wgt_for_trunc(0)
                 else:
+                    if keep_overweight_weight and nb_below == 0:
+                        # every event was kept at the previous maximum weight: a
+                        # lower one cannot add events (and would only make the
+                        # weights, all overweight, numerically meaningless)
+                        logger.log(log_level+10,"fail to reach target %s", event_target)
+                        break
                     #guess the correct max_wgt based on last iteration
                     efficiency = nb_keep/nb_event
                     needed_efficiency = event_target/nb_event
@@ -985,6 +1104,8 @@ class EventFile(object):
                     needed_max_wgt = last_max_wgt * efficiency / needed_efficiency
                     
                     min_max_wgt = max_wgt_for_trunc(trunc_error)
+                    if keep_overweight_weight:
+                        min_max_wgt = 0 # no truncation happens: no floor needed
                     max_wgt = max(min_max_wgt, needed_max_wgt)
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
@@ -993,6 +1114,29 @@ class EventFile(object):
                             break   
                         else:
                             break
+
+            # overweight events keep their weight: w/max_wgt units, and all the
+            # weights scaled by ow_norm so that their mean stays the cross-section.
+            # Only when an event is heavier than ow_threshold units: otherwise the
+            # few events just above max_wgt are written as unit events (at most
+            # ow_threshold-1 of a unit truncated each) and the sample stays unit weight
+            ow_on = keep_overweight_weight and hasattr(self, "written_weight") \
+                and any(w > ow_threshold * max_wgt for w in all_wgt)
+            ow_excess = 0
+            if ow_on:
+                if max_wgt < ow_floor:
+                    # events heavier than max_wgt may be missing from ow_known
+                    ow_floor = 0.5 * max_wgt
+                    ow_known = self._weights_above(get_wgt, ow_floor,
+                                                   use_fast_second_pass)
+                ow_excess = sum(w - max_wgt for w in ow_known if w > max_wgt)
+                ow_norm = 1. - ow_excess / cross['abs']
+            seen_floor = 0.5 * max_wgt
+            seen = [] if (keep_overweight_weight and seen_floor < ow_floor) else None
+            ow = (lambda w: ow_norm * max(1., abs(w) / max_wgt)) if ow_on else (lambda w: 1.)
+            if keep_overweight_weight and lha_strategy:
+                # a weighted sample must not claim equal weights (strategy 3)
+                banner.set_lha_strategy(lha_strategy[1] * (4 if ow_on else abs(lha_strategy[0])))
 
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
@@ -1005,22 +1149,23 @@ class EventFile(object):
 
             # scan the file
             nb_keep = 0
-            trunc_cross = 0 # excess weight sum(|w| - max_wgt) of the overweight events
-            nb_over = 0 # number of overweight events (|w| > max_wgt)
-            sum_written = 0 # sum of the |weight| written in the output
+            nb_below = 0 # events lighter than max_wgt (kept or not)
+            trunc_cross = 0
             if use_fast_second_pass:
                 for raw_event, _ievent, wgt, header_meta in self._iter_raw_events_for_unweight():
                     r = random.random()
+                    if 0 < abs(wgt) < max_wgt:
+                        nb_below += 1
+                    if seen is not None and abs(wgt) > seen_floor:
+                        seen.append(abs(wgt))
                     if abs(wgt) < r * max_wgt:
                         continue
                     elif wgt > 0:
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
-                            final_wgt = written_weight(max(wgt, max_wgt))
-                            sum_written += abs(final_wgt)
+                            final_wgt = written_weight(max(wgt, max_wgt)) * ow(wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1032,10 +1177,8 @@ class EventFile(object):
                         nb_keep += 1
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                            nb_over += 1
                         if outputpath and (event_target == 0 or keep_overshoot or nb_keep <= event_target):
-                            final_wgt = -1 * written_weight(max(abs(wgt), max_wgt))
-                            sum_written += abs(final_wgt)
+                            final_wgt = -1 * written_weight(max(abs(wgt), max_wgt)) * ow(wgt)
                             try:
                                 outfiles[nb_keep % nb_output].write(self._rewrite_raw_event_weight(raw_event, final_wgt, header_meta))
                             except Exception:
@@ -1047,29 +1190,31 @@ class EventFile(object):
                 for event in self:
                     r = random.random()
                     wgt = get_wgt(event)
+                    if 0 < abs(wgt) < max_wgt:
+                        nb_below += 1
+                    if seen is not None and abs(wgt) > seen_floor:
+                        seen.append(abs(wgt))
                     if abs(wgt) < r * max_wgt:
                         continue
                     elif wgt > 0:
                         nb_keep += 1
-                        event.wgt = written_weight(max(wgt, max_wgt))
+                        event.wgt = written_weight(max(wgt, max_wgt)) * ow(wgt)
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt 
-                            nb_over += 1
                         if event_target ==0 or keep_overshoot or nb_keep <= event_target:
                             if outputpath:                         
-                                sum_written += abs(event.wgt)
                                 outfiles[nb_keep % nb_output].write(str(event))
 
                     elif wgt < 0:
                         nb_keep += 1
-                        event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
+                        event.wgt =     -1* written_weight(max(abs(wgt), max_wgt)) * ow(wgt)
                         if abs(wgt) > max_wgt:
                             trunc_cross += abs(wgt) - max_wgt
-                            nb_over += 1
                         if outputpath and (event_target ==0 or keep_overshoot or nb_keep <= event_target):
-                            sum_written += abs(event.wgt)
                             outfiles[nb_keep % nb_output].write(str(event))
-            
+            if seen is not None:
+                ow_known, ow_floor = sorted(seen), seen_floor
+
             if event_target and nb_keep > event_target:
                 if not outputpath:
                     #no outputpath define -> wants only the nb of unweighted events
@@ -1110,22 +1255,32 @@ class EventFile(object):
         else:
             nb_events_unweighted = nb_keep
 
-        logger.log(log_level, "write %i event (efficiency %.2g %%, %i overweight event(s) kept with their weight: excess of %.2g %% of the cross section) after %i iteration(s)",
-          nb_keep, nb_events_unweighted/nb_event*100, nb_over, trunc_cross/cross['abs']*100, i)
+        logger.log(log_level, "write %i event (efficiency %.2g %%, overweight excess %.2g %%) after %i iteration(s)",
+          nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
-        # normalise the written sample: the sum of |weight| has to be
-        # written_weight*event_target for 'sum'/'unit' and written_weight*nb_keep
-        # (i.e. average |weight| = written_weight) for 'average'. This absorbs
-        # both the difference between nb_keep and event_target and the extra
-        # weight carried by the overweight events.
-        if hasattr(self, "written_weight") and outputpath and sum_written:
-            if normalization in ['unit', 'sum'] and event_target:
-                factor = self.written_weight * event_target / sum_written
-            else:
-                factor = self.written_weight * nb_keep / sum_written
-            if abs(factor - 1) > 1e-9:
-                for path in outpaths:
-                    self._rescale_event_weights(path, factor)
+        # every event heavier than max_wgt is kept, so trunc_cross is the
+        # overweight excess the weights were normalised with
+        if ow_on and abs(trunc_cross - ow_excess) > 1e-6 * cross['abs']:
+            logger.warning("overweight excess %s differs from the one used for "
+                           "the normalisation %s", trunc_cross, ow_excess)
+
+        #correct the weight in the file if not the correct number of event
+        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
+            # rescale (not reset) each weight: kept overweight events keep
+            # their factor
+            factor = event_target/nb_keep
+            for path in outpaths:
+                startfile = EventFile(path)
+                tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
+                outfile = EventFile(tmpname, "w")
+                outfile.write(startfile.banner)
+                for event in startfile:
+                    event.wgt = event.wgt * factor
+                    outfile.write(str(event))
+                outfile.write("</LesHouchesEvents>\n")
+                startfile.close()
+                outfile.close()
+                shutil.move(tmpname, path)
             
         
         
@@ -1133,33 +1288,6 @@ class EventFile(object):
         self.max_wgt = max_wgt
         return nb_keep
     
-    @staticmethod
-    def _rescale_event_weights(path, factor):
-        """multiply the central weight of every event of the file by factor
-        (the file is rewritten in place)"""
-
-        tmpname = pjoin(os.path.dirname(path), "wgtcorrected_"+ os.path.basename(path))
-        startfile = EventFile(path)
-        outfile = EventFile(tmpname, "w")
-        outfile.write(startfile.banner)
-        try:
-            for raw_event, _ievent, wgt, header_meta in startfile._iter_raw_events_direct():
-                outfile.write(EventFile._rewrite_raw_event_weight(raw_event, wgt*factor, header_meta))
-        except ValueError:
-            # malformed block: restart with the generic (slower) parser
-            startfile.close()
-            outfile.close()
-            startfile = EventFile(path)
-            outfile = EventFile(tmpname, "w")
-            outfile.write(startfile.banner)
-            for event in startfile:
-                event.wgt *= factor
-                outfile.write(str(event))
-        outfile.write("</LesHouchesEvents>\n")
-        startfile.close()
-        outfile.close()
-        shutil.move(tmpname, path)
-
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
@@ -1413,7 +1541,7 @@ class EventFile(object):
             self.alpsrunner = lambda scale: self.pdf.alphasQ(scale)
         else:
             try:
-                from models.model_reader import Alphas_Runner
+                from madgraph.models.model_reader import Alphas_Runner
             except ImportError:
                 root = os.path.dirname(__file__)
                 root_path = pjoin(root, os.pardir, os.pardir)
@@ -1425,7 +1553,7 @@ class EventFile(object):
                     cmd = me_int.Cmd(root_path,force_run=True)                
                 if 'mg5_path' in cmd.options and cmd.options['mg5_path']:
                     sys.path.append(cmd.options['mg5_path'])
-                from models.model_reader import Alphas_Runner
+                from madgraph.models.model_reader import Alphas_Runner
                 
             if not hasattr(banner, 'param_card'):
                 param_card = banner.charge_card('param_card')
@@ -1587,7 +1715,7 @@ class MultiEventFile(EventFile):
         if not self.banner:
             return
         
-        # compute the cross-section of each splitted channel
+        # compute the cross-section of each split channel
         grouped_cross = {}
         grouped_error = {}
         for i,ff in enumerate(self.files):
@@ -1682,14 +1810,13 @@ class MultiEventFile(EventFile):
 %(cross_info)s
 %(generator_info)s
 """
-        
         self.banner["init"] = template_init % init_information
         
             
     
     def initialize_unweighting(self, getwgt, trunc_error):
         """ scan once the file to return 
-            - the list of the hightest weight (of size trunc_error*NB_EVENT
+            - the list of the highest weight (of size trunc_error*NB_EVENT
             - the cross-section by type of process
             - the total number of events in the files
             In top of that it initialise the information for the next routine
@@ -1860,7 +1987,7 @@ class MultiEventFile(EventFile):
                 elif opts['normalization'] == 'average':
                     strategy = 4
                     new_wgt = sum(self.across)                    
-                elif opts['normalization'] == 'unit':
+                elif opts['normalization'] in ['unit', 'unity']: # 'unity' in the LO run_card
                     strategy =3
                     new_wgt = 1.
             else:
@@ -1939,7 +2066,205 @@ class MultiEventFile(EventFile):
                 lhe.close()
         out.write("</LesHouchesEvents>\n") 
         return nb_event, info
-                            
+
+    @staticmethod
+    def merge_runs(paths, outputpath, banner_path=None, event_norm=None):
+        """Merge the event files of independent runs of the same process
+        (multi_run). The events are written in the order of paths, after the
+        header of the first file. banner_path (optional) receives that header.
+        Both are replaced only if the merge succeeds; a run without event,
+        truncated or not compatible with the first one raises an error.
+        event_norm is used for a run whose banner has no (readable) run_card;
+        without it such a run is an error.
+        Return the number of events and the cross section (<init>) of the
+        merged file.
+
+        Run i (N_i events) contributes its own cross section sigma_i with the
+        weight lambda_i = N_i/N_tot. All its events are multiplied by the same
+        factor f_i, which keeps their relative weights (overweights of the
+        unweighting, bias, MadSpin, sign) and follows the event_norm of the
+        run_card of the runs:
+          - average (mean weight = sigma_i): f_i = 1, so that the mean weight
+            of the merged file is sum_i lambda_i sigma_i;
+          - sum (sum of the weights = sigma_i): f_i = lambda_i;
+          - unity (sum of |w| = number of events, no normalisation in the
+            weights): f_i = N_i/A_i * |sigma_i|/sum_k lambda_k |sigma_k|, with
+            sigma_i the cross section of the <init> block of the run, so that
+            sum |w| = N_tot.
+        N_i and A_i = sum |w| come from a scan of the events (not from the
+        banner or XMAXUP). f_i also multiplies the absolute weights of <rwgt>
+        (systematics, reweighting) but not the multiplicative 'bias' entry.
+
+        <init>: the first line (beams, PDF, IDWTUP, NPRUP) and the processes
+        (LPRUP) of the runs must agree. XSECUP = sum_i lambda_i XSECUP_i,
+        XERRUP = sqrt(sum_i (lambda_i XERRUP_i)^2), and XMAXUP is the common
+        weight of the merged file, its mean |w| (as the unweighting writes it).
+        """
+
+        runs = []
+        for path in paths:
+            lhe = EventFile(path)
+            banner = lhe.get_banner()
+            try:
+                nb_event, sum_abs = lhe._scan_raw_weights()
+            except ValueError:
+                _, wgt_sum, nb_event = lhe._initialize_unweighting_header_only(0)
+                sum_abs = wgt_sum['abs']
+            if not nb_event:
+                lhe.close()
+                raise Exception("Cannot merge %s: no event" % path)
+            init = [l.strip() for l in banner['init'].split('\n') if l.strip()]
+            procs = collections.OrderedDict()
+            for line in init[1:]:
+                split = line.split()
+                if len(split) == 4:
+                    procs[int(split[3])] = [float(v) for v in split[:3]]
+            try:
+                run_norm = banner.get('run_card', 'event_norm').lower()
+            except Exception as error:
+                if not event_norm:
+                    lhe.close()
+                    raise Exception("Cannot merge %s: no event_norm in its banner (%s)"
+                                    % (path, error))
+                logger.warning("no event_norm in the banner of %s: assume %s", path, event_norm)
+                run_norm = event_norm.lower()
+            cross, error = banner.get_cross(witherror=True)
+            integrated = re.search(r"Integrated\s*weight\s*\(\s*pb\s*\)\s*:\s*([\+\-\d.e]+)",
+                                   banner['mggenerationinfo'] if 'mggenerationinfo' in banner else '', re.I)
+            runs.append({'path': path, 'lhe': lhe, 'banner': banner,
+                         'nb_event': nb_event, 'abs': sum_abs,
+                         'first': [float(v) for v in init[0].split()],
+                         'procs': procs,
+                         'other': [l for l in init[1:] if len(l.split()) != 4],
+                         'event_norm': 'unity' if run_norm == 'unit' else run_norm,
+                         'cross': cross, 'error': error,
+                         'integrated': float(integrated.group(1)) if integrated else cross})
+        if not runs:
+            raise Exception("No event to merge in %s" % ', '.join(paths))
+
+        # the runs have to be the same generation
+        ref = runs[0]
+        for run in runs[1:]:
+            if run['first'] != ref['first'] or set(run['procs']) != set(ref['procs']) \
+                                            or run['other'] != ref['other']:
+                raise Exception("Cannot merge %s with %s: the <init> blocks do not match"
+                                % (run['path'], ref['path']))
+            if run['event_norm'] != ref['event_norm']:
+                raise Exception("Cannot merge %s with %s: different event_norm (%s/%s)"
+                                % (run['path'], ref['path'], run['event_norm'], ref['event_norm']))
+            # as merge.pl: 5% agreement, unless within the statistical error
+            diff = abs(run['cross'] - ref['cross'])
+            if diff > 0.05 * max(abs(run['cross']), abs(ref['cross'])) and \
+                         diff > 5 * math.sqrt(run['error']**2 + ref['error']**2):
+                raise Exception("Cannot merge %s with %s: the cross sections do not agree (%g/%g pb)"
+                                % (run['path'], ref['path'], run['cross'], ref['cross']))
+
+        nb_tot = sum(run['nb_event'] for run in runs)
+        for run in runs:
+            run['lambda'] = run['nb_event'] / nb_tot
+        event_norm = ref['event_norm']
+        if event_norm == 'sum':
+            factors = [run['lambda'] for run in runs]
+        elif event_norm == 'unity':
+            sigma = [abs(run['cross']) for run in runs]
+            if not all(sigma):
+                sigma = [1] * len(runs)
+            mean_sigma = sum(run['lambda'] * s for run, s in zip(runs, sigma))
+            factors = [run['nb_event'] / run['abs'] * s / mean_sigma if run['abs'] else 1
+                       for run, s in zip(runs, sigma)]
+        else:
+            factors = [1] * len(runs)
+        common_wgt = sum(f * run['abs'] for f, run in zip(factors, runs)) / nb_tot
+
+        # combine <init> and <MGGenerationInfo> (in the Banner of the first run)
+        banner = ref['banner']
+        xsecup = dict((pid, sum(run['lambda'] * run['procs'][pid][0] for run in runs))
+                      for pid in ref['procs'])
+        xerrup = dict((pid, math.sqrt(sum((run['lambda'] * run['procs'][pid][1])**2 for run in runs)))
+                      for pid in ref['procs'])
+        banner.modify_init_cross(xsecup, error=xerrup, xmaxup=common_wgt)
+        # (MadSpin keeps there the cross section before the decays)
+        banner.add_generation_info(sum(run['lambda'] * run['integrated'] for run in runs), nb_tot)
+        cross = sum(xsecup.values())
+        # and put them in the header of the first run, which is otherwise
+        # kept as it is (Banner.write would drop the tags it does not know)
+        header = re.sub(r'(<init>[^\n]*\n).*?(</init>)',
+                        lambda m: m.group(1) + banner['init'].strip('\n') + '\n' + m.group(2),
+                        ref['lhe'].banner, count=1, flags=re.S)
+        gen_info = '<MGGenerationInfo>\n%s\n</MGGenerationInfo>' % banner['MGGenerationInfo'].strip('\n')
+        gen_info_pattern = re.compile(r'<MGGenerationInfo>.*?</MGGenerationInfo>', re.S | re.I)
+        if gen_info_pattern.search(header):
+            header = gen_info_pattern.sub(lambda m: gen_info, header, count=1)
+        else:
+            header = header.replace('</header>', '%s\n</header>' % gen_info, 1)
+
+        for run, factor in zip(runs, factors):
+            logger.debug("merge %s: %i events, cross section %g pb, weights x %g",
+                         run['path'], run['nb_event'], run['cross'], factor)
+
+        # written next to outputpath/banner_path, replaced only once complete
+        tmppath = pjoin(os.path.dirname(outputpath), '.merge_tmp_' + os.path.basename(outputpath))
+        banner_tmppath = banner_path + '.merge_tmp' if banner_path else None
+
+        def write_events(use_raw):
+            # level 6 (as gzip/perl): the python default (9) is ~4 times slower
+            # for a 4% smaller file
+            if outputpath.endswith('.gz'):
+                out = gzip.open(tmppath, 'wb', compresslevel=6)
+            else:
+                out = open(tmppath, 'wb')
+            nb_event = 0
+            try:
+                out.write(header.encode())
+                for run, factor in zip(runs, factors):
+                    lhe = run['lhe']
+                    if use_raw:
+                        nb_event += lhe._write_raw_rescaled_events(out, factor)
+                    else:
+                        lhe.seek(0)
+                        lhe.parsing = 'wgt_only'
+                        for event in lhe:
+                            nb_event += 1
+                            event.wgt *= factor
+                            rwgt = event.parse_reweight()
+                            for key in rwgt:
+                                if key not in EventFile.rwgt_multiplicative:
+                                    rwgt[key] *= factor
+                            out.write(str(event).encode())
+                out.write(b"</LesHouchesEvents>\n")
+            finally:
+                out.close()
+            return nb_event
+
+        try:
+            try:
+                nb_event = write_events(use_raw=True)
+            except ValueError:
+                # unexpected format: restart with the generic (slower) parser
+                nb_event = write_events(use_raw=False)
+            if nb_event != nb_tot:
+                raise Exception("merged %i events instead of the %i found in %s"
+                                % (nb_event, nb_tot, ', '.join(run['path'] for run in runs)))
+            if banner_path:
+                with open(banner_tmppath, 'w') as fsock:
+                    fsock.write(header)
+                    fsock.write("</LesHouchesEvents>\n")
+        except BaseException:
+            for path in [tmppath, banner_tmppath]:
+                if path and os.path.exists(path):
+                    os.remove(path)
+            raise
+        finally:
+            for run in runs:
+                run['lhe'].close()
+        os.replace(tmppath, outputpath)
+        if banner_path:
+            os.replace(banner_tmppath, banner_path)
+
+        logger.info("merged %i runs: %i events, cross section %g pb (event_norm=%s)",
+                    len(runs), nb_tot, cross, event_norm)
+        return nb_tot, cross
+
     def remove(self):
         """ """
         if self.parsefile:
@@ -1951,6 +2276,385 @@ class MultiEventFile(EventFile):
             
         
            
+def _model_leg_is_massless(model, pdg):
+    """True when the model gives this leg a strictly zero mass.
+
+    Scoping is taken from the model, never from a hardcoded PDG list: the same
+    PDG is massless in one restriction and massive in another (b, c, tau...).
+    Merged particles (apply_flavor_grouping, codes 81/82/83) are resolved onto
+    the flavours they stand for.  Anything that cannot be resolved answers
+    False, i.e. is left untouched.
+    """
+    try:
+        pdg = int(pdg)
+    except (TypeError, ValueError):
+        return False
+    merged = None
+    if hasattr(model, 'get'):
+        try:
+            merged = model.get('merged_particles')
+        except Exception:
+            merged = None
+    if merged and abs(pdg) in merged:
+        ids = merged[abs(pdg)]
+        return bool(ids) and all(_model_leg_is_massless(model, i) for i in ids)
+    try:
+        part = model.get_particle(pdg)
+    except Exception:
+        return False
+    if part is None:
+        return False
+    try:
+        if part.get('mass').lower() == 'zero':
+            return True
+    except Exception:
+        pass
+    if hasattr(model, 'get_mass'):
+        try:
+            return float(model.get_mass(pdg)) == 0.
+        except Exception:
+            return False
+    return False
+
+
+def project_massless_initial_state(momenta, pdgs, model, n_initial=2,
+                                   tolerance=1e-6):
+    """Put the initial-state legs the model calls massless back onto p^2 = 0.
+
+    aMC@NLO writes its LHE with the partons on the *Monte-Carlo* mass shell
+    (``Template/NLO/SubProcesses/add_write_info.f``, ``put_on_MC_mshell_in``
+    via ``getxmss_madfks``): in the frame where pz1+pz2 = 0 it replaces
+
+        pz -> +- sqrt( shat - 2(m1^2+m2^2) + (m1^2-m2^2)^2/shat ) / 2
+        E  -> sqrt(m^2 + pz^2)
+
+    with m the Monte-Carlo mass (0.33 GeV for a light quark or a gluon), and
+    then boosts back to the lab.  That map leaves shat and the *total* initial
+    four-momentum exactly invariant, which is why the LHE still balances.
+
+    The matrix element is nevertheless a massless one, and ``ixxxxx``'s
+    massless branch is only accidentally right for a parton pointing exactly
+    along -z (it special-cases px==py==0, pz<0).  Any boost gives the backward
+    parton a transverse component, the branch stops firing and the implicit
+    light-cone projection p~ = p - m^2/(2(p0+p3)) (1,0,0,-1) is evaluated on a
+    cancelling p0+p3: the error is unbounded although m^2/shat is not.
+
+    The exact inverse of the map above, for two purely longitudinal incoming
+    legs, is the light-cone projection onto the total initial momentum
+    P = p1 + p2:
+
+        p1 -> ((P0+Pz)/2) (1,0,0,+1)        p2 -> ((P0-Pz)/2) (1,0,0,-1)
+
+    which is light-like by construction, reproduces shat, and conserves
+    energy-momentum *exactly* -- unlike the naive E := |p|, which silently
+    loses m^2/2E ~ 1e-3 GeV per leg.
+
+    Only the initial state is touched: the final-state light partons carry
+    transverse momentum, so their (equally wrong) O(m^2) treatment is at least
+    frame-independent, and projecting them was measured to buy no invariance
+    at all while moving the matrix element slightly more.
+
+    ``momenta`` is a list of (E,px,py,pz) in matrix-element order, ``pdgs`` the
+    PDG codes in the same order.  A new list is returned; the input is left
+    alone.  Legs that are crossed into the initial block (negative energy),
+    that carry transverse momentum, or that the model gives a mass, are copied
+    through untouched.
+    """
+    out = [tuple(p) for p in momenta]
+    if len(out) < n_initial or len(pdgs) < n_initial:
+        return out
+    idx, todo = [], False
+    for i in range(n_initial):
+        E, px, py, pz = out[i]
+        if E <= 0.:                              # crossed into the initial block
+            return out
+        if abs(px) > tolerance * E or abs(py) > tolerance * E:
+            return out                           # not the longitudinal beam setup
+        if not _model_leg_is_massless(model, pdgs[i]):
+            continue
+        idx.append(i)
+        if E * E - px * px - py * py - pz * pz != 0.:
+            todo = True
+    # a leg that happens to be light-like already is still part of the two-leg
+    # recoil: put_on_MC_mshell_in can give one of the two a mass and not the
+    # other, and the exact inverse then still moves both.
+    if not idx or not todo:
+        return out
+    if len(idx) == n_initial == 2:
+        # exact inverse: the light-cone components of the *total*
+        P0 = out[0][0] + out[1][0]
+        Pz = out[0][3] + out[1][3]
+        plus, minus = 0.5 * (P0 + Pz), 0.5 * (P0 - Pz)
+        if plus <= 0. or minus <= 0.:
+            return out
+        if out[0][3] >= 0.:
+            out[0], out[1] = (plus, 0., 0., plus), (minus, 0., 0., -minus)
+        else:
+            out[0], out[1] = (minus, 0., 0., -minus), (plus, 0., 0., plus)
+    else:
+        # only one of the two legs is massless in the model: drop that leg's
+        # own small light-cone component and leave the partner alone.
+        for i in idx:
+            E, px, py, pz = out[i]
+            h = 0.5 * (E + abs(pz))
+            out[i] = (h, 0., 0., math.copysign(h, pz))
+    return out
+
+
+def _boost_from_rest(p, q, mq):
+    """Boost p from the rest frame of q into the frame where q is written.
+
+    ``mq`` is sqrt(q^2).  This is the inverse of ``_boost_to_rest``; the pair
+    is written out longhand (rather than reusing FourMomentum.boost) so that
+    the round trip is exactly the same arithmetic in both directions.
+    """
+    E, px, py, pz = p
+    qE, qx, qy, qz = q
+    bp = (qx * px + qy * py + qz * pz) / mq
+    c = (E + bp / (qE / mq + 1.))
+    return ((qE * E + qx * px + qy * py + qz * pz) / mq,
+            px + qx * c / mq, py + qy * c / mq, pz + qz * c / mq)
+
+
+def _boost_to_rest(p, q, mq):
+    """Boost p into the rest frame of q.  ``mq`` is sqrt(q^2)."""
+    E, px, py, pz = p
+    qE, qx, qy, qz = q
+    bp = (qx * px + qy * py + qz * pz) / mq
+    c = (E - bp / (qE / mq + 1.))
+    return ((qE * E - qx * px - qy * py - qz * pz) / mq,
+            px - qx * c / mq, py - qy * c / mq, pz - qz * c / mq)
+
+
+def project_massless_final_state(momenta, pdgs, model, n_initial=2,
+                                 tolerance=1e-6, max_iter=100):
+    """Put the final-state legs the model calls massless back onto p^2 = 0.
+
+    Same disease as ``project_massless_initial_state``: aMC@NLO writes its LHE
+    with the light partons on the *Monte-Carlo* mass shell (0.33 GeV for a
+    light quark or a gluon, ``put_on_MC_mshell_Hevout`` in
+    ``Template/NLO/SubProcesses/add_write_info.f``), while the matrix element
+    that is then asked to evaluate them is a massless one.
+
+    Unlike the initial state there is no exact inverse to invert: the H-event
+    kinematics were regenerated by ``generate_momenta`` with the MC masses
+    already in the common block, and ``i_fks`` was reshuffled against
+    ``j_fks``.  What matters instead is the property the naive per-leg recipe
+    ``E := |p|`` destroys, and it destroys it badly: it loses m^2/2E ~ 1e-3 GeV
+    of energy on *every* leg, so the matrix element is handed a set of momenta
+    that no longer balances -- and |M|^2 off the momentum-conserving surface is
+    not gauge invariant.
+
+    So this uses the standard momentum-conserving massless mapping, the same
+    construction a parton shower uses in the other direction.  In the rest
+    frame of the total final-state momentum Q, every final-state
+    three-momentum is scaled by one *common* factor x,
+
+        sum_(massless i) x |p_i| + sum_(massive j) sqrt(m_j^2 + x^2 |p_j|^2)
+                                                             = sqrt(Q^2)
+
+    solved for x by a guarded Newton iteration (the left-hand side is strictly
+    increasing in x, so the root is unique and is bracketed from x = 1).  The
+    massless legs then take E_i = x |p_i|, exactly light-like; the massive ones
+    keep the invariant mass they have *in the event* -- not the model mass, so
+    an off-shell Z keeps its Breit-Wigner mass -- and are scaled by the same x.
+
+    Two properties follow, and they are the whole point:
+
+      * every direction is untouched, so no observable moves at O(1);
+      * the spatial sum stays zero in that frame and the energy sum is what x
+        solves for, so the total final-state four-momentum is conserved
+        *exactly*.  Combined with the initial-state light-cone projection,
+        which conserves the total initial four-momentum exactly, the event
+        still balances -- measured to ~1e-13 GeV, the cost of the boost round
+        trip alone.
+
+    Guards.  The whole thing is skipped, and the momenta returned untouched,
+    whenever the construction is not defined or the root find does not
+    converge: fewer than two final-state legs, a leg crossed into the final
+    block (E <= 0), a spacelike leg, Q^2 <= 0, sqrt(Q^2) not above the sum of
+    the masses that are being kept, no bracket found for the root, or Newton
+    failing to reach |g(x) - sqrt(Q^2)| <= 1e-14 sqrt(Q^2) within ``max_iter``
+    steps.  The failure mode is always "return the input", never "return
+    something subtly wrong".
+
+    ``momenta`` is a list of (E,px,py,pz) in matrix-element order, ``pdgs`` the
+    PDG codes in the same order.  A new list is returned; the input is left
+    alone.
+    """
+    out = [tuple(p) for p in momenta]
+    n = len(out)
+    if n - n_initial < 2 or len(pdgs) < n:
+        return out
+
+    # ---- classify, and find out whether there is anything to do at all
+    light, heavy, todo = [], [], False
+    for i in range(n_initial, n):
+        E, px, py, pz = out[i]
+        if E <= 0.:                      # crossed into the final block
+            return out
+        m2 = E * E - px * px - py * py - pz * pz
+        if m2 < -tolerance * E * E:      # spacelike: not our business
+            return out
+        if _model_leg_is_massless(model, pdgs[i]):
+            light.append(i)
+            if m2 != 0.:
+                todo = True
+        else:
+            heavy.append((i, math.sqrt(m2) if m2 > 0. else 0.))
+    if not light or not todo:
+        return out
+
+    # ---- the total final-state momentum, and its rest frame
+    Q = [0., 0., 0., 0.]
+    for i in range(n_initial, n):
+        for k in range(4):
+            Q[k] += out[i][k]
+    s = Q[0] ** 2 - Q[1] ** 2 - Q[2] ** 2 - Q[3] ** 2
+    if s <= 0.:
+        return out
+    roots = math.sqrt(s)
+    Q = tuple(Q)
+
+    rest = [_boost_to_rest(out[i], Q, roots) for i in range(n_initial, n)]
+    q = [math.sqrt(p[1] ** 2 + p[2] ** 2 + p[3] ** 2) for p in rest]
+
+    qlight = [q[i - n_initial] for i in light]
+    qheavy = [(q[i - n_initial], m) for i, m in heavy]
+    sumlight = sum(qlight)
+    summass = sum(m for _, m in qheavy)
+    # The energy the rescaled legs have to add back up to is the energy sum of
+    # the momenta *as they were boosted here*, not sqrt(Q^2): the two agree to
+    # a few ulp, but only the first makes the shift sum to exactly zero, and
+    # the boost back multiplies whatever it does not by gamma*beta (measured:
+    # 2.7e-12 GeV of residual imbalance with it against 1.7e-10 without).
+    esum = sum(p[0] for p in rest)
+    if sumlight <= 0. or esum <= summass:
+        return out
+    if min(qlight) <= 0.:
+        # a leg the model calls massless, at rest in the final-state frame:
+        # E := x|p| would annihilate it.  Unphysical input, leave it alone.
+        return out
+
+    def g(x):
+        return (x * sumlight
+                + sum(math.sqrt(m * m + x * x * qq * qq) for qq, m in qheavy))
+
+    def dg(x):
+        d = sumlight
+        for qq, m in qheavy:
+            r = math.sqrt(m * m + x * x * qq * qq)
+            if r > 0.:
+                d += x * qq * qq / r
+        return d
+
+    # ---- bracket.  g is strictly increasing; g(1) <= esum because a massless
+    # leg contributes |p| where it used to contribute sqrt(m^2+|p|^2), so the
+    # root sits at x >= 1.  Walk up until g overshoots.
+    lo, hi = 1., 1.
+    if g(lo) > esum:                     # only reachable on an already-exact
+        lo = 0.                          # event, off by a rounding of |p| <= E
+    for _ in range(200):
+        if g(hi) >= esum:
+            break
+        hi *= 2.
+    else:
+        return out                       # no bracket: give up, momenta as they were
+
+    # bisection-safeguarded Newton, run to the fixed point rather than to a
+    # tolerance: the residual is what leaks into the energy balance.
+    x, done = 0.5 * (lo + hi), False
+    for _ in range(max_iter):
+        f = g(x) - esum
+        if f == 0.:
+            done = True
+            break
+        if f > 0.:
+            hi = x
+        else:
+            lo = x
+        d = dg(x)
+        step = x - f / d if d > 0. else 0.5 * (lo + hi)
+        if not (lo < step < hi):
+            step = 0.5 * (lo + hi)
+        if step == x or step == lo or step == hi:
+            done = True                  # converged to the last representable x
+            break
+        x = step
+    if not done:
+        return out                       # did not converge: momenta as they were
+
+    if x != x or not 0. < x < float('inf'):     # NaN / inf / non-positive
+        return out
+
+    # The shift is applied as a *difference* boosted back, not as the new
+    # momentum boosted back: the boost round trip is only accurate to a few
+    # ulp of the momentum itself (~1e-11 GeV at LHC energies), while the shift
+    # is O(m_MC^2/2E) ~ 1e-3 GeV, so boosting the shift keeps the exact input
+    # momentum as the base and pushes the round-trip error down by the ratio.
+    # Sum_i rest_i is (sqrt(Q^2),0,0,0) by construction both before and after,
+    # so the boosted shifts sum to (0,0,0,0) and the event still balances.
+    for k, i in enumerate(light):
+        E, px, py, pz = rest[i - n_initial]
+        d = (x * qlight[k] - E, (x - 1.) * px, (x - 1.) * py, (x - 1.) * pz)
+        rest[i - n_initial] = d
+    for i, m in heavy:
+        E, px, py, pz = rest[i - n_initial]
+        qq = q[i - n_initial]
+        d = (math.sqrt(m * m + x * x * qq * qq) - E,
+             (x - 1.) * px, (x - 1.) * py, (x - 1.) * pz)
+        rest[i - n_initial] = d
+    for i in range(n_initial, n):
+        d = _boost_from_rest(rest[i - n_initial], Q, roots)
+        out[i] = tuple(a + b for a, b in zip(out[i], d))
+    return out
+
+
+def project_massless_partons(momenta, pdgs, model, n_initial=2,
+                             tolerance=1e-6, final_state=False):
+    """Undo the Monte-Carlo mass shell on both sides of the event.
+
+    The initial state gets the exact closed-form inverse of
+    ``put_on_MC_mshell_in`` (``project_massless_initial_state``), the final
+    state the momentum-conserving common-rescaling map
+    (``project_massless_final_state``).  Each conserves its own half of the
+    total four-momentum exactly, so applying both leaves the event balanced.
+
+    This is for the *matrix-element call only*: it returns a new list and never
+    touches the ``Event`` the momenta came from, so nothing that is written
+    back to an LHE file ever sees a projected momentum.
+    """
+    out = project_massless_initial_state(momenta, pdgs, model,
+                                         n_initial=n_initial,
+                                         tolerance=tolerance)
+    if final_state:
+        out = project_massless_final_state(out, pdgs, model,
+                                           n_initial=n_initial,
+                                           tolerance=tolerance)
+    return out
+
+
+def merged_pdg(pid, merged_map):
+    """The merged-particle code of pid, antiparticles included: merged_map
+    (raw pdg -> merged code) lists the members of each merged particle by their
+    positive pdg only, so an antiparticle maps to minus the code of its
+    particle. pid itself when it belongs to no merged particle."""
+    try:
+        return merged_map[pid]
+    except KeyError:
+        try:
+            return -merged_map[-pid]
+        except KeyError:
+            return pid
+
+
+_newline_runs = re.compile('\n\n+')
+
+def _collapse_newlines(text):
+    """text with every run of newlines reduced to one (Event.__str__)"""
+    return _newline_runs.sub('\n', text) if '\n\n' in text else text
+
+
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
 
@@ -2117,6 +2821,56 @@ class Event(list):
             _add_lhe_timer("event_parse_total", time.perf_counter() - t0_total)
     
     
+    # What Event(str(event)) keeps of a particle: the fields of its LHE line
+    # (the mothers are re-pointed to the copy's own particles separately)
+    _copy_particle_fields = ('pid', 'status', 'color1', 'color2', 'px', 'py', 'pz',
+                             'E', 'mass', 'vtim', 'helicity', 'rwgt', 'comment')
+
+    def copy(self):
+        """The event Event(str(self)) gives, without the text round trip.
+
+        Only what the LHE text carries is copied: the particles' fields and
+        mothers, and the event's weights, flags, scales, tags and comments.
+        Attributes a caller hangs on an event or a particle (MadSpin's
+        ``_ms_*`` caches, ``new_mass``, ...) are not, exactly as they would not
+        survive the text. The one difference is the precision: the momenta are
+        the doubles themselves, where the text keeps 11 significant digits.
+        MadSpin copies an event per accept/reject trial, and rendering then
+        parsing it was a large part of the trial (and grows with the weights).
+        """
+        if getattr(self, 'nloweight', None) is not None:
+            # NLO weights are kept as an object that rewrites the tag: keep the
+            # exact round trip for those
+            return Event(str(self))
+        new = Event()
+        new.nexternal, new.ievent, new.wgt = self.nexternal, self.ievent, self.wgt
+        new.scale, new.aqed, new.aqcd = self.scale, self.aqed, self.aqcd
+        new.tag, new.comment = self.tag, self.comment
+        new.eventflag = dict(self.eventflag)
+        new.reweight_data = dict(self.reweight_data)
+        if hasattr(self, 'reweight_order'):
+            new.reweight_order = list(self.reweight_order)
+        new.matched_scale_data = None if self.matched_scale_data is None \
+                                 else list(self.matched_scale_data)
+        new.syscalc_data = dict(self.syscalc_data)
+        new.density = list(self.density)
+        fields = self._copy_particle_fields
+        position = {}
+        for i, particle in enumerate(self):
+            clone = Particle.__new__(Particle)
+            old = particle.__dict__
+            clone.__dict__.update((key, old[key]) for key in fields if key in old)
+            clone.event, clone.event_id = new, i
+            clone.mother1, clone.mother2 = particle.mother1, particle.mother2
+            position[id(particle)] = i
+            new.append(clone)
+        for clone in new:
+            if isinstance(clone.mother1, Particle):
+                clone.mother1 = new[position[id(clone.mother1)]]
+            if isinstance(clone.mother2, Particle):
+                clone.mother2 = new[position[id(clone.mother2)]]
+        return new
+
     def assign_mother(self):
         """convert the number in actual particle"""
         #Security if not incoming particle. Define a fake particle 
@@ -2231,7 +2985,7 @@ class Event(list):
                                            if not self.reweight_order.append(pid)])
                                       # the if is to create the order file on the flight
             except ValueError as error:
-                raise Exception('Event File has unvalid weight. %s' % error)
+                raise Exception('Event file has an invalid weight. %s' % error)
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
@@ -2307,13 +3061,58 @@ class Event(list):
         self.tag = self.tag[:start] + text % data + self.tag[stop+9:]
         
             
-    def parse_lo_weight(self):
-        """ """
-        
-        
+    def reconstruct_lo_weight(self, nqcd, ebeam):
+        """Reconstruct the LO reweighting information (the content of an <mgrwt>
+        block) from the event itself, for a process with a *single* alpha_s
+        power ``nqcd``. This is what systematics.get_lo_wgt needs to compute the
+        scale/PDF uncertainties on events that do not carry an <mgrwt> block
+        (e.g. the mg7 output).
+
+        Everything but the alpha_s power is taken from the event: the two
+        initial-state partons give the PDF pdg codes and, together with the beam
+        energies ``ebeam = (ebeam1, ebeam2)``, the Bjorken-x (x_i = E_i/ebeam_i,
+        exact for the collinear massless initial state of an LHE event); the
+        renormalisation and factorisation scales are the event scale (SCALUP).
+        With a single alpha_s power there is no clustering, so there is a single
+        PDF reweight entry per beam and no separate alpha_s reweight scale --
+        matching what MadEvent writes for an unmatched LO event (verified
+        against a real <mgrwt>: x_i, pdg, scale and n_qcd all coincide).
+
+        Scope: this is only valid for an unmatched (ickkw=0) LO sample with the
+        standard collinear massless initial state. It does NOT reproduce the
+        <mgrwt> of a matched sample (ickkw>0, where the clustering fills asrwt
+        and multiple pdf reweight entries) nor the EVA/DIS special cases; use the
+        real <mgrwt> block for those."""
+
+        initial = [p for p in self if int(p.status) == -1]
+        if len(initial) != 2:
+            return None
+        if ebeam is None:
+            ebeam = (0., 0.)
+        scale = float(self.scale)
+        loweight = {'n_qcd': int(nqcd),
+                    'ren_scale': scale,
+                    'asrwt': [],
+                    'tot_fact': 1.0}
+        for beam, (part, eb) in enumerate(zip(initial, ebeam), start=1):
+            x = abs(float(part.E)) / eb if eb else 0.0
+            loweight['n_pdfrw%d' % beam] = 1
+            loweight['pdf_pdg_code%d' % beam] = [int(part.pid)]
+            loweight['pdf_x%d' % beam] = [x]
+            loweight['pdf_q%d' % beam] = [scale]
+        return loweight
+
+    def parse_lo_weight(self, nqcd=None, ebeam=None):
+        """Return the LO reweighting information (from the <mgrwt> block).
+
+        If the event carries no <mgrwt> block, it is reconstructed from the
+        event for a process with a single alpha_s power when ``nqcd`` is given
+        (see :meth:`reconstruct_lo_weight`); ``ebeam=(ebeam1, ebeam2)`` supplies
+        the beam energies needed for the Bjorken-x. Otherwise returns None."""
+
         if hasattr(self, 'loweight'):
             return self.loweight
-        
+
         if not hasattr(Event, 'loweight_pattern'):
             Event.loweight_pattern = re.compile('''<rscale>\\s*(?P<nqcd>\\d+)\\s+(?P<ren_scale>[\\d.e+-]+)\\s*</rscale>\\s*\n\\s*
                                     <asrwt>\\s*(?P<asrwt>[\\s\\d.+-e]+)\\s*</asrwt>\\s*\n\\s*
@@ -2356,11 +3155,18 @@ class Event(list):
             self.loweight['n_pdfrw2'] = npdf
             self.loweight['pdf_pdg_code2'] = [int(i) for i in args[1:1+npdf]]
             self.loweight['pdf_x2'] = [float(i) for i in args[1+npdf:1+2*npdf]]
-            self.loweight['pdf_q2'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]            
-            
+            self.loweight['pdf_q2'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]
+
+        elif nqcd is not None:
+            # no <mgrwt> block: reconstruct it from the event (single alpha_s
+            # power) so systematics can still be computed (e.g. mg7 output).
+            loweight = self.reconstruct_lo_weight(nqcd, ebeam)
+            if loweight is None:
+                return None
+            self.loweight = loweight
         else:
             return None
-        return self.loweight            
+        return self.loweight
     
             
     def parse_matching_scale(self):
@@ -2428,7 +3234,7 @@ class Event(list):
         this_particle.status = 2
         this_particle.helicity = 0
         
-        # some usefull information
+        # some useful information
         decay_particle = decay_event[0]
         this_4mom = FourMomentum(this_particle)
         nb_part = len(self) #original number of particle
@@ -2894,22 +3700,48 @@ class Event(list):
         if filter is None:
             filter = lambda p: p.status==-1
         
-        if not isinstance(filter, FourMomentum):
+        # Inline of FourMomentum.boost for the whole event. MadSpin calls this
+        # once per decay per accept/reject trial, and the original built two
+        # FourMomentum objects per particle only to copy four floats back out.
+        # The boost vector is shared by every particle, so its norm, mass and
+        # the two divisions by them are loop invariant; hoisting them leaves
+        # per particle only multiplies and adds.
+        #
+        # The helas sign flip is applied to locals rather than to a copy of the
+        # boost momentum, which saves the copy and leaves the caller's object
+        # untouched exactly as the copy did.
+        if isinstance(filter, FourMomentum):
+            bpx, bpy, bpz, bE = -filter.px, -filter.py, -filter.pz, filter.E
+        else:
             pboost = FourMomentum()
             for p in self:
                 if list(filter(p)):
                     pboost += p
-        else:
-            pboost = FourMomentum(filter)
+            bpx, bpy, bpz, bE = -pboost.px, -pboost.py, -pboost.pz, pboost.E
 
-        # change sign of three-component due to helas convention
-        pboost.px *=-1
-        pboost.py *=-1
-        pboost.pz *=-1 
-        for p in self:
-            b= FourMomentum(p).boost(pboost)
-            p.E, p.px, p.py, p.pz = b.E, b.px, b.py, b.pz 
-        
+        pnorm = bpx * bpx + bpy * bpy + bpz * bpz
+        if pnorm and len(self):
+            # Rounds differently from FourMomentum.boost, which divides per
+            # particle and forms the mass as E^2-px^2-py^2-pz^2 rather than
+            # E^2-pnorm. Measured over 40k components of real decay events the
+            # worst relative difference is 1.2e-12, in the cases where E+k*s3
+            # cancels; typical components agree to ~1e-16. That is far below
+            # any physical sensitivity here.
+            mass = math.sqrt(max(bE * bE - pnorm, 0.))
+            inv_mass = 1.0 / mass
+            k = (bE - mass) / pnorm
+            for p in self:
+                px, py, pz, E = p.px, p.py, p.pz, p.E
+                s3product = px * bpx + py * bpy + pz * bpz
+                lf = (E + k * s3product) * inv_mass
+                p.E = (E * bE + s3product) * inv_mass
+                p.px = px + bpx * lf
+                p.py = py + bpy * lf
+                p.pz = pz + bpz * lf
+        elif not pnorm:
+            for p in self:
+                p.E, p.px, p.py, p.pz = bE, bpx, bpy, bpz
+
         return self
             
     def check(self):
@@ -3030,19 +3862,35 @@ class Event(list):
             self.aqed = aqed
             self.aqcd = aqcd
         
-    def get_tag_and_order(self):
+    def get_tag_and_order(self, merged_particle=None):
         """Return the unique tag identifying the SubProcesses for the generation.
-        Usefull for program like MadSpin and Reweight module."""
+        Useful for program like MadSpin and Reweight module.
+        merged particle is a dictionary id:merged
+        such that if id is in the tag, it will be replace by merged[id]
+        """
+        if merged_particle is None:
+            map = lambda x: x
+        else:
+            def get_merged(x):
+                try:
+                    return merged_particle[x]
+                except:
+                    try:
+                        return - merged_particle[-x]
+                    except:
+                        return x
+            map = get_merged
         
         initial, final, order = [], [], [[], []]
         for particle in self:
             if particle.status == -1:
-                initial.append(particle.pid)
+                initial.append(map(particle.pid))
                 order[0].append(particle.pid)
             elif particle.status == 1: 
-                final.append(particle.pid)
+                final.append(map(particle.pid))
                 order[1].append(particle.pid)
         initial.sort(), final.sort()
+
         tag = (tuple(initial), tuple(final))
         return tag, order
     
@@ -3123,8 +3971,12 @@ class Event(list):
         return jac
 
     @staticmethod
-    def mass_shuffle(momenta, sqrts, new_mass, new_sqrts=None):
-        """use the RAMBO method to shuffle the PS. initial sqrts is preserved."""
+    def mass_shuffle(momenta, sqrts, new_mass, new_sqrts=None, return_chi=False):
+        """use the RAMBO method to shuffle the PS. initial sqrts is preserved.
+
+        return_chi: also return RAMBO's chi, the common factor every
+        three-momentum is scaled by in the frame where the momenta sum to rest
+        (0 on the failure paths, where jac is 0 too)."""
 
         if not new_sqrts:
             new_sqrts = sqrts
@@ -3132,50 +3984,65 @@ class Event(list):
         oldm = [p.mass_sqr for p in momenta]
         newm = [m**2 for m in new_mass]
         tot_mom = sum(momenta, FourMomentum())
-        lor = tot_mom.get_lorentz_map(FourMomentum(sqrts, 0, 0, 0))
-        back_lor =FourMomentum(sqrts, 0, 0, 0).get_lorentz_map(tot_mom) 
-        for i,m in enumerate(momenta):
-            momenta[i] = m.apply_lorentzmap(lor) 
-        
-        tot_mom2 = sum(momenta, FourMomentum())
-        # this is the equation 4.3 of RAMBO paper        
-        f = lambda chi: new_sqrts - sum(math.sqrt(max(0, M + chi**2*(p.E**2-m))) 
-                                    for M,p,m in zip(newm, momenta,oldm))
-        # this is the derivation of the function
-        df = lambda chi: -1* sum(chi*(p.E**2-m)/math.sqrt(max(0,(p.E**2-m)*chi**2+M))
-            for M,p,m in zip(newm, momenta,oldm))
-        
-        if sum(new_mass) > new_sqrts:
-            return momenta, 0
-        try:
-            chi = misc.newtonmethod(f, df, 1.0, error=1e-7,maxiter=1000)
-        except:
-            return momenta, 0 
+        # Momenta that already sum to rest -- a decay generated at rest, i.e.
+        # every MadSpin decay reshuffle -- need neither map: both boosts would
+        # have a zero velocity, which _apply_boost_beta skips, so the numbers
+        # are the same without the ~4 us it costs to build and apply them.
+        # Only taken where from_p1_to_p2's p1^2 == p2^2 check would pass.
+        at_rest = (tot_mom.px == 0 and tot_mom.py == 0 and tot_mom.pz == 0 and
+                   abs(tot_mom.E**2 - sqrts**2) <= 1e-6 * max(tot_mom.E**2, sqrts**2))
+        if not at_rest:
+            lor = tot_mom.get_lorentz_map(FourMomentum(sqrts, 0, 0, 0))
+            back_lor =FourMomentum(sqrts, 0, 0, 0).get_lorentz_map(tot_mom)
+            for i,m in enumerate(momenta):
+                momenta[i] = m.apply_lorentzmap(lor)
 
-        # create the new set of momenta # eq. (4.2)        
-        new_momenta = []
-        for i,p in enumerate(momenta):
-            new_momenta.append(
-                FourMomentum(math.sqrt(newm[i]+chi**2*(p.E**2-oldm[i])),
-                              chi*p.px, chi*p.py, chi*p.pz))
-        
-        new_tot = sum(new_momenta, FourMomentum())
-        #if __debug__:
-        #    for i,p in enumerate(new_momenta):
-        #        misc.sprint(p.mass_sqr, new_mass[i]**2, i,p, momenta[i])
-        #        assert p.mass_sqr == new_mass[i]**2
-                
+        failed = (momenta, 0, 0.) if return_chi else (momenta, 0)
+        if sum(new_mass) > new_sqrts:
+            return failed
+        # Equation 4.3 of the RAMBO paper, f(chi) = 0, solved by Newton's method
+        # from chi = 1 to |f| <= 1e-7 in at most 1000 steps: the iteration of
+        # misc.newtonmethod, with the same arithmetic (hence the same chi, bit
+        # for bit), but f evaluated once per step instead of twice and
+        # E^2 - m^2 once per particle instead of in every evaluation. MadSpin
+        # reshuffles a decay per accept/reject trial. Failing to converge, a
+        # vanishing derivative or an overflow is a failed reshuffling, as it
+        # was around misc.newtonmethod.
+        avail = [p.E**2 - m for p, m in zip(momenta, oldm)]
+        pairs = list(zip(newm, avail))
+        chi = 1.0
+        try:
+            f = new_sqrts - sum(math.sqrt(max(0, M + chi**2*a)) for M, a in pairs)
+            nb_iter = 0
+            while abs(f) > 1e-7:
+                nb_iter += 1
+                # f'(chi)
+                df = -1* sum(chi*a/math.sqrt(max(0, a*chi**2+M)) for M, a in pairs)
+                chi = chi - f/df
+                if nb_iter == 1000:
+                    return failed
+                f = new_sqrts - sum(math.sqrt(max(0, M + chi**2*a)) for M, a in pairs)
+        except ArithmeticError:
+            return failed
+
+        # create the new set of momenta # eq. (4.2)
+        new_momenta = [FourMomentum(math.sqrt(newm[i]+chi**2*avail[i]),
+                                    chi*p.px, chi*p.py, chi*p.pz)
+                       for i, p in enumerate(momenta)]
+
         # compute the jacobian factor (eq. 4.9)
         jac = chi**(3*len(momenta)-3)
         jac *= reduce(operator.mul,[p.E/k.E for p,k in zip(momenta, new_momenta)],1)
         jac *= sum(p.norm_sq/p.E for p in momenta)
         jac /= sum(k.norm_sq/k.E for k in new_momenta)
-        
-        # boost back the events in the lab-frame
-        for i,m in enumerate(new_momenta):
-            new_momenta[i] = m.apply_lorentzmap(back_lor) 
 
-        new_tot2 = sum(new_momenta, FourMomentum())
+        # boost back the events in the lab-frame
+        if not at_rest:
+            for i,m in enumerate(new_momenta):
+                new_momenta[i] = m.apply_lorentzmap(back_lor)
+
+        if return_chi:
+            return new_momenta, jac, chi
         return new_momenta, jac
         
         
@@ -3374,12 +4241,30 @@ class Event(list):
                 copy.reshuffle_info = orig.reshuffle_info
         return probe.reshuffle_production(_allow_retry=False)
 
-    def reshuffle_production(self, _allow_retry=True):
+    def reshuffle_production(self, _allow_retry=True, min_recoil=0.,
+                             recoil_massless=None):
         """ particle that need new mass have the "new_mass" attribute
 
         _allow_retry: on a kinematically impossible mass set, resample the
         masses and try again (the historical behaviour). production_jacobian
         turns it off so the failure is reported to a caller that owns the retry.
+
+        min_recoil: refuse a mass set whose RAMBO scale factor chi -- the
+        factor by which every production three-momentum shrinks in the
+        partonic rest frame -- falls below it. Returns 0 and leaves the event
+        untouched, whatever _allow_retry says: this is a cut on the mass set,
+        which the caller turns into a zero weight, not an infeasible set to
+        be redrawn in place. A mass set redrawn after an infeasible one is
+        held to the same floor.
+
+        It applies only when a massless particle recoils: one of the
+        particles RAMBO rescales -- the top-level final state, see
+        split_event_by_onshell_propagator -- carries no virtuality of its own
+        and is massless by recoil_massless(particle) (default: its LHE mass is
+        zero). A resonance drawn up to sqrt(shat) then pushes it soft and the
+        weight grows like 1/chi. The decay products of a resonance already
+        decayed in the event are moved rigidly with it, never go soft, and do
+        not count.
         """
 
         # create a nice data structure for the reshuffling
@@ -3387,6 +4272,11 @@ class Event(list):
 
         #filter outsubdecay
         production = [p for p in subdiags if not isinstance(p, list)]
+        if min_recoil:
+            massless = recoil_massless or (lambda p: abs(p.mass) < 1e-6)
+            if not any(massless(p) for p in production
+                       if p.status != -1 and not hasattr(p, 'new_mass')):
+                min_recoil = 0.
 
         old_momenta = [FourMomentum(p) for p in production if p.status!=-1]
         new_masses = [getattr(p, 'new_mass', p.mass) for p in production if p.status!=-1]
@@ -3415,7 +4305,10 @@ class Event(list):
 
         if sum(new_masses,0) <=  sqrts:
             # apply the RAMBO algo
-            new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)
+            new_mom, jac, chi = self.mass_shuffle(old_momenta, sqrts,
+                                                  new_masses, return_chi=True)
+            if min_recoil and jac not in [0, -1] and chi < min_recoil:
+                return 0
         else:
             jac = -1
         #if __debug__:
@@ -3434,7 +4327,9 @@ class Event(list):
             Event.nb_reshuffle_issue +=1
             if jac != -1:
                 misc.sprint('jac was 0 -> retry', Event.nb_reshuffle_issue)
-            return self.reshuffle_production(_allow_retry=_allow_retry)
+            return self.reshuffle_production(_allow_retry=_allow_retry,
+                                             min_recoil=min_recoil,
+                                             recoil_massless=recoil_massless)
 
         
         #modify the momenta of the particles:
@@ -3576,7 +4471,7 @@ class Event(list):
         particle correspond to new_mom"""
 
         
-        # some usefull information
+        # some useful information
         decay_particle = subdiag[0]
         orig_mom = FourMomentum(decay_particle) 
         #nb_part = len(self) #original number of particle
@@ -3605,23 +4500,29 @@ class Event(list):
         return jac
         
     
-    def get_helicity(self, get_order=None, allow_reversed=True,
+    def get_helicity(self, get_order=None, allow_reversed=True, merged_map=None,
                      decay_chain=False):
         """return a list with the helicities in the order asked for
 
         The helicity at slot i has to belong to the particle whose momentum
         get_momenta puts at slot i -- the reweighting looks the pair up
-        together -- so both take their slots from the same get_mapping (and
-        have to be asked with the same ``decay_chain``).
+        together -- so both go through the same get_mapping. This used to be a
+        separate copy of that walk, and the copies drifted: its charge-reversed
+        retry dropped merged_map, so an event needing both could not be
+        mapped at all. Crossing stays off, as it always was here: a crossed
+        leg's helicity would need its sign flipped as well, and nothing asks
+        for that. Ask it with the same decay_chain as get_momenta.
         """
-        
+
         if get_order is None:
             init = [part.pid for part in self if part.status == -1]
-            final = [part.pid for part in self if part.status == 1] 
+            final = [part.pid for part in self if part.status == 1]
             get_order = [init, final]
 
         event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
-                                              decay_chain)
+                                              allow_crossing=False,
+                                              merged_map=merged_map,
+                                              decay_chain=decay_chain)
         out = [9] * (len(get_order[0]) + len(get_order[1]))
         curr_pos = -1
         for part in self:
@@ -3832,75 +4733,119 @@ class Event(list):
                 info_density += str(self.density[i]) + ' '
             density_to_write = "<density> " + info_density + "</density>"
         
-        out = out % {'event_flag': event_flag,
-                     'scale': scale_str, 
-                      'particles': '\n'.join([str(p) for p in self]),
-                      'tag': tag_str,
-                      'comments': self.comment,
-                      'reweight': reweight_str,
-                      'density': density_to_write}
-        
-        return re.sub('[\n]+', '\n', out)
+        # Every run of newlines collapses to one, as one re.sub over the whole
+        # event used to do. Only the free-text parts can hold such a run (a part
+        # left empty is skipped), so the regular expression runs over those and
+        # not over the particles and the weights, which are most of the text.
+        parts = ['<event%s>' % event_flag, scale_str]
+        parts += [str(p) for p in self]
+        for text in (self.comment, tag_str, reweight_str, density_to_write):
+            text = _collapse_newlines(text).strip('\n')
+            if text:
+                parts.append(text)
+        parts.append('</event>\n')
+        return '\n'.join(parts)
+    
 
-    def get_mapping(self, get_order, allow_reversed=True, decay_chain=False):
-        """Which slot of the order asked for each particle of the event takes.
+    def get_mapping(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None,
+                    decay_chain=False):
+        """return the mapping between the order asked for and the order in the event
+            return two dictionary: one from the order of the event to the order asked for
+            and one from the order asked for to the order of the event.
 
-        Returns two dictionaries: from the position among the event's external
-        (|status| == 1) particles to the slot in get_order (initial state
-        first), and back. The k-th particle of a pdg in the event takes the
-        k-th slot of that pdg. With allow_reversed, an event that only matches
-        the charge-conjugated order is mapped onto that one (self-conjugate
-        particles keep their id).
+            if the order of the pdg of the event is (1,2),(3,4,5)
+            and the get_order is (2,1),(5,3,4)
+            the mapping will be:
+            {1:2, 2:1, 3:5, 4:3, 5:4}, {2:1, 1:2, 5:3, 4:5, 3:4}  
 
-        get_momenta, get_helicity and get_all_momenta all take their slots from
-        here, so they cannot disagree on which particle sits where. They used
-        to carry a copy of this walk each, and the copies had drifted:
-        get_momenta's charge-reversed retry went through get_momenta_str and
-        handed back a Fortran-formatted *string* instead of the momenta, and
-        get_all_momenta could not map a charge-reversed order at all.
+            Note that get_order received merged pid value not the actual pid (like in the event)
+            In that case the merged map allow to pass from the actual pid to the merged one.
 
-        With decay_chain, identical final-state particles coming from different
-        resonances are dealt their slots so that the decay products of every
-        resonance of the event sit on consecutive slots (see
-        _follow_decay_chains) instead of in the event's line order.
+            With allow_reversed, an event that only matches the
+            charge-conjugated order is mapped onto that one (self-conjugate
+            particles keep their id).
+
+            With decay_chain, identical final-state particles coming from
+            different resonances are dealt their slots so that the decay
+            products of every resonance of the event sit on consecutive slots
+            (see _follow_decay_chains) instead of in the event's line order.
         """
 
-        #avoid to modify the input
-        order = [list(get_order[0]), list(get_order[1])]
+        if not merged_map:
+            map = lambda x: x
+        else:
+            def map(x):
+                try:
+                    return merged_map[x]
+                except:
+                    try:
+                        return - merged_map[-x]
+                    except:
+                        return x
+
+
         out1 = {}
-        out2 = {}
+        out2 = {}        
+        #avoid to modify the input
+        order = [list(get_order[0]), list(get_order[1])] 
         curr_pos = -1
-        for part in self:
+        for i, part in enumerate(self):
             if abs(part.status) != 1: #intermediate
                 continue
             curr_pos += 1
-            block = order[0] if part.status == -1 else order[1]
+            flip = False # check if the crossing is used
+            # curr_block is the part of get_order where the current particle is expected to be
+            # other_block is the other part of get_order
+            if part.status == -1:
+                curr_block, other_block = order[0],order[1]
+            else:
+                curr_block, other_block = order[1],order[0]
+            # check if the particle is in the initinal/final state (after moving to the merged pid)
+            # should be the case but if allow_reverse is True or allow_crossing is True
             try:
-                ind = block.index(part.pid)
+                ind = curr_block.index(map(part.pid))
             except ValueError as error:
-                if not allow_reversed:
+                # check first for crossing and therefore if the particle is in the "wrong" block:
+                if allow_crossing and -part.pid in other_block:
+                    ind = other_block.index(-map(part.pid))
+                    flip = True
+                elif not allow_reversed:
                     raise error
-                # charge conjugation leaves a self-conjugate particle (g, a,
-                # z, h, ...) as it is. Without the model, an id the event
-                # carries while it never carries its negative is taken as one;
-                # negating it could only fail (no slot of the event fits it).
-                pids = set(p.pid for p in self if abs(p.status) == 1)
-                conj = lambda i: i if (i in pids and -i not in pids) else -i
-                order = [[conj(i) for i in get_order[0]],
-                         [conj(i) for i in get_order[1]]]
-                try:
-                    return self.get_mapping(order, False, decay_chain)
-                except ValueError:
-                    raise error
-            position = ind if part.status == -1 else len(order[0]) + ind
-            # empty the slot, for the next identical particle
-            block[ind] = 0
-            out1[curr_pos] = position
+                else:
+                    # try the allow_reversed option and change all particle/anti-particle.
+                    # Charge conjugation leaves a self-conjugate particle (g, a,
+                    # z, h, ...) as it is. Without the model, an id the event
+                    # carries while it never carries its negative is taken as
+                    # one; negating it could only fail (no slot of the event
+                    # fits it).
+                    pids = set(map(p.pid) for p in self if abs(p.status) == 1)
+                    conj = lambda i: i if (i in pids and -i not in pids) else -i
+                    order = [[conj(i) for i in get_order[0]],
+                             [conj(i) for i in get_order[1]]]
+                    try:
+                        return self.get_mapping(order, False, allow_crossing,
+                                                merged_map, decay_chain)
+                    except ValueError:
+                        raise error
+
+            # Now ind should be defined and correspond to the position in the curr_block
+            # compute now the associate position in the original order
+            # first case is the particle was found in the initial state
+            if (part.status == -1 and not flip) or (part.status == 1 and flip):
+                position =  ind
+            else:
+                position = len(order[0]) + ind
+            # empty the position for handling case with identical pdg
+            curr_block[ind] = 0
+            # store the mapping
+            out1[curr_pos] = position   
             out2[position] = curr_pos
         if decay_chain:
             out1 = self._follow_decay_chains(out1)
             out2 = dict((v, k) for k, v in out1.items())
         return out1, out2
+
+           
 
     def _follow_decay_chains(self, event_pos2order, max_trials=5040):
         """Re-deal the slots of identical final-state particles that come from
@@ -3990,22 +4935,68 @@ class Event(list):
                 return mapping
         return event_pos2order
 
-    def get_momenta(self, get_order, allow_reversed=True, decay_chain=False):
+    def get_momenta(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None,
+                    decay_chain=False):
         """return the momenta vector in the order asked for"""
-
-        event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
-                                              decay_chain)
-        out = [''] * (len(get_order[0]) + len(get_order[1]))
+        
+        event_pos2order, orderevent_2pos = self.get_mapping(get_order, allow_reversed, allow_crossing, merged_map,
+                                                            decay_chain)
         curr_pos = -1
-        for part in self:
-            if abs(part.status) != 1: #intermediate
+        out = [''] *(len(get_order[0])+len(get_order[1]))
+        for i, part in enumerate(self):
+            if abs(part.status) != 1:
                 continue
             curr_pos += 1
-            out[event_pos2order[curr_pos]] = (part.E, part.px, part.py, part.pz)
+            position = event_pos2order[curr_pos]
+            # check for crossing
+            if part.status == -1 and position >= len(get_order[0]):
+                flip = True
+            elif part.status == 1 and position < len(get_order[0]):
+                flip = True
+            else:   
+                flip = False
+            if flip:
+               out[position] = (-part.E, -part.px, -part.py, -part.pz) 
+            else:   
+                out[position] = (part.E, part.px, part.py, part.pz)
+
+        # check that all position are filled 
+        if __debug__:   
+            for i in range(len(get_order[0])+len(get_order[1])):
+                if not out[i]:
+                    raise Exception("Missing particle %s in the event" % map(orderevent_2pos[i]))   
+        return out
+    
+
+    def get_pdg(self, momenta):
+        """return the pdg vector in the order related to the momenta"""
+    
+        out = [''] *len(momenta)
+        data = {}
+        for i, part in enumerate(self):
+            if abs(part.status) != 1:
+                continue
+            data[(part.E, part.px, part.py, part.pz)] = part.pid
+
+        for i,p in enumerate(momenta):
+            if (p[0], p[1], p[2], p[3]) in data:
+                out[i] = data[(p[0], p[1], p[2], p[3])]
+            elif (-p[0], -p[1], -p[2], -p[3]) in data:
+                out[i] = -data[(-p[0], -p[1], -p[2], -p[3])]
+            else:
+                misc.sprint(data)
+                misc.sprint((p[0], p[1], p[2], p[3]))
+                raise Exception("Missing particle %s in the event" % p)
+
+        #check that all position are filled
+        if __debug__:
+            for i in range(len(momenta)):
+                if  '' == out[i]:
+                    raise Exception("Missing particle %s in %s" %(i, out))
+
         return out
 
-
-    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,permutate_two_decay=False,
+    def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None, permutate_two_decay=False,
                         decay_chain=False):
         """ same as get_momenta but return all valid permutation of the final state 
               where identical particle does NOT have the same parent
@@ -4014,23 +5005,38 @@ class Event(list):
               decay_chain: see get_mapping
         """  
 
-        p = self.get_momenta(get_order, allow_reversed, decay_chain)
+        p = self.get_momenta(get_order, allow_reversed, merged_map=merged_map,
+                             decay_chain=decay_chain)
+
+        # When the ME legs use merged-particle IDs, event PDGs need the same
+        # remap before being looked up in get_order[1]; otherwise
+        # final.index(raw_pdg) raises ValueError.
+        if merged_map:
+            map_pdg = lambda x: merged_pdg(x, merged_map)
+        else:
+            map_pdg = lambda x: x
 
         nbin = len(get_order[0])
         data = {} # dict will be {pdg: {(m1,m2): [position1, position2]}} position are position in p
-        # each particle's slot in p is the one get_momenta put it in: take it
-        # from the same mapping (re-deriving it with final.index(pdg), as this
-        # did, failed on a charge-reversed order)
+        # Each particle's slot in p is the one get_momenta just put it in, so
+        # take it from the very mapping get_momenta used. Re-deriving it here
+        # with final.index(pdg), as this did, only agreed with get_momenta while
+        # no charge-reversed or crossed order was involved; with one it could
+        # not find the pdg at all.
         event_pos2order, _ = self.get_mapping(get_order, allow_reversed,
-                                              decay_chain)
+                                              merged_map=merged_map,
+                                              decay_chain=decay_chain)
         curr_pos = -1
         for part in self:
             if abs(part.status) != 1:
                 continue
             curr_pos += 1
-            if part.status != 1:
+            position = event_pos2order[curr_pos]
+            # only final-state slots are permuted; that includes nothing that
+            # was crossed into the initial state
+            if part.status != 1 or position < nbin:
                 continue
-            pdg = part.pid
+            pdg = map_pdg(part.pid)
             try:
                 m1 = part.mother1.event_id
             except AttributeError:
@@ -4040,8 +5046,7 @@ class Event(list):
             except AttributeError:
                 m2 = 0
             M = (m1,m2)
-            data.setdefault(pdg, {}).setdefault(M, []).append(
-                                                    event_pos2order[curr_pos])
+            data.setdefault(pdg, {}).setdefault(M, []).append(position)
 
         # for unnittest 
         if debug_output == 1:
@@ -4089,7 +5094,7 @@ class Event(list):
         The two list are consider equivalent if the  total content associated to an identifier
         is the same (up to ordering)
         so (3,4,5) and (4,3,5) are the same for mapping={0:"a",1:"a",2:"b"}
-        since a is assocated to 3,4 in both case (and b to 5 in each case
+        since a is associated to 3,4 in both case (and b to 5 in each case
         but (3,4,5) and (3,5,4) are not the same because b has 5 in one case and 4 in the second
 
         if permutate_two_decay is False, then two permutation are consider equivalent if they differ by a swap of particles having not
@@ -4208,10 +5213,10 @@ class Event(list):
         return math.sqrt(m2)
     
     
-    def get_momenta_str(self, get_order, allow_reversed=True):
+    def get_momenta_str(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None):
         """return the momenta str in the order asked for"""
         
-        out = self.get_momenta(get_order, allow_reversed)
+        out = self.get_momenta(get_order, allow_reversed, allow_crossing, merged_map)
         #format
         format = '%.12f'
         format_line = ' '.join([format]*4) + ' \n'
@@ -4528,7 +5533,7 @@ class FourMomentum(object):
     
     def boost_to_restframe(self, pboost):
         """apply the boost transformation such that pboost is at rest in the new frame.
-        First apply a rotation to allign the pboost to the z axis and then use
+        First apply a rotation to align the pboost to the z axis and then use
         zboost routine (see above)
         """
         
@@ -5103,9 +6108,9 @@ class NLO_PARTIALWEIGHT(object):
         def get_pdg_code(self):
             return self.pdgs
             
-        def get_tag_and_order(self):
+        def get_tag_and_order(self, merged_particle=None):
             """ return the tag and order for this basic event""" 
-            (initial, _), _ = self.event.get_tag_and_order()
+            (initial, _), _ = self.event.get_tag_and_order(merged_particle)
             order = self.get_pdg_code()
             
             
@@ -5113,30 +6118,80 @@ class NLO_PARTIALWEIGHT(object):
             initial.sort()
             out.sort()
             return (tuple(initial), tuple(out)), order
+
+        def get_mapping(self, get_order, allow_reversed=True, allow_crossing=True, merged_map=None,
+                        decay_chain=False):
+            """return (event_pos2order, orderevent_2pos); allow_crossing and
+            decay_chain are ignored for API compatibility (a BasicEvent carries
+            no resonance lines, no mothers)"""
+
+            _ = (allow_crossing, decay_chain)
+
+            if merged_map:
+                map_pdg = lambda x: merged_pdg(x, merged_map)
+            else:
+                map_pdg = lambda x: x
+
+            out1 = {}
+            out2 = {}
+            order = [list(get_order[0]), list(get_order[1])]
+            pdgs = self.get_pdg_code()
+            for pos, pdg in enumerate(pdgs):
+                pdg = map_pdg(pdg)
+                if pos < len(get_order[0]):
+                    try:
+                        ind = order[0].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = ind
+                    order[0][ind] = 0
+                else:
+                    try:
+                        ind = order[1].index(pdg)
+                    except ValueError as error:
+                        if not allow_reversed:
+                            raise error
+                        order = [[-i for i in get_order[0]], [-i for i in get_order[1]]]
+                        return self.get_mapping(order, False, allow_crossing, merged_map=merged_map)
+                    position = len(order[0]) + ind
+                    order[1][ind] = 0
+
+                out1[pos] = position
+                out2[position] = pos
+            return out1, out2
         
-        def get_momenta(self, get_order, allow_reversed=True, decay_chain=False):
+        def get_momenta(self, get_order, allow_reversed=True, allow_crossing=True,
+                        merged_map=None, decay_chain=False):
             """return the momenta vector in the order asked for
 
-            decay_chain is accepted for the reweighting, which asks Event and
-            BasicEvent alike, and ignored: a BasicEvent carries momenta and
-            pdgs only -- no resonance lines, no mothers -- so its line order is
-            all there is to go on."""
+            allow_crossing and decay_chain are accepted for the reweighting,
+            which asks Event and BasicEvent alike, and ignored: a BasicEvent
+            carries momenta and pdgs only -- no resonance lines, no mothers --
+            so its line order is all there is to go on."""
              
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
             out = [''] *(len(order[0])+len(order[1]))
             pdgs = self.get_pdg_code()
+            if merged_map:
+                map_pdg = lambda x: merged_pdg(x, merged_map)
+            else:
+                map_pdg = lambda x: x
             for pos, part in enumerate(self):
+                pdg = map_pdg(pdgs[pos])
                 if pos < len(get_order[0]): #initial
                     try:
-                        ind = order[0].index(pdgs[pos])
+                        ind = order[0].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error   
                             
@@ -5145,14 +6200,14 @@ class NLO_PARTIALWEIGHT(object):
                     order[0][ind] = 0             
                 else: #final   
                     try:
-                        ind = order[1].index(pdgs[pos])
+                        ind = order[1].index(pdg)
                     except ValueError as error:
                         if not allow_reversed:
                             raise error
                         else:
                             order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
                             try:
-                                return self.get_momenta(order, False)
+                                return self.get_momenta(order, False, merged_map=merged_map)
                             except ValueError:
                                 raise error     
                     position = len(order[0]) + ind
@@ -5162,7 +6217,7 @@ class NLO_PARTIALWEIGHT(object):
                 
             return out
 
-        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None,
+        def get_all_momenta(self, get_order, allow_reversed=True, debug_output=None, merged_map=None,
                             permutate_two_decay=False, decay_chain=False):
             """ same as get_momenta but return all valid permutation of the final state 
                     where identical particle does NOT have the same parent
@@ -5171,11 +6226,15 @@ class NLO_PARTIALWEIGHT(object):
             """  
 
 
-            return [self.get_momenta(get_order, allow_reversed)]
+            return [self.get_momenta(get_order, allow_reversed, merged_map=merged_map)]
             
             
-        def get_helicity(self, get_order=None, allow_reversed=True,
+        def get_helicity(self, get_order=None, allow_reversed=True, merged_map=None,
                          decay_chain=False):
+            """Return default helicities; keep signature compatible with Event.get_helicity."""
+            _ = (allow_reversed, merged_map, decay_chain)
+            if get_order:
+                return [9] * (len(get_order[0]) + len(get_order[1]))
             return [9] * len(self)
         
         @property
@@ -5226,7 +6285,7 @@ class NLO_PARTIALWEIGHT(object):
         self.nb_event = 0
         self.nb_wgts = 0
         self.threshold = threshold
-        self.modified = False #set on True if we decide to change internal infor
+        self.modified = False #set on True if we decide to change internal info
                               # that need to be written in the event file.
                               #need to be set manually when this is the case
         if isinstance(input, str):
@@ -5499,7 +6558,7 @@ if '__main__' == __name__:
         
         n, bins, patches = ax.hist(data, nbins, histtype='step', label='original')
         ax_c = ax.twinx()
-        ax_c.set_ylabel('MadGraph5_aMC@NLO')
+        ax_c.set_ylabel('MadGraph7')
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])
@@ -5554,7 +6613,7 @@ if '__main__' == __name__:
         ax.legend()
         # add on the right program tag
         ax_c = ax.twinx()
-        ax_c.set_ylabel('MadGraph5_aMC@NLO')
+        ax_c.set_ylabel('MadGraph7')
         ax_c.yaxis.set_label_coords(1.01, 0.25)
         ax_c.set_yticks(ax.get_yticks())
         ax_c.set_yticklabels([])

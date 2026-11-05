@@ -1,4 +1,4 @@
-C this is a f2py wrapper for reweight mode at tree level
+      %(python_information)s
 
       SUBROUTINE %(f2py_prefix)sSMATRIXHEL(PDGS, PROCID, NPDG, P, ALPHAS, SCALE2,
      $  NHEL, ANS)
@@ -45,36 +45,82 @@ CF2PY integer, intent(hide), depend(PDGS) :: NPDG = len(PDGS)
       DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2)
       call %(f2py_prefix)sf77_density(PDGS, NPDG, PROCID, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, ALPHAS, SCALE2, INTER)
 
-      return 
+      return
       end
 
-      SUBROUTINE %(f2py_prefix)sPY_GET_ALL_INTER(PDGS, PROCID, NPDG, P, POS,N_CHANGING, ALLOW_HEL, N_COMB, INTER)
-C     P momenta
-C     NHEL base of helicity that are not changing
-C     POS(N_CHNGING): position of the changing helicity
-C     n_changing: number of changing helicity
-C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
-C     consider (all jamp computed)
-C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
-C     symmetric one)
+      SUBROUTINE %(f2py_prefix)sPY_GET_DENSITY_BATCH(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS, SCALE2, NBATCH, NEXT, INTER, N_CHANGING, N_COMB, NPDG)
+C     PY_GET_DENSITY for NBATCH phase-space points in one call.
+C
+C     The density itself is cheap; crossing into fortran is not. MadSpin's
+C     max-weight scan evaluates hundreds of decay configurations against the
+C     same production event, so paying the f2py entry once per point dominated
+C     the cost. Everything is per point except POS/ALLOW_HEL, which describe
+C     the helicity structure and are shared: PDGS is per point because a decay
+C     pool mixes flavours, and ALPHAS/SCALE2 because nothing guarantees the
+C     points share a scale.
+      IMPLICIT NONE
+CF2PY double precision, intent(in), dimension(0:3,next,nbatch) :: p
+CF2PY integer, intent(in), dimension(npdg,nbatch) :: pdgs
+CF2PY integer, intent(in) :: procid
+CF2PY integer, INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY integer, INTENT(IN) :: POS(N_CHANGING)
+CF2PY double precision INTENT(IN), dimension(nbatch) :: ALPHAS
+CF2PY double precision INTENT(IN), dimension(nbatch) :: SCALE2
+CF2PY integer, intent(in) :: NBATCH
+CF2PY integer, intent(in) :: NEXT
+CF2PY double complex INTENT(OUT), dimension(N_COMB*(N_COMB+1)/2,NBATCH) :: INTER
+CF2PY integer, intent(hide), depend(allow_hel, pos) :: N_COMB = len(ALLOW_HEL)/len(pos)
+CF2PY integer, intent(hide), depend(pos) :: N_CHANGING = len(pos)
+CF2PY integer, intent(hide), depend(PDGS) :: NPDG = len(PDGS)
 
+      INTEGER NBATCH, NEXT, NPDG, PROCID, N_CHANGING, N_COMB
+      INTEGER PDGS(NPDG, NBATCH)
+      INTEGER POS(N_CHANGING)
+      DOUBLE PRECISION ALPHAS(NBATCH), SCALE2(NBATCH)
+      DOUBLE PRECISION P(0:3, NEXT, NBATCH)
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2, NBATCH)
+      INTEGER IBATCH
+
+      DO IBATCH = 1, NBATCH
+        call %(f2py_prefix)sf77_density(PDGS(1,IBATCH), NPDG, PROCID,
+     $   P(0,1,IBATCH), POS, N_CHANGING, ALLOW_HEL, N_COMB,
+     $   ALPHAS(IBATCH), SCALE2(IBATCH), INTER(1,IBATCH))
+      ENDDO
+
+      return
+      end
+
+      SUBROUTINE %(f2py_prefix)sPY_GET_ALL_INTER(PDGS, PROCID, P, NHEL, POS, ALLOW_HEL, INTER, N_CHANGING, N_COMB, NPDG)
+C     PY_GET_DENSITY for ONE helicity of the legs not in POS: the
+C     interference terms between the N_COMB helicity combinations
+C     ALLOW_HEL of the legs POS, with every other leg at its NHEL
+C     helicity (the entries of NHEL at POS are ignored). Summed over
+C     those other helicities it gives PY_GET_DENSITY (unpolarised
+C     beams).
+C     No ALPHAS here: the couplings are the ones last set (INITIALISE,
+C     SMATRIXHEL or PY_GET_DENSITY).
+      IMPLICIT NONE
 CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
-CF2PY integer, intent(in):: procid
-CF2PY integer, intent(in), dimension(*):: pos
-CF2PY integer, intent(in) :: npdg
-CF2PY integer, intent(in), optional, depend(pos) :: n_changing=len(pos)
-CF2PY INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
-CF2PY INTENT(IN) :: N_COMB
-      INTEGER PDGS(*)
-      INTEGER NPDG, PROCID, N_CHANGING, N_COMB
-      INTEGER POS(*)
-      INTEGER ALLOW_HEL(*)
-      DOUBLE COMPLEX INTER(*)
-CF2PY INTENT(OUT) :: INTER(N_COMB*(N_COMB+1)/2)
-      call f77_get_all_inter(PDGS, PROCID, NPDG, P, POS, N_CHANGING,  ALLOW_HEL, N_COMB, INTER)
+CF2PY integer, intent(in) :: procid
+CF2PY integer, intent(in), dimension(npdg) :: nhel
+CF2PY integer, INTENT(IN) :: ALLOW_HEL(N_CHANGING*N_COMB)
+CF2PY integer, INTENT(IN) :: POS(N_CHANGING)
+CF2PY double complex INTENT(OUT), dimension(N_COMB*(N_COMB+1)/2) :: INTER
+CF2PY integer, intent(hide), depend(allow_hel, pos) :: N_COMB = len(ALLOW_HEL)/len(pos)
+CF2PY integer, intent(hide), depend(pos) :: N_CHANGING = len(pos)
+CF2PY integer, intent(hide), depend(PDGS) :: NPDG = len(PDGS)
 
-      return 
+      INTEGER PDGS(NPDG), NHEL(NPDG)
+      INTEGER PROCID, N_CHANGING, N_COMB, NPDG
+      INTEGER POS(N_CHANGING)
+      DOUBLE PRECISION P(0:3,NPDG)
+      INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
+      DOUBLE COMPLEX INTER(N_COMB*(N_COMB+1)/2)
+      call %(f2py_prefix)sf77_get_all_inter(PDGS, PROCID, NPDG, P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+
+      return
       end
 
 
@@ -84,7 +130,7 @@ C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
       CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
-      CALL SETPARA(PATH)  !first call to setup the paramaters
+      CALL SETPARA(PATH)  !first call to set up the parameters
       RETURN
       END
 
@@ -256,10 +302,10 @@ C     pref = (E, 0, 0, p_k)
       IF (ABS(PREF(1)/PREF(0)) < EPSILON .AND. ABS(PREF(2)/PREF(0)) < EPSILON) THEN
 c     If the particle is immobile then we can't do the rotation
         IF (ABS(PREF(3)/PREF(0)) < EPSILON) THEN
-          WRITE(*,*) "The chosen particle is immobile. We cant use it",
+          WRITE(*,*) "The chosen particle is immobile. Cannot use it",
      &    " as reference for the helicity basis"
           STOP "Error when passing to helicity basis"
-c If the particle has no tranverse momentum (we are already in the correct frame)
+c If the particle has no transverse momentum (we are already in the correct frame)
         ELSE IF (PREF(3) < 0) THEN
           PHI = 0D0
           THETA = 4*ATAN(1D0)
@@ -307,13 +353,13 @@ C     pref = (E, 0, 0, p_k)
       IF (ABS(PREF(1)/PREF(0)) < EPSILON .AND. ABS(PREF(2)/PREF(0)) < EPSILON) THEN
 c     If the particle is immobile then we can't do the rotation
         IF (ABS(PREF(3)/PREF(0)) < EPSILON) THEN
-          WRITE(*,*) "The chosen particle is immobile. We cant use it",
+          WRITE(*,*) "The chosen particle is immobile. Cannot use it",
      &    " as reference for the helicity basis, using phi = theta = 0"
 c          STOP "Error when passing to helicity basis"
 c   We chose to put the angles to 0 to not stop the code
           PHI = 0D0
           THETA = 0D0
-c If the particle has no tranverse momentum (we are already in the correct frame)
+c If the particle has no transverse momentum (we are already in the correct frame)
         ELSE IF (PREF(3) < 0) THEN
           PHI = 0D0
           THETA = 4*ATAN(1D0)

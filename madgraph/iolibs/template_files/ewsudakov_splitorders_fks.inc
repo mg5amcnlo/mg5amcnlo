@@ -113,6 +113,7 @@ C FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
 %(process_lines)s
 C  
+      USE ALOHA_OBJECT
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -145,9 +146,12 @@ C
       INTEGER IC(NEXTERNAL-1),NMO
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
+      INTEGER FLAVOR(NEXTERNAL-1)
+      DATA FLAVOR /NMO*1/
       INTEGER DENOM
       INTEGER CF(NCOLOR2,NCOLOR1)
-      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO), W(%(wavefunctionsize)d,NWAVEFUNCS)
+      COMPLEX*16 ZTEMP, AMP1(NGRAPHS1), AMP2(NGRAPHS2), JAMP1(NCOLOR1,NAMPSO), JAMP2(NCOLOR2,NAMPSO)
+      type(aloha) W(NWAVEFUNCS)
       COMPLEX*16 TMP_JAMP1(%(nb_temp_jamp1)i)
       COMPLEX*16 TMP_JAMP2(%(nb_temp_jamp2)i)
       real*8 p_save(0:3, nexternal-1), p_resh(0:3, nexternal-1)
@@ -155,7 +159,7 @@ C
 C CCC THIS IS PROBABLY UNNECESSARY, KEEP COMMENTED FOR THE TIME BEING
 C  Imag power takes into account the I factor when a longitudinal Z
 C   boson is replaced by its goldstone (Chi). 
-C   It is the difference of the number of Chi's in the first and second amplitude which are interferred together
+C   It is the difference of the number of Chi's in the first and second amplitude which are interfered together
 C       integer imag_power
 C       data imag_power / %(imag_power)d /
 

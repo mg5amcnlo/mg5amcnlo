@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -493,91 +493,6 @@ class HelasModelTest(HelasModelTestSetup):
                           mymodel.add_amplitude,
                           (1, 2), "not_a_function")
 
-    def test_set_wavefunctions(self):
-        """Test wavefunction dictionary in HelasModel"""
-
-        wavefunctions = {}
-        # IXXXXXX.Key: (spin, state)
-        key1 = ((-2, 0, tuple(),False,None), ('',))
-        wavefunctions[key1] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-        # OXXXXXX.Key: (spin, state)
-        key2 = ((2, 0, tuple(),False,None), ('',))
-        wavefunctions[key2] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-
-        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
-
-        wf = helas_objects.HelasWavefunction()
-        wf.set('particle', -2, self.mybasemodel)
-        wf.set('state', 'incoming')
-        wf.set('interaction_id', 0)
-        wf.set('number_external', 1)
-        wf.set('lorentz', [''])
-        wf.set('number', 40)
-
-        self.assertEqual(wf.get_call_key(), key1)
-
-        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        wf.set('fermionflow', -1)
-
-        self.assertEqual(wf.get_call_key(), key2)
-
-        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        del wavefunctions[key1]
-        del wavefunctions[key2]
-        
-        # IXXXXXX.Key: (spin, state)
-        key1 = ((-2, 0, tuple(),True, None), ('',))
-        wavefunctions[key1] = \
-                          lambda wf: 'CALL IXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), -(-1) ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-        # OXXXXXX.Key: (spin, state)
-        key2 = ((2, 0, tuple(), True, None ), ('',))
-        wavefunctions[key2] = \
-                          lambda wf: 'CALL OXXXXX(P(0,%d),%s,NHEL(%d),%d*IC(%d),W(1,%d))' % \
-                          (wf.get('number_external'), wf.get('mass'),
-                           wf.get('number_external'), 1 ** wf.get_with_flow('is_part'),
-                           wf.get('number_external'), wf.get('number'))
-
-        self.assertTrue(self.mymodel.set('wavefunctions', wavefunctions))
-
-        wf = helas_objects.HelasWavefunction()
-        wf.set('particle', -2, self.mybasemodel)
-        wf.set('state', 'incoming')
-        wf.set('interaction_id', 0)
-        wf.set('number_external', 1)
-        wf.set('lorentz', [''])
-        wf.set('number', 40)
-        wf.set('offshell', True)
-
-        self.assertEqual(wf.get_call_key(), key1)
-
-        # not real goal since offshell not implemented in the lambda above
-        goal = 'CALL IXXXXX(P(0,1),mu,NHEL(1),-1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        wf.set('fermionflow', -1)
-
-        self.assertEqual(wf.get_call_key(), key2)
-
-        goal = 'CALL OXXXXX(P(0,1),mu,NHEL(1),1*IC(1),W(1,40))'
-        self.assertEqual(self.mymodel.get_wavefunction_call(wf), goal)
-
-        del wavefunctions[key1]
-        del wavefunctions[key2]
 
 #===============================================================================
 # FortranHelasCallWriterTest
@@ -589,20 +504,20 @@ class FortranHelasCallWriterTest(HelasModelTestSetup):
         """Test automatic generation of wavefunction and amplitude calls"""
 
         goal = [ \
-            'CALL IXXXXX(P(0,4),me,NHEL(4),+1*IC(4),W(1,4))',
-            'CALL OXXXXX(P(0,5),me,NHEL(5),-1*IC(5),W(1,5))',
-            'CALL VXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
-            'CALL FVOXXX(W(1,5),W(1,3),MGVX12,me,zero,W(1,4))',
-            'CALL FVIXXX(W(1,4),W(1,3),MGVX12,me,zero,W(1,5))',
-            'CALL JIOXXX(W(1,4),W(1,5),MGVX12,zero,zero,W(1,3))',
-            'CALL IOVXXX(W(1,4),W(1,5),W(1,3),MGVX12,AMP(1))',
-            'CALL VXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))',
-            'CALL VXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))',
-            'CALL TXXXXX(P(0,3),zero,NHEL(3),-1*IC(3),W(1,3))',
-            'CALL JVTAXX(W(1,5),W(1,3),MGVX2,zero,zero,W(1,4))',
-            'CALL JVTAXX(W(1,4),W(1,3),MGVX2,zero,zero,W(1,5))',
-            'CALL UVVAXX(W(1,4),W(1,5),MGVX2,zero,zero,zero,W(1,3))',
-            'CALL VVTAXX(W(1,4),W(1,5),W(1,3),MGVX2,zero,AMP(2))',
+            'CALL IXXXXX(P(0,4),me,NHEL(4),+1, FLAVOR(4),W(4))',
+            'CALL OXXXXX(P(0,5),me,NHEL(5),-1, FLAVOR(5),W(5))',
+            'CALL VXXXXX(P(0,3),zero,NHEL(3),-1,W(3))',
+            'CALL FVOXXX(W(5),W(3),MGVX12,me,zero,W(4))',
+            'CALL FVIXXX(W(4),W(3),MGVX12,me,zero,W(5))',
+            'CALL JIOXXX(W(4),W(5),MGVX12,zero,zero,W(3))',
+            'CALL IOVXXX(W(4),W(5),W(3),MGVX12,AMP(1))',
+            'CALL VXXXXX(P(0,4),zero,NHEL(4),-1,W(4))',
+            'CALL VXXXXX(P(0,5),zero,NHEL(5),-1,W(5))',
+            'CALL TXXXXX(P(0,3),zero,NHEL(3),-1,W(3))',
+            'CALL JVTAXX(W(5),W(3),MGVX2,zero,zero,W(4))',
+            'CALL JVTAXX(W(4),W(3),MGVX2,zero,zero,W(5))',
+            'CALL UVVAXX(W(4),W(5),MGVX2,zero,zero,W(3))',
+            'CALL VVTAXX(W(4),W(5),W(3),MGVX2,zero,AMP(2))',
             'CALL VXXXXX(P(0,4),zero,NHEL(4),-1*IC(4),W(1,4))',
             'CALL VXXXXX(P(0,5),zero,NHEL(5),-1*IC(5),W(1,5))',
             'CALL SXXXXX(P(0,3),-1*IC(3),W(1,3))',
@@ -932,21 +847,95 @@ class UFOHELASCallWriterTest(unittest.TestCase):
             self.mybasemodel)
         
         result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
-        solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1*IC(1),W(1,1))',
-                   'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1*IC(2),W(1,2))',
-                   'CALL VXXXXX(P(0,3),zero,NHEL(3),+1*IC(3),W(1,3))',
-                   'CALL VXXXXX(P(0,4),wmas,NHEL(4),+1*IC(4),W(1,4))',
-                   'CALL VXXXXX(P(0,5),zmas,NHEL(5),+1*IC(5),W(1,5))',
-                   'CALL VVVV1_4(W(1,1),W(1,3),W(1,2),GC_51,wmas,wwid,W(1,6))',
+        solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1,W(1))',
+                   'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1,W(2))',
+                   'CALL VXXXXX(P(0,3),zero,NHEL(3),+1,W(3))',
+                   'CALL VXXXXX(P(0,4),wmas,NHEL(4),+1,W(4))',
+                   'CALL VXXXXX(P(0,5),zmas,NHEL(5),+1,W(5))',
+                   'CALL VVVV1_4(W(1),W(3),W(2),GC_51,wmas,wwid,W(6))',
                    '# Amplitude(s) for diagram number 1',
-                   'CALL VVV1_0(W(1,6),W(1,4),W(1,5),GC_12,AMP(1))',
-                   'CALL VVVV1_3(W(1,1),W(1,3),W(1,4),GC_51,wmas,wwid,W(1,6))',
+                   'CALL VVV1_0(W(6),W(4),W(5),GC_12,AMP(1))',
+                   'CALL VVVV1_3(W(1),W(3),W(4),GC_51,wmas,wwid,W(6))',
                    '# Amplitude(s) for diagram number 2',
-                   'CALL VVV1_0(W(1,2),W(1,6),W(1,5),GC_12,AMP(2))']
+                   'CALL VVV1_0(W(2),W(6),W(5),GC_12,AMP(2))']
 
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
+
+
+    def get_tchannel_calls(self, matrix_element, export_format,
+                           output_options=None, options=None):
+        """helas calls written by the standalone exporter"""
+
+        # the exporter monkey-patches the HelasCallWriter: restore it
+        self.addCleanup(setattr, helas_call_writers.HelasCallWriter,
+                        'customize_argument_for_all_other_helas_object',
+                        helas_call_writers.HelasCallWriter.__dict__[
+                            'customize_argument_for_all_other_helas_object'])
+        exporter = export_v4.ProcessExporterFortranSA('',
+                        {'export_format': export_format,
+                         'output_options': output_options or {}},
+                        format=export_format)
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(\
+            self.mybasemodel, options=options or {})
+        replace_dict = exporter.write_matrix_element_v4(None,
+                        matrix_element, fortran_model, write=False)
+        return replace_dict['helas_calls'].split('\n'), fortran_model
+
+    def test_UFO_fortran_tchannel_width_standalone_rw(self):
+        """Test that the t-channel width is set to zero, using the fk_ tagging
+        of madevent, for the reweighting and MadSpin outputs (standalone_rw,
+        standalone_msP/msF, standalone with --zerowidth_tchannel=True) but not
+        for standalone"""
+
+        solution =['CALL VXXXXX(P(0,1),zero,NHEL(1),-1,W(1))',
+                   'CALL VXXXXX(P(0,2),wmas,NHEL(2),-1,W(2))',
+                   'CALL VXXXXX(P(0,3),zero,NHEL(3),+1,W(3))',
+                   'CALL VXXXXX(P(0,4),wmas,NHEL(4),+1,W(4))',
+                   'CALL VXXXXX(P(0,5),zmas,NHEL(5),+1,W(5))',
+                   'CALL VVVV1_4(W(1),W(3),W(2),GC_51,wmas,wwid,W(6))',
+                   '# Amplitude(s) for diagram number 1',
+                   'CALL VVV1_0(W(6),W(4),W(5),GC_12,AMP(1))',
+                   'CALL VVVV1_3(W(1),W(3),W(4),GC_51,wmas,wwid,W(6))',
+                   '# Amplitude(s) for diagram number 2',
+                   'CALL VVV1_0(W(2),W(6),W(5),GC_12,AMP(2))']
+        zeroed = list(solution)
+        zeroed[8] = 'CALL VVVV1_3(W(1),W(3),W(4),GC_51,wmas, ZERO,W(6))'
+
+        # (format, output options, writer options): t-channel W width zeroed?
+        for export_format, output_options, options, zero in [
+                ('standalone_fortran', None, None, False),
+                ('standalone_fortran', {'zerowidth_tchannel': 'True'}, None, True),
+                ('standalone_rw', None, None, True),
+                ('standalone_rw', {'zerowidth_tchannel': 'False'}, None, False),
+                ('standalone_rw', None, {'zerowidth_tchannel': False}, False),
+                ('standalone_msP', None, None, True),
+                ('standalone_msF', None, None, True)]:
+            result, fortran_model = self.get_tchannel_calls(self.mymatrixelement,
+                                    export_format, output_options, options)
+            self.assertEqual(zeroed if zero else solution, result)
+            self.assertEqual(fortran_model.width_tchannel_set_tozero, zero)
+
+    def test_UFO_fortran_tchannel_width_decay(self):
+        """No width is set to zero in a decay (is_t_channel assumes two initial
+        particles), also when the output mixes it with 2 > n processes"""
+
+        legs = base_objects.LegList([base_objects.Leg({'id':23, 'state':False}),
+                                     base_objects.Leg({'id':24, 'state':True}),
+                                     base_objects.Leg({'id':-24, 'state':True}),
+                                     base_objects.Leg({'id':22, 'state':True}),
+                                     base_objects.Leg({'id':22, 'state':True})])
+        decay = helas_objects.HelasMatrixElement(diagram_generation.Amplitude(
+                base_objects.Process({'legs':legs, 'model':self.mybasemodel})))
+
+        result, fortran_model = self.get_tchannel_calls(decay, 'standalone_rw')
+        propagators = [call for call in result if 'wmas,' in call and 'XXXXX' not in call]
+        self.assertTrue(propagators)
+        for call in propagators:
+            self.assertIn('wmas,wwid,', call)
+        self.assertFalse(fortran_model.width_tchannel_set_tozero)
+        self.assertTrue(fortran_model.options['zerowidth_tchannel'])
 
         
     def test_UFO_CPP_helas_call_writer(self):
@@ -961,16 +950,77 @@ class UFOHELASCallWriterTest(unittest.TestCase):
                    'vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);',
                    'vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);',
                    'vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);',
-                   'VVVV1_4(w[0],w[2],w[1],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVVV1_4(w[0],w[2],w[1],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 1',
-                   'VVV1_0(w[5],w[3],w[4],pars->GC_12,amp[0]);',
-                   'VVVV1_3(w[0],w[2],w[3],pars->GC_51,pars->wmas,pars->wwid,w[5]);',
+                   'VVV1_0(w[5],w[3],w[4],pars.GC_12,amp[0]);',
+                   'VVVV1_3(w[0],w[2],w[3],pars.GC_51,pars.wmas,pars.wwid,w[5]);',
                    '# Amplitude(s) for diagram number 2',
-                   'VVV1_0(w[1],w[5],w[4],pars->GC_12,amp[1]);']
+                   'VVV1_0(w[1],w[5],w[4],pars.GC_12,amp[1]);']
         
         for i, line in enumerate(solution):
             self.assertEqual(line, result[i])
-        
+
+    def test_UFO_fortran_flavor_mask_prefix_uses_index_bits(self):
+        """Flavor-mask guard should check wf/amp index bits."""
+
+        fortran_model = helas_call_writers.FortranUFOHelasCallWriter(
+            self.mybasemodel)
+        fortran_model.use_flavor_mask = True
+        fortran_model.me_n_flavors = 3
+
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'IF (IAND(CURRENT_WF_MASK(2), ISHFT(1_8, 5)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+        fortran_model.me_n_flavors = 4
+        fortran_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            fortran_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'IF (IAND(CURRENT_AMP_MASK(3), ISHFT(1_8, 1)) .NE. 0) ')
+
+    def test_UFO_cpp_flavor_mask_prefix_uses_index_bits(self):
+        """C++ flavor-mask guard should check wf/amp index bits."""
+
+        cpp_model = helas_call_writers.CPPUFOHelasCallWriter(self.mybasemodel)
+        cpp_model.use_flavor_mask = True
+        cpp_model.me_n_flavors = 3
+
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 70, 'flavor_mask': 1}, 'wf'),
+            'if ((current_wf_mask[1] & (1ULL << 5)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 130, 'flavor_mask': 1}, 'amp'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 1, 'flavor_mask': 7}, 'wf'),
+            '')
+        cpp_model.me_n_flavors = 4
+        cpp_model.me_active_flavor_mask = 7
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 2, 'flavor_mask': 7}, 'amp'),
+            '')
+        self.assertEqual(
+            cpp_model._flavor_mask_prefix(
+                {'number': 9, 'flavor_mask': 3, 'guard_amp_number': 130}, 'wf'),
+            'if ((current_amp_mask[2] & (1ULL << 1)) != 0ULL) ')
+
 
     def test_UFO_Python_helas_call_writer(self):
         """Test automatic generation of UFO helas calls in Python"""
@@ -1013,7 +1063,7 @@ class UFOHELASCallWriterTest(unittest.TestCase):
         
 
 class UFOHELASCALLWriterComplexMass(unittest.TestCase):
-    """testing the writting in case of complex mass scheme"""
+    """testing the writing in case of complex mass scheme"""
 
     @test_aloha.set_global(cms=True) 
     def setUp(self):
@@ -1049,45 +1099,45 @@ class UFOHELASCALLWriterComplexMass(unittest.TestCase):
             self.mybasemodel)
         
         result = fortran_model.get_matrix_element_calls(self.mymatrixelement)
-        solution = """CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1*IC(1),W(1,1))
-CALL VXXXXX(P(0,2),mdl_MW,NHEL(2),-1*IC(2),W(1,2))
-CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1*IC(3),W(1,3))
-CALL VXXXXX(P(0,4),mdl_MW,NHEL(4),+1*IC(4),W(1,4))
-CALL VXXXXX(P(0,5),mdl_MZ,NHEL(5),+1*IC(5),W(1,5))
-CALL VVV1_3(W(1,1),W(1,2),-GC_3,DCMPLX(CMASS_mdl_MW),W(1,6))
-CALL VVV1_2(W(1,3),W(1,4),-GC_3,DCMPLX(CMASS_mdl_MW),W(1,7))
+        solution = """CALL VXXXXX(P(0,1),ZERO,NHEL(1),-1,W(1))
+CALL VXXXXX(P(0,2),mdl_MW,NHEL(2),-1,W(2))
+CALL VXXXXX(P(0,3),ZERO,NHEL(3),+1,W(3))
+CALL VXXXXX(P(0,4),mdl_MW,NHEL(4),+1,W(4))
+CALL VXXXXX(P(0,5),mdl_MZ,NHEL(5),+1,W(5))
+CALL VVV1_3(W(1),W(2),GC_4,DCMPLX(CMASS_mdl_MW),W(6))
+CALL VVV1_2(W(3),W(4),GC_4,DCMPLX(CMASS_mdl_MW),W(7))
 # Amplitude(s) for diagram number 1
-CALL VVV1_0(W(1,6),W(1,7),W(1,5),GC_53,AMP(1))
-CALL VVV1_1(W(1,4),W(1,5),GC_53,DCMPLX(CMASS_mdl_MW),W(1,8))
+CALL VVV1_0(W(6),W(7),W(5),GC_53,AMP(1))
+CALL VVV1_1(W(4),W(5),GC_53,DCMPLX(CMASS_mdl_MW),W(8))
 # Amplitude(s) for diagram number 2
-CALL VVV1_0(W(1,3),W(1,6),W(1,8),-GC_3,AMP(2))
+CALL VVV1_0(W(3),W(6),W(8),GC_4,AMP(2))
 # Amplitude(s) for diagram number 3
-CALL VVVV5_0(W(1,3),W(1,6),W(1,4),W(1,5),GC_57,AMP(3))
-CALL VVV1_2(W(1,1),W(1,4),-GC_3,DCMPLX(CMASS_mdl_MW),W(1,6))
-CALL VVV1_3(W(1,3),W(1,2),-GC_3,DCMPLX(CMASS_mdl_MW),W(1,9))
+CALL VVVV5_0(W(3),W(6),W(4),W(5),GC_57,AMP(3))
+CALL VVV1_2(W(1),W(4),GC_4,DCMPLX(CMASS_mdl_MW),W(6))
+CALL VVV1_3(W(3),W(2),GC_4,DCMPLX(CMASS_mdl_MW),W(9))
 # Amplitude(s) for diagram number 4
-CALL VVV1_0(W(1,9),W(1,6),W(1,5),GC_53,AMP(4))
-CALL VVV1_2(W(1,2),W(1,5),GC_53,DCMPLX(CMASS_mdl_MW),W(1,10))
+CALL VVV1_0(W(9),W(6),W(5),GC_53,AMP(4))
+CALL VVV1_2(W(2),W(5),GC_53,DCMPLX(CMASS_mdl_MW),W(10))
 # Amplitude(s) for diagram number 5
-CALL VVV1_0(W(1,3),W(1,10),W(1,6),-GC_3,AMP(5))
+CALL VVV1_0(W(3),W(10),W(6),GC_4,AMP(5))
 # Amplitude(s) for diagram number 6
-CALL VVVV5_0(W(1,3),W(1,2),W(1,6),W(1,5),GC_57,AMP(6))
+CALL VVVV5_0(W(3),W(2),W(6),W(5),GC_57,AMP(6))
 # Amplitude(s) for diagram number 7
-CALL VVV1_0(W(1,1),W(1,9),W(1,8),-GC_3,AMP(7))
+CALL VVV1_0(W(1),W(9),W(8),GC_4,AMP(7))
 # Amplitude(s) for diagram number 8
-CALL VVV1_0(W(1,1),W(1,10),W(1,7),-GC_3,AMP(8))
-CALL VVVV2_4(W(1,1),W(1,3),W(1,2),GC_5,DCMPLX(CMASS_mdl_MW),W(1,10))
+CALL VVV1_0(W(1),W(10),W(7),GC_4,AMP(8))
+CALL VVVV2_4(W(1),W(3),W(2),GC_5,DCMPLX(CMASS_mdl_MW),W(10))
 # Amplitude(s) for diagram number 9
-CALL VVV1_0(W(1,10),W(1,4),W(1,5),GC_53,AMP(9))
-CALL VVVV5_3(W(1,1),W(1,2),W(1,5),GC_57,DCMPLX(CMASS_mdl_MW),W(1,10))
+CALL VVV1_0(W(10),W(4),W(5),GC_53,AMP(9))
+CALL VVVV5_3(W(1),W(2),W(5),GC_57,DCMPLX(CMASS_mdl_MW),W(10))
 # Amplitude(s) for diagram number 10
-CALL VVV1_0(W(1,3),W(1,10),W(1,4),-GC_3,AMP(10))
-CALL VVVV2_3(W(1,1),W(1,3),W(1,4),GC_5,DCMPLX(CMASS_mdl_MW),W(1,10))
+CALL VVV1_0(W(3),W(10),W(4),GC_4,AMP(10))
+CALL VVVV2_3(W(1),W(3),W(4),GC_5,DCMPLX(CMASS_mdl_MW),W(10))
 # Amplitude(s) for diagram number 11
-CALL VVV1_0(W(1,2),W(1,10),W(1,5),GC_53,AMP(11))
-CALL VVVV5_2(W(1,1),W(1,4),W(1,5),GC_57,DCMPLX(CMASS_mdl_MW),W(1,10))
+CALL VVV1_0(W(2),W(10),W(5),GC_53,AMP(11))
+CALL VVVV5_2(W(1),W(4),W(5),GC_57,DCMPLX(CMASS_mdl_MW),W(10))
 # Amplitude(s) for diagram number 12
-CALL VVV1_0(W(1,3),W(1,2),W(1,10),-GC_3,AMP(12))"""
+CALL VVV1_0(W(3),W(2),W(10),GC_4,AMP(12))"""
 
         self.assertEqual(solution.split('\n'), result)
 
@@ -1105,40 +1155,40 @@ vxxxxx(p[perm[1]],mME[1],hel[1],-1,w[1]);
 vxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
 vxxxxx(p[perm[3]],mME[3],hel[3],+1,w[3]);
 vxxxxx(p[perm[4]],mME[4],hel[4],+1,w[4]);
-VVV1_3(w[0],w[1],-pars->GC_3,pars->CMASS_mdl_MW,w[5]);
-VVV1_2(w[2],w[3],-pars->GC_3,pars->CMASS_mdl_MW,w[6]);
+VVV1_3(w[0],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_2(w[2],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[6]);
 # Amplitude(s) for diagram number 1
-VVV1_0(w[5],w[6],w[4],pars->GC_53,amp[0]);
-VVV1_1(w[3],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[7]);
+VVV1_0(w[5],w[6],w[4],pars.GC_53,amp[0]);
+VVV1_1(w[3],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[7]);
 # Amplitude(s) for diagram number 2
-VVV1_0(w[2],w[5],w[7],-pars->GC_3,amp[1]);
+VVV1_0(w[2],w[5],w[7],pars.GC_4,amp[1]);
 # Amplitude(s) for diagram number 3
-VVVV5_0(w[2],w[5],w[3],w[4],pars->GC_57,amp[2]);
-VVV1_2(w[0],w[3],-pars->GC_3,pars->CMASS_mdl_MW,w[5]);
-VVV1_3(w[2],w[1],-pars->GC_3,pars->CMASS_mdl_MW,w[8]);
+VVVV5_0(w[2],w[5],w[3],w[4],pars.GC_57,amp[2]);
+VVV1_2(w[0],w[3],pars.GC_4,pars.CMASS_mdl_MW,w[5]);
+VVV1_3(w[2],w[1],pars.GC_4,pars.CMASS_mdl_MW,w[8]);
 # Amplitude(s) for diagram number 4
-VVV1_0(w[8],w[5],w[4],pars->GC_53,amp[3]);
-VVV1_2(w[1],w[4],pars->GC_53,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[8],w[5],w[4],pars.GC_53,amp[3]);
+VVV1_2(w[1],w[4],pars.GC_53,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 5
-VVV1_0(w[2],w[9],w[5],-pars->GC_3,amp[4]);
+VVV1_0(w[2],w[9],w[5],pars.GC_4,amp[4]);
 # Amplitude(s) for diagram number 6
-VVVV5_0(w[2],w[1],w[5],w[4],pars->GC_57,amp[5]);
+VVVV5_0(w[2],w[1],w[5],w[4],pars.GC_57,amp[5]);
 # Amplitude(s) for diagram number 7
-VVV1_0(w[0],w[8],w[7],-pars->GC_3,amp[6]);
+VVV1_0(w[0],w[8],w[7],pars.GC_4,amp[6]);
 # Amplitude(s) for diagram number 8
-VVV1_0(w[0],w[9],w[6],-pars->GC_3,amp[7]);
-VVVV2_4(w[0],w[2],w[1],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[0],w[9],w[6],pars.GC_4,amp[7]);
+VVVV2_4(w[0],w[2],w[1],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 9
-VVV1_0(w[9],w[3],w[4],pars->GC_53,amp[8]);
-VVVV5_3(w[0],w[1],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[9],w[3],w[4],pars.GC_53,amp[8]);
+VVVV5_3(w[0],w[1],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 10
-VVV1_0(w[2],w[9],w[3],-pars->GC_3,amp[9]);
-VVVV2_3(w[0],w[2],w[3],pars->GC_5,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[2],w[9],w[3],pars.GC_4,amp[9]);
+VVVV2_3(w[0],w[2],w[3],pars.GC_5,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 11
-VVV1_0(w[1],w[9],w[4],pars->GC_53,amp[10]);
-VVVV5_2(w[0],w[3],w[4],pars->GC_57,pars->CMASS_mdl_MW,w[9]);
+VVV1_0(w[1],w[9],w[4],pars.GC_53,amp[10]);
+VVVV5_2(w[0],w[3],w[4],pars.GC_57,pars.CMASS_mdl_MW,w[9]);
 # Amplitude(s) for diagram number 12
-VVV1_0(w[2],w[1],w[9],-pars->GC_3,amp[11]);"""
+VVV1_0(w[2],w[1],w[9],pars.GC_4,amp[11]);"""
 
         self.assertEqual(solution.split('\n'), result)
         
@@ -1155,39 +1205,316 @@ w[1] = vxxxxx(p[1],mdl_MW,hel[1],-1)
 w[2] = vxxxxx(p[2],ZERO,hel[2],+1)
 w[3] = vxxxxx(p[3],mdl_MW,hel[3],+1)
 w[4] = vxxxxx(p[4],mdl_MZ,hel[4],+1)
-w[5]= VVV1_3(w[0],w[1],-GC_3,CMASS_mdl_MW)
-w[6]= VVV1_2(w[2],w[3],-GC_3,CMASS_mdl_MW)
+w[5]= VVV1_3(w[0],w[1],GC_4,CMASS_mdl_MW)
+w[6]= VVV1_2(w[2],w[3],GC_4,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 1
 amp[0]= VVV1_0(w[5],w[6],w[4],GC_53)
 w[7]= VVV1_1(w[3],w[4],GC_53,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 2
-amp[1]= VVV1_0(w[2],w[5],w[7],-GC_3)
+amp[1]= VVV1_0(w[2],w[5],w[7],GC_4)
 # Amplitude(s) for diagram number 3
 amp[2]= VVVV5_0(w[2],w[5],w[3],w[4],GC_57)
-w[5]= VVV1_2(w[0],w[3],-GC_3,CMASS_mdl_MW)
-w[8]= VVV1_3(w[2],w[1],-GC_3,CMASS_mdl_MW)
+w[5]= VVV1_2(w[0],w[3],GC_4,CMASS_mdl_MW)
+w[8]= VVV1_3(w[2],w[1],GC_4,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 4
 amp[3]= VVV1_0(w[8],w[5],w[4],GC_53)
 w[9]= VVV1_2(w[1],w[4],GC_53,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 5
-amp[4]= VVV1_0(w[2],w[9],w[5],-GC_3)
+amp[4]= VVV1_0(w[2],w[9],w[5],GC_4)
 # Amplitude(s) for diagram number 6
 amp[5]= VVVV5_0(w[2],w[1],w[5],w[4],GC_57)
 # Amplitude(s) for diagram number 7
-amp[6]= VVV1_0(w[0],w[8],w[7],-GC_3)
+amp[6]= VVV1_0(w[0],w[8],w[7],GC_4)
 # Amplitude(s) for diagram number 8
-amp[7]= VVV1_0(w[0],w[9],w[6],-GC_3)
+amp[7]= VVV1_0(w[0],w[9],w[6],GC_4)
 w[9]= VVVV2_4(w[0],w[2],w[1],GC_5,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 9
 amp[8]= VVV1_0(w[9],w[3],w[4],GC_53)
 w[9]= VVVV5_3(w[0],w[1],w[4],GC_57,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 10
-amp[9]= VVV1_0(w[2],w[9],w[3],-GC_3)
+amp[9]= VVV1_0(w[2],w[9],w[3],GC_4)
 w[9]= VVVV2_3(w[0],w[2],w[3],GC_5,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 11
 amp[10]= VVV1_0(w[1],w[9],w[4],GC_53)
 w[9]= VVVV5_2(w[0],w[3],w[4],GC_57,CMASS_mdl_MW)
 # Amplitude(s) for diagram number 12
-amp[11]= VVV1_0(w[2],w[1],w[9],-GC_3)"""
+amp[11]= VVV1_0(w[2],w[1],w[9],GC_4)"""
         
         self.assertEqual(solution.split('\n'), result)        
+
+
+#===============================================================================
+# AxialGaugeReferenceTest
+#===============================================================================
+class AxialGaugeReferenceTest(unittest.TestCase):
+    """--axial_gauge: the reference leg of every massless external vector,
+    and the vxxxxxr calls written with it"""
+
+    cmd = None
+
+    def setUp(self):
+        if AxialGaugeReferenceTest.cmd is None:
+            from madgraph.interface.master_interface import MasterCmd
+            AxialGaugeReferenceTest.cmd = MasterCmd()
+            AxialGaugeReferenceTest.cmd.exec_cmd('import model sm')
+        self.model = self.cmd._curr_model
+
+    def matrix_element(self, process):
+        self.cmd.exec_cmd('generate %s' % process)
+        return helas_objects.HelasMatrixElement(self.cmd._curr_amps[0])
+
+    def test_reference_initial_gluon(self):
+        """g g > g g g: one beam gluon for all, the other one for it"""
+
+        me = self.matrix_element('g g > g g g')
+        self.assertEqual(helas_call_writers.get_axial_gauge_refs(me),
+                         {1: 2, 2: 1, 3: 1, 4: 1, 5: 1})
+
+    def test_reference_coloured_leg(self):
+        """e+ e- > u u~ g g: the gluons take the u quark, not a beam lepton
+        (which they do not couple to, and which gives no vanishing amplitude)"""
+
+        me = self.matrix_element('e+ e- > u u~ g g')
+        self.assertEqual(helas_call_writers.get_axial_gauge_refs(me),
+                         {5: 3, 6: 3})
+
+    def test_no_reference_for_massive_vectors(self):
+        """u u~ > w+ w-: no massless vector, nothing to gauge"""
+
+        me = self.matrix_element('u u~ > w+ w-')
+        self.assertTrue(me.get('diagrams'))
+        self.assertEqual(helas_call_writers.get_axial_gauge_refs(me), {})
+
+    def test_fortran_vxxxxxr_call(self):
+        """the reference momentum is passed after nsv"""
+
+        me = self.matrix_element('g g > g g')
+        writer = helas_call_writers.FortranUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = helas_call_writers.get_axial_gauge_refs(me)
+        calls = writer.get_matrix_element_calls(me)
+        self.assertEqual(calls[:4],
+            ['CALL VXXXXXR(P(0,1),ZERO,NHEL(1),-1,P(0,2),W(1))',
+             'CALL VXXXXXR(P(0,2),ZERO,NHEL(2),-1,P(0,1),W(2))',
+             'CALL VXXXXXR(P(0,3),ZERO,NHEL(3),+1,P(0,1),W(3))',
+             'CALL VXXXXXR(P(0,4),ZERO,NHEL(4),+1,P(0,1),W(4))'])
+
+    def test_madmatrix_vxxxxxr_call(self):
+        """madmatrix: the 0-based particle number of the reference comes last"""
+
+        from madmatrix import model_handling
+        me = self.matrix_element('g g > g g')
+        writer = model_handling.MadMatrixUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = helas_call_writers.get_axial_gauge_refs(me)
+        externals = sorted([wf for wf in me.get_all_wavefunctions()
+                            if not wf.get('mothers')],
+                           key=lambda wf: wf.get('number_external'))
+        self.assertEqual(
+            writer.get_external(externals[0], externals[0]).strip(),
+            'vxxxxxr<M_ACCESS, W_ACCESS>( momenta, 0., hel_sv[0], -1, '
+            'cFlavors[iflavor][0], aloha_obj[0], 0, 1 );')
+        self.assertEqual(
+            writer.get_external(externals[2], externals[2]).strip(),
+            'vxxxxxr<M_ACCESS, W_ACCESS>( momenta, 0., hel_sv[2], +1, '
+            'cFlavors[iflavor][2], aloha_obj[2], 2, 0 );')
+
+    def test_massive_vector_keeps_vxxxxx(self):
+        """Only a vector that got a reference is written as VXXXXXR: the W of
+        u u~ > w+ w- g has none (the shift needs p^2 = 0), while it shares the
+        cached call template of the gluon, which has one"""
+
+        me = self.matrix_element('u u~ > w+ w- g')
+        refs = helas_call_writers.get_axial_gauge_refs(me)
+        self.assertEqual(refs, {5: 1})
+        writer = helas_call_writers.FortranUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = refs
+        externals = [line for line in writer.get_matrix_element_calls(me)
+                     if line.split('(')[0].endswith(('VXXXXX', 'VXXXXXR'))]
+        self.assertEqual(externals,
+            ['CALL VXXXXX(P(0,3),mdl_MW,NHEL(3),+1,W(3))',
+             'CALL VXXXXX(P(0,4),mdl_MW,NHEL(4),+1,W(4))',
+             'CALL VXXXXXR(P(0,5),ZERO,NHEL(5),+1,P(0,1),W(5))'])
+
+    def test_madmatrix_massive_vector_keeps_vxxxxx(self):
+        """madmatrix: the W of u u~ > w+ w- g has no reference, the gluon has"""
+
+        from madmatrix import model_handling
+        me = self.matrix_element('u u~ > w+ w- g')
+        writer = model_handling.MadMatrixUFOHelasCallWriter(self.model)
+        writer.axial_gauge = True
+        writer.axial_gauge_refs = helas_call_writers.get_axial_gauge_refs(me)
+        externals = sorted([wf for wf in me.get_all_wavefunctions()
+                            if not wf.get('mothers')],
+                           key=lambda wf: wf.get('number_external'))
+        lines = [writer.get_external(wf, wf).strip() for wf in externals[2:]]
+        self.assertTrue(lines[0].startswith('vxxxxx<'), lines[0])
+        self.assertTrue(lines[1].startswith('vxxxxx<'), lines[1])
+        self.assertTrue(lines[2].startswith('vxxxxxr<'), lines[2])
+        self.assertTrue(lines[2].endswith('aloha_obj[4], 4, 0 );'), lines[2])
+
+    def test_axial_gauge_requested(self):
+        """the output option, and its refusal in the FD gauge (no vxxxxxr in
+        the five-component HELAS library)"""
+
+        requested = helas_call_writers.axial_gauge_requested
+        self.assertFalse(requested(None))
+        self.assertFalse(requested({'axial_gauge': 'False'}))
+        self.assertTrue(requested({'axial_gauge': 'True'}))
+        self.assertTrue(requested({'axial_gauge': True}))
+        old = aloha.unitary_gauge
+        try:
+            aloha.unitary_gauge = 3
+            # silent when asked per matrix element, and it warns every time it
+            # is asked to -- once per output, not once per session
+            with self.assertNoLogs('madgraph.helas_call_writers', 'WARNING'):
+                self.assertFalse(requested({'axial_gauge': 'True'}))
+            for _ in range(2):
+                with self.assertLogs('madgraph.helas_call_writers', 'WARNING'):
+                    self.assertFalse(requested({'axial_gauge': 'True'}, warn=True))
+        finally:
+            aloha.unitary_gauge = old
+
+
+class CombineNameHashTest(unittest.TestCase):
+    """The name of a long combined ALOHA routine is a hash of the names of
+    the combined Lorentz structures: the call site (an amplitude, with the
+    '%(tags)s' placeholder still to be filled) and ALOHA (which writes the
+    routine) must hash the same string."""
+
+    def test_long_amplitude_name_matches_the_routine(self):
+        from aloha.aloha_writers import combine_name
+
+        others = ['FFVV%d' % i for i in (110, 1110, 111, 114, 115, 131, 132, 141, 142, 193, 194)]
+        # name written by ALOHA for the amplitude routine
+        written = combine_name('FFVV1010', others, 0, [])
+        self.assertTrue(written.startswith('ALOHA_'))
+        # name of the call, the tags being known only when the call is written
+        call = combine_name('FFVV1010', others, 0, [], unknown_tag=True)
+        self.assertIn('%(tags)s', call)
+        self.assertEqual(call % {'tags': '', 'propa': ''}, written)
+
+    def test_short_amplitude_name_is_not_hashed(self):
+        from aloha.aloha_writers import combine_name
+
+        others = ['FFV2']
+        written = combine_name('FFV1', others, 0, [])
+        call = combine_name('FFV1', others, 0, [], unknown_tag=True)
+        self.assertEqual(call % {'tags': '', 'propa': ''}, written)
+        self.assertNotIn('ALOHA_', written)
+
+    def test_long_wavefunction_name_matches_the_routine(self):
+        from aloha.aloha_writers import combine_name
+
+        others = ['FFVV%d' % i for i in (110, 1110, 111, 114, 115, 131, 132, 141, 142, 193, 194)]
+        written = combine_name('FFVV1010', others, 3, [])
+        call = combine_name('FFVV1010', others, 3, [], unknown_tag=True)
+        self.assertEqual(call % {'tags': '', 'propa': ''}, written)
+
+
+class TestZeroWidthPdgs(unittest.TestCase):
+    """output standalone_fortran --zerowidth_decay=: the HelasCallWriter writes the listed
+    propagators with a zero width, and the standalone exporter decides per
+    matrix element which of the listed particles apply."""
+
+    class _WF(object):
+        def __init__(self, pdg, width, t_channel=False):
+            self.data = {'pdg_code': pdg, 'width': width}
+            self.t_channel = t_channel
+        def get(self, key):
+            return self.data[key]
+        def get_call_key(self):
+            return 'key'
+        def is_t_channel(self):
+            return self.t_channel
+
+    CALL = 'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT,MDL_WT,W(1,5))'
+
+    def _writer(self, zero):
+        writer = helas_call_writers.HelasCallWriter()
+        writer.zerowidth_pdgs = frozenset(zero)
+        writer['wavefunctions']['key'] = lambda wf: self.CALL
+        return writer
+
+    def test_listed_propagator_gets_zero_width(self):
+        call = self._writer([6]).get_wavefunction_call(self._WF(-6, 'MDL_WT'))
+        self.assertEqual(call, 'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_MT, ZERO,W(1,5))')
+
+    def test_other_propagators_are_untouched(self):
+        for zero in ([], [24]):
+            self.assertEqual(self._writer(zero).get_wavefunction_call(
+                self._WF(6, 'MDL_WT')), self.CALL)
+
+    def test_the_mass_is_never_touched(self):
+        """Only the width argument: a width name that is a prefix of the mass
+        name (or equal to nothing in the call) must not hit the mass."""
+        writer = self._writer([6])
+        writer['wavefunctions']['key'] = lambda wf: \
+            'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_WT2,MDL_WT,W(1,5))'
+        self.assertEqual(writer.get_wavefunction_call(self._WF(6, 'MDL_WT')),
+                         'CALL FFV1_1(W(1,3),W(1,1),GC_11,MDL_WT2, ZERO,W(1,5))')
+
+    class _Leg(dict):
+        pass
+
+    class _Proc(object):
+        def __init__(self, ids, ninitial):
+            self.legs = []
+            for i, pid in enumerate(ids):
+                leg = TestZeroWidthPdgs._Leg(id=pid, state=i >= ninitial)
+                self.legs.append(leg)
+            self.ninitial = ninitial
+        def get(self, key):
+            return self.legs
+        def get_ninitial(self):
+            return self.ninitial
+
+    class _ME(object):
+        def __init__(self, *procs):
+            self.procs = list(procs)
+        def get(self, key):
+            return self.procs
+
+    def _active(self, option, *procs):
+        class Exporter(object):
+            get_zerowidth_pdgs = export_v4.ProcessExporterFortranSA.get_zerowidth_pdgs
+        exporter = Exporter()
+        exporter.cmd_options = {} if option is None else {'zerowidth_decay': option}
+        return exporter.get_zerowidth_pdgs(self._ME(*procs))
+
+    def test_production_uses_the_listed_final_state_particles(self):
+        ttz = self._Proc([-11, 11, 6, -6, 23], 2)
+        self.assertEqual(self._active('6,24', ttz), frozenset([6]))
+        self.assertEqual(self._active('6,23', ttz), frozenset([6, 23]))
+
+    def test_a_decay_uses_its_decaying_particle_only(self):
+        """The W of t > e+ ve b keeps its width even when 24 is listed; the
+        top of t > w+ b g is zeroed."""
+        self.assertEqual(self._active('6,24', self._Proc([6, -11, 12, 5], 1)),
+                         frozenset([6]))
+        self.assertEqual(self._active('24', self._Proc([6, -11, 12, 5], 1)),
+                         frozenset())
+        self.assertEqual(self._active('6,24', self._Proc([-24, 11, -12], 1)),
+                         frozenset([24]))
+
+    def test_true_takes_every_external_particle(self):
+        """True: the decaying particle of a decay (never the W it
+        propagates), every final-state particle of a production."""
+        for option in (True, 'True', 'true'):
+            self.assertEqual(self._active(option, self._Proc([6, -11, 12, 5], 1)),
+                             frozenset([6]))
+            self.assertEqual(self._active(option, self._Proc([6, 24, 5, 21], 1)),
+                             frozenset([6]))
+            self.assertEqual(self._active(option,
+                                          self._Proc([-11, 11, 6, -6, 23], 2)),
+                             frozenset([6, 23]))
+        for option in (False, 'False'):
+            self.assertEqual(self._active(option, self._Proc([6, 24, 5, 21], 1)),
+                             frozenset())
+
+    def test_no_option_no_zero(self):
+        self.assertEqual(self._active(None, self._Proc([6, 24, 5, 21], 1)),
+                         frozenset())
+        self.assertEqual(self._active('', self._Proc([6, 24, 5, 21], 1)),
+                         frozenset())

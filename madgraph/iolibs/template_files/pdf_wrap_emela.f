@@ -71,6 +71,9 @@ c     first try in the current directory
          Inquire(File=LHAPath, exist=exists)
          if(exists)return
       enddo
+c     shared read-only mirror (CVMFS): tried last, so that a local
+c     lib/PDFsets always wins over it
+      %(cvmfs_specific_path)s
 
 c      
 c     getting the path of the executable

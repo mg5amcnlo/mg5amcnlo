@@ -3,7 +3,7 @@
 	subroutine ffcb0(cb0,d0,xmu,cp,cma,cmb,ier)
 ***#[*comment:***********************************************************
 *									*
-*	calculates the the two-point function (cf 't Hooft and Veltman)	*
+*	calculates the two-point function (cf 't Hooft and Veltman)	*
 *	we include an overall factor 1/(i*pi^2)	relative to FormF	*
 *									*
 *	Input:	d0	(real)	  infinity arising from renormalization	*
@@ -922,7 +922,7 @@
 	    if ( z.ne.zr .or. z1.ne.z1r ) then
 		c = -z1r/zr
 		if ( DBLE(c).lt.0 ) then
-*		    check whetehr we chose the correct continuation
+*		    check whether we chose the correct continuation
 		    if ( (DIMAG(c).gt.0 .or. DIMAG(c).eq.0 .and.
      +				is.eq.+1) .and. DIMAG(-z1/z).lt.0 ) then
 			cs = cs - c2ipi*z

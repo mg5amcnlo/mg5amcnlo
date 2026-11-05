@@ -152,7 +152,7 @@ C-------------------------------------------------------------------------
      #, ' 248     NNLO  ss      vfn'   
      #, ' 249     NNLO  slow ev ffn'   
      #, ' 250     NNLO  slow ev vfn'   
-     #, ' To get the sets with errorrs, do:'
+     #, ' To get the sets with errors, do:'
      #, ' call errsk(i), con i=-15...15. After this, calls to'
      #, ' mlmpdf will return the pdf minus (plus) the variation'
      #, ' if the |ith| parameter'
@@ -295,7 +295,7 @@ c 231-250, Alekhin 20 sets
      # 6*0.418d0,6*0.215d0,8*0.182d0/
       IRET=0       
       IF(ABS(IH).NE.1.AND.IH.NE.4.AND.IH.NE.5)THEN
-        WRITE(*,*) ' HADRON TPYE ',IH,' NOT IMPLEMENTED'
+        WRITE(*,*) ' HADRON TYPE ',IH,' NOT IMPLEMENTED'
         IRET=1
         RETURN
       ENDIF
@@ -4862,7 +4862,7 @@ C             All the above sets assume a SU(3)-symmetric sea.
 
 C             6 (Set S2) corresponds to a new set with input strange quark
 C             distribution being 1/2 of the non-strange sea quarks
-C             (as prefered by some expts).
+C             (as preferred by some expts).
 C
 C             7 (Set S2M) is the set S2 in the MS-bar scheme
 C
@@ -8651,7 +8651,7 @@ C                             and for   .0015<  x   < .99
 C
 C      The program also gives the structure function F2:
 C                        F2 = q*Cq + g*Cg + Cgam
-C      Cq and Cg are the Wilson coeficients and Cgam is the direct term.
+C      Cq and Cg are the Wilson coefficients and Cgam is the direct term.
 C
 C      Although the charm quark evolution is massless, the direct term
 C      Cgam includes the effects due to the charm quark mass. The charm
@@ -9829,8 +9829,8 @@ C LAC1 PHOTON
       DIMENSION NA(NARG)
       DATA ZEROD/0.D0/
       DATA INIT/0/
-C...100 x valuse; in (D-4,.77) log spaced (78 points)
-C...              in (.78,.995) lineary spaced (22 points)
+C...100 x values; in (D-4,.77) log spaced (78 points)
+C...              in (.78,.995) linearly spaced (22 points)
       DATA Q2T/4.D0,10.D0,50.D0,1.D2,1.D3,1.D4,1.D5/
       DATA XT/
      &0.1000D-03,0.1123D-03,0.1262D-03,0.1417D-03,0.1592D-03,0.1789D-03,
@@ -10368,7 +10368,7 @@ C                                        Adapted from "Numerical Recipes"
 
 c  Given the parton distribution function in the array U in
 c  COMMON / PEVLDT / , this routine interpolates to find
-c  the parton distribution at an arbitray point in x and q.
+c  the parton distribution at an arbitrary point in x and q.
 c
       Implicit Double Precision (A-H,O-Z)
 

@@ -406,7 +406,7 @@ C                        ****************************
 
 c  Given the parton distribution function in the array U in
 c  COMMON / PEVLDT / , this routine interpolates to find
-c  the parton distribution at an arbitray point in x and q.
+c  the parton distribution at an arbitrary point in x and q.
 c
       Implicit Double Precision (A-H,O-Z)
 

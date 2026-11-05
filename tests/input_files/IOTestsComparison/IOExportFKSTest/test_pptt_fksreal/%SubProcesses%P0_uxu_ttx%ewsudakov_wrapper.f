@@ -50,6 +50,7 @@
 
       INTEGER IFLIST(NEXTERNAL-1)
 
+
       DOUBLE PRECISION INVARIANTS(NEXTERNAL-1, NEXTERNAL-1)
 
       DOUBLE COMPLEX GET_LSC_DIAG, GET_LSC_NONDIAG
@@ -62,6 +63,7 @@
       EXTERNAL GET_XXC_DIAG, GET_XXC_NONDIAG
       DOUBLE COMPLEX GET_QCD_LO2
       EXTERNAL GET_QCD_LO2
+
 
 
       INTEGER EWSUD_HELSELECT
@@ -114,6 +116,7 @@ C     stuff for the MC over helicities
         HEL_MIN = HEL(HEL_PICK)
         HEL_MAX = HEL_MIN
       ENDIF
+
 
 
 C     Main loop over the helicities
@@ -173,6 +176,7 @@ C        longitudinally-polarised legs and the born for all-transverse
         ENDIF
 
       ENDDO
+
 
 
 

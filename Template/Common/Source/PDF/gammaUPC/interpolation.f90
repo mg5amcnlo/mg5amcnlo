@@ -186,7 +186,7 @@ CONTAINS
     integer i, j, k
     double precision dx
     
-    ! if u is ouside the x() interval take a boundary value (left or right)
+    ! if u is outside the x() interval take a boundary value (left or right)
     if(u <= x(1)) then
        ispline = y(1)
        return
@@ -197,7 +197,7 @@ CONTAINS
     end if
     
     !*
-    !  binary search for for i, such that x(i) <= u <= x(i+1)
+    !  binary search for i, such that x(i) <= u <= x(i+1)
     !*
     i = 1
     j = n+1

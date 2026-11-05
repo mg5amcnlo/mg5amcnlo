@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2011 The MadGraph Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
@@ -34,7 +34,7 @@ class TestFOAnalyseCard(unittest.TestCase):
 ################################################################################
 FO_EXTRALIBS   =                    # Needed extra-libraries (FastJet is already linked). 
 FO_EXTRAPATHS  =                    # (Absolute) path to the extra-libraries. 
-FO_INCLUDEPATHS=                    # (Absolute) Path to the dirs containing header files neede by C++.
+FO_INCLUDEPATHS=                    # (Absolute) Path to the dirs containing header files needed by C++.
                                     # Directory names are separated by white spaces
 FO_ANALYSE     = analysis_fixed_order.o # User's analysis and histogramming routines 
                                     # (please use .o as extension and white spaces to separate files)
@@ -52,7 +52,7 @@ FO_ANALYSE     = analysis_fixed_order.o # User's analysis and histogramming rout
 ################################################################################
 FO_EXTRALIBS   = libdummy1.a dummy2                   # Needed extra-libraries (FastJet is already linked). 
 FO_EXTRAPATHS  = /path/to/dummy1 /path/to/dummy2                   # (Absolute) path to the extra-libraries. 
-FO_INCLUDEPATHS= /path/to/dummy1/include /path/to/dummy2/include                   # (Absolute) Path to the dirs containing header files neede by C++.
+FO_INCLUDEPATHS= /path/to/dummy1/include /path/to/dummy2/include                   # (Absolute) Path to the dirs containing header files needed by C++.
                                     # Directory names are separated by white spaces
 FO_ANALYSE     = analysis_fixed_order.o dummy1.o dummy2.o # User's analysis and histogramming routines 
                                     # (please use .o as extension and white spaces to separate files)

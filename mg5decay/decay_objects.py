@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
@@ -16,7 +16,7 @@
    DecayParticle: this object contains all the decay related properties
                   including all the decay vertices and decay channels.
                   This object also has the 'is_stable' label to denote
-                  wether this particle is stable.
+                  whether this particle is stable.
    DecayParticleList: this helper class will help to turn Particle 
                       in base_objects into DecayParticle.
    DecayModel: This model contains DecayParticle. Particle in base_objects
@@ -61,10 +61,10 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import madgraph.various.misc as misc
 
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, MG5DIR
 
-import models.model_reader as model_reader
+import madgraph.models.model_reader as model_reader
 ZERO = 0
 #===============================================================================
 # Logger for decay_module
@@ -263,7 +263,7 @@ class DecayParticle(base_objects.Particle):
 
             # Check if the vertex is radiation
             if radiation:
-                raise self.PhysicsObjectError("The vertex is radiactive for mother particle %s"\
+                raise self.PhysicsObjectError("The vertex is radioactive for mother particle %s"\
                     % str(self.get_pdg_code()))
 
         return True
@@ -318,7 +318,7 @@ class DecayParticle(base_objects.Particle):
         """Check the validity of DecayAmplitudes condition, including,
            partnum: final state particle number,
            value  : the assign amplitudelist, all amplitudes in it must
-                    be consistent to the processess they hold.
+                    be consistent with the processes they hold.
         """
         # Check if partnum is an integer.
         if not isinstance(partnum, int):
@@ -363,7 +363,7 @@ class DecayParticle(base_objects.Particle):
                     
         if name == 'vertexlist_found' or name == 'is_stable':
             if not isinstance(value, bool):
-                raise self.PhysicsObjectError("Propery %s should be Boolean type." % name)
+                raise self.PhysicsObjectError("Property %s should be of Boolean type." % name)
 
         if name == 'max_vertexorder':
             if not isinstance(value, int):
@@ -680,7 +680,7 @@ class DecayParticle(base_objects.Particle):
 
     def get_amplitude(self, final_ids):
         """Return the amplitude with the given final pids.
-           If no suitable amplitude is found, retun None.
+           If no suitable amplitude is found, return None.
         """
         if not isinstance(final_ids, list):
             raise self.PhysicsObjectError("The final particle ids %s must be a list of integer." \
@@ -772,7 +772,7 @@ class DecayParticle(base_objects.Particle):
 
         # If vertexlist has not been found before, run model.find_vertexlist
         if not model['vertexlist_found']:
-            logger.info("Process the model to add decay informations.")
+            logger.info("Process the model to add decay information.")
             model.find_vertexlist()
 
         # Find stable particles of this model
@@ -813,7 +813,7 @@ class DecayParticle(base_objects.Particle):
             the channels lower than clevel are all found. The user could
             first setup channels by find_channels and then use this function
             if they want to have high level decay.
-            NOTE that the width of channels are added sucessively into mother
+            NOTE that the width of channels are added successively into mother
             particle during the search.
             NO calculation of branching ratios and width err are performed!
             For the search of two-body decay channels, the 2body_massdiff
@@ -990,7 +990,7 @@ class DecayParticle(base_objects.Particle):
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
                         if not temp_c_o:
-                            # if offshell, this starts to be extremelly tricky
+                            # if offshell, this starts to be extremely tricky
                             #and time consuming to found all the fake onshell
                             #decay. We therefore neglect all of them. This starts 
                             #to be problematic for 4 body decay (for valid 2-body)
@@ -1202,7 +1202,7 @@ class DecayParticle(base_objects.Particle):
 
 
 
-    # This helper function is obselete in current algorithm...
+    # This helper function is obsolete in current algorithm...
     def generate_configlist(self, channel, partnum, model):
         """ Helper function to generate all the configuration to add
             vertetices to channel to create a channel with final 
@@ -1320,7 +1320,7 @@ class DecayModel(model_reader.ModelReader):
 
         # Must set particles first so that the particle_dict
         # can point to DecayParticle
-        # Futhermore, the set of interactions can have correct particle_dict
+        # Furthermore, the set of interactions can have correct particle_dict
         if 'particles' in list(init_dict.keys()):
             p =  init_dict['particles'][0]
             self.set('particles', init_dict['particles'], force)
@@ -1336,9 +1336,21 @@ class DecayModel(model_reader.ModelReader):
                 except:
                     pass
 
+        if self.get('merged_particles'):
+            self.unmerge_flavors()
+            if 'particles' in list(init_dict.keys()):
+                particles = init_dict['particles'].__class__()
+                for p in init_dict['particles']:
+                    if abs(p.get('pdg_code')) not in self.get('merged_particles'):
+                        particles.append(p)
+                self.set('particles',particles, force)
+    
+            self['particle_dict'] = {}
+            self.get('particle_dict')            
+    
         
     def default_setup(self):
-        """The particles is changed to ParticleList"""
+        """The particles are changed to ParticleList"""
         super(DecayModel, self).default_setup()
         self['particles'] = DecayParticleList()
         # Other properties
@@ -2191,7 +2203,7 @@ class DecayModel(model_reader.ModelReader):
                      p.get('pdg_code') not in self.sm_ids]
 
         for particle in particles:
-            # Check if particles is already in a decay group
+            # Check if a particle is already in a decay group
             if particle not in sum(self['decay_groups'], []):
                 # Insert particle in new decay group
                 self['decay_groups'].append([particle])
@@ -2590,7 +2602,7 @@ class DecayModel(model_reader.ModelReader):
                         for j in range(i):
                             if (group_ids[i] == group_ids[j] and \
                                 group_ids[i] != None) and ref_list[j] != None:
-                                # Both of the particles is useless for 
+                                # Both of the particles are useless for
                                 # the determination of parity
                                 ref_list[i] = None
                                 ref_list[j] = None
@@ -2666,7 +2678,7 @@ class DecayModel(model_reader.ModelReader):
             # stable_candidates. Suppose the lightest particle is the 1st one.
             stable_candidates.append([group[0]])
             for part in group[1:]:
-                # If the mass is smaller, replace the the list.
+                # If the mass is smaller, replace the list.
                 if abs(eval(part.get('mass'))) < \
                         abs(eval(stable_candidates[-1][0].get('mass'))) :
                     stable_candidates[-1] = [part]
@@ -2735,7 +2747,7 @@ class DecayModel(model_reader.ModelReader):
             mass[part.get('pdg_code')] = abs(eval(part.get('mass')))
             stable_list[part.get('pdg_code')] = True
 
-        # Record minimal mass for avioding round-off error.
+        # Record minimal mass for avoiding round-off error.
         m_min = min(min([m for i,m in mass.items() if m > 0.]), 10**(-6))
 
         # Start the iteration
@@ -3399,7 +3411,7 @@ class Channel(base_objects.Diagram):
         elif len(self.get_final_legs()) == len(set(l['id'] for l in self.get_final_legs())):
             return [self]
 
-        # check if all symetry are already handle:
+        # check if all symmetry are already handle:
         if len(set(l['id'] for l in self.get_final_legs() if l['id'] not in ignore)) ==\
            len([   l['id'] for l in self.get_final_legs() if l['id'] not in ignore]):
             return [self]
@@ -3515,7 +3527,7 @@ class Channel(base_objects.Diagram):
 
     def calculate_orders(self, model):
         """Calculate the actual coupling orders of this channel,
-           negative vertex id is interepret as positive one 
+           negative vertex ID is interpreted as a positive one
            (the CPT counterpart)."""
 
         coupling_orders = {}
@@ -3788,7 +3800,7 @@ class Channel(base_objects.Diagram):
         """
         lindex_dict = {}
         id_part_list = {}
-        # Record the occurence of each leg.
+        # Record the occurrence of each leg.
         for lindex, leg in enumerate(vert.get('legs')):
             try:
                 lindex_dict[leg['id']].append(lindex)
@@ -3813,7 +3825,7 @@ class Channel(base_objects.Diagram):
 
         return channel_a.get('tag') == channel_b.get('tag')
 
-    # OBSELETE
+    # OBSOLETE
     def get_idpartlist(self):
         """ Get the position of identical particles in this channel.
             The format of id_part_list is a dictionary with the vertex
@@ -3840,7 +3852,7 @@ class Channel(base_objects.Diagram):
 
         return self['id_part_list']
 
-#    # Obselete, replaced by DiagramTag
+#    # Obsolete, replaced by DiagramTag
 #    @staticmethod
 #    def check_channels_equiv_rec(channel_a, vindex_a, channel_b, vindex_b):
 #        """ The recursive function to check the equivalence of channels 
@@ -3848,7 +3860,7 @@ class Channel(base_objects.Diagram):
 #            Algorithm:
 #            1. Check if the two vertices are the same (in id).
 #            2. Compare each the non-identical legs. Either they are both 
-#               final legs or their decay chain are the same. The comparision
+#               final legs or their decay chain are the same. The comparison
 #               of decay chain is via recursive call of check_channels_equiv_rec
 #            3. Check all the identical particle legs, try to match each leg of b
 #               for the legs of a of each kind of identical particles. 
@@ -3872,7 +3884,7 @@ class Channel(base_objects.Diagram):
 #                channel_b.get('vertices')[vindex_b]['id']:
 #            return False
 #
-#        # Obsolete when idetical vertex is removed.
+#        # Obsolete when identical vertex is removed.
 #        """# If the vertex is the initial vertex, start from the next vertex
 #        if vindex_a == len(channel_a.get('vertices'))-1 and \
 #                vindex_b == len(channel_b.get('vertices'))-1 :
@@ -3895,7 +3907,7 @@ class Channel(base_objects.Diagram):
 #
 #                # If the 'is final' is inconsistent between a and b,
 #                # return False. 
-#                # If both are 'is final', end the comparision of these two legs.
+#                # If both are 'is final', end the comparison of these two legs.
 #                leg_a_isfinal =  leg_a in channel_a.get_final_legs()
 #                leg_b_isfinal =  leg_b in channel_b.get_final_legs()
 #                if leg_a_isfinal or leg_b_isfinal:
@@ -3995,7 +4007,7 @@ class Channel(base_objects.Diagram):
 #        # the two decay chain are the same eventually.
 #        return True
 #
-#    # Helper function (obselete)    
+#    # Helper function (obsolete)
 #    @staticmethod
 #    def generate_configs(id_part_list):
 #        """ Generate all possible configuration for the identical particles in
@@ -4157,6 +4169,8 @@ class Channel(base_objects.Diagram):
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
+                    if isinstance(v, base_objects.FLV_Coupling):
+                        v = v.get_all_couplings()[0]
                     lorentz_factor += abs(eval(v))**2 * lor_value**2
 
                 apx_m *= lorentz_factor
@@ -4256,6 +4270,8 @@ class Channel(base_objects.Diagram):
                         new_structure = new_structure.replace('-','+')
                         lor_value = eval(new_structure % q_dict_lor)
 
+                    if isinstance(v, base_objects.FLV_Coupling):
+                        v = v.get_all_couplings()[0]
                     lorentz_factor += abs(eval(v))**2 * eval(new_structure % q_dict_lor)**2
 
                 apx_m *= lorentz_factor
@@ -4358,7 +4374,7 @@ class Channel(base_objects.Diagram):
     def get_color_multiplicity(self, ini_color, final_color, model, base=False):
         """ Get the color multiplicity recursively of the given final_color.
             The multiplicity is obtained based on the color_multiplicity_def
-            funtion in the model.
+            function in the model.
             If the color structure of final_color matches the 
             color_multiplicity_def, return the multiplicity.
             Otherwise, return 1 for the get_color_multiplicity with base = True
@@ -4716,7 +4732,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
 
         # Check the number of initial leg is 1
         if dia['vertices'][-1]['legs'][-1]['number'] != 1:
-            raise self.PhysicsObjectError("The number of initial leg should be setted as 1.")
+            raise self.PhysicsObjectError("The number of initial legs should be set to 1.")
 
         # Append the initial leg.
         leglist = base_objects.LegList([base_objects.Leg({'id': dia.get_initial_id(model),
@@ -4927,7 +4943,7 @@ class DecayAmplitude(diagram_generation.Amplitude):
             
             # Set the intermediate particle and interaction,
             # except for the identical vertex 
-            # (the initial particle will be resetted, but it should be fine.)
+            # (the initial particle will be reset, but it should be fine.)
             for i, v in enumerate(ab_dia['vertices']):
 
                 # Set intermediate particle
@@ -5011,7 +5027,7 @@ class AbstractModel(base_objects.Model):
                   ]
 
     def default_setup(self):
-        """The particles is changed to ParticleList"""
+        """The particles are changed to ParticleList"""
 
         super(AbstractModel, self).default_setup()
         # Other properties
@@ -5339,7 +5355,7 @@ class AbstractModel(base_objects.Model):
 
     def add_ab_interaction(self, inter_id, force=False, color = None):
         """ Functions to set new interaction according to the given interaction
-        particles and lorentz sturcture. This function will assign the correct
+        particles and lorentz structure. This function will assign the correct
         serial number of new interaction, change the abstract_interactions.
         Note: Add NEW type of interaction should use setup."""
 
@@ -5418,7 +5434,7 @@ class AbstractModel(base_objects.Model):
         """Add real interactions into AbstractModel, 
         convert into abstract interactions.
         The lorentz and color 
-        structures keep to be the union of all correpsonding
+        structures remain the union of all corresponding
         real ones. 
         Construct the quick reference dictionary,
         and setup the coupling constants in the end."""
@@ -5709,7 +5725,7 @@ class AbstractModel(base_objects.Model):
         if len(ab_inter_id_list) != len(real_inter_id_list):
             return False
 
-        # Full comparision of interaction type.
+        # Full comparison of interaction type.
         # The duplicated intereactions are taken into consideration.
         if self.get_interactionlist_type(real_inter_id_list)[0] != \
                 ab_inter_id_list:
@@ -5720,7 +5736,7 @@ class AbstractModel(base_objects.Model):
                                  for v in real_dia['vertices'][:-1]]
         
 
-        # Full comparision of intermediate particle type.
+        # Full comparison of intermediate particle type.
         # 1. Duplicated particles will be treated as different.
         # 2. Do not get the std_output. We want to compare two real pids,
         #    not to 
@@ -5737,7 +5753,7 @@ class AbstractModel(base_objects.Model):
         # Final pids
         real_pdgcode_list = [l['id'] for l in real_dia.get_final_legs()]
 
-        # Full comparision of particle type.
+        # Full comparison of particle type.
         # Duplicated particles will be treated as different.
         try:
             # Try to use final_legs_dict to save time

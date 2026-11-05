@@ -65,6 +65,37 @@ class TestStandaloneSudakov(unittest.TestCase):
 
 
 class TestBornRegistry(unittest.TestCase):
+    def test_readonly_aloha_records_preserve_the_dependency_proof(self):
+        module = ['module aloha_object', 'type aloha', 'sequence',
+                  'double complex::w(4)', 'double precision::p(0:3)',
+                  'integer::flv_index', 'end type aloha', 'end module aloha_object']
+        helper = ['subroutine helper(w)', 'use aloha_object', 'implicit none',
+                  'type(aloha) w', 'w%w(1)=2d0*w%p(0)', 'end']
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = root/'Source/DHELAS'
+            directory.mkdir(parents=True)
+            path = directory/'aloha_functions.f'
+            support.write_fortran(path, module+helper)
+            self.assertTrue(support.explicit_helas_dependencies(root))
+            # Module-level numeric state would be an input outside the graph.
+            support.write_fortran(path, module[:-1]+['double precision hidden']+
+                                  module[-1:]+helper)
+            self.assertFalse(support.explicit_helas_dependencies(root))
+            support.write_fortran(path, module+[line.replace('aloha_object', 'hidden_state')
+                                               for line in helper])
+            self.assertFalse(support.explicit_helas_dependencies(root))
+
+    def test_target_couplings_are_transferred_as_numeric_model_state(self):
+        lines = ['double complex, target :: gc_10,gc_11',
+                 'double complex, target :: gal(2)',
+                 'common/couplings/gc_10,gc_11,gal']
+        members, sizes = support.common_members(lines)
+        self.assertEqual(members, [('gc_10', 'complex', '1'),
+                                   ('gc_11', 'complex', '2'),
+                                   ('gal', 'complex', '3:4')])
+        self.assertEqual(sizes, dict(real=0, complex=4))
+
     def test_external_width_particles_from_born_metadata(self):
         """Width removal must survive the replacement of static Born tables."""
         with tempfile.TemporaryDirectory(prefix='mg5_born_pids_') as tmp:
@@ -195,6 +226,127 @@ class TestBornRegistry(unittest.TestCase):
             TestBornLibrary.run_command(['./check'],tmp)
 
     @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_born_zero_mask_relearns_when_only_the_frame_changes(self):
+        routine = ['subroutine sum_born(p,ans,calls)', 'implicit none',
+            'real(8) p,ans,t', 'integer calls,ntry,i,nfksprocess',
+            'common/c_nfksprocess/nfksprocess', 'logical goodhel(2)',
+            'save ntry,goodhel', 'data ntry/0/', 'data goodhel/2*.false./',
+            'ntry=ntry+1', 'ans=0d0', 'calls=0', 'do i=1,2',
+            'if(goodhel(i).or.ntry.lt.2)then', 'calls=calls+1',
+            't=1d0', 'if(i.eq.2)t=p', 'ans=ans+t',
+            'if(t.ne.0d0)goodhel(i)=.true.', 'endif', 'enddo', 'end']
+        program = ['program check', 'implicit none',
+            'integer nfksprocess,born_model_epoch,born_helicity_frame(2),calls',
+            'common/c_nfksprocess/nfksprocess',
+            'common/c_born_model_epoch/born_model_epoch',
+            'common/c_born_helicity_frame/born_helicity_frame', 'real(8) ans',
+            'nfksprocess=1', 'born_model_epoch=11', 'born_helicity_frame=0',
+            'call sum_born(0d0,ans,calls)', 'if(ans.ne.1d0.or.calls.ne.2)stop 1',
+            'call sum_born(0d0,ans,calls)', 'if(ans.ne.1d0.or.calls.ne.1)stop 2',
+            'born_helicity_frame=[3,8]', 'call sum_born(2d0,ans,calls)',
+            'if(ans.ne.3d0.or.calls.ne.2)stop 3',
+            'call sum_born(2d0,ans,calls)', 'if(ans.ne.3d0.or.calls.ne.2)stop 4',
+            # The same run-card mask can identify another basis in a reused
+            # provider when the native context's user-leg mapping changes.
+            'born_helicity_frame=[4,8]', 'call sum_born(0d0,ans,calls)',
+            'if(ans.ne.1d0.or.calls.ne.2)stop 5',
+            'call sum_born(0d0,ans,calls)', 'if(ans.ne.1d0.or.calls.ne.1)stop 6',
+            'born_helicity_frame=0', 'call sum_born(0d0,ans,calls)',
+            'if(ans.ne.1d0.or.calls.ne.2)stop 7',
+            'if(born_model_epoch.ne.11)stop 8', 'end']
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)/'check.f'
+            support.write_fortran(source, program+support.model_aware_helicity_filter(routine))
+            TestBornLibrary.run_command(['gfortran','-fcheck=all','-ffixed-line-length-none',
+                                         'check.f','-o','check'],tmp)
+            TestBornLibrary.run_command(['./check'],tmp)
+
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
+    def test_cached_helicities_preserve_the_other_frame_zero_mask(self):
+        # Compile the production adapter and mask transformation together.
+        # The two bases have disjoint nonzero amplitudes, so an intervening
+        # learned mask cannot accidentally give the right optional weights.
+        record = dict(provider=1,nexternal=4,ngraphs=1,ncolor=1,nhelicity=2,
+            namps=1,nsqamps=1,orders=['QCD'],links=[],
+            helicity_matrices=[{}],sectors=[dict(fks=dict(splitting_type=['QCD']))])
+        declarations = ["include 'orders.inc'", 'real(8) p(0:3,3),ans',
+            'complex(8) saveamp(1,2)', 'common/to_saveamp/saveamp',
+            'logical goodhel(2,1)', 'common/c_goodhel/goodhel',
+            'integer nfksprocess', 'common/c_nfksprocess/nfksprocess']
+        routine = ['subroutine sborn(p,ans)', 'implicit none']+declarations+[
+            'integer ntry,i,calls', 'common/test_calls/calls',
+            'logical calculatedBorn', 'common/ccalculatedBorn/calculatedBorn',
+            'real(8) amp2(1),jamp2(0:1),amp2b(1),jamp2b(0:1,0:1)',
+            'common/to_amps/amp2,jamp2', 'common/to_amps_born/amp2b,jamp2b',
+            'save ntry', 'data ntry/0/', 'ntry=ntry+1',
+            'if(.not.calculatedBorn)then', 'saveamp=0d0', 'do i=1,2',
+            'if(goodhel(i,1).or.ntry.lt.2)then', 'calls=calls+1',
+            'saveamp(1,i)=p(0,i)',
+            'if(saveamp(1,i).ne.(0d0,0d0))goodhel(i,1)=.true.',
+            'endif', 'enddo', 'endif', 'ans=sum(abs(saveamp)**2)',
+            'amp_split=ans', 'amp2=ans', 'amp2b=ans', 'jamp2=ans', 'jamp2b=ans', 'end']
+        optional = ['subroutine sborn_hel(p,ans)', 'implicit none']+declarations+[
+            'integer i', 'real(8) hel(2),helorders(1,2)',
+            'common/c_born_hel/hel', 'common/c_born_hel_split/helorders',
+            'do i=1,2', 'if(goodhel(i,1))hel(i)=abs(saveamp(1,i))**2', 'enddo',
+            'helorders(1,:)=hel', 'ans=sum(hel)', 'end',
+            'subroutine sborn_sf(p,m,n,ans)', 'real(8) p(0:3,3),ans',
+            'integer m,n', 'stop 90', 'end',
+            'subroutine extra_cnt(p,n,ans)', 'real(8) p(0:3,3)',
+            'integer n', 'complex(8) ans(2,1)', 'stop 91', 'end',
+            'subroutine sborn_onehel(p,nhel,ihel,ans)', 'real(8) p(0:3,3),ans',
+            'integer nhel(3),ihel', 'stop 92', 'end']
+        program = ['program check', 'use mc_born_types', 'implicit none',
+            'type(BornModelState) state', 'type(BornRequest) request',
+            'type(BornResult) result', 'real(8) p(0:3,3)', 'integer status,calls',
+            'common/test_calls/calls', 'calls=0',
+            'allocate(state%real_values(0),state%complex_values(0),request%charges(3))',
+            'request%charges=0d0', 'p=0d0', 'p(0,1)=1d0',
+            'call mcb_provider_1(1,p,state,request,result,status)',
+            'if(status.ne.0.or.result%born.ne.1d0.or.calls.ne.2)stop 1',
+            # Learn B's disjoint mask, then return to the cached point A with
+            # optional helicities. Neither HELAS nor the B mask may change.
+            'p=0d0', 'p(0,2)=2d0', 'request%helicity_frame=[1,4]',
+            'call mcb_provider_1(1,p,state,request,result,status)',
+            'if(status.ne.0.or.result%born.ne.4d0.or.calls.ne.4)stop 2',
+            'p=0d0', 'p(0,1)=1d0', 'request%helicity_frame=0',
+            'request%helicities=.true.',
+            'call mcb_provider_1(1,p,state,request,result,status)',
+            'if(status.ne.0.or.calls.ne.4)stop 3',
+            'if(any(result%helicities.ne.[1d0,0d0]))stop 4',
+            'if(any(result%helicity_orders(1,:).ne.[1d0,0d0]))stop 5',
+            # An uncached point in B still uses its correctly learned mask.
+            # This detects an epoch changed to A while restoring B's mask.
+            'p=0d0', 'p(0,2)=4d0', 'request%helicity_frame=[1,4]',
+            'call mcb_provider_1(1,p,state,request,result,status)',
+            'if(status.ne.0.or.result%born.ne.16d0.or.calls.ne.5)stop 6',
+            'if(any(result%helicities.ne.[0d0,16d0]))stop 7',
+            # A new A point must relearn both columns. The unfiltered oracle
+            # is simply the squared norm of these two supplied amplitudes.
+            'p=0d0', 'p(0,1)=3d0', 'request%helicity_frame=0',
+            'call mcb_provider_1(1,p,state,request,result,status)',
+            'if(status.ne.0.or.result%born.ne.sum(p(0,1:2)**2))stop 8',
+            'if(calls.ne.7.or.any(result%helicities.ne.[9d0,0d0]))stop 9', 'end']
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root/'SubProcesses/P0'
+            source.mkdir(parents=True)
+            (root/'Source/MODEL').mkdir(parents=True)
+            (source/'coupl.inc').touch()
+            (root/'Source/MODEL/input.inc').touch()
+            support.write_fortran(source/'orders.inc',[
+                'integer,parameter::amp_split_size=1,nsplitorders=1',
+                'real(8) amp_split(1)', 'common/to_amp_split/amp_split',
+                'complex(8) amp_split_cnt(1,2,1)', 'common/to_amp_split_cnt/amp_split_cnt'])
+            support.write_fortran(source/'check.f',program+
+                support.provider_adapter(record,source,[])+
+                support.model_aware_helicity_filter(routine)+optional)
+            types = Path(support.__file__).resolve().parents[2]/'Template/NLO/Source/BornSupport/mc_born_types.f90'
+            TestBornLibrary.run_command(['gfortran','-fcheck=all','-ffixed-line-length-none',
+                str(types),'check.f','-o','check'],source)
+            TestBornLibrary.run_command(['./check'],source)
+
+    @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
     def test_polarized_real_cache_preserves_caller_frame(self):
         from madgraph.iolibs import native_histories
         identity = physical((21,21,6))
@@ -207,6 +359,10 @@ class TestBornRegistry(unittest.TestCase):
             support.write_fortran(root/'nexternal.inc', ['integer,parameter::nexternal=3'])
             support.write_fortran(root/'orders.inc', ['integer,parameter::amp_split_size=1',
                 'real(8) amp_split(1)', 'common/to_amp_split/amp_split'])
+            support.write_fortran(root/'real_matrix_weights.inc', [
+                'real(8) real_amp2(2)', 'common/c_real_diagram_weights/real_amp2',
+                'logical get_real_diagram_weights',
+                'common/c_get_real_diagram_weights/get_real_diagram_weights'])
             native_histories.write_dispatchers(root,record,{1:record},[(1,1),(1,2)],{})
             (root/'mc_native_context.f90').write_text('''module mc_native_context
 implicit none
@@ -217,26 +373,36 @@ integer,save::history_permutations(3,1)=0
 end module
 ''')
             program = ['program check', 'use mc_native_context', 'implicit none',
+                "include 'real_matrix_weights.inc'",
                 'integer nfksprocess,calls', 'common/c_nfksprocess/nfksprocess',
                 'common/test_calls/calls', 'real(8) p(0:3,3),wgt',
-                'calls=0', 'shared_real_point=1d0', 'p=2d0', 'nfksprocess=1',
+                'calls=0', 'get_real_diagram_weights=.false.',
+                'shared_real_point=1d0', 'p=2d0', 'nfksprocess=1',
                 'call smatrix_real(p,wgt)', 'if(wgt.ne.4d0.or.calls.ne.1)stop 1',
                 'p(0,1)=3d0', 'call smatrix_real(p,wgt)',
                 'if(wgt.ne.5d0.or.calls.ne.2)stop 2', 'call smatrix_real(p,wgt)',
                 'if(wgt.ne.5d0.or.calls.ne.2)stop 3', 'nfksprocess=2',
                 'call smatrix_real(p,wgt)', 'if(wgt.ne.2d0.or.calls.ne.3)stop 4',
                 'p(0,1)=4d0', 'call smatrix_real(p,wgt)',
-                'if(wgt.ne.2d0.or.calls.ne.3)stop 5', 'end',
+                'if(wgt.ne.2d0.or.calls.ne.3)stop 5',
+                # A scalar cache hit cannot supply weights that were never
+                # requested; a later weights request must evaluate once.
+                'get_real_diagram_weights=.true.', 'call smatrix_real(p,wgt)',
+                'if(calls.ne.4.or.any(real_amp2.ne.[2d0,4d0]))stop 6',
+                'real_amp2=-1d0', 'call smatrix_real(p,wgt)',
+                'if(calls.ne.4.or.any(real_amp2.ne.[2d0,4d0]))stop 7', 'end',
                 'subroutine mc_capture_model_state(state)', 'use mc_born_types',
                 'implicit none', 'type(BornModelState) state',
                 'state%real_values=[1d0]', 'state%complex_values=[(1d0,0d0)]', 'end']
             for number in (1,2):
                 program += ['subroutine smatrix%d(p,wgt)' % number, 'implicit none',
+                    "include 'real_matrix_weights.inc'",
                     "include 'orders.inc'", 'real(8) p(0:3,3),wgt,wgt_me_born,wgt_me_real',
                     'integer calls', 'common/test_calls/calls',
                     'common/c_wgt_me_tree/wgt_me_born,wgt_me_real',
                     'calls=calls+1', 'wgt=p(0,1)+p(0,3)',
-                    'amp_split=wgt', 'wgt_me_real=wgt', 'end']
+                    'amp_split=wgt', 'wgt_me_real=wgt',
+                    'if(get_real_diagram_weights)real_amp2=[wgt,2d0*wgt]', 'end']
             support.write_fortran(root/'check.f',program)
             types = Path(support.__file__).resolve().parents[2]/'Template/NLO/Source/BornSupport/mc_born_types.f90'
             TestBornLibrary.run_command(['gfortran','-fcheck=all','-ffixed-line-length-none',
@@ -381,7 +547,8 @@ class TestBornLibrary(unittest.TestCase):
                 paths += sorted((output/'Source/DHELAS').glob('*.f'))
                 paths += [output/'Source/MODEL/model_functions.f']
                 self.run_command(['gfortran','-O0','-g','-fcheck=all','-ffixed-line-length-none',
-                    '-I'+str(source),'-I'+str(output/'lib'),*map(str,paths),
+                    '-I'+str(source),'-I'+str(output/'lib'),
+                    '-I'+str(output/'Source/BornSupport'),*map(str,paths),
                     '-L'+str(output/'lib'),'-lmc_born_support',
                     '-Wl,-rpath,'+self.origin+'/../../lib','-Wl,-rpath,'+self.origin,
                     '-o','check'],source)
@@ -471,6 +638,15 @@ class TestBornLibrary(unittest.TestCase):
             'if(born_test_helas_calls(%d).ne.calls_before)stop 30' % r['provider'],
             'if(born_test_contractions(%d).ne.contractions_before)stop 47' % r['provider'],
             'call close_real(result%born,other%born)',
+            # A basis key invalidates only the learned zero mask. Identical
+            # p/model values still identify the same complete numerical result.
+            'request%helicities=.false.',
+            'request%%helicity_frame=[%d,8]' % r['context'],
+            'call born_evaluate(%d,%d,p,state,request,other,status)' % (r['provider'],r['context']),
+            'if(status.ne.0)stop 51', 'call close_real(result%born,other%born)',
+            'if(born_test_helas_calls(%d).ne.calls_before)stop 52' % r['provider'],
+            'if(born_test_contractions(%d).ne.contractions_before)stop 53' % r['provider'],
+            'request%helicity_frame=0', 'request%helicities=.true.',
             'call close_real(ans,result%born)',
             'do i=1,amp_split_size', 'call close_real(amp_split(i),result%amplitudes(i))','enddo',
             'do i=1,%d' % ng, 'call close_real(amp2(i),result%diagrams(i))','enddo',

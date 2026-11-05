@@ -1,0 +1,280 @@
+name: Release
+
+# Fires once a GitHub Release is published (draft -> Publish release), never on
+# a tag push by itself. Checks that main's CI was green for the tagged commit,
+# publishes madspace and pyamplicol to PyPI with the same version as the
+# MadGraph release, and attaches the MadGraph tarball and the pyamplicol
+# prepared-model archive to the release. If anything fails, the release
+# is reverted to draft so a half-published version never stays public.
+#
+# The test suites are deliberately NOT re-run here. Every commit on main is
+# already tested by the push-triggered workflows, and the release tag points at
+# one of those commits, so re-running them would test the same tree a second
+# time for ~250 duplicated jobs. require_green_ci below gates on that existing
+# run instead. (The suites also no longer trigger on tag pushes, for the same
+# reason -- see the push.branches note in each of them.)
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+
+jobs:
+  check_version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Check VERSION / madspace/pyproject.toml agree with the release tag
+        run: python3 bin/create_release.py --version "${{ steps.version.outputs.value }}" --check-only
+
+  # The release gate: main's CI for the exact commit being released must have
+  # finished and be green. Waits if it is still running, so publishing a release
+  # straight after a merge works without having to watch CI by hand.
+  require_green_ci:
+    needs: check_version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # merge-base below needs history
+
+      - name: Check the release commit is on main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --quiet origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::${GITHUB_REF_NAME} points at $GITHUB_SHA, which is not on main."
+            echo "::error::Releases are gated on main's CI run for the tagged commit, so the tag has to be on main."
+            exit 1
+          fi
+
+      # Every suite that runs on a push to main. Kept as an explicit list on
+      # purpose: "all runs for this commit were green" is vacuously true when
+      # no run exists at all, which is exactly the failure mode that let
+      # v0.2.0 publish untested -- hence absent_is_failure: 'true' below.
+      #
+      # madspin_parallel.yml is knowingly absent -- its push filter is
+      # branches: ['3.x'], so it never runs on main and there is nothing to
+      # gate on. See the tracking issue linked in the PR that added this.
+      #
+      # The full suite takes a few hours from cold; poll_timeout_minutes stays
+      # under this job's own timeout-minutes so we report which suite hung
+      # rather than having the runner killed out from under us.
+      - name: Require main's CI for this commit to be green
+        uses: ./.github/actions/require_green_ci
+        with:
+          sha: ${{ github.sha }}
+          branch: main
+          absent_is_failure: 'true'
+          poll_timeout_minutes: '330'
+          poll_interval_seconds: '60'
+          required_workflows: |
+            .github/workflows/unittest.yml
+            .github/workflows/acceptancetest.yml
+            .github/workflows/acceptancetest_madevent.yml
+            .github/workflows/acceptancetest_mg7.yml
+            .github/workflows/parralel.yml
+            .github/workflows/IOtest.yml
+            .github/workflows/aloha.yml
+            .github/workflows/check_xsec_processes_mg7.yml
+            .github/workflows/madspace.yml
+            .github/workflows/pyamplicol.yml
+
+  # Builds the wheels for every supported Python/platform. This one suite does
+  # have to run at release time: the CI build on main only builds the
+  # smoke-test subset, and nothing on main uploads to PyPI.
+  madspace:
+    needs: require_green_ci
+    uses: ./.github/workflows/madspace.yml
+    with:
+      full_matrix: true
+
+  # Publishes the wheels madspace just built. This job MUST be defined here in
+  # release.yml rather than in madspace.yml, even though that is where the
+  # wheels are built: PyPI trusted publishing matches the OIDC job_workflow_ref
+  # claim, which names the workflow file the *job* is defined in, not the
+  # caller. A publish job inside the reusable workflow presents
+  #   job_workflow_ref: .../madspace.yml@refs/tags/vX.Y.Z
+  # and is rejected with "invalid-publisher" against the configured
+  # "Workflow: release.yml" publisher, which is what happened to v0.2.0 in
+  # run 34779296181. PyPI does not support reusable workflows here at all:
+  # https://docs.pypi.org/trusted-publishers/troubleshooting/#reusable-workflows-on-github
+  #
+  # The environment name below is also part of the publisher's claims -- the
+  # configured publisher sets Environment name: pypi, so dropping it would
+  # leave the claim MISSING and fail the same way.
+  publish_pypi:
+    name: Publish to PyPI
+    needs: madspace
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/madspace
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Download all the dists
+        uses: actions/download-artifact@v5
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Builds and tests the pyamplicol sdist and wheels (and the prepared-model
+  # archive they contain), validated by pyamplicol's own release tooling.
+  pyamplicol:
+    needs: require_green_ci
+    uses: ./.github/workflows/pyamplicol.yml
+    with:
+      full_matrix: true
+
+  # Defined here for the same reason as publish_pypi; pyamplicol's PyPI trusted
+  # publisher names this workflow and the same "pypi" environment.
+  publish_pypi_pyamplicol:
+    name: Publish pyamplicol to PyPI
+    needs: [pyamplicol, publish_pypi]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyamplicol
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    steps:
+      - name: Download the validated dists
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-validated-release
+          path: validated
+      - name: Keep only the package files
+        run: |
+          mkdir dist
+          find validated -name 'pyamplicol-*.whl' -exec cp {} dist/ \;
+          find validated -name 'pyamplicol-*.tar.gz' -exec cp {} dist/ \;
+          ls -l dist
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  tarball:
+    needs:
+      - check_version
+      - publish_pypi
+      - publish_pypi_pyamplicol
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # full history: create_release.py's authors.md needs it
+
+      # The actual wheel filenames built for this release, so create_release.py
+      # can record them in input/.release and install.py can later check
+      # platform/Python availability locally instead of querying PyPI.
+      - name: Download the madspace wheels built for this release
+        uses: actions/download-artifact@v5
+        with:
+          pattern: cibw-*
+          path: wheels
+          merge-multiple: true
+
+      - name: Download the pyamplicol wheels built for this release
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-validated-release
+          path: pyamplicol-validated
+
+      - name: Download the pyamplicol prepared-model archive
+        uses: actions/download-artifact@v5
+        with:
+          name: pyamplicol-prepared-models
+          path: dist
+
+      - name: Collect the pyamplicol wheel names
+        run: find pyamplicol-validated -name 'pyamplicol-*.whl' -exec cp {} wheels/ \;
+
+      - name: Build the MadGraph tarball
+        run: >
+          python3 bin/create_release.py --version "${{ needs.check_version.outputs.version }}"
+          --output dist --wheels-dir wheels
+
+      - name: Smoke-test the tarball
+        run: |
+          set -e
+          tar xzf dist/MG7_v${{ needs.check_version.outputs.version }}.tar.gz -C /tmp
+          cd "/tmp/MG7_v$(echo "${{ needs.check_version.outputs.version }}" | tr . _)"
+
+          # madgraph/VERSION is a symlink to ../VERSION: prove it survived packaging.
+          grep -q "version = ${{ needs.check_version.outputs.version }}" madgraph/VERSION
+
+          # The just-published PyPI wheel may take a little while to become
+          # installable; retry rather than fail on the first miss.
+          for attempt in $(seq 10); do
+            python3 madspace/install.py --bin -y && break
+            echo "attempt $attempt: madspace==${{ needs.check_version.outputs.version }} not installable yet, retrying..."
+            sleep 15
+          done
+          test -d madspace/install/madspace
+
+          # Also checks that Symbolica accepts pyamplicol's library key; only the
+          # wheel download is retried, so a rejected key fails the step.
+          for attempt in $(seq 10); do
+            if python3 pyamplicol/install.py --bin -y; then status=0; break; else status=$?; fi
+            # The wheel installed, so the license check failed: retrying cannot help.
+            test -d pyamplicol/install/pyamplicol && break
+            echo "attempt $attempt: pyamplicol==${{ needs.check_version.outputs.version }} not installable yet, retrying..."
+            sleep 15
+          done
+          test "$status" -eq 0
+          test -d pyamplicol/install/pyamplicol
+
+      - name: Sign the tarball with Sigstore
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: ./dist/MG7_v${{ needs.check_version.outputs.version }}.tar.gz
+
+      - name: Upload tarball to the GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: gh release upload '${{ github.ref_name }}' dist/** --repo '${{ github.repository }}' --clobber
+
+  revert_to_draft:
+    needs:
+      - check_version
+      - require_green_ci
+      - madspace
+      - publish_pypi
+      - pyamplicol
+      - publish_pypi_pyamplicol
+      - tarball
+    # 'skipped' has to count as a failure here: a job whose own guard is false,
+    # or one whose dependency was skipped, is neither failure() nor cancelled(),
+    # so the old condition let a run in which nothing but check_version executed
+    # report success and leave the release published untested.
+    if: >-
+      always() && (contains(needs.*.result, 'failure')
+      || contains(needs.*.result, 'cancelled')
+      || contains(needs.*.result, 'skipped'))
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Revert the release to draft
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit '${{ github.ref_name }}' --draft --repo '${{ github.repository }}'
+          echo "::error::Release checks failed -- '${{ github.ref_name }}' was reverted to draft. Fix the issue and re-publish."
+          # An ::error:: annotation does not set an exit code. Without this the
+          # run is still green when the trigger was skipped jobs rather than a
+          # failed one, which is exactly the case this job now catches.
+          exit 1

@@ -95,7 +95,7 @@ c
 c     TJS 3/13/2008
 c     Modified to allow for more sequences
 c     iseed can be between 0 and 30081*30081
-c     before patern repeats
+c     before pattern repeats
 c     JA 11/2/2011: Check for ioffset, as in ntuple (ranmar.f)
 c     TJS  20/6/2012 changed mod value to 30081 to avoid duplicate sequences
 c

@@ -1,6 +1,6 @@
 /*******************************************************************************
 *									       *
-* misc.c -- Miscelaneous Motif convenience functions			       *
+* misc.c -- Miscellaneous Motif convenience functions			       *
 *									       *
 * Copyright (c) 1991 Universities Research Association, Inc.		       *
 * All rights reserved.							       *
@@ -105,7 +105,7 @@ void AddMotifCloseCallback(Widget shell, XtCallbackProc closeCB, void *arg)
 }
 
 /*
-** Motif still generates spurrious passive grab warnings on both IBM and SGI
+** Motif still generates spurious passive grab warnings on both IBM and SGI
 ** This routine suppresses them
 */
 void SuppressPassiveGrabWarnings(void)
@@ -257,7 +257,7 @@ void RemoveDialogMnemonicHandler(Widget dialog)
 **
 ** Under some circumstances, popping down a dialog and its parent in
 ** rapid succession causes a crash.  This routine delays and
-** processs events until receiving a ReparentNotify event.
+** process events until receiving a ReparentNotify event.
 ** (I have no idea why a ReparentNotify event occurs at all, but it does
 ** mark the point where it is safe to destroy or pop down the parent, and
 ** it might have something to do with the bug.)  There is a failsafe in

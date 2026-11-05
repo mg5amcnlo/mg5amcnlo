@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: 0BSD
+# Generate p p > Z j j from the serialized form of the UFO Standard Model.
+# `pyamplicol examples copy` materializes models/json/sm beside this card.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "models/json/sm/sm.json"
+restriction = "default"
+simplify = true
+
+[process]
+entries = [{ expression = "p p > Z j j" }]
+flavor_scheme = 2
+max_quark_lines = 2
+
+[process.multiparticles]
+p = ["d", "d~", "g"]
+j = ["d", "d~", "g"]
+
+[color]
+accuracy = "lc"
+# Omitted lc_flow_layout defaults to non-union "topology-replay".
+# Set it to "all-flow-union" to generate the LC union-flow layout instead.
+
+[generation]
+output = "artifacts/pp_zjj"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+# Raw portable model IR has no prepared recurrence pack. This example
+# intentionally demonstrates process-local compiled DAG generation.
+execution_mode = "compiled"
+
+[evaluator.jit]
+# Omitted optimization_level uses the portable JIT O2 default.
+compress = "auto"

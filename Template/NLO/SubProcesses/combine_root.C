@@ -1,11 +1,11 @@
-//Sums root histograms produced by MadGraph5_aMC@NLO and saves 
+//Sums root histograms produced by MadGraph7 and saves 
 //the results in a single root file. 
 //
 //This code is steered by combine_root.sh, but can be executed directly
 //from a shell with the command:
 //   root -l -b combine_root.C
 //
-//It has beed tested on SLC6 machines with root v5.34.11. 
+//It has been tested on SLC6 machines with root v5.34.11.
 //It may not work with older versions
 
 #include <TCanvas.h>
@@ -79,7 +79,7 @@ void combine_root(){
     }
   else {
     std::cout << "Error in combine_root.C" << std::endl;
-    std::cout << "Probably cant find temp_root_files.txt" << std::endl;
+    std::cout << "Probably cannot find temp_root_files.txt" << std::endl;
     return ;
   }
 

@@ -373,7 +373,7 @@ void mcfioC_PrintDictionary(void)
    printf 
    ("    MCFIO_FILENUMBER : The Sequential file number currently accessed.\n");
    printf ("    MCFIO_MAXLREC: Maximum Record length\n");
-   printf ("    MCFIO_MINLREC: Minumum Record length\n");
+   printf ("    MCFIO_MINLREC: Minimum Record length\n");
    printf
    ("    MCFIO_NUMRECORDS: The number of records in the current event\n");
    printf 
@@ -420,7 +420,7 @@ void mcfioC_PrintDictionary(void)
    
 unsigned int mcfioC_InfoNumStream(int *istreams,  unsigned int nmax)
 /*
-** Returns in the arrary istream the list of active stream indices.
+** Returns in the array istream the list of active stream indices.
 ** 
 */
 {

@@ -113,7 +113,7 @@ class Param_card:
     #3 #########################################################################
     def mod_with_diff(self,name_blok,line_content):
         """ modify the line content to fix the parameter in fixing the mass differences
-            entry line_content doesn't content the name blok information
+            entry line_content doesn't content the name block information
 
             You should prefer to use mod_with_fct (more general)
         """
@@ -129,7 +129,7 @@ class Param_card:
     #3 #########################################################################
     def mod_with_fct(self,name_blok,line_content,level):
         """ modify the line content to fix the parameter in fixing the mass differences
-            entry line_content doesn't content the name blok information
+            entry line_content doesn't content the name block information
         """        
 
         pat=re.compile(r'''\$(\d+)3''')
@@ -138,7 +138,7 @@ class Param_card:
 
         for param_nb in values:
             fct=fct.replace('$'+param_nb+'3','param'+param_nb)
-            string0='self.info[self.MWparam[\'mw_parameter\'][\''+str(10*int(param_nb)+1)+'\'].split(\'_\')[-1]]' #select the blok name
+            string0='self.info[self.MWparam[\'mw_parameter\'][\''+str(10*int(param_nb)+1)+'\'].split(\'_\')[-1]]' #select the block name
             string=string0
             if type(self.MWparam['mw_parameter'][str(10*int(param_nb)+2)])==str:
                 string+='[\''+str(self.MWparam['mw_parameter'][str(10*int(param_nb)+2)])+'\']' 
@@ -148,7 +148,7 @@ class Param_card:
             if int(param_nb)!=level: exec('param'+param_nb+'=float('+string+')')               # find the current value of the parameter
             else:                    exec('param'+param_nb+'=float('+line_content[-1]+')')
         try:
-            exec('new_value='+fct[1:-1])   #supress the ' on the fct and find the correct value
+            exec('new_value='+fct[1:-1])   #suppress the ' on the fct and find the correct value
         except:
             print('WARNING: fct undefined for card ',self.creating_card,'. This card will be desactivated')
             self.wrong_generation.append(self.creating_card)
@@ -319,7 +319,7 @@ class Param_card:
     def create_set_card(self,name):
         """ create all the card from schedular in file name """
         self.creating_card=1 #tag to know card under creation
-        self.wrong_generation=[] #can happen if fct is wrongly defined -> automatic desactivation
+        self.wrong_generation=[] #can happen if fct is wrongly defined -> automatic deactivation
         
         if type(name)==str:
             self.MWparam=MW_param.read_card(name)
@@ -568,7 +568,7 @@ class Param_card:
                                  
     #3#########################################################################
     def del_old_param(self):
-        """ supress all the all param_card """
+        """ suppress all the all param_card """
 
         if not self.MWparam['mw_parameter']['2']:
             os.system('rm ./Cards/param_card_?.dat &>/dev/null')

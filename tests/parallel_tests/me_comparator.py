@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -436,14 +436,14 @@ class MG5Runner(MG4Runner):
     def format_mg5_proc_card(self, proc_list, model, orders):
         """Create a proc_card.dat string following v5 conventions."""
 
-        v5_string = "import model_v4 %s\n" % os.path.join(self.model_dir, model)
+        v5_string = "import model_v4 %s --debug\n" % os.path.join(self.model_dir, model)
         v5_string += "set automatic_html_opening False\n"
         couplings = MERunner.get_coupling_definitions(orders)
 
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone %s -f\n" % \
+        v5_string += "output standalone_fortran %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
@@ -466,8 +466,9 @@ class MG5_UFO_Runner(MG5Runner):
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone %s -f\n" % \
+        v5_string += "output standalone_fortran %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
+        misc.sprint("proc_card.dat content:\n%s" % v5_string)
         return v5_string
 
 class MG5_UFO_gauge_Runner(MG5Runner):
@@ -495,7 +496,7 @@ class MG5_UFO_gauge_Runner(MG5Runner):
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone %s -f\n" % \
+        v5_string += "output standalone_fortran %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
                      
         v5_string += 'set complex_mass_scheme False \n'
@@ -507,7 +508,7 @@ class MG5OldRunner(MG5Runner):
     """ """
     
     mg5_path = ""
-    name = 'MadGraph5 Reference'
+    name = 'MadGraph7 Reference'
     type = 'ufo_ref'
     
     def setup(self, mg5_path, temp_dir=None):
@@ -545,7 +546,7 @@ class MG5OldRunner(MG5Runner):
             v5_string = "import model %s \n" % model
             proc_card_file.write(v5_string)
             proc_card_file.write(self.pass_proc)
-            proc_card_file.write("\n output standalone %s -f\n" % dir_name)
+            proc_card_file.write("\n output standalone_fortran %s -f\n" % dir_name)
         proc_card_file.close()
 
         logging.info("proc_card.dat file for %i processes successfully created in %s" % \
@@ -556,10 +557,10 @@ class MG5OldRunner(MG5Runner):
 
         devnull = open(os.devnull,'w') 
         if logging.root.level >=20:
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location],
+            subprocess.call([pjoin(self.mg5_path,'bin','madgraph'), proc_card_location],
                         stdout=devnull, stderr=devnull)
         else:       
-            subprocess.call([pjoin(self.mg5_path,'bin','mg5_aMC'), proc_card_location])
+            subprocess.call([pjoin(self.mg5_path,'bin','madgraph'), proc_card_location])
                         
         
         # Remove the temporary proc_card
@@ -591,48 +592,11 @@ class MG5_UFO_OldRunner(MG5OldRunner):
         for i, proc in enumerate(proc_list):
             v5_string += 'add process ' + proc + ' ' + couplings + \
                          '@%i' % i + '\n'
-        v5_string += "output standalone %s -f\n" % \
+        v5_string += "output standalone_fortran %s -f\n" % \
                      os.path.join(self.mg4_path, self.temp_dir_name)
 
         return v5_string
 
-
-class MG5_CPP_Runner(MG5Runner):
-    """Runner object for the MG5 C++ Standalone output."""
-
-    mg5_path = ""
-    
-    type='cpp'
-    name = 'MG5-C++'
-    compilator ='g++'
-
-    def format_mg5_proc_card(self, proc_list, model, orders):
-        """Create a proc_card.dat string following v5 conventions."""
-
-        v5_string = "import model %s \n" % model
-        v5_string += "set automatic_html_opening False\n"
-        couplings = MERunner.get_coupling_definitions(orders)
-
-        for i, proc in enumerate(proc_list):
-            v5_string += 'add process ' + proc + ' ' + couplings + \
-                         '@%i' % i + '\n'
-        v5_string += "output standalone_cpp %s -f\n" % \
-                     os.path.join(self.mg4_path, self.temp_dir_name)
-
-        return v5_string
-
-    def fix_energy_in_check(self, dir_name, energy):
-        """Replace the hard coded collision energy in check_sa.f by the given
-        energy, assuming a working dir dir_name"""
-
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'r')
-        check_sa = file.read()
-        file.close()
-
-        file = open(os.path.join(dir_name, 'SubProcesses', 'check_sa.cpp'), 'w')
-        file.write(re.sub("energy = 1000", "energy = %i" % int(energy),
-                          check_sa))
-        file.close()
 
 class PickleRunner(MERunner):
     """Runner object for the stored comparison results."""
@@ -776,7 +740,7 @@ class MEComparator(object):
             return mystr + " " * (length - len(mystr))
 
     def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
-        """Output result as a nicely formated table. If filename is provided,
+        """Output result as a nicely formatted table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
         proc_col_size = 17
@@ -882,7 +846,7 @@ class MEComparatorGauge(MEComparator):
     formats."""
     
     def output_result(self, filename=None, tolerance=3e-06, skip_zero=True):
-        """Output result as a nicely formated table. If filename is provided,
+        """Output result as a nicely formatted table. If filename is provided,
         write it to the file, else to the screen. Tolerance can be adjusted."""
 
         proc_col_size = 18
@@ -1069,4 +1033,3 @@ def create_proc_list_2_3(init_part_list1,
                         res_list.append(' '.join(proc))
 
     return res_list
-

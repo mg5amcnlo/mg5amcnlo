@@ -251,7 +251,7 @@ c            write(*,*) min_goal,goal_wgt,max_goal
       endif
       write(*,*) 'Unweighting selected ',nreq, ' events.'
       write(*,'(a,f5.2,a)') 'Truncated ',xtrunc*100./sum,
-     $     '%% of cross section'
+     $     '% of cross section'
 
 C $B$ output_file2 $B$ !this is tag for automatic modification by MW
       filename='../Events/unweighted_events.lhe'

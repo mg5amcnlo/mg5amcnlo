@@ -51,9 +51,9 @@ MODULE ElasticPhotonPhotonFlux
                                                ! when proton_FF_correction=.TRUE.
                                                ! it will impact both pp and pA UPCs
   INTEGER,PUBLIC::IEPSILON_EDFF=0  ! 0: bmin = RA; 1: bmin = RA+a
-  LOGICAL,PRIVATE::CALC_DELTABQ=.FALSE. ! whether we want to calcuate DeltaB (.TRUE.) or not (.FALSE.)
+  LOGICAL,PRIVATE::CALC_DELTABQ=.FALSE. ! whether we want to calculate DeltaB (.TRUE.) or not (.FALSE.)
   LOGICAL,PUBLIC::GENERATE_DELTAB_GRID=.FALSE. ! if true, it will always first generate the grid
-  LOGICAL,PUBLIC::GENERATE_PhotonPhotonFlux_GRID=.TRUE. ! if true, it will alwyas first generate the grid for PhotonPhotonFlux
+  LOGICAL,PUBLIC::GENERATE_PhotonPhotonFlux_GRID=.TRUE. ! if true, it will always first generate the grid for PhotonPhotonFlux
   INTEGER,PRIVATE,SAVE::nuclearA_beam1,nuclearA_beam2,nuclearZ_beam1,nuclearZ_beam2
   ! energy in GeV per nucleon in each beam
   REAL(KIND(1d0)),DIMENSION(2),PRIVATE,SAVE::ebeam_PN

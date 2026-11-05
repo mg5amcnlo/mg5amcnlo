@@ -125,9 +125,9 @@ Fortran-callable interfaces. Run it from the repository root with:
 ==================================================
 
 0. Make sure that correct information about the PY8 path is stored in
-   input/mg5_configuration.txt, which will be used to fill makefile.inc.
+   input/mg7_configuration.txt, which will be used to fill makefile.inc.
    It is possible to run pythia_path.py to retrieve information from
-   the input/mg5_configuration.txt.
+   the input/mg7_configuration.txt.
 
 1. Run "make gridsudgen_clust".
 

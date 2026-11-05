@@ -1,5 +1,5 @@
 #***********************************************************************
-#                        MadGraph5_aMC@NLO                             *
+#                        MadGraph7                             *
 #                                                                      *
 #                      shower_card.dat aMC@NLO                         *
 #                                                                      *
@@ -61,6 +61,11 @@ njmax      = XXX       # Maximal multiplicity in the merging (fxFx).
 #                     # -1 means guessed  from the process definition
 qed_shower   = XXX      # T = enable QED shower for Q and L 
 primordialkt = XXX      # T = enable primordial parton k_T  
+hepmc_format = XXX      # HepMC version of the output: hepmc3, hepmc2 or auto
+#                       # (auto: hepmc3, or hepmc2 if MadAnalysis5 runs at
+#                       # hadron level or Delphes has no DelphesHepMC3).
+#                       # With ANALYSE, hepmc3 fills HEPEVT in the Pythia8
+#                       # event-record order (auto keeps the HepMC2 one).
 pythia8_options = XXXX # Dictionary specifying any additional entry in the pythia8 command file
                        # Warning changing some parameter will break NLO accuracy.
 #***********************************************************************
@@ -96,7 +101,7 @@ time_shower_me_after_first  = XX    # hep-ph/2308.06389 for details
 #                                                                      *
 # Syntax for PYTHIA8                                                   *
 # DM_I = M:onIfAny = D1 D2                                             *
-# or similar, according to the offical PYTHIA8 decay syntax, see       *
+# or similar, according to the official PYTHIA8 decay syntax, see       *
 # the online PYTHIA8 manual                                            *
 # WARNING: 1 -> n decays (with n > 2) are handled through a sequence   *
 # of 1 -> 2 decays.                                                    *

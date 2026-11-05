@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2011 The MadGraph Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
@@ -133,11 +133,19 @@ class CmdExtended(cmd.Cmd):
         '#************************************************************\n' + \
         '#*                        MadWeight 5                       *\n' + \
         '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
+        "#*                        ..........                        *\n" + \
+        "#*                      @          ....                     *\n" + \
+        "#*                    @               ...                   *\n" + \
+        "#*                  @    M         M    .                   *\n" + \
+        "#*                 @     MM       MM    ..                  *\n" + \
+        "#*                 .     M  M   M  M  ..                    *\n" + \
+        "#*                 ..    M   M M   M ..                     *\n" + \
+        "#*                  .    M    M    M.                       *\n" + \
+        "#*                  ...                   7777777           *\n" + \
+        "#*                    ....                     7            *\n" + \
+        "#*                       .................... 7             *\n" + \
+        "#*                                           7              *\n" + \
+        "#*                                          7               *\n" + \
         "#*                                                          *\n" + \
         "#*                                                          *\n" + \
         info_line + \
@@ -159,14 +167,22 @@ class CmdExtended(cmd.Cmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H  5          *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 7           *\n" + \
         "*                      M A D W E I G H T                   *\n" + \
         "*                                                          *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                     * * * * 5 * * * *                    *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                 *                       *                *\n" + \
+        "*                        ..........                        *\n" + \
+        "*                      @          ....                     *\n" + \
+        "*                    @               ...                   *\n" + \
+        "*                  @    M         M    .                   *\n" + \
+        "*                 @     MM       MM    ..                  *\n" + \
+        "*                 .     M  M   M  M  ..                    *\n" + \
+        "*                 ..    M   M M   M ..                     *\n" + \
+        "*                  .    M    M    M.                       *\n" + \
+        "*                  ...                   7777777           *\n" + \
+        "*                    ....                     7            *\n" + \
+        "*                       .................... 7             *\n" + \
+        "*                                           7              *\n" + \
+        "*                                          7               *\n" + \
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
@@ -391,8 +407,8 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         
     def check_launch_jobs(self, args):
-        """format the argument to retrun a list with two argument,
-        The first corresponding to the fact if we need te create the output dir
+        """format the argument to return a list with two argument,
+        The first corresponding to the fact whether we need to create the output directory
         The second if we can launch the job on the cluster."""
         
         if not args:
@@ -464,10 +480,13 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         
         input_files = [pjoin(self.me_dir, 'SubProcesses', dirname, 'comp_madweight'), 
                        pjoin(self.me_dir, 'Cards', 'param_card_%i.dat' % nb_card),
-                       self.get_pdf_input_filename(),
                        pjoin(self.me_dir, 'Cards', 'ident_card.dat'),
                        pjoin(self.me_dir, 'Cards', 'run_card.dat')
                        ]
+        # empty when the node reads the PDF on its own (CVMFS/cluster_local_path)
+        pdfinput = self.get_pdf_input_filename()
+        if pdfinput.strip():
+            input_files.insert(2, pdfinput)
         
         # add event_file:
         if not evt_file:
@@ -711,7 +730,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         cards = ['param_card.dat', 'run_card.dat', 'madweight_card.dat', 
                  'transfer_card.dat', 'input.lhco']
         if not self.force:
-            self.ask_edit_cards(cards, mode='fixed', plot=False)
+            self.ask_edit_cards(cards, mode='fixed')
         else:
             self.configured = 0
             self.configure()
@@ -779,7 +798,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
         self.clean_old_run(keep_event=True)     
         if not self.force:
             cards = ['madweight_card.dat'] 
-            self.ask_edit_cards(cards, mode='fixed', plot=False)
+            self.ask_edit_cards(cards, mode='fixed')
             self.exec_cmd("treatcards")
             self.do_compile('', refine=True) # force re-compilation
         
@@ -803,7 +822,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
                 continue
             if float(value) * precision < float(error):
                 allow_refine.append((int(card_nb), lhco_nb))
-        logger.info("%s selected jobs for the refinment." % len(allow_refine))
+        logger.info("%s selected jobs for the refinement." % len(allow_refine))
         for MWdir in self.MWparam.MW_listdir:
             # We need to know in which file are written all the relevant event
             event_to_file = {}
@@ -922,7 +941,7 @@ class CollectObj(dict):
 
 #1 ################################################################################# 
 class MWParserXML(xml.sax.handler.ContentHandler):
-    """ This class will organize in python obect the TF_param.dat file 
+    """ This class will organize in python object the TF_param.dat file
         (written in xml) 
     """
 

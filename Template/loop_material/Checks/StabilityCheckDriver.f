@@ -66,7 +66,7 @@
 !     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 !     in coupl.inc .
 
-          call setpara('param_card.dat')  !first call to setup the paramaters
+          call setpara('param_card.dat')  !first call to set up the parameters
 
       ENDIF
       AO2PI=G**2/(8.D0*(3.14159265358979323846d0**2))

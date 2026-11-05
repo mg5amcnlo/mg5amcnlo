@@ -347,7 +347,7 @@ void FreeTree(nodehep *node)
 		cur = cur->daughter;
 	}
 	/*
-	* reassing the sister to be the first daughter ( if any),
+	* reassign the sister to be the first daughter ( if any),
 	* and set the next node to be free to that daughter.  if no 
 	* such daughter, then set next to be the mother.
 	*/
@@ -573,7 +573,7 @@ static void drawNodehep( nodehep *ptr){
   	XtSetValues(w, wargs, n);  
 	XmStringFree (xminfo);
 /*
-* Now add the pointer to the node to the argument forthe call back routine.
+* Now add the pointer to the node to the argument for the call back routine.
 */
 	XtAddCallback(w, XmNactivateCallback,
 	              (XtCallbackProc)  listnodeCB, ptr);
@@ -587,7 +587,7 @@ static void listnodeCB(Widget w, nodehep *ptr, caddr_t callData)
 	PhaseParticle *p, *pm;
 	int nn, takeit;
 
-/* Do nothin if the user click on the tree top.. */
+/* Do nothing if the user click on the tree top.. */
 	
 	wim = ptr->window;
 	if ((nodehep *) wim->treehead == ptr) return;
@@ -683,7 +683,7 @@ void CloseHepTreeWindow(Widget w, StdHepWindow *window)
 {
 	nodehep *head;
 
-/* Set the selected Node to null and redraw the event to remore the 
+/* Set the selected Node to null and redraw the event to remove the
 	possible highlights..*/
 	
 	window->selectedNode = NULL;

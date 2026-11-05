@@ -8,7 +8,7 @@ c uses only the tree setup, beam sampler and Born-momentum generator.
       include 'nexternal.inc'
       private
       public generate_momenta_born,initialize_born_chart,
-     $     generate_tau_y_wrapper
+     $     generate_tau_y_wrapper,sample_real_channel
 
 c The initialized channel supplies this private Born sampling chart.
 c It is independent of the masses/momenta of each sampled point.
@@ -17,6 +17,202 @@ c It is independent of the masses/momenta of each sampled point.
       logical :: one_body=.false.
 
       contains
+
+      subroutine sample_real_channel(ndim,iconfig,
+     &     representative_sector,x,p,wgt)
+c Generate the complete real phase space from a real-emission tree.
+c Unlike generate_momenta, this has no underlying Born or FKS radiation
+c map. The returned weight contains phase space, beam fractions and flux;
+c conversion to picobarns is applied later with the parton luminosity.
+      use mint_module, only: new_point
+      use fks_phase_space_data, only: tau_Born_lower_bound,
+     &     tau_lower_bound_resonance,tau_lower_bound,p_ev,p_born,
+     &     p1_cnt,jac_cnt,sqrtshat_ev,shat_ev,sqrtshat_cnt,shat_cnt,
+     &     tau_ev,ycm_ev,tau_cnt,ycm_cnt,xbjrk_ev,xbjrk_cnt,
+     &     nocntevents
+      implicit none
+      include 'nFKSconfigs.inc'
+      include 'run.inc'
+      integer ndim,iconfig,representative_sector
+      double precision x(99),p(0:3,nexternal),wgt
+      double precision props_mass(-nexternal:0,lmaxconfigs,
+     &     0:fks_configs),props_width(-nexternal:0,lmaxconfigs,
+     &     0:fks_configs)
+      integer iforest(2,-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer sprop(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer tprid(-max_branch:-1,lmaxconfigs,0:fks_configs)
+      integer mapconfig(0:lmaxconfigs,0:fks_configs)
+      common/c_configurations/props_mass,props_width,iforest,
+     &     sprop,tprid,mapconfig
+      double precision emass(nexternal)
+      common/to_mass/emass
+      integer itree(2,-max_branch:-1),iconf
+      common/to_itree/itree,iconf
+      double precision s_mass(-nexternal:nexternal)
+      common/to_phase_space_s_channel/s_mass
+      double precision m(-max_branch:max_particles),
+     &     s(-max_branch:max_particles),pb(0:3,-max_branch:nexternal)
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),
+     &     cbw_mass(-1:1,-nexternal:-1),
+     &     cbw_width(-1:1,-nexternal:-1)
+      integer cbw(-nexternal:-1)
+      double precision stot,totmass,threshold,tau,ycm,shat,
+     &     sqrtshat,xjac,xpswgt,pi
+      parameter (pi=3.1415926535897932385d0)
+      integer nbranch,ns_channel,nt_channel
+      logical pass
+
+      wgt=0d0
+      p=0d0
+      p(0,1)=-99d0
+      p_ev=p
+      p_born=0d0
+      p_born(0,1)=-99d0
+      p1_cnt=0d0
+      p1_cnt(0,1,:)=-99d0
+      jac_cnt=0d0
+      tau_cnt=0d0
+      ycm_cnt=0d0
+      sqrtshat_cnt=0d0
+      shat_cnt=0d0
+      xbjrk_cnt=0d0
+      nocntevents=.true.
+      if (representative_sector.lt.1.or.
+     &     representative_sector.gt.fks_configs) then
+         write(*,*) 'Invalid real phase-space sector',
+     &        representative_sector
+         stop 1
+      endif
+      if (iconfig.lt.1.or.
+     &     iconfig.gt.mapconfig(0,representative_sector)) then
+         write(*,*) 'Invalid real phase-space configuration',iconfig
+         stop 1
+      endif
+      iconf=iconfig
+      itree=iforest(:,:,iconfig,representative_sector)
+      qmass=props_mass(:,iconfig,representative_sector)
+      qwidth=props_width(:,iconfig,representative_sector)
+      m=0d0
+      s=0d0
+      pb=0d0
+      s_mass=0d0
+      cbw=0
+      cbw_mass=0d0
+      cbw_width=0d0
+      m(1:nexternal)=emass
+      s(1:nexternal)=emass**2
+      s_mass(1:nexternal)=emass**2
+      nbranch=nexternal-2
+      if (nincoming.eq.1) then
+         ns_channel=nbranch-1
+         nt_channel=0
+         stot=emass(1)**2
+      else
+         ns_channel=1
+         do while(ns_channel.lt.nbranch)
+            if(itree(1,-ns_channel).eq.1.or.
+     &           itree(1,-ns_channel).eq.2) exit
+            ns_channel=ns_channel+1
+         enddo
+         ns_channel=ns_channel-1
+         nt_channel=nbranch-ns_channel-1
+         if(nt_channel.eq.0) ns_channel=ns_channel-1
+         stot=4d0*ebeam(1)*ebeam(2)
+      endif
+      totmass=sum(emass(nincoming+1:nexternal))
+      threshold=totmass**2
+      if(nincoming.eq.2)
+     &     threshold=max(totmass,sum(emass(1:nincoming)))**2
+      if(stot.le.0d0.or.threshold.ge.stot) return
+      tau_Born_lower_bound=threshold/stot
+      tau_lower_bound_resonance=tau_Born_lower_bound
+      tau_lower_bound=tau_Born_lower_bound
+      xjac=1d0
+      xpswgt=1d0
+      tau=1d0
+      ycm=0d0
+      if(nincoming.eq.2) then
+         if(abs(lpp(1)).ne.abs(lpp(2))) then
+            write(*,*) 'Different beams not implemented',lpp
+            stop 1
+         endif
+         if(abs(lpp(1)).eq.3.or.abs(lpp(1)).eq.4) then
+            call generate_ee_tau_y(x(ndim-1),x(ndim),.false.,
+     &           totmass,stot,nt_channel,qmass(-ns_channel-1),
+     &           qwidth(-ns_channel-1),0,cbw_mass(-1,-ns_channel-1),
+     &           cbw_width(-1,-ns_channel-1),tau,ycm,xjac)
+         elseif(abs(lpp(1)).ge.1) then
+            if(nt_channel.eq.0.and.
+     &           qwidth(-ns_channel-1).ne.0d0) then
+               call generate_tau_BW(stot,ndim-1,x(ndim-1),
+     &              qmass(-ns_channel-1),qwidth(-ns_channel-1),0,
+     &              cbw_mass(-1,-ns_channel-1),
+     &              cbw_width(-1,-ns_channel-1),tau,xjac)
+            elseif(threshold.eq.0d0) then
+c A massless final state has no positive physical lower bound.
+               tau=x(ndim-1)**2
+               xjac=xjac*2d0*x(ndim-1)
+            else
+               call generate_tau(stot,ndim-1,x(ndim-1),tau,xjac)
+            endif
+            if(tau.le.0d0.or.xjac.le.0d0) return
+            call generate_y(tau,x(ndim),ycm,xjac)
+         endif
+      endif
+      if(tau.le.0d0.or.xjac.le.0d0) return
+      shat=tau*stot
+      sqrtshat=sqrt(shat)
+      if(shat.le.threshold) return
+      if(nincoming.eq.2) then
+         call mom2cx(sqrtshat,m(1),m(2),1d0,0d0,pb(0,1),pb(0,2))
+      else
+         pb(0,1)=sqrtshat
+      endif
+      s(-nbranch)=shat
+      m(-nbranch)=sqrtshat
+      pb(0,-nbranch)=sqrtshat
+c sChan_order caches its ordering across FKS maps of the same point.
+c A real topology is a separate map and needs a fresh ordering.
+      new_point=.true.
+      call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat,
+     &     totmass,qwidth,qmass,cbw,cbw_mass,cbw_width,s,x,xjac,pass)
+      if(.not.pass.or.xjac.le.0d0) return
+      if(nt_channel.eq.0.and.nincoming.eq.2) then
+         s(-nbranch+1)=shat
+         m(-nbranch+1)=sqrtshat
+         pb(0,-nbranch+1)=sqrtshat
+      endif
+      if(nt_channel.ne.0) then
+         call generate_t_channel_branchings(ns_channel,nbranch,
+     &        itree,m,s,x,pb,xjac,xpswgt,pass)
+         if(.not.pass.or.xjac.le.0d0) return
+      endif
+      call fill_born_momenta(nbranch,nt_channel,.false.,0,
+     &     x,itree,m,s,pb,xjac,xpswgt,pass)
+      if(.not.pass.or.xjac.le.0d0) return
+      call phspncheck_nocms(nexternal,sqrtshat,m,pb(0,1),pass)
+      if(.not.pass) return
+c The complete real tree uses Kajantie phase-space normalization.
+c There is no separate FKS radiation factor to compensate here.
+      if(nincoming.eq.2) then
+         wgt=xjac*xpswgt/(2d0*sqrt(lambda(shat,m(1)**2,m(2)**2)))
+      else
+         wgt=xjac*xpswgt/(2d0*sqrtshat)
+      endif
+      wgt=wgt/(2d0*pi)**(3*(nexternal-nincoming)-4)
+      p=pb(:,1:nexternal)
+      p_ev=p
+      tau_ev=tau
+      ycm_ev=ycm
+      shat_ev=shat
+      sqrtshat_ev=sqrtshat
+      xbjrk_ev(1)=sqrt(tau)*exp(ycm)
+      xbjrk_ev(2)=sqrt(tau)*exp(-ycm)
+c set_cms_stuff obtains the common lab-frame boost from this entry.
+      ycm_cnt(0)=ycm
+      return
+      end subroutine sample_real_channel
+
 
       subroutine generate_momenta_born(x,shat_born,sqrtshat_born,totmass,
      $          m,s,
@@ -304,7 +500,7 @@ c with the s channel decay sequence
       double precision xjac0,xpswgt0
       double precision M(-max_branch:max_particles),x(99)
       double precision s(-max_branch:max_particles)
-      double precision pb(0:3,-max_branch:nexternal-1)
+      double precision pb(0:3,-max_branch:*)
       integer itree(2,-max_branch:-1)
       integer ns_channel,nbranch
       logical pass
@@ -442,7 +638,7 @@ c last t channel 2->2
       integer nbranch,nt_channel,ionebody
       double precision M(-max_branch:max_particles),x(99)
       double precision s(-max_branch:max_particles)
-      double precision pb(0:3,-max_branch:nexternal-1)
+      double precision pb(0:3,-max_branch:*)
       integer itree(2,-max_branch:-1)
       double precision xjac0,xpswgt0
       logical pass,one_body

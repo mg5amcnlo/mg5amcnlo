@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -790,6 +790,49 @@ class TestHistogramRegressions(unittest.TestCase):
         self.assertNotIn('Relative scale and PDF uncertainty',
                          '\n'.join(gnuplot_output))
 
+    def test_cli_keeps_amcatnlo_scale_and_pdf_columns(self):
+        """aMC@NLO's MADatNLO.HwU labels its columns 'dyn=-1 muR= 1.000
+        muF= 1.000' and 'PDF=334700 <set>': the default command line keeps
+        them, and so the bands, while --no_scale/--no_pdf still drop them."""
+        labels = ['central', 'stat_error',
+                  ('scale_adv', -1, 1.0, 1.0), ('scale_adv', -1, 2.0, 1.0),
+                  ('scale_adv', -1, 0.5, 1.0),
+                  ('pdf_adv', 334700, 'NNPDF40_nlo_as_01180_nf_4'),
+                  ('pdf_adv', 334701, 'NNPDF40_nlo_as_01180_nf_4')]
+        histo = self.make_hwu(labels, [2.0, 0.2, 2.0, 1.8, 2.2, 2.0, 2.1],
+                              title='tt inv m', n_bins=2)
+
+        with misc.TMP_directory() as tmpdir:
+            source = pjoin(tmpdir, 'MADatNLO.HwU')
+            histo.output(source)
+            with open(source) as stream:
+                self.assertIn('dyn=-1 muR= 1.000 muF= 1.000', stream.readline())
+
+            def header(*options):
+                out = pjoin(tmpdir, 'out')
+                result = subprocess.run(
+                    [sys.executable, histograms.__file__, source, source,
+                     '--out='+out, '--no_open']+list(options),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
+                self.assertEqual(result.returncode, 0,
+                                 result.stdout+result.stderr)
+                with open(out+'.HwU') as stream:
+                    return stream.readline()
+
+            # the command of a two-run comparison, bands built
+            line = header('--matplotlib')
+            self.assertIn('dyn=-1 muR= 2.000 muF= 1.000', line)
+            self.assertIn('delta_mu_min -1 @aux', line)
+            self.assertIn('PDF=334701 NNPDF40_nlo_as_01180_nf_4', line)
+
+            line = header('--HwU', '--no_scale')
+            self.assertNotIn('muR=', line)
+            self.assertIn('PDF=334701 NNPDF40_nlo_as_01180_nf_4', line)
+            line = header('--HwU', '--no_pdf')
+            self.assertIn('dyn=-1 muR= 2.000 muF= 1.000', line)
+            self.assertNotIn('PDF=', line)
+
     def test_cli_accepts_run_id_and_rejects_incompatible_sums(self):
         xml_template = """<histfile>
 <run id="{run_id}" header="xmin;xmax;Weight;WeightError">
@@ -839,3 +882,100 @@ class TestHistogramRegressions(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('are not compatible and cannot be combined',
                           result.stdout+result.stderr)
+
+
+class TestPythia8Main164DJRs(unittest.TestCase):
+    """The differential jet rates Pythia8's main164 writes with
+    Main:InternalAnalysis = on, which the DJR plots of an MLM run are made
+    from."""
+
+    MAIN164 = """<histfile>
+<run id="0"">
+<histogram name="log10d01" unit="[]" weight="all">
+  0.0000e+00  1.0000e-06
+  1.0000e+00  2.0000e-06
+  2.0000e+00  0.0000e+00
+</histogram>
+<histogram name="log10d12" unit="[]" weight="all">
+  0.0000e+00  3.0000e-06
+  1.0000e+00  0.0000e+00
+  2.0000e+00  4.0000e-06
+</histogram>
+</run>
+</histfile>
+"""
+
+    def write(self, text):
+        import tempfile
+        handle, path = tempfile.mkstemp(suffix='.dat')
+        with os.fdopen(handle, 'w') as stream:
+            stream.write(text)
+        self.addCleanup(os.remove, path)
+        return path
+
+    def test_reads_the_main164_histfile(self):
+        """main164 writes <run id="0""> (one quote too many), which no XML
+        parser takes; the bins are read with their edges and scaled"""
+        histos = histograms.HwUList.from_pythia8_main164(
+            self.write(self.MAIN164), scale=1e9)
+        self.assertEqual([h.title for h in histos], ['log10d01 []', 'log10d12 []'])
+        bins = histos[0].bins
+        self.assertEqual([b.boundaries for b in bins],
+                         [(0.0, 1.0), (1.0, 2.0), (2.0, 3.0)])
+        self.assertEqual([b.wgts['central'] for b in bins], [1000.0, 2000.0, 0.0])
+        self.assertTrue(all(b.wgts['stat_error'] == 0.0 for b in bins))
+        # and it writes out as a HwU file the plots can be made from
+        out = self.write('')
+        histos.output(out[:-len('.dat')], format='HwU')
+        self.addCleanup(os.remove, out[:-len('.dat')] + '.HwU')
+        reread = histograms.HwUList(out[:-len('.dat')] + '.HwU')
+        self.assertEqual(len(reread), 2)
+
+    def test_the_former_interface_format_is_left_to_its_reader(self):
+        old = self.write('<histfile>\n<run id="0" header="xmin;xmax;central">\n'
+                         '<jethistograms njet="0">\n</jethistograms>\n'
+                         '</run>\n</histfile>\n')
+        self.assertIsNone(histograms.HwUList.from_pythia8_main164(old))
+
+    def test_jet_samples_and_errors(self):
+        """A main164 that also writes the histograms per jet sample (number of
+        matrix-element partons) and the bin uncertainties: the per-sample
+        histograms are returned, titled |JETSAMPLE@n, with their errors"""
+        text = ('<histfile>\n<run id="0">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  3.0e-06  1.0e-07\n  1.0  2.0e-06  1.0e-07\n</histogram>\n'
+                '<jethistograms njet="0">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  3.0e-06  1.0e-07\n  1.0  0.0  0.0\n</histogram>\n'
+                '</jethistograms>\n<jethistograms njet="1">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  0.0  0.0\n  1.0  2.0e-06  1.0e-07\n</histogram>\n'
+                '</jethistograms>\n</run>\n</histfile>\n')
+        histos = histograms.HwUList.from_pythia8_main164(self.write(text), scale=1e9)
+        self.assertEqual([(h.title, h.jetsample) for h in histos],
+                         [('log10d01 []', 0), ('log10d01 []', 1)])
+        self.assertEqual([b.wgts['central'] for b in histos[1].bins], [0.0, 2000.0])
+        self.assertEqual([b.wgts['stat_error'] for b in histos[1].bins], [0.0, 100.0])
+
+    def test_jetsample_blocks_of_pythia8(self):
+        """main164 with InternalAnalysis:jetSamples: <jetsample njet="n">
+        blocks after the totals, two columns"""
+        text = ('<histfile>\n<run id="0">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  3.0e-06\n  1.0  2.0e-06\n</histogram>\n'
+                '<jetsample njet="0">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  3.0e-06\n  1.0  0.0\n</histogram>\n'
+                '</jetsample>\n<jetsample njet="1">\n'
+                '<histogram name="log10d01" unit="[]" weight="all">\n'
+                '  0.0  0.0\n  1.0  2.0e-06\n</histogram>\n'
+                '</jetsample>\n</run>\n</histfile>\n')
+        histos = histograms.HwUList.from_pythia8_main164(self.write(text), scale=1e9)
+        self.assertEqual([(h.title, h.jetsample) for h in histos],
+                         [('log10d01 []', 0), ('log10d01 []', 1)])
+        self.assertEqual([b.wgts['central'] for b in histos[0].bins], [3000.0, 0.0])
+        self.assertTrue(all(b.wgts['stat_error'] == 0.0 for b in histos[1].bins))
+
+    def test_a_file_without_histograms(self):
+        self.assertIsNone(histograms.HwUList.from_pythia8_main164(
+            self.write('<histfile>\n</histfile>\n')))

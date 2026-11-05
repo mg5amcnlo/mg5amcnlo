@@ -18,10 +18,10 @@ c     INPUTS:  ndim     == number of dimensions
 c              iconfig  == configuration working on
 c              mincfig  == First configuration to include
 c              maxcfig  == Last configuration to include
-c              invar    == Number of invarients we are mapping (ndim*maxcfig)
+c              invar    == Number of invariants we are mapping (ndim*maxcfig)
 c              wgt      == wgt for choosing point thus far. 1/npnts*iter
 c     OUTPUTS: wgt      == updated weight after choosing points
-c              x        == points choosen from sample grid
+c              x        == points chosen from sample grid
 c              p        == transformed points call is f(p(x))
 c     COMMON:
 c           hel_picked  == Modified integer in gen_ps.inc to pass the
@@ -77,15 +77,15 @@ c                mincfig   == First configuration to include
 c                maxcfig   == Last configuration to include
 c                wgt       == wgt for choosing x's so far.
 c     OUTPUTS:   wgt       == updated wgt including all configs
-c                x()       == Integration variabls for all configs
+c                x()       == Integration variables for all configs
 c                p1(0:3,n) == 4 momentum of external particles
 c
 c     REQUIRES: IFOREST() set in data statement (see configs.inc)
 c               NEXTERNAL set in data statement (see genps.inc)
 c
-c     Note regarding integration variables mapping to invarients
+c     Note regarding integration variables mapping to invariants
 c     the first nbranch variables go for the masses of branches -1,-2,..
-c     For each t-channel invarient x(ndim-1), x(ndim-3), .... are used
+c     For each t-channel invariant x(ndim-1), x(ndim-3), .... are used
 c     in place of the cos(theta) variable used in s-channel.
 c     x(ndim), x(ndim-2),.... are the phi angles.
 c**************************************************************************
@@ -329,7 +329,7 @@ c        ! while in the ee case x1 and x2 are generated first.
 c        ! now we are done. We must call the following function 
 c        ! in order to (re-)generate tau and ycm
 c        ! from x1 and x2. It also (re-)checks that tau_born 
-c        ! is pysical, and otherwise sets xjac0=-1000
+c        ! is physical, and otherwise sets xjac0=-1000
                call get_y_from_x12(x1_ee, x2_ee, omx_ee(1), cm_rap) 
                set_cm_rap=.true.
             endif
@@ -544,7 +544,7 @@ c
          flux  = 1d0 /(2.D0*SQRT(LAMBDA(s(-nbranch),m(1)**2,m(2)**2)))
          flux  = flux / (2d0*pi)**(3 * nfinal - 4)
 c
-c     Make sure all the invarients are reasonable
+c     Make sure all the invariants are reasonable
 c         
 
          do i=1,invar
@@ -558,7 +558,7 @@ c
 c
 c     Determine fractional probs from the different configs this
 c     allows me to only include points which were contributed
-c     by the projection onto that invarient.
+c     by the projection onto that invariant.
 c
 c
 c     Now normalize fprb
@@ -640,8 +640,10 @@ c     External
 c
       double precision lambda,dot,dsig
       logical passcuts
-
-
+c
+c      local
+c
+      integer dummyflavor
 c
 c     global
 c
@@ -660,7 +662,7 @@ c
       common /to_invar/ Minvar
 
 
-
+        dummyflavor=0
          do i=1,nexternal
             m(i)=pmass(i)
          enddo
@@ -713,7 +715,7 @@ c         if (abs(lpp(1)) .ge. 1) ndim=ndim+1
 c         if (abs(lpp(2)) .ge. 1) ndim=ndim+1
          call set_peaks
 c     Initialize dsig (needed for subprocess group running mode)
-         dum=dsig(0,0,1)
+         dum=dsig(0,dummyflavor,0,1)
 
       return
       end
@@ -727,6 +729,8 @@ c     part to it, and that the t-channel propagators must always appear
 c     as the first element, that is itree(1,i)
 c************************************************************************
       implicit none
+      logical msoft
+      common/to_msoft/msoft
 c
 c     Constants
 c      
@@ -901,7 +905,7 @@ c
          totmass=totmass+m(itree(2,ibranch))
       enddo
       m(-ns_channel-1) = dsqrt(S(-nbranch))
-      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invarient mass
+      do ibranch = -ns_channel-1,-nbranch+2,-1    !Choose invariant mass
          totmass=totmass-m(itree(2,ibranch))      !for remaining particles
          smin = totmass**2                        !This affects t_min/max
          smax = (m(ibranch) - m(itree(2,ibranch)))**2
@@ -910,9 +914,11 @@ c
             jac=-3d0
             return
          endif
+         msoft = .true.
          call sample_get_x(wgt,x(nbranch-1+(-ibranch)*2),
      &        nbranch-1+(-ibranch)*2,iconfig,
      &        smin/stot,smax/stot)
+         msoft = .false.
 
          m(ibranch-1)=dsqrt(max(stot*x(nbranch-1+(-ibranch)*2), 0d0))
 c         write(*,*) 'Using s',nbranch-1+(-ibranch)*2
@@ -1498,7 +1504,7 @@ c
       p1(2) = pt*sin(phi)
 
       call rotxxx(p1,pa_cms,p1)          !Rotate back to pa_cms frame
-      call boostx(p1,ptot,p1)            !boost back to lab fram
+      call boostx(p1,ptot,p1)            !boost back to lab frame
       do i=0,3
          pr(i)=pa(i)-p1(i)               !Return remainder of momentum
       enddo
@@ -1523,7 +1529,7 @@ C****************************************************************************
 C**************************************************************************
 C     This is the G function from Particle Kinematics by
 C     E. Byckling and K. Kajantie, Chapter 4 p. 89 eqs 5.23
-C     It is used to determine if a set of invarients are physical or not
+C     It is used to determine if a set of invariants are physical or not
 C**************************************************************************
       implicit none
 c
@@ -1821,17 +1827,15 @@ C     -----------------------------------------
 
       DOUBLE PRECISION P1(0:3,NEXTERNAL)
       DOUBLE PRECISION P2(0:3,NEXTERNAL)
-      DOUBLE PRECISION PBOOST(0:3)
+      DOUBLE PRECISION QZ(0:3), QT(0:3), PTMP(0:3)
       integer frame_id
 
       integer ids(nexternal)
-      integer i,j
-      integer nsel, isel
+      integer i
       logical trivial_boost
 
 c     uncompress
       call mapid(frame_id, ids)
-      pboost(:) = 0d0
       p2(:,:) = 0d0
 c     avoid trivial boost (check only for  0 0 1 1 1... so sum of the
 c     final state. 1 1 0 0 0 .... should not go within this function   
@@ -1855,55 +1859,28 @@ c     final state. 1 1 0 0 0 .... should not go within this function
             return
         endif
 
-c     find the boost momenta --sum of particles--
-      do i=1,nexternal
-       if (ids(i).eq.1)then
-            do j=0,3
-	           Pboost(j) = Pboost(j) + P1(j,i)
-            enddo
-         endif
-      enddo
-      do j=1,3	
-          Pboost(j) = -1 * Pboost(j)
-      enddo	    
+c     rest frame of the selected particles, reached by a boost along z and
+c     then a transverse one. A single boost along their momentum would
+c     depend on the frame the momenta come in -- partonic c.m. here, lab
+c     in madspace and MadSpin, the Born c.m. of the FKS sector at NLO --
+c     and so would the spin axis of a single particle at rest. See
+c     get_me_frame_boosts in Template/Common/Source/impose_frame_rest.f.
+      call get_me_frame_boosts(ids, nexternal, nincoming, p1, qz, qt)
       do i=1, nexternal
-         call boostx(p1(0,i), pboost, p2(0,i))
+         call boostx(p1(0,i), qz, ptmp)
+         call boostx(ptmp, qt, p2(0,i))
       enddo
 
-c     If a single particle defines the frame, that particle must be
-c     exactly at rest after the boost. boostx only gets there up to the
-c     rounding of the boost factor, leaving a residual 3-momentum of a
-c     few 1d-14 whose direction is pure noise. That is not harmless:
-c     vxxxxx (aloha_functions.f) branches on pp.eq.rZero, and for a
-c     massive vector at exactly zero 3-momentum it takes the frame z
-c     axis as quantisation axis (longitudinal polarisation vector
-c     (0,0,0,1)); otherwise it builds the polarisation vectors from the
-c     momentum direction, i.e. from the rounding noise, giving an O(1)
-c     wrong polarisation state on the events that fail to round to zero.
-c     So impose the defining property of the frame explicitly.
-c     Only nsel==1 needs this: with two or more selected particles it is
-c     their sum that is at rest, and no individual leg sits on the
-c     pp.eq.rZero branch point. The energy is left untouched -- zeroing
-c     the 3-momentum shifts the invariant mass by O(1d-28) relative, and
-c     HELAS takes the mass as a separate argument anyway.
-      nsel = 0
-      isel = 0
-      do i=1, nexternal
-         if (ids(i).eq.1) then
-            nsel = nsel + 1
-            isel = i
-         endif
-      enddo
-      if (nsel.eq.1) then
-         p2(1,isel) = 0d0
-         p2(2,isel) = 0d0
-         p2(3,isel) = 0d0
-      endif
+c     A single selected particle must come out *exactly* at rest, not at
+c     rest to rounding: HELAS switches quantisation axis at exactly zero
+c     three-momentum. See Template/Common/Source/impose_frame_rest.f.
+      call impose_frame_rest(ids, nexternal, p2)
 
       return
       end
 
       double precision function get_channel_cut(p, config)
+      use model_object
       implicit none
 
       include 'maxconfigs.inc'

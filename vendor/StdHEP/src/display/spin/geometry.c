@@ -22,7 +22,7 @@
 *									       *
 * by Paul Lebrun & Mark Edel						       *
 *									       *
-* June 17 : add the Perspective tranformation.				       *
+* June 17 : add the Perspective transformation.				       *
 *									       *
 *******************************************************************************/
 static char SCCSID[] = "@(#)geometry.c	1.1	4/6/92";
@@ -39,7 +39,7 @@ void genZRotMatrix(double theta, double m[3][3]);
 void genScaleMatrix(double scale, double m[3][3]);
 
 /*
-** Routines for generating matricies for rotation and scaling.  The matrix
+** Routines for generating matrices for rotation and scaling.  The matrix
 ** parameter to each takes a 3x3 array which the caller has allocated.
 */
 void genXRotMatrix(double theta, double m[3][3])
@@ -179,11 +179,11 @@ void TransformPoint(double x, double y, double z, double *x1, double *y1,
 /*
 ** MultM
 **
-** Multiply two 3x3 matricies
+** Multiply two 3x3 matrices
 **
 ** Parameters
 **
-**	a, b		The two 3x3 matricies to multiply.
+**	a, b		The two 3x3 matrices to multiply.
 **	result		A 3x3 matrix to hold the result. Allocated by the caller.
 */
 void MultM(double a[3][3], double b[3][3], double result[3][3])

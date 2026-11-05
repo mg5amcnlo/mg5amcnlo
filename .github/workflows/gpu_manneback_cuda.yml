@@ -1,0 +1,77 @@
+# GPU CI on manneback (partition gpu, NVidia, CUDA): madspace build + p p > t t~ with mg7,
+# all in one Slurm allocation through the self-hosted runner 'manneback-gpu'.
+# Runs on every push to main and from the Actions tab ("Run workflow"), where the module
+# list (CUDA/GCC/Python versions), the GPU model and the other inputs can be chosen.
+# Setup and security model: .github/gpu_ci/README.md.
+
+name: GPU CI (manneback, CUDA)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Modules to load, in order (empty = PyTorch CUDA Python foss)'
+        type: string
+        default: ''
+      gres:
+        description: 'Slurm --gres, e.g. gpu:1 (any GPU) or gpu:TeslaA100:1'
+        type: string
+        default: 'gpu:1'
+      gpu_arch:
+        description: 'CUDA compute capability, e.g. 80 (empty = the GPU of the node)'
+        type: string
+        default: ''
+      nevents:
+        description: 'Number of unweighted events'
+        type: string
+        default: '10000'
+      time_limit:
+        description: 'Slurm --time of the allocation (all CI jobs together)'
+        type: string
+        default: '00:30:00'
+      extra_sbatch:
+        description: 'Extra sbatch options, space separated, no quotes (e.g. --qos=preemptible)'
+        type: string
+        default: ''
+      keep_workdir:
+        description: 'Keep the run directory on the cluster after a successful run'
+        type: boolean
+        default: false
+      interference:
+        description: 'Also run the interference (squared split-order) checks'
+        type: boolean
+        default: true
+
+# one run at a time per cluster; a newer pending run replaces an older pending one
+concurrency:
+  group: gpu-ci-manneback
+  cancel-in-progress: false
+
+jobs:
+  manneback:
+    # a called workflow gets at most the permissions of its caller: actions: write for its
+    # watchdog, which cancels the run when the Slurm allocation ends before stop_runner ran
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/gpu_runner_ci.yml
+    with:
+      cluster: manneback
+      runner_label: manneback-gpu
+      partition: gpu
+      backend: cuda
+      # the fallbacks are the defaults, used on push (no inputs) or when left empty
+      modules: ${{ inputs.modules || 'PyTorch CUDA Python foss' }}
+      gres: ${{ inputs.gres || 'gpu:1' }}
+      gpu_arch: ${{ inputs.gpu_arch }}
+      nevents: ${{ inputs.nevents || '10000' }}
+      # 30 min, not 20 as on lemaitre4: the runner set-up and checkout are sometimes slow here
+      time_limit: ${{ inputs.time_limit || '00:30:00' }}
+      extra_sbatch: ${{ inputs.extra_sbatch }}
+      keep_workdir: ${{ inputs.keep_workdir || false }}
+      # on push (no inputs) always; on "Run workflow" as ticked (default ticked)
+      interference: ${{ github.event_name == 'push' || inputs.interference }}

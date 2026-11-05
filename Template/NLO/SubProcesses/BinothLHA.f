@@ -163,7 +163,7 @@ C        look for orders which match the nlo order constraint
              virt_wgt= virt_wgt + virt_wgts(1,i)
              single  = single + virt_wgts(2,i)
              double  = double + virt_wgts(3,i)
-C         keep track of the separate pieces correspoinding to
+C         keep track of the separate pieces corresponding to
 C          different coupling combinations
              do j = 1, nsplitorders
               amp_orders(j) = getordpowfromindex_ML5(j, i)
@@ -191,7 +191,7 @@ c once the initial pole check is performed.
                 virt_wgt= virt_wgt + virt_wgts(1,i)
                 single  = single + virt_wgts(2,i)
                 double  = double + virt_wgts(3,i)
-C         keep track of the separate pieces correspoinding to
+C         keep track of the separate pieces corresponding to
 C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i)
@@ -221,7 +221,7 @@ c virtual as flat as possible
                 virt_wgt= virt_wgt + virt_wgts_hel(1,i) * hel_fact
                 single  = single + virt_wgts_hel(2,i) * hel_fact
                 double  = double + virt_wgts_hel(3,i) * hel_fact
-C         keep track of the separate pieces correspoinding to
+C         keep track of the separate pieces corresponding to
 C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i)

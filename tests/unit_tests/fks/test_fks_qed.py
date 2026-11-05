@@ -2,7 +2,7 @@
 #
 # Copyright (c) 2009 The MadGraph Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
@@ -28,7 +28,7 @@ import madgraph.fks.fks_helas_objects as fks_helas_objects
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
 import madgraph.core.diagram_generation as diagram_generation
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import copy
 import array
@@ -40,7 +40,7 @@ class TestFKSQED(unittest.TestCase):
     def setUp(self):
         # the model
         if not hasattr(self, 'mymodel'):
-            TestFKSQED.mymodel = import_ufo.import_model('sm')
+            TestFKSQED.mymodel = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
             #remove third and fourth generation of quarks, and the muon
             particles_to_rm = [3, 4, 13]
             for p in particles_to_rm:
@@ -150,7 +150,7 @@ class TestFKSQED(unittest.TestCase):
         # check real emissions:
         # from the first and second leg, one can have the final and initial
         # state photon splitting,
-        # as well as the final and initial state gluon splittng 
+        # as well as the final and initial state gluon splitting
         # (for order consistency)
         self.assertEqual(len(fksproc.reals[0]), 4)
         self.assertEqual(len(fksproc.reals[1]), 4)
@@ -168,7 +168,7 @@ class TestFKSQED(unittest.TestCase):
         #check that the correct orders are set for the real amplitudes
 
         #there should be 16 born processes with leptons and 12 without 
-        # (remeber, without leptons means no born process with BOTH initial-
+        # (remember, without leptons means no born process with BOTH initial-
         # state leptons, so things like u e- > u e- are kept)
         self.assertEqual(len(fksmultiproc_wlep['born_processes']), 20)
         self.assertEqual(len(fksmultiproc_nolep['born_processes']), 14)

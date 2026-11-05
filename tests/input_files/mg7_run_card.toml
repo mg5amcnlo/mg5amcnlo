@@ -1,0 +1,137 @@
+[run]
+run_name = "run"
+# list of devices; options: cpu, cuda, hip (an optional device index can be added, e.g. "cuda:1")
+device = ["cpu"]
+# SIMD width of the matrix elements (madmatrix) on the 'cpu' devices (ignored by cuda/hip)
+# options: auto (widest width supported by the host), scalar, simd_128, simd_256, simd_512, avx512y
+cpu_mode = "scalar"
+# SIMD width of the phase-space sampling (madspace) on the 'cpu' devices
+# options: auto (simd_512, then simd_256 on x86; scalar on ARM), scalar, simd_128 (ARM only), simd_256, avx512y, simd_512
+madspace_cpu_mode = "auto"
+# pool sizes: -1 sets count automatically based on number of CPUs
+cpu_thread_pool_size = -1
+gpu_thread_pool_size = 1
+combine_thread_pool_size = -1
+output_format = "compact_npy" # options: compact_npy, lhe_npy, lhe
+verbosity = "pretty" # options: silent, pretty, log
+dummy_matrix_element = false
+
+[gridpack]
+save_gridpack = false
+include_source = false
+include_madspace = true
+include_madspace_source = false
+compress = false
+run_mode = "minimal"
+temp_output_dir = ""
+output_dir = ""
+
+[beam]
+e_cm = 1000.0
+leptonic = true
+pdf = "NNPDF23_lo_as_0130_qed"
+fixed_ren_scale = true
+fixed_fact_scale = true
+ren_scale = 91.188
+fact_scale1 = 91.188
+fact_scale2 = 91.188
+# options: transverse_energy, transverse_mass, half_transverse_mass, partonic_energy
+dynamical_scale_choice = "half_transverse_mass"
+
+[generation]
+events = 100000
+max_overweight_truncation = 0.01
+freeze_max_weight_after = 10000
+cpu_batch_size = 1000
+gpu_batch_size = 64000
+survey_min_iters = 3
+survey_max_iters = 3
+survey_target_precision = 0.1
+cut_efficiency_threshold = 0.7
+max_cut_repetitions = 1000
+systematics = false
+
+[vegas]
+enable = true
+bins = 64
+damping = 0.4
+optimization_patience = 5
+optimization_threshold = 0.9
+start_batch_size = 1000
+max_batch_size = 32000
+
+[phasespace]
+mode = "multichannel" #options: multichannel, flat, both
+sde_strategy = "diagrams" #options: diagrams, denominators
+t_channel = "propagator" # options: propagator, rambo, chili
+flat_mode = "rambo" # options: propagator, rambo, chili
+simplified_channel_count = 10
+invariant_power = 0.7
+bw_cutoff = 15
+
+[multiparticles]
+jet = [1, 2, 3, 4, -1, -2, -3, -4, 21]
+bottom = [-5, 5]
+lepton = [11, 13, 15, -11, -13, -15]
+missing = [12, 14, 16, -12, -14, -16]
+photon = [22]
+
+[cuts]
+# possible groups: jet, bottom, lepton, missing, photon
+# possible observables: pt, eta, dR, mass, sqrt_s
+#     (mass is for pairs of particles from the same group, sqrt_s is for all outgoing particles)
+# for all cuts, min or max can be specified
+lepton-pt.min = 10.0
+lepton-eta_abs.max = 2.5
+lepton-delta_r.min = 0.4
+sqrt_s.min = 0.0
+
+[histograms]
+
+
+[madnis]
+enable = false
+
+# normalizing flow parameters
+flow_hidden_dim = 64
+flow_layers = 3
+flow_spline_bins = 10
+flow_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+flow_invert_spline = false
+
+# discrete dimensions
+discrete_hidden_dim = 64
+discrete_layers = 3
+discrete_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+
+# channel weight network
+cwnet_hidden_dim = 64
+cwnet_layers = 3
+cwnet_activation = "leaky_relu" # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+
+# precision of all networks
+nn_float_precision = "float32" # options: float32, float64
+
+# training parameters
+train_batches = 1000
+log_interval = 100
+batch_size_offset = 512
+batch_size_per_channel = 128
+generator_target_size_factor = 32
+gpu_generator_batch_granularity = 1000
+lr = 0.001
+lr_scheduler = "cosine" # options: none, cosine
+adam_beta1 = 0.9
+adam_beta2 = 0.999
+adam_eps = 1e-08
+buffer_capacity = 0
+minimum_buffer_size = 50000
+buffered_steps_fraction = 0.0
+buffer_unweighting_quantile = 0.99
+uniform_channel_ratio = 0.1
+integration_history_length = 100
+channel_dropping_threshold = 0.01
+channel_dropping_interval = 100
+drop_zero_integrands = true
+fixed_cwnet_fraction = 0.33
+softclip_threshold = 30.0

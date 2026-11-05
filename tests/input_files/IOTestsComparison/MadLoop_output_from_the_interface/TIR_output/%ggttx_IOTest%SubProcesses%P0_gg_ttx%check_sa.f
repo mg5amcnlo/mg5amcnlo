@@ -104,7 +104,7 @@ C        parameters are calculated
 C       in Source/MODEL/couplings.f. The values are stored in common
 C        blocks that are listed
 C       in coupl.inc .
-C       first call to setup the paramaters
+C       first call to set up the parameters
         CALL SETPARA('param_card.dat')
 C       set up masses
         INCLUDE 'pmass.inc'

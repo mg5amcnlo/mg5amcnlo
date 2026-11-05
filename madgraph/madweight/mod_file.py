@@ -27,14 +27,14 @@
 ##      $B$ NAME $E$ -> replace tag by RULE=NAME                                                  ##
 ##  Some character are reserved:                                                                  ##
 ##   'S-','_' and '+'                                                                             ##
-##   'S-': indicates a special tag (see later). Don't start name with this two caracter           ##
+##   'S-': indicates a special tag (see later). Don't start name with this two character           ##
 ##   '_' : indicates begin of option in special tag, use freely if you are not in this case       ##
 ##   '+' : for splitting different option value (use freely elsewhere)                            ##
 ##                                                                                                ##
 ##  This is the special expression authorized in NAME (all start with S-)                         ##                                            
 ##                                                                                                ##
 ##  S-END:(only in rule) add the text in end (no tag needed)                                      ##
-##  S-DEl:(in mod_file) supress this part of the file                                             ##
+##  S-DEl:(in mod_file) suppress this part of the file                                             ##
 ##  S-COMMENT_?: start commenting the defined region.                                             ##
 ##      The comment tag will be the value in place of the '?'. the '?' Can not contain '+' or '_' ##
 ##  S-DECOMMENT_?:(only in rule) inverse the comment procedure apply with S-COMMENT (go back to   ##
@@ -44,7 +44,7 @@
 ##        "new": the new expression to write                                                      ##
 ##        "opt": python option for regular option (the one in re.compile)                         ##
 ##      if this rule appear in rule file, the modification appear in the complete file.           ##
-##      no '_' or '+' are autorized in "exp" or "new". those one can be echap with '\'            ##
+##      no '_' or '+' are authorized in "exp" or "new". those one can be echap with '\'            ##
 ##                                                                                                ##
 ##  Priority order                                                                                ##
 ##     if a step define a tag that will in a future step the modification on the tag will be done ##
@@ -58,7 +58,7 @@
 ##                                                                                                ##
 ####################################################################################################
 ##                                                                                                ##
-## Exemple of use:                                                                                ##
+## Example of use:                                                                                ##
 ## 1) with a master file                                                                          ##
 ##                                                                                                ##
 ##    import mod_file                                                                             ##
@@ -90,7 +90,7 @@
 ##                                                                                                ##
 ##   modification list:                                                                           ##
 ##                                                                                                ##
-##     01/06/10: - make the modification inside a unknow blok                                     ##
+##     01/06/10: - make the modification inside an unknown block                                     ##
 ##               - add a test suite for MadWeight case                                            ##
 ##                                                                                                ##
 ##     29/09/09: - differentiate $b$...$b$ from $B$...$B$ (gestion of end of line)                ## 
@@ -99,7 +99,7 @@
 ##               - ensure that all end of line use tag \n                                         ##
 ##                                                                                                ##
 ##     11/11/08: - modify documentation                                                           ##
-##               - authorize differate affectation with B-DIFF                                    ## 
+##               - allow different assignments with B-DIFF                                    ##
 ##                                                                                                ##
 ##     31/01/08: - pass in object                                                                 ##
 ##               - add S-comment super tag                                                        ##
@@ -111,7 +111,7 @@
 ##    23/06/08:  - add S-REGEXP super tag                                                         ##
 ##               - add function list                                                              ##
 ##               - differentiate $B$...$E$ with $b$...$e$                                         ##
-##                    the first supress the full tag line                                         ##
+##                    the first suppress the full tag line                                         ##
 ##                                                                                                ##
 ####################################################################################################
 ##                                                                                                ##
@@ -152,10 +152,10 @@ def mod_file(mod_file,rule_file='',write='',opt={}):
             mod_obj=Mod_file(opt=opt)
             mod_obj.mod_one_file(mod_file,rule_file,write)
         elif type(mod_file)==list:
-            #supress problem of output
+            #suppress problem of output
             if write=='':
                 write=['']*len(mod_file)
-            #supress problem if only one rule_file
+            #suppress problem if only one rule_file
             if type(rule_file)!=list:
                 rule_file=[rule_file]*len(mod_file)
             if type(rule_file)==str:
@@ -255,7 +255,7 @@ class Mod_file:
             self.mod_one_text(text,rule_file,mod_file)
         self.back_to_init_dir()
         stop=time()
-        #print 'time used to modifiy file:',stop-start,'s'
+        #print 'time used to modify file:',stop-start,'s'
         return
 
     # 3 ###############################################################
@@ -289,7 +289,7 @@ class Mod_file:
             if key.startswith('S-DECOMMENT_'):
                 text=self.return_mod_text(key,text)
                 
-        ##treat replacment
+        ##treat replacement
         text_list=replace.split(text)
         text_to_write=text_list.pop(0)
         while len(text_list)>1:
@@ -421,7 +421,7 @@ class Mod_file:
                 if rec_mode==0:
                     print('error in ',rule_file,'no initial tag:', tag)
                     sys.exit()
-                #detect one-line replacment => supress blank and '\n'
+                #detect one-line replacement => suppress blank and '\n'
                 if replace_text.count('\n')==1:
                     replace_text=replace_text[:-1]
                     while replace_text.endswith(' '):
@@ -616,7 +616,7 @@ if '__main__' == __name__:
     
 
     class TestMod_file(unittest.TestCase):
-        """ Test the the mod routines works correctly on MadWeight """
+        """ Test the mod routines works correctly on MadWeight """
 
         def setUp(self):
             """ create a copy of the original file """
@@ -629,7 +629,7 @@ if '__main__' == __name__:
 
 
         def test_cuts(self):
-            """ test if we can activate/desactivate the cuts """
+            """ test if we can activate/deactivate the cuts """
 
             self.assertEqual(create_run.cut_is_active('cuts.bk'), 1)
             self.assertEqual(create_run.bw_cut_is_active('cuts.bk'),1)
@@ -751,7 +751,7 @@ if '__main__' == __name__:
             self.assertEqual(create_run.bw_cut_is_active('cuts.mod'), 0)
             self.assertFalse('\n$B$' in open('./SubProcesses/cuts.mod').read())
 
-            # Next one will Fail but is not supose to be called whitout check of the second 
+            # Next one will Fail but is not supposed to be called without checking the second
             #rule='./Source/MadWeight/mod_file/suppress_cuts_MG'
             #mod_file(file_to_mod,rule,opt={'nowarning':"""['PASSCUTS','MW_NEW_DEF','DESACTIVATE_BW_CUT']"""}, write='./SubProcesses/cuts.mod')
             #self.assertEqual(create_run.cut_is_active('cuts.mod'), 0)

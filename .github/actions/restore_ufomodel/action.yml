@@ -1,5 +1,5 @@
 name: Restore ufo cache
-description: Restores numpy from cache and sets PYTHONPATH
+description: Restores cached UFO models and sets PYTHONPATH
 runs:
   using: composite
   steps:
@@ -12,6 +12,7 @@ runs:
           heft.tgz
           loop_qcd_qed_sm.tgz
           loop_qcd_qed_sm_Gmu.tgz
+          RS.tgz
           sm_v4.tgz
           uutt_sch_4fermion.tgz
           uutt_tch_scalar.tgz
@@ -39,8 +40,14 @@ runs:
           ufomodel-
           ufomodel
 
+    # The cache can miss (a self-hosted runner without zstd cannot read the
+    # .tzst entry written on ubuntu); the models extracted above are then all
+    # there is, so an empty cache must not fail the step.
     - run: |
+        mkdir -p $HOME/.cache/UFOMODEL
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-        cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        if [ -n "$(ls -A $HOME/.cache/UFOMODEL)" ]; then
+          cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        fi
         ls $GITHUB_WORKSPACE/models
       shell: bash

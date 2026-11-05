@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -135,7 +135,7 @@ class TestFeynmanLine(unittest.TestCase):
         self.assertIn(self.my_line, self.my_vertex.lines)
         self.assertIn(self.my_line, self.my_vertex2.lines)
 
-        #check that the swithching method runs fine.
+        #check that the switching method runs fine.
         self.my_line.inverse_begin_end()
         self.assertIs(self.my_line.begin, self.my_vertex)
         self.assertIs(self.my_line.end, self.my_vertex2)
@@ -569,7 +569,7 @@ class TestVertexPoint(unittest.TestCase):
         my_vertex.def_position(0.1, 0.3)
         self.assertEqual(my_vertex.pos_x, 0.1)
         self.assertEqual(my_vertex.pos_y, 0.3)
-        #check border are corectly define (no error raises
+        #check border are correctly define (no error raises
         my_vertex.def_position(0, 0.3)
         my_vertex.def_position(0, 0)
         my_vertex.def_position(0, 1)
@@ -850,7 +850,7 @@ class TestFeynmanDiagram(unittest.TestCase):
 
     @staticmethod
     def vertex_identification(vertex):
-        """return a integer which acts like an id"""
+        """return an integer which acts like an id"""
 
         tag = 0
         for i, line in enumerate(vertex.lines):
@@ -1053,7 +1053,7 @@ class TestFeynmanDiagram(unittest.TestCase):
             )
 
     def test_creation_from_cmd(self):
-        """Test basic diagram comming from (old) cmd works"""
+        """Test basic diagram coming from (old) cmd works"""
 
         diagram = self.store_diagram['u d~ > c s~'][0]
         diagram = drawing.FeynmanDiagram(diagram, _model)

@@ -50,7 +50,7 @@ end module
 module avh_olo_forIREGI_units
   implicit none
 ! By default these values are set to 6. However, they can potentially clog
-! the logs so we want to force them off, unless explicitely turned on
+! the logs so we want to force them off, unless explicitly turned on
   integer :: eunit=0
   integer :: wunit=0
   integer :: munit=0
@@ -3858,7 +3858,7 @@ contains
    subroutine trif3HV( rslt ,pp,mm ,ap ,smax ,lam )
 !*******************************************************************
 ! Finite 1-loop scalar 3-point function with all internal masses
-! non-zero. Based on the fomula of 't Hooft & Veltman
+! non-zero. Based on the formula of 't Hooft & Veltman
 !*******************************************************************
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
@@ -4021,7 +4021,7 @@ contains
      if (arez*EPSN*EPSN.le.aimz*neglig(prcpar).and.aimz.le.arez*neglig(prcpar)) then
 ! Here, the value of Imz is just numerical noise due to cancellations.
 ! Realize that |Imz|~eps^2 indicates there were no such cancellations,
-! so the lower limit is needed in in the if-statement!
+! so the lower limit is needed in the if-statement!
        zz = (rez + cc)/aa
      else
        zz = (zz + cc)/aa
@@ -5644,7 +5644,7 @@ contains
    enddo
 !
    if (icase.lt.15) then
-! at least one exernal mass equal zero
+! at least one external mass equal zero
      jcase = casetable(icase)
      if (jcase.eq.0.or.jcase.eq.1.or.jcase.eq.5) then
 ! two opposite masses equal zero
@@ -5679,7 +5679,7 @@ contains
                - tfun( a,b+j,cph,h,j ,d,epk,f ,k ,dek,dpf )
      endif
    else
-! no extenal mass equal zero
+! no external mass equal zero
      if    (areal((pp(5)-pp(1)-pp(2))**2-4*pp(1)*pp(2)).gt.RZRO)then ;icase=0 !12, no permutation
      elseif(areal((pp(6)-pp(2)-pp(3))**2-4*pp(2)*pp(3)).gt.RZRO)then ;icase=8 !23, 1 cyclic permutation
      elseif(areal((pp(4)-pp(5)-pp(3))**2-4*pp(5)*pp(3)).gt.RZRO)then ;icase=4 !34, 2 cyclic permutations

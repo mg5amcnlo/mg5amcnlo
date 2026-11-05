@@ -58,8 +58,8 @@ Block MW_parameter
 #                            #  second parameter #
 #                            !DELETE ALL THE FOLLOWING TAG IF YOU WANT TO RUN WITH ONLY ONE PARAM!
 #     21       MGCKM          # Block of the parameter to change  
-#     22       1              # id of the paramter to change 
-#     22       2              # id2 of the paramter to change
+#     22       1              # id of the parameter to change
+#     22       2              # id2 of the parameter to change
 #     23       1.5E-02        # here you can enter the different values:
 #     23       1.8E-02        #        add a new line with tag 23 to introduce a new value
 #
@@ -72,7 +72,7 @@ Block MW_perm
      permutation  T         # make permutation
      bjet_is_jet  T         # consider permutation between b-jets and light jets
      montecarlo   T         # Monte-Carlo over permutation (Huge speed up if many permutation)
-     preselect    'default' # How to pre-select the correct permutation set. 
+     preselect    'default' # How to preselect the correct permutation set.
                             # put 'None' if no pre-selection to perform.
                             # You can set the path to a fortran file defining the require function
                             # See file SubProcesses/permutation_weight_default.dat for
@@ -82,7 +82,7 @@ Block MW_perm
 ##                       Phase-Space Integration mapping                ##
 #*************************************************************************
 Block MW_gen
-    force_nwa     2         # Only consider the change of variable alligning particles 
+    force_nwa     2         # Only consider the change of variable aligning particles
                             # with width smaller than this value. This speed up the code
                             # but can lead to zero weight for background event where the
                             # kinematic doesn't agree with the associated mass.

@@ -98,7 +98,7 @@ contains
    enddo
 !
    if (icase.lt.15) then
-! at least one exernal mass equal zero
+! at least one external mass equal zero
      jcase = casetable(icase)
      if (jcase.eq.0.or.jcase.eq.1.or.jcase.eq.5) then
 ! two opposite masses equal zero
@@ -133,7 +133,7 @@ contains
                - tfun( a,b+j,cph,h,j ,d,epk,f ,k ,dek,dpf )
      endif
    else
-! no extenal mass equal zero
+! no external mass equal zero
      if    (areal((pp(5)-pp(1)-pp(2))**2-4*pp(1)*pp(2)).gt.RZRO)then ;icase=0 !12, no permutation
      elseif(areal((pp(6)-pp(2)-pp(3))**2-4*pp(2)*pp(3)).gt.RZRO)then ;icase=8 !23, 1 cyclic permutation
      elseif(areal((pp(4)-pp(5)-pp(3))**2-4*pp(5)*pp(3)).gt.RZRO)then ;icase=4 !34, 2 cyclic permutations

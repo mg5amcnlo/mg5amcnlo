@@ -96,7 +96,7 @@ c----------------------------------------------
       jac_loc=jac_loc*dsin(gen_var(1))
 
 c----------------------------------------------
-c     usefull definitions for change of var.
+c     useful definitions for change of var.
 c----------------------------------------------
 
       delta_ma2=mvir2(r1)-mvir2(p1)

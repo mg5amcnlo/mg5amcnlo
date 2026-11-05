@@ -321,7 +321,7 @@
 	idsub = 0
 	ljust = .FALSE.
 *  #] initialisations:
-*  #[ handel special cases:
+*  #[ handle special cases:
 	if ( DIMAG(cpi(1)).eq.0 .and. DIMAG(cpi(2)).eq.0 .and.
      +		DIMAG(cpi(3)).eq.0 ) then
 	    do 4 i=1,6
@@ -389,7 +389,7 @@
 *	endif
 *	return
 *    5	continue
-*  #] handel special cases:
+*  #] handle special cases:
 *  #[ rotate to alpha in (0,1):
 	call ffcrt3(irota,cqi,cqiqj,cpi,cdpipj,6,2,ier)
 *  #] rotate to alpha in (0,1):

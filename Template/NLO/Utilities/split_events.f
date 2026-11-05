@@ -36,7 +36,7 @@ c
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
       close(34)
       write (*,*) 'File contains ',maxevt,' events'
-      write (*,*) 'Give the number of splitted files you want (< 999)'
+      write (*,*) 'Give the number of split files you want (< 999)'
       read (*,*) npart
       if (npart.gt.999) then
          write (*,*) 'Too many event files (999 is max)', npart

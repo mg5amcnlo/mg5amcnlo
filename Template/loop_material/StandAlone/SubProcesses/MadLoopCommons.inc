@@ -193,7 +193,7 @@ C     Try to automatically find the path
           close(1)
 c
 c     Try to automatically find the path from the executable location
-c     particularly usefull in gridpack readonly mode
+c     particularly useful in gridpack readonly mode
 c
 	  call getarg(0,path) !path is the PATH to the madevent executable (either global or from launching directory)
 	  pos = index(path,'/',.true.)

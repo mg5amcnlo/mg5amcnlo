@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -104,7 +104,7 @@ class LoopHelasUVCTAmplitude(helas_objects.HelasAmplitude):
 
     def get_call_key(self):
         """ Exactly as a regular HelasAmplitude except that here we must add 
-        an entry to mutliply the final result by the coupling constants of the
+        an entry to multiply the final result by the coupling constants of the
         interaction in UVCT_couplings if there are any"""
         original_call_key = super(LoopHelasUVCTAmplitude,self).get_call_key()
         
@@ -800,7 +800,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         # process, we must reorder the generated diagrams so as to put together
         # all those which share the same coupling orders. Then, we sort these
         # *group of diagrams* in decreasing WEIGHTED order, so that the
-        # leading contributions are placed first (I will therfore be possible
+        # leading contributions are placed first (I will therefore be possible
         # to compute them only, saving the time of the rest of the computation)
         amplitude.order_diagrams_according_to_split_orders(\
                                    self.get('processes')[0].get('split_orders'))
@@ -1211,7 +1211,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 number_to_wavefunctions = new_number_to_wavefunctions
                 color_lists = new_color_lists
 
-            ###print "bridg wfs returned="
+            ###print "bridge wfs returned="
             ###for wf in bridge_wfs:
             ###    print "    bridge =",wf['number_external'],"("+str(wf.get_pdg_code())+") number=",wf['number']
             
@@ -1317,7 +1317,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
             # it has the same coefficients and loop momentum zero, 
             # so it is in principle not necessary to add it to the 
             # diagram_wavefunction. However, this is necessary for the function
-            # check_and_fix_fermion_flow to correctly update the dependances of
+            # check_and_fix_fermion_flow to correctly update the dependencies of
             # previous diagrams to an external L-cut majorana wavefunction which
             # needs flipping.
             if not self.optimized_output:
@@ -1418,7 +1418,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                                 # Update wf number
                                 wfNumber = wfNumber + 1
                                 wf.set('number', wfNumber)
-                                # Depending on wether we are on the 
+                                # Depending on whether we are on the
                                 # loop_optimized_output mode or now we want to
                                 # reuse the loop wavefunctions as well.
                                 try:
@@ -1447,7 +1447,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 
                 # We update the lastloopwfs list and the color_lists for the
                 # next iteration, i.e. the treatment of the next loop vertex
-                # by returning them to the calling environnement.
+                # by returning them to the calling environment.
                 return wfNumber, new_last_loop_wfs, new_color_lists
 
  
@@ -1839,7 +1839,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         'loop_amp_orders' : The same as for born_amp_orders but for the loop
             type of amplitudes only.
 
-        Keep in mind that the orders of the elements of the outter most list is
+        Keep in mind that the orders of the elements of the outer most list is
         important as it dictates the order for the corresponding "order indices" 
         in the fortran code output by the exporters.
         """
@@ -1918,7 +1918,13 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         if process.get('has_born'):
             ref_orders = [bao[0] for bao in born_amp_orders]
         else:
-            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders]
+            # Without Born, the loop amplitudes are squared against all the
+            # loop-less ones too: the tree-level amplitudes of an interference
+            # process (LIxtree) are stored as UVCT amplitudes. Their squared
+            # orders must be known even if only the interference is selected,
+            # since the generated code evaluates every product.
+            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders+
+                                                               uvct_amp_orders]
         
         # Temporarily we set squared_orders to be a dictionary with keys being
         # the actual contributing squared_orders and the values are the list 
@@ -2342,7 +2348,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         """Return a list of (lorentz_name, tags, outgoing) with
         all lorentz structures used by this LoopHelasMatrixElement."""
 
-        # Loop version of the function which add to the tuple wether it is a loop 
+        # Loop version of the function which add to the tuple whether it is a loop
         # structure or not so that aloha knows if it has to produce the subroutine 
         # which removes the denominator in the propagator of the wavefunction created.
         output = []
@@ -2596,8 +2602,8 @@ class LoopHelasProcess(helas_objects.HelasMultiProcess):
     def process_color(cls,matrix_element,color_information,compute_loop_nc=False):
         """ Process the color information for a given matrix
         element made of a loop diagrams. It will create a different 
-        color matrix depending on wether the process has a born or not.
-        The compute_loop_nc sets wheter independent tracking of Nc power coming
+        color matrix depending on whether the process has a born or not.
+        The compute_loop_nc sets whether independent tracking of Nc power coming
         from the color loop trace is necessary or not (it is time consuming).
         """
         if matrix_element.get('processes')[0]['has_born']:

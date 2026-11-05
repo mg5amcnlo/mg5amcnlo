@@ -179,7 +179,7 @@ c iret#0 when problem occur
       endif
 c modify the following if non-nucleon PDFs will be included in LHAPDF
       if(abs(ih).gt.5)then
-        write(*,*) ' Hadron tpye ',ih,' not implemented'
+        write(*,*) ' Hadron type ',ih,' not implemented'
         iret=1
         return
       endif

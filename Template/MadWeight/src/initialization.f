@@ -269,8 +269,8 @@ c                    I -> component : I=1 : y
 c                                     I=2 : phi
 c                                     I=3 : PT
 c                    K ->     K = 1 : variable
-c                             K = 2 : associated width   (0 if transfert function : delta function)
-c                                                        (-1 if the variable is "fixed" by tranverse momentum conservation)
+c                             K = 2 : associated width   (0 if transfer function : delta function)
+c                                                        (-1 if the variable is "fixed" by transverse momentum conservation)
 c                    L -> PERMUTATION NUMBER
 c***********************************************************************************
       implicit none

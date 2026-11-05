@@ -1,0 +1,246 @@
+# Documentation: https://docs.madgraph.org/latest/run_card.html
+
+[run]
+run_name = %(run.run_name)s
+# -1 draws a fresh random seed for each run; the seed used is recorded in the output
+seed = %(run.seed)s
+# options: cpu, cuda, hip, each optionally with a device index, e.g. "cuda:1"
+device = %(run.device)s
+# SIMD width of the matrix elements on cpu devices; options: auto, scalar, simd_128, simd_256, simd_512, avx512y
+cpu_mode = %(run.cpu_mode)s
+# SIMD width of the phase-space sampling on cpu devices; options: auto, scalar, simd_128 (ARM only), simd_256, avx512y, simd_512
+madspace_cpu_mode = %(run.madspace_cpu_mode)s
+# matrix element precision; options: all64, all32, color32, denom64
+precision = %(run.precision)s
+# -1 sets the thread count automatically
+cpu_thread_pool_size = %(run.cpu_thread_pool_size)s
+# auto uses pigz for large files when installed; false uses gzip
+use_pigz = %(run.use_pigz)s
+gpu_thread_pool_size = %(run.gpu_thread_pool_size)s
+combine_thread_pool_size = %(run.combine_thread_pool_size)s
+output_format = %(run.output_format)s # options: compact_npy, lhe_npy, lhe
+# fill the [histograms] with weighted events during integration
+weighted_histograms = %(run.weighted_histograms)s
+# fill the [histograms] with the final events, including scale/PDF weights
+postprocessing_histograms = %(run.postprocessing_histograms)s
+# plot the [histograms] into Events/<run>/plots (needs matplotlib)
+make_plots = %(run.make_plots)s
+# also write the [histograms] in HwU format
+write_hwu = %(run.write_hwu)s
+verbosity = %(run.verbosity)s # options: silent, pretty, log, auto
+dummy_matrix_element = %(run.dummy_matrix_element)s
+# Lorentz frame in which the matrix element is evaluated, given as the list of
+# external particles whose momenta are summed up to define it. [] applies no
+# boost: the matrix element sees the momenta in the frame they are generated in
+# (the lab frame for a collision, the decaying particle's rest frame for a
+# decay). [1, 2] is the partonic centre of mass, which is the frame madevent
+# evaluates in, and [1] its equivalent for a 1 -> n decay; [3] would be the rest
+# frame of the third external particle. This only changes the result for a
+# matrix element that is not Lorentz invariant, i.e. a polarised one -- it is
+# then the frame the polarisations are defined in.
+me_frame = %(run.me_frame)s
+
+[gridpack]
+save_gridpack = %(gridpack.save_gridpack)s
+include_source = %(gridpack.include_source)s
+include_madspace = %(gridpack.include_madspace)s
+include_madspace_source = %(gridpack.include_madspace_source)s
+include_madtrex = %(gridpack.include_madtrex)s
+include_madtrex_source = %(gridpack.include_madtrex_source)s
+compress = %(gridpack.compress)s
+# end of a run creating a gridpack; options: regular, minimal (no events), fix_max_weight (no events, adds bin/event_stream.py)
+run_mode = %(gridpack.run_mode)s
+# temporary npy files; "" uses the output directory, "auto" a new temporary directory
+temp_output_dir = %(gridpack.temp_output_dir)s
+# output files; "" creates a new run folder in Events
+output_dir = %(gridpack.output_dir)s
+
+[beam]
+# beam 1 moves along +z; events and eta cuts are in this lab frame
+ebeam1 = %(beam.ebeam1)s
+ebeam2 = %(beam.ebeam2)s
+leptonic = %(beam.leptonic)s
+# "set beam.pdf X" sets both beams
+pdf1 = %(beam.pdf1)s
+pdf2 = %(beam.pdf2)s
+fixed_ren_scale = %(beam.fixed_ren_scale)s
+fixed_fact_scale = %(beam.fixed_fact_scale)s
+ren_scale = %(beam.ren_scale)s
+fact_scale1 = %(beam.fact_scale1)s
+fact_scale2 = %(beam.fact_scale2)s
+# options: transverse_energy, transverse_mass, half_transverse_mass, partonic_energy, mlm
+dynamical_scale_choice = %(beam.dynamical_scale_choice)s
+# multiplies the dynamical scale; fixed scales are unaffected
+scale_factor = %(beam.scale_factor)s
+# heaviest quark flavour treated as a jet by the MLM back-clustering
+max_jet_flavor = %(beam.max_jet_flavor)s
+# the other MLM clustering options (scale_scheme, alphas_reweighting,
+# pdf_reweighting, clustering_history, ...) are hidden; one that is set (at the
+# launch prompt, or by adding its line to this section) is kept in this card
+# floor on mu_R and mu_F, since a PDF grid has no densities below it: the
+# scales are raised to it, and under dynamical_scale_choice = "mlm" the event
+# is dropped instead, as madevent does. Ignored without beam PDFs (0 disables it)
+min_scale = %(beam.min_scale)s
+
+[generation]
+events = %(generation.events)s
+max_overweight_truncation = %(generation.max_overweight_truncation)s
+freeze_max_weight_after = %(generation.freeze_max_weight_after)s
+cpu_batch_size = %(generation.cpu_batch_size)s
+gpu_batch_size = %(generation.gpu_batch_size)s
+survey_min_iters = %(generation.survey_min_iters)s
+survey_max_iters = %(generation.survey_max_iters)s
+survey_target_precision = %(generation.survey_target_precision)s
+cut_efficiency_threshold = %(generation.cut_efficiency_threshold)s
+max_cut_repetitions = %(generation.max_cut_repetitions)s
+# helicity of an interference |M|^2: "exact" (as madevent) or "summed" (written as 9)
+interference_helicity = %(generation.interference_helicity)s # options: exact, summed
+
+[systematics]
+enable = %(systematics.enable)s
+mur = %(systematics.mur)s # renormalization scale factors
+muf = %(systematics.muf)s # factorization scale factors
+alps = %(systematics.alps)s # MLM emission scale factors (dynamical_scale_choice = "mlm" only)
+together = %(systematics.together)s # true: all mur x muf combinations, false: one at a time
+# alternative dynamical scale choices, as for [beam] dynamical_scale_choice
+dynamical_scale = %(systematics.dynamical_scale)s
+# "errorset", "central", LHAPDF set names or ids, or "<set>@<member>"
+pdf = %(systematics.pdf)s
+write_inputs = %(systematics.write_inputs)s # store x1, x2 and scales for each event
+
+[postprocessing]
+time_of_flight = %(postprocessing.time_of_flight)s # threshold in mm, -1 disables
+# legacy systematics.py run; use [systematics] instead
+systematics = %(postprocessing.systematics)s
+systematics_muf = %(postprocessing.systematics_muf)s
+systematics_mur = %(postprocessing.systematics_mur)s
+systematics_pdf = %(postprocessing.systematics_pdf)s
+systematics_str_options = %(postprocessing.systematics_str_options)s
+
+[vegas]
+enable = %(vegas.enable)s
+bins = %(vegas.bins)s
+damping = %(vegas.damping)s
+optimization_patience = %(vegas.optimization_patience)s
+optimization_threshold = %(vegas.optimization_threshold)s
+start_batch_size = %(vegas.start_batch_size)s
+max_batch_size = %(vegas.max_batch_size)s
+
+[phasespace]
+mode = %(phasespace.mode)s # options: auto, multichannel, flat, both
+merge_subprocesses = %(phasespace.merge_subprocesses)s # ignored under dynamical_scale_choice = "mlm"
+sde_strategy = %(phasespace.sde_strategy)s # options: diagrams, denominators
+t_channel = %(phasespace.t_channel)s # options: propagator, rambo, chili
+flat_mode = %(phasespace.flat_mode)s # options: propagator, rambo, chili
+combine_channel_threshold = %(phasespace.combine_channel_threshold)s
+drop_qcd_s_channel = %(phasespace.drop_qcd_s_channel)s # channel count above which QCD-less channels are dropped, -1 keeps all
+invariant_power = %(phasespace.invariant_power)s
+bw_cutoff = %(phasespace.bw_cutoff)s
+cut_decays = %(phasespace.cut_decays)s # apply the [cuts] to decay products of on-shell particles
+# minimum kt separation required of a matrix-element jet emission, the
+# counterpart of xqcut in the legacy run_card (0 disables it; only used
+# with dynamical_scale_choice = "mlm")
+xqcut = %(phasespace.xqcut)s
+# tighten ptj and the jet-pair invariant mass to xqcut when it is set, so that
+# the phase space is not sampled where the merging cut would throw it away.
+# madevent's auto_ptj_mjj, from Template/LO/SubProcesses/setcuts.f
+auto_ptj_mjj = %(phasespace.auto_ptj_mjj)s
+adaptive_symmetry_sampling = %(phasespace.adaptive_symmetry_sampling)s
+
+[custom_functions]
+# functions created with bin/init_custom_func: a .so library, e.g. "lib/custom_cut.so",
+# or a Python file, e.g. "custom_cut/custom_cut.py"
+# paths are relative to the process directory; "" disables the function
+cut = %(custom_functions.cut)s
+scale = %(custom_functions.scale)s # replaces dynamical_scale_choice
+pdf = %(custom_functions.pdf)s # replaces the PDF set, alpha_s still comes from [beam] pdf
+bias = %(custom_functions.bias)s # events are generated with |w| b and written with w / b
+# parameters declared by a function, e.g. cut_parameters.pt_min = 30.0
+$custom_function_parameters
+
+[surrogate]
+# a fast surrogate of the matrix element in the integrand: a .so library, which can
+# contain {subprocess} and {device}, or a Python file defining
+# custom_surrogate(momenta, pdg_ids, alpha_s); "" disables it
+function = %(surrogate.function)s
+# unweight or reweight the events with the full matrix element in a second pass
+mode = %(surrogate.mode)s
+# unweighting with the surrogate (unweight mode); [generation] sets the second pass
+first_pass_max_overweight_truncation = %(surrogate.first_pass_max_overweight_truncation)s
+first_pass_freeze_max_weight_after = %(surrogate.first_pass_freeze_max_weight_after)s
+param_card = %(surrogate.param_card)s # for a .so surrogate, "" uses Cards/param_card.dat
+
+[amplicol]
+# the [amplicol] processes are integrated at leading colour; their events are
+# re- or unweighted to color_accuracy in a second pass (lc: no second pass)
+color_accuracy = %(amplicol.color_accuracy)s
+mode = %(amplicol.mode)s
+# unweighting at leading colour (unweight mode); [generation] sets the second pass
+first_pass_max_overweight_truncation = %(amplicol.first_pass_max_overweight_truncation)s
+first_pass_freeze_max_weight_after = %(amplicol.first_pass_freeze_max_weight_after)s
+
+[multiparticles]
+$multiparticles
+
+[cuts]
+# <group>[-<group>]-<observable>.min / .max
+# groups: jet, bottom, lepton, missing, photon (see [multiparticles])
+# observables: pt, eta_abs, delta_r, mass, pair_mass, sfos_pair_mass, sqrt_s
+$cuts
+
+[histograms]
+# <observable>.min, .max and .bin_count; "jet_1-pt" selects the hardest jet
+# "weight" histograms the event weight over the unit weight sigma_abs
+$histograms
+
+[madnis]
+# "auto" lets MG7 choose the value from the survey
+enable = %(madnis.enable)s
+
+# normalizing flow
+flow_hidden_dim = %(madnis.flow_hidden_dim)s
+flow_layers = %(madnis.flow_layers)s
+flow_spline_bins = %(madnis.flow_spline_bins)s
+flow_activation = %(madnis.flow_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+flow_invert_spline = %(madnis.flow_invert_spline)s
+
+# discrete dimensions
+discrete_hidden_dim = %(madnis.discrete_hidden_dim)s
+discrete_layers = %(madnis.discrete_layers)s
+discrete_activation = %(madnis.discrete_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+
+# channel weight network
+cwnet_hidden_dim = %(madnis.cwnet_hidden_dim)s
+cwnet_layers = %(madnis.cwnet_layers)s
+cwnet_activation = %(madnis.cwnet_activation)s # options: relu, leaky_relu, elu, gelu, sigmoid, softplus
+
+# precision of all networks
+nn_float_precision = %(madnis.nn_float_precision)s # options: float32, float64
+
+# training parameters
+train_batches = %(madnis.train_batches)s
+log_interval = %(madnis.log_interval)s
+batch_size_offset = %(madnis.batch_size_offset)s
+batch_size_per_channel = %(madnis.batch_size_per_channel)s
+generator_target_size_factor = %(madnis.generator_target_size_factor)s
+gpu_generator_batch_granularity = %(madnis.gpu_generator_batch_granularity)s
+lr = %(madnis.lr)s
+lr_scheduler = %(madnis.lr_scheduler)s # options: none, cosine
+adam_beta1 = %(madnis.adam_beta1)s
+adam_beta2 = %(madnis.adam_beta2)s
+adam_eps = %(madnis.adam_eps)s
+adam_weight_decay = %(madnis.adam_weight_decay)s
+grad_clip_threshold = %(madnis.grad_clip_threshold)s
+buffer_capacity = %(madnis.buffer_capacity)s
+minimum_buffer_size = %(madnis.minimum_buffer_size)s
+buffered_steps_fraction = %(madnis.buffered_steps_fraction)s
+buffer_skip_batches = %(madnis.buffer_skip_batches)s
+buffer_unweighting_quantile = %(madnis.buffer_unweighting_quantile)s
+uniform_channel_ratio = %(madnis.uniform_channel_ratio)s
+integration_history_length = %(madnis.integration_history_length)s
+channel_dropping_threshold = %(madnis.channel_dropping_threshold)s
+channel_dropping_interval = %(madnis.channel_dropping_interval)s
+drop_zero_integrands = %(madnis.drop_zero_integrands)s
+fixed_cwnet_fraction = %(madnis.fixed_cwnet_fraction)s
+softclip_threshold = %(madnis.softclip_threshold)s
+compressed_channel_weight_count = %(madnis.compressed_channel_weight_count)s

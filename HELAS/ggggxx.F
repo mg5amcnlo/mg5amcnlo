@@ -3,7 +3,7 @@ c
 c This subroutine computes the portion of the amplitude of the four-point 
 c coupling of 4 massless color octet gauge bosons (gluons) corresponding 
 c to the color structure f^{a,b,e} f{c,d,e}. 
-c To optain the complete amplitude, this coupling must be called three
+c To obtain the complete amplitude, this coupling must be called three
 c times (once for each color structure) with the following permutations:
 c	call ggggxx(ga,gb,gc,gd,g,v1)
 c       call ggggxx(ga,gc,gd,gb,g,v2)

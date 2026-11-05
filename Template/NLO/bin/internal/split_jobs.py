@@ -41,7 +41,7 @@ for (k, max_n) in max_events.items():
         print('Max %s-events per channel found is %d' % (k, max_n))
         max_dict[k] = max(max_n/20, 100)
         if max_dict[k]:
-            print('Max number of events in splitted job is %d' % max_dict[k])
+            print('Max number of events in split job is %d' % max_dict[k])
 
 
 if len(sys.argv) == 2:

@@ -1,0 +1,42 @@
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Created originally by: A. Valassi (Nov 2023) for the MG5aMC CUDACPP plugin.
+# Further modified by: A. Valassi (2023-2024).
+# Integrated with the MadGraph7 project in Feb 2026.
+#----------------------------------------------------------------------------------------------------------------------------------
+
+name: Test all processes
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+on:
+
+  # Enable the possibility to manually trigger the all-processes workflow
+  workflow_dispatch:
+
+  # Trigger the all-processes workflow for pull requests to master
+  pull_request:
+    branches: [ master ]
+
+  # Trigger the all-processes workflow when new changes to the workflow are pushed
+  # (NB: this is now disabled to avoid triggering two jobs when pushing to a branch for which a PR is opened)
+  ###push:
+  ###  paths: [ .github/workflows/testsuite* ]
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+jobs:
+
+  # See https://stackoverflow.com/a/75337311
+  oneprocess:
+    strategy:
+      fail-fast: false # important to see all results even if one fails (fail-fast is true by default)
+      matrix:
+        # FIXME? Can the list of supported processes be specified only once in oneprocess.yml or allprocesses.yml?
+        process: [ee_mumu, gg_tt, gg_ttg, gg_ttgg, gg_ttggg, gg_tt01g, gq_ttq, pp_tt012j, nobm_pp_ttW, susy_gg_tt, susy_gg_t1t1, smeft_gg_tttt, heft_gg_bb]
+        suffix: [mad, sa]
+    uses: ./.github/workflows/testsuite_oneprocess.yml
+    with:
+      process: ${{ matrix.process }}.${{ matrix.suffix }}
+
+#----------------------------------------------------------------------------------------------------------------------------------

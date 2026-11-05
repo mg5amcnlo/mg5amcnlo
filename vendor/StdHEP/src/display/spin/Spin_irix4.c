@@ -681,7 +681,7 @@ void SpinSetSegments(Widget w, SpinSegment *segments, int nSegments)
 /*
 ** SpinSetPoints
 **
-** Specify the contents of the spin widget in the form of poins in 3D space
+** Specify the contents of the spin widget in the form of points in 3D space
 ** measured from the origin.  Takes an array of SpinPoint data structures
 ** which contain the X,Y, and Z coordinates of the  end points of each
 ** point.  This call is mutually exclusive with SpinSetSegments.  Use
@@ -1060,7 +1060,7 @@ static void rotateProc(SpinWidget w, XtIntervalId *id)
     if (!w->spin.spinning)
     	return;
     	
-    /* Rotate the the widget if it's realized and visible */
+    /* Rotate the widget if it's realized and visible */
     if (XtIsRealized(w) && w->core.visible) {
     	/* Make sure the server is done with the last rotation */
     	XSync(XtDisplay(w), False);
@@ -1097,7 +1097,7 @@ static void keySpin(SpinWidget w, XEvent *event, int direction)
     if (event->xbutton.state & ShiftMask) {
     	/* shift key pressed means adjust spin speed */
 	if (w->spin.spinning) {
-	    /* already spinning, adjust roatation speed */
+	    /* already spinning, adjust rotation speed */
     	    rAngle = DEGREES(normalizeAngle(w->spin.rAngle));
     	    if   (((direction == LEFT) && (rAngle < -90 || rAngle > 90)) ||
     	    	  ((direction == RIGHT) && (rAngle > -90 && rAngle < 90)) ||
@@ -1218,7 +1218,7 @@ static void transform3DtoWindow(SpinWidget w, double x, double y, double z,
     
     TransformPoint(x, y, z, &tx, &ty, &tz, m);
 
-    /* X gets wierd when points get near it's precision limit.  If users zoom
+    /* X gets weird when points get near it's precision limit.  If users zoom
        in far enough that points go past this threshold, we must clip them.
        Since this routine deals with points rather than segments, it can't 
        clip entirely correctly.  Lines which are not radial, with endpoints

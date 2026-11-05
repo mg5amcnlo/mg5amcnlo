@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -16,8 +16,73 @@
 """Unit test library for the Misc routine library in the I/O package"""
 
 from __future__ import absolute_import
+import contextlib
+import io
 import tests.unit_tests as unittest
 import tests.test_manager as test_manager
+
+#===============================================================================
+# TestUnmatchedExpression
+#===============================================================================
+class TestUnmatchedExpression(unittest.TestCase):
+    """Check that a test name asked for on the command line but selecting no
+    test at all is reported, so that a renamed/removed test can not keep on
+    being silently 'OK' in the CI."""
+
+    test_path = 'tests/unit_tests/various'
+
+    def finder(self, expression):
+        return test_manager.TestFinder(package=self.test_path,
+                                       expression=expression)
+
+    def test_unmatched_on_unknown_name(self):
+        """a name which matches nothing is reported"""
+
+        finder = self.finder(['test_no_such_test_anywhere'])
+        self.assertEqual(finder.unmatched_expressions(),
+                         ['test_no_such_test_anywhere'])
+
+    def test_unmatched_keeps_the_valid_names(self):
+        """only the names selecting nothing are reported"""
+
+        finder = self.finder(['test_unmatched_on_unknown_name',
+                              'test_no_such_test_anywhere'])
+        self.assertEqual(finder.unmatched_expressions(),
+                         ['test_no_such_test_anywhere'])
+
+    def test_unmatched_on_class_module_and_regexp(self):
+        """a class, a module or a regular expression can select a test as well"""
+
+        for expression in ['TestUnmatchedExpression', 'test_test_finder',
+                           'test_test_finder.py',
+                           'tests/unit_tests/various/test_test_finder.py',
+                           'test_unmatched_on_class.*']:
+            finder = self.finder([expression])
+            self.assertEqual(finder.unmatched_expressions(), [],
+                             'wrongly reported as unknown: %s' % expression)
+
+    def test_unmatched_on_directory(self):
+        """a directory below the searched package selects all its tests"""
+
+        finder = test_manager.TestFinder(package='tests/unit_tests',
+                                         expression=['various'])
+        self.assertEqual(finder.unmatched_expressions(), [])
+
+    def test_unmatched_empty_when_nothing_requested(self):
+        """the bulk modes (no name given) never report anything"""
+
+        self.assertEqual(self.finder('').unmatched_expressions(), [])
+        self.assertEqual(self.finder([]).unmatched_expressions(), [])
+
+    def test_only_a_plain_name_is_fatal(self):
+        """a regular expression is allowed to select nothing, a name is not"""
+
+        report = io.StringIO()
+        with contextlib.redirect_stdout(report):
+            fatal = test_manager.report_unmatched(['test_gone', 'test_gone_.*'],
+                                                  self.test_path)
+        self.assertEqual(fatal, ['test_gone'])
+        self.assertIn('test_gone_.*', report.getvalue())
 
 #===============================================================================
 # TestTestFinder
@@ -55,7 +120,7 @@ if 0:
         )
 
     def test_collect_dir_with_restriction_file(self):
-        " TestFinder.collect_dir pass corectly restriction rule on file "
+        " TestFinder.collect_dir pass correctly restriction rule on file "
         self.testmodule.restrict_to('test_test_finder.py')
         self.assertIn(
             'tests.unit_tests.various.test_test_finder.' + \
@@ -64,7 +129,7 @@ if 0:
         )
 
     def test_collect_dir_with_restriction_file2(self):
-        " TestFinder.collect_dir pass corectly restriction rule on file "
+        " TestFinder.collect_dir pass correctly restriction rule on file "
         self.testmodule.restrict_to('./tests/unit_tests/various/' + 
                                     'test_test_finder.py')
         self.assertIn(
@@ -74,7 +139,7 @@ if 0:
         )
 
     def test_collect_dir_with_restriction_class(self):
-        " TestFinder.collect_dir pass corectly restriction rule on class "
+        " TestFinder.collect_dir pass correctly restriction rule on class "
 
         self.testmodule.restrict_to('TestTestFinder')
         self.assertIn(
@@ -84,7 +149,7 @@ if 0:
         )
 
     def test_collect_dir_with_restriction_fct(self):
-        " TestFinder.collect_dir pass corectly restriction rule on fct "
+        " TestFinder.collect_dir pass correctly restriction rule on fct "
 
         self.testmodule.restrict_to('test_check_valid.*')
         self.assertNotIn(
@@ -137,7 +202,7 @@ if 0:
             self.assertTrue(name.startswith('test'))
 
     def test_output_are_function(self):
-        """ TestFinder.collect_function returns test funcions only """
+        """ TestFinder.collect_function returns test functions only """
         self.testmodule.collect_function(TestTestFinder)
         collect = unittest.TestLoader()
         for test_fct in self.testmodule:

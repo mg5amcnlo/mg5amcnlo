@@ -14,11 +14,11 @@ on:
     # button (below) to warm from anywhere else; that is a deliberate act.
     #
     # The schedule trigger needs no equivalent filter: GitHub only ever runs
-    # cron workflows on the default branch, which is 3.x.
+    # cron workflows on the default branch, which is main here (3.x upstream).
     branches:
-      - '3.x'
+      - 'main'
       - 'test_ci'
-    # NB both filters must match: a push to 3.x/test_ci that touches none of
+    # NB both filters must match: a push to main/test_ci that touches none of
     # these paths does not warm anything either.
     paths:
       - '.github/workflows/warm_cache.yml'
@@ -37,23 +37,24 @@ on:
       reset_ufo:
         type: boolean
         default: false
-      reset_pip:
-        type: boolean
-        default: false
       reset_delphes:
         type: boolean
         default: false
         description: 'Rebuild the dedicated ROOT/Delphes cache (independent of heptools)'
+      reset_pip:
+        type: boolean
+        default: false
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
 
   delete-cache:
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
 #
     steps:
       - uses: actions/checkout@v5
@@ -77,6 +78,7 @@ jobs:
           set -u
           for prefix in "$@"; do
             ids=$(gh cache list --repo "$GITHUB_REPOSITORY" --key "$prefix" \
+                                --ref "$GITHUB_REF" \
                                 --limit 100 --json id --jq '.[].id' 2>/dev/null || true)
             if [ -z "$ids" ]; then
               echo "no cache entry matching prefix '$prefix'"
@@ -117,7 +119,9 @@ jobs:
       - name: Collect intermediate caches left behind by earlier runs
         run: |
           set -u
-          for prefix in lhapdf boost pythia8 emela contur looptools; do
+          # both generations: v2 (current) and the unversioned one before it
+          for prefix in lhapdf-v2 boost-v2 pythia8-v2 emela-v2 contur-v2 looptools-v2 \
+                        lhapdf boost pythia8 emela contur looptools; do
             # never let a gh hiccup fail the whole warm run: this is a cleanup,
             # not a precondition (hence the "|| true", which -o pipefail would
             # otherwise turn into a step failure).
@@ -155,13 +159,14 @@ jobs:
         if: inputs.reset_heptools
         run: |
           "$RUNNER_TEMP/delete_caches.sh" \
-            heptools-${{ env.CACHE_KEY }} \
-            lhapdf-${{ env.CACHE_KEY }} \
-            pythia8-${{ env.CACHE_KEY }} \
-            boost-${{ env.CACHE_KEY }} \
-            emela-${{ env.CACHE_KEY }} \
-            contur-${{ env.CACHE_KEY }} \
-            looptools-${{ env.CACHE_KEY }}
+            heptools-v2-${{ env.CACHE_KEY }} \
+            heptools-core-v2-${{ env.CACHE_KEY }} \
+            lhapdf-v2-${{ env.CACHE_KEY }} \
+            pythia8-v2-${{ env.CACHE_KEY }} \
+            boost-v2-${{ env.CACHE_KEY }} \
+            emela-v2-${{ env.CACHE_KEY }} \
+            contur-v2-${{ env.CACHE_KEY }} \
+            looptools-v2-${{ env.CACHE_KEY }}
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -197,10 +202,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   rebuild-numpy-cache:
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
     needs: delete-cache
     steps:
       - name: Set cache key
@@ -220,9 +226,14 @@ jobs:
             pip-numpy-${{ env.CACHE_KEY }}-
             pip-numpy-${{ env.CACHE_KEY }}
 
-      - name: Install numpy into cache dir (if not cached)
+      - name: Install numpy (+ meson/ninja for f2py) into cache dir (if not cached)
         if: steps.cache-pip.outputs.cache-matched-key == ''
-        run: pip install --upgrade --target ~/.cache/pip-packages numpy meson ninja
+        # meson + ninja are required by numpy>=1.26's f2py meson backend (used on
+        # ubuntu-24 / py3.12 to compile the Fortran matrix-element wrappers, e.g.
+        # all_matrix2py.so for MadSpin/reweight). restore-pip-cache puts this
+        # dir on PYTHONPATH and its bin/ on PATH, so the meson/ninja executables
+        # are then found wherever the pip cache is restored.
+        run: pip install --target ~/.cache/pip-packages --ignore-installed numpy meson ninja
 
       - name: Save the new pip cache generation
         if: steps.cache-pip.outputs.cache-matched-key == ''
@@ -232,61 +243,60 @@ jobs:
           key: pip-numpy-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
   ufo_cache:
-     runs-on: ubuntu-latest
-     needs: delete-cache
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+    runs-on: ubuntu-24.04
+    needs: delete-cache
 
     # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
-       # Generation-suffixed keys (see the note above heptools_cache), split into
-       # restore + save like the pip/root/delphes caches. This one is not
-       # per-image (the UFO models are pure python), hence the bare "ufomodel-"
-       # prefix; the trailing bare "ufomodel" restore-key is transitional, for
-       # the unversioned entry that predates this change.
-       - name: Cache UFO MODEL
-         id: cache-ufo
-         uses: actions/cache/restore@v5
-         with:
-           path: ~/.cache/UFOMODEL
-           key: ufomodel-${{ github.run_id }}
-           restore-keys: |
-             ufomodel-
-             ufomodel
+    steps:
+      # Generation-suffixed keys (see the note above heptools_cache), split into
+      # restore + save like the pip/root/delphes caches. This one is not
+      # per-image (the UFO models are pure python), hence the bare "ufomodel-"
+      # prefix; the trailing bare "ufomodel" restore-key is transitional, for
+      # the unversioned entry that predates this change.
+      - name: Cache UFO MODEL
+        id: cache-ufo
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/UFOMODEL
+          key: ufomodel-${{ github.run_id }}
+          restore-keys: |
+            ufomodel-
+            ufomodel
 
-       - uses: actions/checkout@v5
-         if: steps.cache-ufo.outputs.cache-matched-key == ''
+      - uses: actions/checkout@v5
+        if: steps.cache-ufo.outputs.cache-matched-key == ''
 
-       - name: Install UFO model
-         if: steps.cache-ufo.outputs.cache-matched-key == ''
-         run: |
-           mkdir -p /home/runner/.cache/UFOMODEL
-           echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-           echo "import model 2HDM" >> cmd
-           ./bin/mg5_aMC cmd
+      - name: Install UFO model
+        if: steps.cache-ufo.outputs.cache-matched-key == ''
+        run: |
+          mkdir -p /home/runner/.cache/UFOMODEL
+          echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
+          echo "import model 2HDM" >> cmd
+          ./bin/madgraph cmd
 
-       - name: move UFO model to cache
-         if: steps.cache-ufo.outputs.cache-matched-key == ''
-         run: |
-           cp -r models/2HDM /home/runner/.cache/UFOMODEL
+      - name: move UFO model to cache
+        if: steps.cache-ufo.outputs.cache-matched-key == ''
+        run: |
+          cp -r models/2HDM /home/runner/.cache/UFOMODEL
 
-       - name: Save the new UFO cache generation
-         if: steps.cache-ufo.outputs.cache-matched-key == ''
-         uses: actions/cache/save@v5
-         with:
-           path: ~/.cache/UFOMODEL
-           key: ufomodel-${{ github.run_id }}
+      - name: Save the new UFO cache generation
+        if: steps.cache-ufo.outputs.cache-matched-key == ''
+        uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/UFOMODEL
+          key: ufomodel-${{ github.run_id }}
            
   lhapdf_cache:
-     # The scheduled run only keeps caches warm (see keep-warm-heptools); the
-     # heptools chain is rebuilt only on push/dispatch (or after reset_heptools).
-     if: github.event_name != 'schedule'
-     needs: delete-cache
-     runs-on: ${{ matrix.os }}
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    needs: delete-cache
+    runs-on: ${{ matrix.os }}
+    strategy:
+     matrix:
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -295,7 +305,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           key: lhapdf-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          uses: actions/checkout@v5
@@ -306,21 +316,42 @@ jobs:
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install lhapdf6" > cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
 
        - name: get pdf set for NLO
          if: steps.cache-lhapdf.outputs.cache-hit != 'true'
          run: |
                cd /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
                wget https://lhapdfsets.web.cern.ch/current/NNPDF23_nlo_as_0118_qed.tar.gz
-               tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz           
+               tar -xzpvf NNPDF23_nlo_as_0118_qed.tar.gz
                wget https://lhapdfsets.web.cern.ch/lhapdfsets/current/cteq6l1.tar.gz
-               tar -xzpvf cteq6l1.tar.gz           
+               tar -xzpvf cteq6l1.tar.gz
+               # LO set used by the mg7 run_card.toml default and by the
+               # legacy LO run_card (pdlabel=lhapdf, lhaid=331900)
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF40_lo_as_01180.tar.gz
+               tar -xzpvf NNPDF40_lo_as_01180.tar.gz
+               # NLO run_card defaults: 5-flavour (331700) and, for a model with
+               # a massive b, the 4-flavour set (334700)
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF40_nlo_as_01180.tar.gz
+               tar -xzpvf NNPDF40_nlo_as_01180.tar.gz
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF40_nlo_as_01180_nf_4.tar.gz
+               tar -xzpvf NNPDF40_nlo_as_01180_nf_4.tar.gz
+               # photon in the initial state / NLO EW corrections: the QED set
+               # (lhaid 335900, LO and NLO run_card and mg7 [beam] pdf)
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF40_nlo_as_01180_qed.tar.gz
+               tar -xzpvf NNPDF40_nlo_as_01180_qed.tar.gz
+               # previous mg7 default; still pinned by some tests
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF40MC_lo_as_01180.tar.gz
+               tar -xzpvf NNPDF40MC_lo_as_01180.tar.gz
+               # previous mg7 default; still pinned by the mg7 cross-section
+               # reference tests (tests/acceptance_tests/test_check_xsec_processes_mg7.py)
+               wget https://lhapdfsets.web.cern.ch/current/NNPDF23_lo_as_0130_qed.tar.gz
+               tar -xzpvf NNPDF23_lo_as_0130_qed.tar.gz
 
-       # "./bin/mg5_aMC cmd" exits 0 even when the install it contains failed,
+       # "./bin/madgraph cmd" exits 0 even when the install it contains failed,
        # and wget/tar above are equally happy with a truncated PDF tarball.
        # actions/cache only saves on a successful job, so failing here is what
        # keeps an incomplete lhapdf cache from being published.
@@ -330,16 +361,24 @@ jobs:
          with:
            tools: lhapdf
 
+       # The downloaded PDF archives (those above, plus the ones "install
+       # lhapdf6" fetches, one of them twice as *.tar.gz.1) stayed next to the
+       # unpacked sets: ~330 MB of already compressed data, so ~330 MB of every
+       # cache built on top of this one. Only the unpacked sets are read.
+       - name: Drop the PDF archives before the cache is saved
+         if: steps.cache-lhapdf.outputs.cache-hit != 'true'
+         run: rm -fv /home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF/*.tar.gz*
+
   pythia8_cache:
-     if: github.event_name != 'schedule'
-     runs-on: ${{ matrix.os }}
-     needs: lhapdf_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    needs: lhapdf_cache
+    strategy:
+     matrix:
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -348,7 +387,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           key: pythia8-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-pythia8.outputs.cache-hit != 'true'
@@ -368,12 +407,12 @@ jobs:
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install pythia8" > cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
 
-       # mg5_aMC exits 0 even when "install pythia8" fails (e.g. a network
+       # madgraph exits 0 even when "install pythia8" fails (e.g. a network
        # timeout while downloading hepmc/pythia8 from the download server), so
        # guard the cache here. Without Pythia.h, MG5 nullifies pythia8_path at
        # startup, leaving the parton shower unavailable and breaking the
@@ -392,12 +431,12 @@ jobs:
   # eMELA itself). Giving it its own cache means a boost failure no longer
   # discards the eMELA build, and an eMELA rebuild no longer recompiles boost.
   boost_cache:
-     if: github.event_name != 'schedule'
+     if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
      runs-on: ${{ matrix.os }}
      needs: lhapdf_cache
      strategy:
        matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+         os: [ubuntu-24.04]
 
      steps:
 
@@ -408,7 +447,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: boost-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           key: boost-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-boost.outputs.cache-hit != 'true'
@@ -425,14 +464,14 @@ jobs:
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install boost" > cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
 
        # installBOOST.sh ends on an unconditional "echo", so it returns 0 even
        # when the tarball was truncated ("gzip: stdin: unexpected end of file"
-       # -> no bootstrap.sh -> no ./b2), and mg5_aMC exits 0 on top of that.
+       # -> no bootstrap.sh -> no ./b2), and madgraph exits 0 on top of that.
        # This is exactly how run 33810239949 saved an eMELA-less cache while
        # reporting green.
        - name: Verify boost landed in the cache
@@ -441,16 +480,32 @@ jobs:
          with:
            tools: boost
 
+       # The unpacked boost source/build tree (boost/boost_1_74_0, 1.2 GB) was
+       # cached too. Its header tree boost_1_74_0/boost has to stay:
+       # HEPToolInstaller.install_emela takes the first boost/boost* entry as
+       # boost root and builds eMELA with -I on it (deleting the whole tree
+       # failed run 41208465679 with an IndexError there). The rest (build
+       # objects, docs, tests, tools) is never read.
+       - name: Drop the boost source tree, but its headers, before the cache is saved
+         if: steps.cache-boost.outputs.cache-hit != 'true'
+         run: |
+           set -e
+           cd /home/runner/.cache/HEPtools/boost
+           src=$(ls -d boost_[0-9]*/ | head -1)
+           test -d "$src/boost"
+           find "$src" -mindepth 1 -maxdepth 1 ! -name boost -exec rm -rf {} +
+           du -sh "$src"
+
   emela_cache:
-     if: github.event_name != 'schedule'
-     runs-on: ${{ matrix.os }}
-     needs: boost_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    needs: boost_cache
+    strategy:
+     matrix:
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
 
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
@@ -459,7 +514,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: emela-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           key: emela-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-eMELA.outputs.cache-hit != 'true'
@@ -485,12 +540,12 @@ jobs:
          run: |
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install eMELA" > cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
 
-       # "Installation of eMELA failed." is only *printed* by mg5_aMC, which
+       # "Installation of eMELA failed." is only *printed* by madgraph, which
        # then exits 0; without this step the job goes green and actions/cache
        # publishes an emela cache that contains no eMELA at all.
        - name: Verify eMELA landed in the cache
@@ -499,6 +554,12 @@ jobs:
          with:
            tools: boost emela
 
+       # grids.tar.gz (115 MB, compressed) stayed next to the unpacked
+       # EMELA/share grids that eMELA reads (checked above).
+       - name: Drop the eMELA grid archive before the cache is saved
+         if: steps.cache-eMELA.outputs.cache-hit != 'true'
+         run: rm -fv /home/runner/.cache/HEPtools/EMELA/grids.tar.gz
+
 #  delete_lhapdf_cache:
 #     runs-on: ${{ matrix.os }}
 #     needs: 
@@ -506,26 +567,26 @@ jobs:
 #       - emela_cache
 #     strategy:
 #       matrix:
-#         os: [ubuntu-22.04, ubuntu-24.04]
+#         os: [ubuntu-24.04]
 #     steps:
 #       - name: Set cache key                  
 #         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 #       - name: Delete lhapdf cache (included both in emela/pythia8 cache)
 #         run: |
-#             gh cache delete lhapdf-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+#             gh cache delete lhapdf-v2-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
 #         env:
 #             GH_TOKEN: ${{ github.token }}
 
   contur_cache:
-     if: github.event_name != 'schedule'
-     runs-on: ${{ matrix.os }}
-     needs: pythia8_cache
-     strategy:
-       matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    needs: pythia8_cache
+    strategy:
+     matrix:
+       os: [ubuntu-24.04]
 
      # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
+    steps:
        - name: Set cache key
          run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
        - name: check Cache rivet/contur packages
@@ -533,7 +594,7 @@ jobs:
          uses: actions/cache@v5
          with:
            path: ~/.cache/HEPtools
-           key: contur-${{ env.CACHE_KEY }}-${{ github.run_id }}
+           key: contur-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
        - name: get mg5
          if: steps.cache-contur.outputs.cache-hit != 'true'
@@ -555,18 +616,18 @@ jobs:
                # YODA's python extension build needs Cython (no longer shipped by
                # default on the GitHub runner image); without it rivet aborts at
                # YODA, before FastJet is installed, leaving NLO builds broken.
-               # Install into the same interpreter mg5_aMC/YODA use (no sudo, so
+               # Install into the same interpreter madgraph/YODA use (no sudo, so
                # the system Python is left untouched for other steps).
                python3 -m pip install Cython
                mkdir -p /home/runner/.cache/HEPtools
                cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
+               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install rivet" > cmd
                echo "install contur" >> cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
 
-       # mg5_aMC exits 0 even when "install rivet" fails, so guard the cache
+       # madgraph exits 0 even when "install rivet" fails, so guard the cache
        # here: a missing fastjet-config means NLO subprocesses cannot compile
        # (fastjet/ClusterSequence.hh). Fail loudly instead of saving an
        # incomplete heptools cache.
@@ -578,69 +639,115 @@ jobs:
 
        #- name: Delete pythia8 cache (include in contur cache)
        #  run: |
-       #      gh cache delete pythia8-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
+       #      gh cache delete pythia8-v2-${{ env.CACHE_KEY }} --repo $GITHUB_REPOSITORY || true
        #  env:
        #     GH_TOKEN: ${{ github.token }}
 
   looptools_cache:
-     if: github.event_name != 'schedule'
-     runs-on: ${{ matrix.os }}
-     strategy:
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    strategy:
+     matrix:
+       os: [ubuntu-24.04]
+    needs:
+    - delete-cache
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+     - name: Set cache key
+       run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
+     - name: Cache loop packages (iregi/cutools)
+       id: cache-nlo
+       uses: actions/cache@v5
+       with:
+         path: ~/.cache/HEPtools
+         key: looptools-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+      
+     - name: get mg5
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       uses: actions/checkout@v5
+
+     - name: Install cuttools/iregi into cache dir
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       run: |
+             mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
+             mkdir -p /home/runner/.cache/HEPtools/IREGI/src
+             cd $GITHUB_WORKSPACE
+             echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
+             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+             cd vendor/IREGI/src
+             make
+             cd ../../CutTools
+             make
+             cd ../../
+             cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
+             cp -r vendor/./CutTools/includects/libcts.a /home/runner/.cache/HEPtools/CutTools/lib
+             cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
+
+     - name: Install ninja/collier into cache dir 
+       if: steps.cache-nlo.outputs.cache-hit != 'true'
+       run: |
+             mkdir -p ~/.cache/HEPtools
+             cd $GITHUB_WORKSPACE
+             echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
+             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+             echo "install collier " > cmd
+             echo "install ninja " >> cmd
+             ./bin/madgraph cmd
+
+     # collier/ninja go through the same madgraph-exits-0-on-failure path as
+     # every other tool, and the cuttools/iregi copies above are plain "cp"s, so
+     # the job would otherwise go green with a half-populated cache -- and
+     # heptools_cache would then fold that into the combined cache and delete
+     # the sub-caches. Fail here instead: actions/cache does not run its
+     # post-save step when the job fails, so no incomplete looptools-<os> cache
+     # is stored and a re-run of *this job only* rebuilds it.
+     # Deliberately runs on the cache-hit path too, so an already-stored
+     # incomplete cache is reported instead of being silently reused (fix it
+     # with the reset_heptools input, which now also deletes looptools-<os>).
+     - name: Verify looptools landed in the cache
+       uses: ./.github/actions/check_heptools
+       with:
+         tools: looptools
+
+  # The core cache: lhapdf + pythia8 (with hepmc) only, ~0.7 GB against ~1.1 GB
+  # for the full heptools cache. Most jobs (LO, mg7, MadSpin) need nothing
+  # else and restore it with restore_heptools_core, which cuts the cache egress
+  # of a push (GitHub has failed restores with "Egress is over the account
+  # limit"). The pythia8 sub-cache already is exactly that tree (it is built on
+  # top of the lhapdf one), so it is only checked and saved under its own,
+  # generation-suffixed, key here. Must run before heptools_cache deletes the
+  # sub-caches, hence its place in the needs of that job.
+  heptools_core_cache:
+    if: (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}
+    strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-     needs:
-       - delete-cache
+        os: [ubuntu-24.04]
+    needs: pythia8_cache
+    steps:
+      # needed for ./.github/actions/check_heptools below
+      - uses: actions/checkout@v5
 
-     # Steps represent a sequence of tasks that will be executed as part of the job
-     steps:
-       - name: Set cache key
-         run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
-       - name: Cache loop packages (iregi/cutools)
-         id: cache-nlo
-         uses: actions/cache@v5
-         with:
-           path: ~/.cache/HEPtools
-           key: looptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
-       
-       - name: get mg5
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         uses: actions/checkout@v5
+      - name: Set cache key
+        run: echo "CACHE_KEY=$ImageOS" >> $GITHUB_ENV
 
-       - name: Install cuttools/iregi into cache dir
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         run: |
-               mkdir -p /home/runner/.cache/HEPtools/CutTools/lib
-               mkdir -p /home/runner/.cache/HEPtools/IREGI/src
-               cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-               cd vendor/IREGI/src
-               make
-               cd ../../CutTools
-               make
-               cd ../../
-               cp -r vendor/IREGI/src/libiregi.a /home/runner/.cache/HEPtools/IREGI/src/
-               cp -r vendor/./CutTools/includects/libcts.a /home/runner/.cache/HEPtools/CutTools/lib
-               cp -r vendor/./CutTools/includects/mpmodule.mod /home/runner/.cache/HEPtools/CutTools/lib
+      - name: Restore pythia8 (on top of lhapdf)
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: pythia8-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
-       - name: Install ninja/collier into cache dir 
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         run: |
-               mkdir -p ~/.cache/HEPtools
-               cd $GITHUB_WORKSPACE
-               echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-               cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-               echo "install collier " > cmd
-               echo "install ninja " >> cmd
-               ./bin/mg5_aMC cmd
+      - name: Verify the core tree before saving it
+        uses: ./.github/actions/check_heptools
+        with:
+          tools: lhapdf pythia8
 
-       # collier/ninja go through the same mg5_aMC-exits-0-on-failure path as
-       # every other tool, and the cuttools/iregi copies above are plain "cp"s.
-       - name: Verify looptools landed in the cache
-         if: steps.cache-nlo.outputs.cache-hit != 'true'
-         uses: ./.github/actions/check_heptools
-         with:
-           tools: looptools
+      - uses: actions/cache/save@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: heptools-core-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
   # ---------------------------------------------------------------------------
   # Cache key generations (the reason every key below ends in ${{ github.run_id }})
@@ -663,6 +770,14 @@ jobs:
   # window. Old generations disappear on their own via the 7-day-unused
   # eviction and the repo LRU.
   #
+  # The "v2" in "<name>-v2-<ImageOS>-<generation>" is the layout of the tree:
+  # v2 has Pythia8 built against HepMC3 (plus HepMC2 and a second main164) and
+  # no MG5aMC_PY8_interface. Branches that predate it only know the
+  # unversioned "<name>-<ImageOS>-" keys, so they keep restoring the previous
+  # tree (which their code expects) until they merge main; this workflow only
+  # builds, deletes and keeps warm the v2 entries. Bump it whenever the tree
+  # changes in a way older code cannot use.
+  #
   # run_id is unique per run, which is all that is needed (the prefix match
   # orders by creation time, not by key), and it is stable across "re-run
   # failed jobs" - which is exactly what keeps the recovery path documented
@@ -670,18 +785,20 @@ jobs:
   # their exact key when that run is re-run.
   # ---------------------------------------------------------------------------
   heptools_cache:
-    runs-on: ${{ matrix.os }}
+    if: always() && (github.ref_name == 'main' || github.ref_name == 'test_ci' || github.event_name == 'workflow_dispatch') && github.event_name != 'schedule'
+    runs-on: ${{ matrix.os }}       
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
-    needs: [lhapdf_cache, boost_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache]
-    # runs even if a dependency failed, but never on the scheduled keep-warm run
-    if: always() && github.event_name != 'schedule'
+        os: [ubuntu-24.04]
+    # runs even if a dependency failed (see always() in the job 'if' above), but
+    # never on the scheduled keep-warm run
+    needs: [lhapdf_cache, boost_cache, pythia8_cache, emela_cache, looptools_cache, contur_cache, heptools_core_cache]
     env:
       # Every sub-cache job reported success. Not enough on its own (see the
       # content check below), but a necessary condition for touching the
-      # combined cache at all.
-      ALL_SUBCACHES_OK: ${{ needs.lhapdf_cache.result == 'success' && needs.boost_cache.result == 'success' && needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success' }}
+      # combined cache at all. heptools_core_cache is in it so that a failed
+      # core save keeps the pythia8 sub-cache for its re-run.
+      ALL_SUBCACHES_OK: ${{ needs.lhapdf_cache.result == 'success' && needs.boost_cache.result == 'success' && needs.pythia8_cache.result == 'success' && needs.emela_cache.result == 'success' && needs.contur_cache.result == 'success' && needs.looptools_cache.result == 'success' && needs.heptools_core_cache.result == 'success' }}
     steps:
       # needed for ./.github/actions/check_heptools below
       - uses: actions/checkout@v5
@@ -710,7 +827,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: lhapdf-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Restore boost
@@ -718,7 +835,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: boost-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: boost-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Restore pythia8
@@ -726,7 +843,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: pythia8-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Restore emela
@@ -734,7 +851,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: emela-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: emela-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Restore contur
@@ -742,7 +859,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: contur-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: contur-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Restore looptools
@@ -750,7 +867,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: looptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: looptools-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       # Green sub-jobs are not proof that the tree is complete: a sub-cache may
@@ -776,7 +893,7 @@ jobs:
         if: env.ALL_SUBCACHES_OK == 'true'
         with:
           path: ~/.cache/HEPtools
-          key: heptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: heptools-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
 
       # The sub-caches are deliberately transient: they exist only to hand
       # content to this job, and each is scoped to this run by the generation
@@ -786,24 +903,34 @@ jobs:
       - name: Cleanup intermediate caches (only if all succeeded and verified)
         if: env.ALL_SUBCACHES_OK == 'true'
         run: |
-          gh cache delete lhapdf-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete boost-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete pythia8-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete emela-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete contur-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
-          gh cache delete looptools-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY || true
+          gh cache delete lhapdf-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
+          gh cache delete boost-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
+          gh cache delete pythia8-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
+          gh cache delete emela-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
+          gh cache delete contur-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
+          gh cache delete looptools-v2-${{ env.CACHE_KEY }}-${{ github.run_id }} --repo $GITHUB_REPOSITORY --ref "${{ github.ref }}" || true
         env:
           GH_TOKEN: ${{ github.token }}
 
-      # Make the run red when a sub-cache job was green but the tree it
-      # produced is not usable, so nobody trusts a "Warm all caches ✓" that
-      # left the combined cache untouched.
-      - name: Report that the combined cache was not refreshed
+      # Without this the job goes green while having silently skipped the
+      # combine, which is exactly how the problem stayed invisible. (An
+      # incomplete *tree* already fails the check_heptools step above; this
+      # covers the "a sub-cache job did not succeed" half.)
+      - name: Report the incomplete combine
         if: env.ALL_SUBCACHES_OK != 'true'
         run: |
-          echo "::error::the combined heptools cache was NOT refreshed: at least one sub-cache job did not succeed."
-          echo "The intermediate caches (lhapdf/boost/pythia8/emela/contur/looptools) have been kept,"
-          echo "so re-running only the failed job is enough - no need to rebuild the whole chain."
+          cat >> $GITHUB_STEP_SUMMARY <<EOF
+          ### heptools cache NOT refreshed
+
+          At least one sub-cache job did not succeed (see the job graph above).
+
+          The intermediate caches (lhapdf/boost/pythia8/emela/contur/looptools)
+          were **kept**, so re-running only the failing job above is enough: the
+          others will cache-hit and this job will combine and clean up.
+          If the stale sub-cache itself is the incomplete one, re-run this
+          workflow via *Run workflow* with \`reset_heptools\` ticked to drop it
+          first.
+          EOF
           exit 1
 
   # On the scheduled run the heptools rebuild chain is skipped (the *_cache jobs
@@ -816,7 +943,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04]
+        os: [ubuntu-24.04]
     steps:
       # needed for ./.github/actions/check_heptools below
       - uses: actions/checkout@v5
@@ -830,10 +957,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: ~/.cache/HEPtools
-          key: heptools-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          key: heptools-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
           restore-keys: |
-            heptools-${{ env.CACHE_KEY }}-
-            heptools-${{ env.CACHE_KEY }}
+            heptools-v2-${{ env.CACHE_KEY }}-
 
       # The twice-weekly run is the only thing that regularly looks at the
       # combined cache, so it is also the place where a cache that was saved
@@ -850,7 +976,21 @@ jobs:
 
       - name: Warn when there is no combined cache to keep warm
         if: steps.touch-heptools.outputs.cache-matched-key == ''
-        run: echo "::warning::no heptools-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
+        run: echo "::warning::no heptools-v2-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
+
+      # same for the core (lhapdf + pythia8) cache; restoring it over the tree
+      # above is harmless, nothing reads that tree after the check
+      - name: Restore (touch) the core heptools cache
+        id: touch-core
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/HEPtools
+          key: heptools-core-v2-${{ env.CACHE_KEY }}-${{ github.run_id }}
+          restore-keys: |
+            heptools-core-v2-${{ env.CACHE_KEY }}-
+      - name: Warn when there is no core cache to keep warm
+        if: steps.touch-core.outputs.cache-matched-key == ''
+        run: echo "::warning::no heptools-core-v2-${{ env.CACHE_KEY }}-* cache found; it will be rebuilt on the next push or manual dispatch."
 
 
   # ---------------------------------------------------------------------------
@@ -871,7 +1011,7 @@ jobs:
      needs: delete-cache
      strategy:
        matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+         os: [ubuntu-24.04]
 
      steps:
        - name: Set cache key
@@ -938,7 +1078,7 @@ jobs:
      needs: root_cache
      strategy:
        matrix:
-         os: [ubuntu-22.04, ubuntu-24.04]
+         os: [ubuntu-24.04]
 
      steps:
        - name: Set cache key
@@ -971,7 +1111,7 @@ jobs:
                cd $GITHUB_WORKSPACE
                cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
                echo "install Delphes" > cmd
-               ./bin/mg5_aMC cmd
+               ./bin/madgraph cmd
                # MG installs Delphes into MG5DIR/Delphes; move it next to ROOT so
                # the whole tool set lives in the dedicated cache.
                rm -rf $HOME/.cache/Delphes/Delphes

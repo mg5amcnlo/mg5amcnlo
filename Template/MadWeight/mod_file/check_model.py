@@ -39,7 +39,7 @@ def go_to_main_dir():
 ############################################################################
 if(__name__=="__main__"):
     go_to_main_dir()
-    #supress open_file subroutine  from couplings.f if defined
+    #suppress open_file subroutine  from couplings.f if defined
     rem_open_file("Source/MODEL/couplings.f","Source/MODEL/couplings_new.f")
     os.system(  "mv Source/MODEL/couplings_new.f   Source/MODEL/couplings.f")
     #same for couplingsValues.f 

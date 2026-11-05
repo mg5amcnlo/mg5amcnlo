@@ -19,15 +19,18 @@ LIBDIR  = ../../lib/
 
 BASIC_OBJS = dual_variables.o aloha_functions.o
 
-FFLAGS += $(ALOHA_FLAG)
+FFLAGS += $(ALOHA_FLAG) -I ../MODEL
+FFLAGS += -fPIC
 
 include ./aloha_file.inc
 
 all: $(LIBDIR)$(LIBRARY)
 
 # Dependencies
+# every routine uses the ALOHA_OBJECT module of aloha_functions.f (itself
+# built on dual_variables): without this a parallel make races for the .mod
 aloha_functions.o: dual_variables.o
-$(ALOHARoutine): dual_variables.o
+$(ALOHARoutine): aloha_functions.o dual_variables.o
 
 $(LIBDIR)$(LIBRARY): $(BASIC_OBJS) $(ALOHARoutine)
 	$(call CREATELIB, $@, $^)

@@ -1,0 +1,89 @@
+#*************************************************************************
+#                          Reweight Module                               *
+#            Matrix-element and PDF reweighting for MG7 outputs          *
+#*************************************************************************
+#
+# Two programs can reweight the events of an MG7 output, and both read this
+# card:
+#  - MadtRex (madtrex/, 'install madtrex' in MadGraph): matrix-element and
+#    PDF/scale reweighting on the events as written (lhe or lhe_npy)
+#  - the classic reweighting module (Mattelaer, arXiv:1607.00763): needs
+#    f2py; LO and NLO reweighting, density matrices and plugins
+# By default (change backend auto) MadtRex reweights whenever it can run the
+# card, else the classic module. The launch question's reweight switch
+# (classic/madtrex) or 'generate_events --reweight-backend=...' choose
+# explicitly, and win over the line below.
+#
+# Note:
+#   1) the value of alpha_s will be used from the event so the value in
+#      the param_card is not taken into account.
+#   2) It is (in general) dangerous/wrong to change parameters by a large
+#      amount, if this changes the shape of the matrix elements a lot.
+#      (For example, changing a particle's mass by much more than its
+#      width leads to very inaccurate result). In such a case, separate
+#      event generation runs are needed.
+#
+#************************************************************************
+# ENTER YOUR COMMANDS BELOW.
+#************************************************************************
+
+#change backend auto   # classic | madtrex | auto
+
+#change helicity True  # reweight each event at its own helicity (default),
+                       # False: helicity-summed matrix elements
+
+launch
+
+#  SPECIFY THE PARAMETERS TO CHANGE LIKE THIS:
+# set sminputs 1 130 # modify 1/alpha_EW
+# set MT 175         # a parameter by its param_card name
+
+
+#************************************************************************
+# Example of code for the computation of two weights:
+#
+# launch --rwgt_name=mt175  ! start the computation of the first weight
+#  set BLOCKNAME ID VALUE   ! rule to modify the current param_card
+#  set MT 175               ! or by the parameter's param_card name
+# launch                    ! start to compute a second weight
+#  set MT scan:[170, 180]   ! one weight per value
+#
+# Note: The commands to specify the parameters are AFTER the associated
+#       "launch".
+#
+#************************************************************************
+# Options ('change NAME VALUE', before the first 'launch'), both programs:
+#
+# change backend classic|madtrex|auto : who reweights (default auto)
+# change helicity True|False : helicity reweighting (default True). MadtRex
+#        stops on events without helicity information when True.
+# change mode LO : parameter (matrix-element) reweighting, the default
+# change model NAME / change process DEF : reweight with another model
+#        (MadtRex needs both lines). The weights are the new model's matrix
+#        element over the original one the events were generated with;
+#        MadtRex requires the regenerated subprocesses to match the original
+#        ones (same particles, flavours and helicities).
+#
+# MadtRex only:
+# change mode pdf : the lines that follow are PDF/scale reweighting:
+#        launch --rwgt_name=nnpdf
+#         set PDF_SET NNPDF40_nnlo_as_01180  ! or BEAM1_PDF_SET + BEAM2_PDF_SET
+#         set MUF_FACTOR 2                   ! or MUR_FACTOR, MUF, MUR (GeV)
+#        'change mode LO' switches back to parameter reweighting.
+# change fptype d|f|m : floating-point precision to reweight to (also per
+#        launch)
+# change verbose|max_batch|max_deferred_iterations|streaming|
+#        stream_batch_size VALUE : MadtRex driver tuning
+# change alpha_s_power|scale_variation_output VALUE : PDF reweighting options
+#
+# Classic module only:
+# change mode NLO|NLO_tree|LO+NLO : NLO reweighting (NLO samples)
+# change output default|2.0|unweight, change rwgt_dir PATH,
+# change tree_path/virtual_path PATH, change systematics, change multicore,
+# change boost, change process DEF --add, a param_card given by its path,
+# density-matrix options (change particle_in_density_matrix ...) and
+# reweighting plugins.
+#
+# Manual: https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
+#         madtrex/README.md
+#************************************************************************

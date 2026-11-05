@@ -622,7 +622,7 @@ int mcfioC_NextEventSequential(int stream)
            tmpbuf += ldat;
         }    
         /*
-        ** Initiate a new bufffer
+        ** Initiate a new buffer
         */
         str->shead->nRecords = 1;
         xdr_setpos(str->xdr, str->firstPos);

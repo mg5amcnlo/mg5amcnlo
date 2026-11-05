@@ -2132,12 +2132,12 @@ void ClusterSequence::_add_step_to_history (
   assert(local_step == step_number);
   assert(parent1 >= 0);
   if (_history[parent1].child != Invalid){
-    throw InternalError("trying to recomine an object that has previsously been recombined");
+    throw InternalError("trying to recomine an object that has previously been recombined");
   }
   _history[parent1].child = local_step;
   if (parent2 >= 0) {
     if (_history[parent2].child != Invalid){
-      throw InternalError("trying to recomine an object that has previsously been recombined");
+      throw InternalError("trying to recomine an object that has previously been recombined");
     }
     _history[parent2].child = local_step;
   }
@@ -3204,7 +3204,7 @@ void ClusterSequence::_minheap_faster_tiled_N2_cluster() {
 	  oldB.tile_index != jetB->tile_index) {
 	// GS: the line below generates a warning that oldB.tile_index
 	// may be used uninitialised. However, to reach this point, we
-	// ned jetB != NULL (see test a few lines above) and is jetB
+	// need jetB != NULL (see test a few lines above) and is jetB
 	// !=NULL, one would have gone through "oldB = *jetB before
 	// (see piece of code ~20 line above), so the index is
 	// initialised. We do not do anything to avoid the warning to

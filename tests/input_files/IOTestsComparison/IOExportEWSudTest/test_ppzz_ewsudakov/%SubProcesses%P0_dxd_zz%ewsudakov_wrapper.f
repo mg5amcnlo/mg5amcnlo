@@ -87,6 +87,7 @@
       EXTERNAL GET_QCD_LO2
 
 
+
       INTEGER EWSUD_HELSELECT
       COMMON/TO_EWSUD_HELSELECT/EWSUD_HELSELECT
 
@@ -137,6 +138,7 @@ C     stuff for the MC over helicities
         HEL_MIN = HEL(HEL_PICK)
         HEL_MAX = HEL_MIN
       ENDIF
+
 
 
 C     Main loop over the helicities
@@ -268,6 +270,7 @@ C       the SSC terms (charged)
         ENDIF
 
       ENDDO
+
 
 
 

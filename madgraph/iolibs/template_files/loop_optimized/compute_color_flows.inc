@@ -1,4 +1,4 @@
-C Set of subroutines to project the Feynman diagrama amplitudes AMPL onto the color flow space.
+C Set of subroutines to project the Feynman diagram amplitudes AMPL onto the color flow space.
 
       SUBROUTINE %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT,DO_CUMULATIVE)
       IMPLICIT NONE
@@ -130,22 +130,22 @@ C ----------
 C CleanUp duties, i.e. array deallocation
 if (CleanUp) then
   DO I=1,NLOOPFLOWS
-    if(ALLOCATED(LoopColorProjector(I)%%Num)) deallocate(LoopColorProjector(I)%%Num)
-    if(ALLOCATED(LoopColorProjector(I)%%Denom)) deallocate(LoopColorProjector(I)%%Denom)
-    if(ALLOCATED(LoopColorProjector(I)%%AmpID)) deallocate(LoopColorProjector(I)%%AmpID)
+    if(ALLOCATED(LoopColorProjector(I)%Num)) deallocate(LoopColorProjector(I)%Num)
+    if(ALLOCATED(LoopColorProjector(I)%Denom)) deallocate(LoopColorProjector(I)%Denom)
+    if(ALLOCATED(LoopColorProjector(I)%AmpID)) deallocate(LoopColorProjector(I)%AmpID)
   ENDDO
 ## if(not LoopInduced){
   DO I=1,NBORNFLOWS
-    if(ALLOCATED(BornColorProjector(I)%%Num)) deallocate(BornColorProjector(I)%%Num)
-    if(ALLOCATED(BornColorProjector(I)%%Denom)) deallocate(BornColorProjector(I)%%Denom)
-    if(ALLOCATED(BornColorProjector(I)%%AmpID)) deallocate(BornColorProjector(I)%%AmpID)
+    if(ALLOCATED(BornColorProjector(I)%Num)) deallocate(BornColorProjector(I)%Num)
+    if(ALLOCATED(BornColorProjector(I)%Denom)) deallocate(BornColorProjector(I)%Denom)
+    if(ALLOCATED(BornColorProjector(I)%AmpID)) deallocate(BornColorProjector(I)%AmpID)
   ENDDO
 ## }  
   return
 endif
 
-C Initialization; must allocate array from data files. All arrays are allocated at once, so we only need to check if LoopColorProjector(0)%%Num is allocated and all other arrays must share the same status.
-if(.not.allocated(LoopColorProjector(1)%%Num)) then
+C Initialization; must allocate array from data files. All arrays are allocated at once, so we only need to check if LoopColorProjector(0)%Num is allocated and all other arrays must share the same status.
+if(.not.allocated(LoopColorProjector(1)%Num)) then
   CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
   CALL JOINPATH(TMP,LoopColorFlowCoefsName,LoopColorFlowCoefsN)
 ## if(not LoopInduced){
@@ -156,12 +156,12 @@ C Initialize the LoopColorProjector
   OPEN(1, FILE=LoopColorFlowCoefsN, err=201, status='OLD',           action='READ')
   DO I=1,NLOOPFLOWS
     READ(1,*,END=998) ARRAY_SIZE
-    allocate(LoopColorProjector(I)%%Num(ARRAY_SIZE))
-    allocate(LoopColorProjector(I)%%Denom(ARRAY_SIZE))
-    allocate(LoopColorProjector(I)%%AmpID(ARRAY_SIZE))
-    READ(1,*,END=998) (LoopColorProjector(I)%%Num(J),J=1,ARRAY_SIZE)
-    READ(1,*,END=998) (LoopColorProjector(I)%%Denom(J),J=1,ARRAY_SIZE)
-    READ(1,*,END=998) (LoopColorProjector(I)%%AmpID(J),J=1,ARRAY_SIZE)
+    allocate(LoopColorProjector(I)%Num(ARRAY_SIZE))
+    allocate(LoopColorProjector(I)%Denom(ARRAY_SIZE))
+    allocate(LoopColorProjector(I)%AmpID(ARRAY_SIZE))
+    READ(1,*,END=998) (LoopColorProjector(I)%Num(J),J=1,ARRAY_SIZE)
+    READ(1,*,END=998) (LoopColorProjector(I)%Denom(J),J=1,ARRAY_SIZE)
+    READ(1,*,END=998) (LoopColorProjector(I)%AmpID(J),J=1,ARRAY_SIZE)
   ENDDO
   GOTO 203
 201  CONTINUE
@@ -174,12 +174,12 @@ C Initialize the BornColorProjector
   OPEN(1, FILE=BornColorFlowCoefsN, err=301, status='OLD',           action='READ')
   DO I=1,NBORNFLOWS
     READ(1,*,END=998) ARRAY_SIZE
-    allocate(BornColorProjector(I)%%Num(ARRAY_SIZE))
-    allocate(BornColorProjector(I)%%Denom(ARRAY_SIZE))
-    allocate(BornColorProjector(I)%%AmpID(ARRAY_SIZE))
-    READ(1,*,END=998) (BornColorProjector(I)%%Num(J),J=1,ARRAY_SIZE)
-    READ(1,*,END=998) (BornColorProjector(I)%%Denom(J),J=1,ARRAY_SIZE)
-    READ(1,*,END=998) (BornColorProjector(I)%%AmpID(J),J=1,ARRAY_SIZE)
+    allocate(BornColorProjector(I)%Num(ARRAY_SIZE))
+    allocate(BornColorProjector(I)%Denom(ARRAY_SIZE))
+    allocate(BornColorProjector(I)%AmpID(ARRAY_SIZE))
+    READ(1,*,END=998) (BornColorProjector(I)%Num(J),J=1,ARRAY_SIZE)
+    READ(1,*,END=998) (BornColorProjector(I)%Denom(J),J=1,ARRAY_SIZE)
+    READ(1,*,END=998) (BornColorProjector(I)%AmpID(J),J=1,ARRAY_SIZE)
   ENDDO
   GOTO 303
 301  CONTINUE
@@ -198,27 +198,27 @@ ENDIF
 ## if(not LoopInduced){
 C Start by projecting the Born amplitudes
 DO I=1,NBORNFLOWS
-  DO J=1,SIZE(BornColorProjector(I)%%AmpID)
-    SOINDEX = %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(BornColorProjector(I)%%AmpID(J))
-    PROJ_COEF=DCMPLX(BornColorProjector(I)%%Num(J)/DBLE(ABS(BornColorProjector(I)%%Denom(J))),0.0d0)
-    IF(BornColorProjector(I)%%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
-    JAMPB(I,SOINDEX) = JAMPB(I,SOINDEX) + PROJ_COEF*AMP(BornColorProjector(I)%%AmpID(J))
+  DO J=1,SIZE(BornColorProjector(I)%AmpID)
+    SOINDEX = %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(BornColorProjector(I)%AmpID(J))
+    PROJ_COEF=DCMPLX(BornColorProjector(I)%Num(J)/DBLE(ABS(BornColorProjector(I)%Denom(J))),0.0d0)
+    IF(BornColorProjector(I)%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
+    JAMPB(I,SOINDEX) = JAMPB(I,SOINDEX) + PROJ_COEF*AMP(BornColorProjector(I)%AmpID(J))
   ENDDO
 ENDDO
 
 ## }
 C Projection of the loop amplitudes
 DO I=1,NLOOPFLOWS
-  DO J=1,SIZE(LoopColorProjector(I)%%AmpID)
-    SOINDEX = %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(LoopColorProjector(I)%%AmpID(J))
-    PROJ_COEF=DCMPLX(LoopColorProjector(I)%%Num(J)/DBLE(ABS(LoopColorProjector(I)%%Denom(J))),0.0d0)
-    IF(LoopColorProjector(I)%%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
+  DO J=1,SIZE(LoopColorProjector(I)%AmpID)
+    SOINDEX = %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(LoopColorProjector(I)%AmpID(J))
+    PROJ_COEF=DCMPLX(LoopColorProjector(I)%Num(J)/DBLE(ABS(LoopColorProjector(I)%Denom(J))),0.0d0)
+    IF(LoopColorProjector(I)%Denom(J).LT.0) PROJ_COEF=PROJ_COEF*IMAG1
     DO K=1,3
-      JAMPL(K,I,SOINDEX) = JAMPL(K,I,SOINDEX) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%%AmpID(J))
+      JAMPL(K,I,SOINDEX) = JAMPL(K,I,SOINDEX) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%AmpID(J))
 ## if(LoopInduced and MadEventOutput){
-      config_index = CONFIG_MAP(LoopColorProjector(I)%%AmpID(J)) 
+      config_index = CONFIG_MAP(LoopColorProjector(I)%AmpID(J))
       IF (config_index.ne.0) THEN
-        JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) = JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%%AmpID(J))
+        JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) = JAMPL_FOR_AMP2(K,I,SOINDEX,config_index) + PROJ_COEF*AMPL(K,LoopColorProjector(I)%AmpID(J))
       ENDIF
 ## }
     ENDDO
@@ -299,8 +299,8 @@ if(.NOT.CMInitialized) then
 C Initialize the BornColorFlowMatrix
   OPEN(1, FILE=BornColorFlowMatrixN, err=601, status='OLD',           action='READ')
   DO I=1,NBORNFLOWS
-    READ(1,*,END=898) (BornColorFlowMatrix(I,J)%%Num,J=1,NBORNFLOWS)
-    READ(1,*,END=898) (BornColorFlowMatrix(I,J)%%Denom,J=1,NBORNFLOWS)
+    READ(1,*,END=898) (BornColorFlowMatrix(I,J)%Num,J=1,NBORNFLOWS)
+    READ(1,*,END=898) (BornColorFlowMatrix(I,J)%Denom,J=1,NBORNFLOWS)
   ENDDO
   GOTO 603
 601  CONTINUE
@@ -312,11 +312,11 @@ C Initialize the LoopColorFlowMatrix
   OPEN(1, FILE=LoopColorFlowMatrixN, err=701, status='OLD',           action='READ')
   DO I=1,NLOOPFLOWS
 ## if(not LoopInduced){
-    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%%Num,J=1,NBORNFLOWS)
-    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%%Denom,J=1,NBORNFLOWS)
+    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%Num,J=1,NBORNFLOWS)
+    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%Denom,J=1,NBORNFLOWS)
 ## } else {
-    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%%Num,J=1,NLOOPFLOWS)
-    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%%Denom,J=1,NLOOPFLOWS)
+    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%Num,J=1,NLOOPFLOWS)
+    READ(1,*,END=898) (LoopColorFlowMatrix(I,J)%Denom,J=1,NLOOPFLOWS)
 ## }
   ENDDO
   GOTO 703
@@ -397,8 +397,8 @@ ENDIF
 
 C Compute the Loop ME from the loop color flow amplitudes (JAMPL)
 DO I=1,NLOOPFLOWS
-  COLOR_COEF=DCMPLX(LoopColorFlowMatrix(I,I)%%Num/DBLE(ABS(LoopColorFlowMatrix(I,I)%%Denom)),0.0d0)
-  IF (LoopColorFlowMatrix(I,I)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
+  COLOR_COEF=DCMPLX(LoopColorFlowMatrix(I,I)%Num/DBLE(ABS(LoopColorFlowMatrix(I,I)%Denom)),0.0d0)
+  IF (LoopColorFlowMatrix(I,I)%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
   DO M=1,NLOOPAMPSO
     DO N=M,NLOOPAMPSO
       ISQSO = %(proc_prefix)sML5SQSOINDEX(M,N)
@@ -532,7 +532,7 @@ C The configurations are not necessarily consecutive when grouping subprocesses.
         DO J=1,NSQUAREDSO
 C For the multi-channeling, it is in general better to ignore the squared order constraints (which, if they are any, would restrict the AMP2 quantities to be coming from the interference terms only).  
          IF (.TRUE.) THEN
-C Chosing the if statement below instead would as a result to apply the squared order constraints to the AMP2 quantities given to MadEvent for the multichanneling.
+C Choosing the if statement below instead would as a result to apply the squared order constraints to the AMP2 quantities given to MadEvent for the multichanneling.
 c         IF (CHOSEN_SO_CONFIGS(I)) THEN
             AMP2(config_index_map(i))=AMP2(config_index_map(i))+DABS(AMP2_ALL(1,i,J))
           ENDIF
@@ -668,8 +668,8 @@ ENDDO
 c Compute the Born ME from the Born color flow amplitudes (JAMP)
 DO I=1, NBORNFLOWS
   DO J=I, NBORNFLOWS
-    COLOR_COEF=DCMPLX(BornColorFlowMatrix(I,J)%%Num/DBLE(ABS(BornColorFlowMatrix(I,J)%%Denom)),0.0d0)
-    IF (BornColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
+    COLOR_COEF=DCMPLX(BornColorFlowMatrix(I,J)%Num/DBLE(ABS(BornColorFlowMatrix(I,J)%Denom)),0.0d0)
+    IF (BornColorFlowMatrix(I,J)%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NBORNAMPSO
 C It may be that this AmpSO index does not receive contribution by the Born amps (because we put the loop and Born amplitude split orders in a common list)
       IF (ABS(JAMPB(I,M)).eq.0.0d0) CYCLE
@@ -703,8 +703,8 @@ DO I=1,NLOOPFLOWS
 ## } else {
   DO J=I,NLOOPFLOWS
 ## }
-    COLOR_COEF=DCMPLX(LoopColorFlowMatrix(I,J)%%Num/DBLE(ABS(LoopColorFlowMatrix(I,J)%%Denom)),0.0d0)
-    IF (LoopColorFlowMatrix(I,J)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
+    COLOR_COEF=DCMPLX(LoopColorFlowMatrix(I,J)%Num/DBLE(ABS(LoopColorFlowMatrix(I,J)%Denom)),0.0d0)
+    IF (LoopColorFlowMatrix(I,J)%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
     DO M=1,NLOOPAMPSO
 ## if(not LoopInduced){
 C It may be that this AmpSO index does not receive contribution by the Loop amps (because we put the loop and Born amplitude split orders in a common list)
@@ -882,7 +882,7 @@ END SUBROUTINE
 ## }
 
 C This subroutine resets to 0 the common arrays JAMPL, JAMPB and possibly JAMPL_FOR_AMP2 if used
-c The common array JAMPL_ALL is reseted to 0 in the previous subroutine
+c The common array JAMPL_ALL is reset to 0 in the previous subroutine
 SUBROUTINE %(proc_prefix)sREINITIALIZE_JAMPS()
 implicit none
 C  
@@ -1137,7 +1137,7 @@ C Here we setup GOODHEL. If GOODHEL(H) = -10000, its JAMP is 0 so we can skip al
         ENDDO
       ELSE
         WRITE(*,*) '### ERROR The parameter HelicityFilterLevel only accepts values of 0 and 1. The value was set to', HelicityFilterLevel
-C       We cant stop the code here because in the initialisation phase, HelicityFilterLevel = 2.
+C       We cannot stop the code here because in the initialisation phase, HelicityFilterLevel = 2.
       ENDIF
 
 c     Here we determine which helicity state we want to compute and which position it has in the JAMPL_ALL structure

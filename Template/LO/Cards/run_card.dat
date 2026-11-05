@@ -1,5 +1,5 @@
 #*********************************************************************
-#                       MadGraph5_aMC@NLO                            *
+#                       MadGraph7                            *
 #                                                                    *
 #                     run_card.dat MadEvent                          *
 #                                                                    *
@@ -67,7 +67,7 @@ $mom_resh
 # Type and output format
 #*********************************************************************
   %(gridpack)s     = gridpack  !True = setting up the grid pack
-  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
+  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant lifetime is not written (-1 means not written)
   %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
 $mlm
 $ckkw

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -523,7 +523,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         
 
     def associate_number(self, line, number):
-        """Write in the EPS figure the MadGraph5_aMC@NLO number associate to the line.
+        """Write in the EPS figure the MadGraph7 number associate to the line.
         Note that this routine is called only for external particle."""
 
         # find the external vertex associate to the line
@@ -770,7 +770,7 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         self.text += ' 260         50  moveto\n'
-        self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'       
+        self.text += ' (Diagrams made by MadGraph7) show\n'       
         # Loop on all diagram
         for i,diagram in enumerate(diagramlist):
             # Check if they need to be convert in correct format
@@ -808,5 +808,5 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         self.text += ' 260         40  moveto\n'
-        self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'
+        self.text += ' (Diagrams made by MadGraph7) show\n'
         

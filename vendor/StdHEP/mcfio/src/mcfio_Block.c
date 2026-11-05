@@ -55,7 +55,7 @@ int mcfioC_Block(int stream, int blkid,
  bool_t xdr_filtercode(XDR *xdrs, int *blockid, int *ntot, char **version))
 /*
 ** Routine to decode or encode a particular Block. Return 1 if O.K, 
-** -1 if a problem or unknow block.  
+** -1 if a problem or unknown block.
 **
 ** Adding Ntuple instances ... October 1995.
 */
@@ -189,7 +189,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
   ddl = mcf_GetNTuByStreamID(stream, nTupleId);
   if (ddl == NULL) {
      fprintf(stderr,
- " mcfio_NTuple: Illegal or inexistant NTuple Id %d for stream %d \n", 
+ " mcfio_NTuple: Illegal or nonexistent NTuple Id %d for stream %d \n",
      nTupleId, stream); 
      return -1;
   }
@@ -291,7 +291,7 @@ int mcfioC_NTuple(int stream, int nTupleId, char * version)
 ** Optimized version used exclusively to read the multiplicity value 
 ** within an NTuple. It is assumed that the stream is open read direct 
 ** access (No checks!), and the event table is available, and the 
-** NTuple is accessible.  Once again, No checks! Use at your onw risk.
+** NTuple is accessible.  Once again, No checks! Use at your own risk.
 ** Also, we do not keep record of the number of byte Read.  
 */
 int mcfioC_NTupleMult(int stream, int nTupleId, char * version)
@@ -332,8 +332,8 @@ int mcfioC_NTupleMult(int stream, int nTupleId, char * version)
       }
       /*
       ** This probably could be optimized away. Note the that the current 
-      ** position of the stream strored in str->currentPos is no longer 
-      ** valied exiting this routine. However, there is enough redundancy 
+      ** position of the stream stored in str->currentPos is no longer
+      ** valid exiting this routine. However, there is enough redundancy
       ** in the data structure to figure out where we could go..
       */
      /*  xdr_setpos(str->xdr, str->currentPos);   */ 

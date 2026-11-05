@@ -1,7 +1,7 @@
 /*******************************************************************************
 *									       *
 * mcf_nTupleDescript.h -- Include file for mcfast generalized nTuple           *
-*    descriptors.  This is a genric structres that can hold info about	       *
+*    descriptors.  This is a generic structures that can hold info about	       *
 *    specficic instances of a generalized nTuple. 			       *
 *									       *
 *	P. Lebrun, September 1995.					       *
@@ -53,7 +53,7 @@ typedef struct {
     int orgStyle;	 /* The organization of the indexed variables */
     void *address;	 /* Virtual address of a particular instance */
     long multOffset;      /* Offset for the multiplicity offset */
-    u_int multXDROffset;   /* Adress for the multiplicity offset */
+    u_int multXDROffset;   /* Address for the multiplicity offset */
     long fenceOffset;     /* Offset for the fence */
     u_int fenceXDROffset;  /* XDR offset for the fence */
     long  *subOffset;     /* Offset for the sub structures */

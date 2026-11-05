@@ -663,7 +663,7 @@ static void scaleCB(Widget w, SpaceWindow *window,caddr_t call_data)
     XtVaSetValues(window->scaleSliderValue, XmNlabelString, s1, 0);
     XmStringFree(s1);
     /* 
-    ** Reset the defaul and scale of other sliders
+    ** Reset the default and scale of other sliders
     **
     */
     window->minTransl[2] = -curval/2.; window->maxTransl[2] = curval/2.;

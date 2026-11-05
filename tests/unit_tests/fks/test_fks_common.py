@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -24,6 +24,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.insert(0, os.path.join(root_path,'..','..'))
 
 import tests.unit_tests as unittest
+import madgraph
 import madgraph.fks.fks_common as fks_common
 import madgraph.core.base_objects as MG
 import madgraph.core.color_algebra as color
@@ -31,7 +32,7 @@ import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 import madgraph.various.misc as misc
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import copy
 import array
 import fractions
@@ -2615,7 +2616,84 @@ class TestFKSCommon(unittest.TestCase):
         self.assertEqual(len(dicts_qed), 12)
         self.assertEqual(link_basis_qed, dicts_qed[1]['link_basis'])
         self.assertEqual(matrix_qed, dicts_qed[1]['link_matrix'])
-        
+
+
+    def test_born_basis_link_matrices(self):
+        """the colour-link matrices expressed in the Born basis give, with
+        the Born JAMPs only, the same colour-linked Born as the diagram-based
+        link basis (JAMP2) of insert_color_links; they are real and
+        symmetric, and the colour-conservation identity holds:
+        sum_{n != m} B_mn = -C_m B for every coloured massless leg m."""
+        import random
+        # u u~ > d d~
+        leglist = MG.LegList([
+                    MG.Leg({'id':2, 'state':False, 'number':1}),
+                    MG.Leg({'id':-2, 'state':False, 'number':2}),
+                    MG.Leg({'id':1, 'state':True, 'number':3}),
+                    MG.Leg({'id':-1, 'state':True, 'number':4}),
+                    ])
+        myproc = MG.Process({'legs' : leglist,
+                       'orders':{'QCD':10, 'QED':0},
+                       'model': self.model,
+                       'id': 1,
+                       'required_s_channels':[],
+                       'forbidden_s_channels':[],
+                       'forbidden_particles':[],
+                       'is_decay_chain': False,
+                       'decay_chains': MG.ProcessList(),
+                       'overall_orders': {}})
+        helas = helas_objects.HelasMatrixElement(
+                        diagram_generation.Amplitude(myproc))
+        basis = helas['color_basis']
+        links = fks_common.find_color_links(
+                    fks_common.to_fks_legs(leglist, self.model), symm=True,
+                    pert='QCD')
+        old = fks_common.insert_color_links(basis,
+                    basis.create_color_dict_list(helas['base_amplitude']),
+                    links)
+        new = fks_common.born_basis_link_matrices(basis, links)
+        self.assertEqual([n['link'] for n in new], [o['link'] for o in old])
+
+        def jamps(col_basis, amps):
+            out = []
+            for key in sorted(col_basis.keys()):
+                val = 0j
+                for entry in col_basis[key]:
+                    val += float(entry[2]) * 3 ** entry[4] * \
+                           (1j if entry[3] else 1) * amps[(entry[0], entry[1])]
+                out.append(val)
+            return out
+
+        random.seed(3)
+        amps = {}
+        for entries in basis.values():
+            for entry in entries:
+                amps[(entry[0], entry[1])] = complex(random.gauss(0, 1),
+                                                     random.gauss(0, 1))
+        jamp = jamps(basis, amps)
+        born_cf = helas['color_matrix'].col_matrix_fixed_Nc
+        born = sum(jamp[i].conjugate() * float(born_cf[(i, j)][0]) * jamp[j]
+                   for i in range(len(jamp)) for j in range(len(jamp))).real
+        values = {}
+        for o, n in zip(old, new):
+            jamp2 = jamps(o['link_basis'], amps)
+            ref = sum(jamp[i].conjugate() *
+                      float(o['link_matrix'].col_matrix_fixed_Nc[(i, k)][0]) *
+                      jamp2[k] for i in range(len(jamp))
+                      for k in range(len(jamp2)))
+            val = 0j
+            for (i, j), (re, im) in n['matrix'].items():
+                self.assertEqual(im, 0)
+                self.assertEqual(n['matrix'].get((j, i)), (re, im))
+                val += jamp[i].conjugate() * float(re) * jamp[j]
+            self.assertAlmostEqual(val.real, ref.real, delta=1e-12 * abs(born))
+            values[tuple(n['link'])] = val.real
+        # colour conservation for the massless quarks: sum_{n!=m} B_mn = -C_F B
+        for m in range(1, 5):
+            tot = sum(v for (a, b), v in values.items()
+                      if a != b and m in (a, b))
+            self.assertAlmostEqual(tot, -4. / 3. * born, delta=1e-12 * born)
+
 
     def test_colour_density_insertions(self):
         """Exact insertions agree with the independent linked-basis expansion.
@@ -2734,7 +2812,7 @@ class TestFKSCommon(unittest.TestCase):
                        coeff = fractions.Fraction(-1,1),
                        is_imaginary = False))
         ####FINAL-FINIAL
-        #FINAL state quark with FINIAL state quark
+        #FINAL state quark with FINAL state quark
         pairs.append([MG.Leg({'id' : 1, 'state' : True, 'number' : 1 }),
                       MG.Leg({'id' : 2, 'state' : True, 'number' : 2 })])
         replacs.append([[1, -3001], [2, -3002]])
@@ -2971,8 +3049,15 @@ class TestLinkRBConfHEFT(unittest.TestCase):
     (only processes with 3 point interactions)"""
 
     def setUp(self):
+        # link_rb_configs reads the vertex decomposition of the real diagrams,
+        # so it runs with the four gluon merging off, as FKSMultiProcess does
+        self.merge_quartic = madgraph.merge_quartic_vertices
+        madgraph.merge_quartic_vertices = False
         if not hasattr(self, 'base_model'):
             TestLinkRBConfHEFT.base_model = import_ufo.import_model('heft')
+
+    def tearDown(self):
+        madgraph.merge_quartic_vertices = self.merge_quartic
 
 
     def test_link_gghg_ggh(self):
@@ -3100,8 +3185,15 @@ class TestLinkRBConfSM(unittest.TestCase):
     (only processes with 3 point interactions)"""
 
     def setUp(self):
+        # link_rb_configs reads the vertex decomposition of the real diagrams,
+        # so it runs with the four gluon merging off, as FKSMultiProcess does
+        self.merge_quartic = madgraph.merge_quartic_vertices
+        madgraph.merge_quartic_vertices = False
         if not hasattr(self, 'base_model'):
-            TestLinkRBConfSM.base_model = import_ufo.import_model('sm')
+            TestLinkRBConfSM.base_model = import_ufo.import_model('sm', options={'apply_flavor_grouping':False})
+
+    def tearDown(self):
+        madgraph.merge_quartic_vertices = self.merge_quartic
 
     def test_link_udxwpg_udxwp(self):
         """tests that the real emission process ud~>w+g and born process u u~>w+ are
@@ -3644,3 +3736,121 @@ class TestFKSDiagramTag(unittest.TestCase):
 
 
 
+
+
+class TestMeFrameCharacteristics(unittest.TestCase):
+    """fks_common.me_frame_characteristics: the default me_frame of the
+    NLO run_card (the massive final state when the initial state radiates,
+    else [1, 2]), what me_frame = [1, 2] means at NLO for a process, and
+    which legs may not enter a frame once real emission is computed (a jet,
+    or a beam that radiates; never the decaying particle of a decay). The
+    run_card resolves me_frame against these (RunCardNLO.get_me_frame_legs).
+    Each result is (cm_legs, unsafe_legs, default_legs)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.model = import_ufo.import_model('loop_sm')
+
+    partons = [1, 2, 3, 4, -1, -2, -3, -4, 21]
+
+    def proc(self, initial, final, nlo_mode='all',
+             couplings=('QCD',)):
+        """legs are (ids, polarisation) pairs, in the user's order"""
+        legs = MG.MultiLegList(
+            [MG.MultiLeg({'ids': ids, 'state': False, 'polarization': pol})
+             for ids, pol in initial] +
+            [MG.MultiLeg({'ids': ids, 'state': True, 'polarization': pol})
+             for ids, pol in final])
+        return MG.ProcessDefinition({'legs': legs, 'model': self.model,
+                                     'NLO_mode': nlo_mode,
+                                     'perturbation_couplings': list(couplings)})
+
+    def charac(self, *procs, splitting_types=('QCD',)):
+        return fks_common.me_frame_characteristics(
+            list(procs), splitting_types=splitting_types)
+
+    def test_initial_state_radiation_and_a_jet(self):
+        # p p > w+{0} j [QCD]: the Born final state contains a jet, so the
+        # partonic c.m. has no infrared-safe NLO version; the default is the
+        # W alone, its Collins-Soper frame
+        p = (self.partons, [])
+        self.assertEqual(self.charac(self.proc([p, p], [([24], [0]),
+                                                        (self.partons, [])])),
+                         ([3, 4], [1, 2, 4], [3]))
+        # p p > t{+} t~ j [QCD]: both tops, never the jet
+        self.assertEqual(self.charac(self.proc([p, p], [([6], [1]),
+                                                        ([-6], []),
+                                                        (self.partons, [])])),
+                         ([3, 4, 5], [1, 2, 5], [3, 4]))
+
+    def test_initial_state_radiation_colourless_final_state(self):
+        # p p > w+{0} w- [QCD]: the W W rest frame, also with a photon in p
+        for ids in (self.partons, self.partons + [22]):
+            p = (ids, [])
+            self.assertEqual(self.charac(self.proc([p, p], [([24], [0]),
+                                                            ([-24], [])])),
+                             ([3, 4], [1, 2], [3, 4]))
+
+    def test_a_leg_massless_somewhere_is_not_in_the_default(self):
+        p = (self.partons, [])
+        # 'define v = z a', p p > v{T} j [QCD]: the label is not massive
+        # for every particle, so no default (the same at LO)
+        self.assertEqual(self.charac(self.proc([p, p], [([23, 22], [1, -1]),
+                                                        (self.partons, [])])),
+                         ([3, 4], [1, 2, 4], []))
+        # p p > z{0} j [QCD] with p p > z{0} z [QCD]: not the jet
+        zj = self.proc([p, p], [([23], [0]), (self.partons, [])])
+        zz = self.proc([p, p], [([23], [0]), ([23], [])])
+        self.assertEqual(self.charac(zj, zz)[2], [3])
+
+    def test_no_initial_state_radiation(self):
+        # e+ e- > t{-1} t~ [QCD]: a massive coloured final state is safe
+        self.assertEqual(self.charac(self.proc([([-11], []), ([11], [])],
+                                               [([6], [-1]), ([-6], [])])),
+                         ([1, 2], [], []))
+        # e+ e- > t{-1} t~ j [QCD]: the jet is not
+        self.assertEqual(self.charac(self.proc([([-11], []), ([11], [])],
+                                               [([6], [-1]), ([-6], []),
+                                                (self.partons, [])])),
+                         ([1, 2], [5], []))
+        # what radiates is decided by the splittings FKS generates, not by
+        # perturbation_couplings, which the mixed expansion fills with
+        # ['QCD', 'QED'] for e+ e- > t t~ [QCD]: the beams stay safe ...
+        ee_tt = self.proc([([-11], []), ([11], [])], [([6], [-1]), ([-6], [])],
+                          couplings=('QCD', 'QED'))
+        self.assertEqual(self.charac(ee_tt), ([1, 2], [], []))
+        # ... unless QED splittings are generated: then they radiate
+        self.assertEqual(self.charac(ee_tt, splitting_types=('QCD', 'QED')),
+                         ([3, 4], [1, 2], [3, 4]))
+        # a a > w+{0} w- [QCD]: no coloured initial parton
+        self.assertEqual(self.charac(self.proc([([22], []), ([22], [])],
+                                               [([24], [0]), ([-24], [])])),
+                         ([1, 2], [], []))
+
+    def test_decay(self):
+        # t > w+{0} d [QCD]: the decaying particle, never split, so it may
+        # enter a frame although it is coloured; the d may not
+        self.assertEqual(self.charac(self.proc([([6], [])],
+                                               [([24], [0]), ([1], [])])),
+                         ([1], [3], []))
+
+    def test_frame_irrelevant(self):
+        p = (self.partons, [])
+        # unpolarised: Lorentz-invariant matrix elements
+        self.assertEqual(self.charac(self.proc([p, p], [([24], []),
+                                                        (self.partons, [])])),
+                         ([], [], []))
+        # a polarised massless particle: helicity is boost invariant
+        self.assertEqual(self.charac(self.proc([p, p], [([-11], [-1]),
+                                                        ([12], [])])),
+                         ([], [], []))
+
+    def test_no_real_emission(self):
+        # [LOonly=QCD]: the Born alone, so [1, 2] is its partonic c.m.; the
+        # default is the same as for [QCD], so that the multiplicities of a
+        # merged sample share one frame
+        p = (self.partons, [])
+        self.assertEqual(self.charac(self.proc([p, p], [([24], [0]),
+                                                        (self.partons, [])],
+                                               nlo_mode='LOonly')),
+                         ([1, 2], [], [3]))

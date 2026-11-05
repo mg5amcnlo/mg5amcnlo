@@ -1,0 +1,7 @@
+{
+  "include": ["typing_consumer.py"],
+  "extraPaths": ["../stubs"],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "strict",
+  "reportMissingModuleSource": "none"
+}

@@ -10,7 +10,9 @@ runs:
   using: composite
   steps:
     - name: Set cache key
-      run: echo "CACHE_KEY=lhapdf-$ImageOS" >> $GITHUB_ENV
+      # HEPTOOLS_IMAGE selects the python paths below: comparing CACHE_KEY
+      # instead would silently break whenever the key generation is bumped
+      run: echo "CACHE_KEY=lhapdf-v2-$ImageOS" >> $GITHUB_ENV && echo "OLD_CACHE_KEY=lhapdf-$ImageOS" >> $GITHUB_ENV && echo "HEPTOOLS_IMAGE=$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     # Cache keys are generation-suffixed by warm_cache.yml, as
@@ -29,25 +31,50 @@ runs:
         key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
         restore-keys: |
           ${{ env.CACHE_KEY }}-
-          ${{ env.CACHE_KEY }}
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg5_configuration.txt
-        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
-        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg5_configuration.txt
+        echo "heptools_install_dir=/home/runner/.cache/HEPtools" >> input/mg7_configuration.txt
+        echo "lhapdf = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg7_configuration.txt
+        echo "lhapdf_py3 = /home/runner/.cache/HEPtools/bin/lhapdf-config" >>       input/mg7_configuration.txt
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lhapdf6_py3//lib" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/runner/.cache/HEPtools/lib" >> $GITHUB_ENV
       shell: bash
 
     - name: set pythonpath for ubuntu22
-      if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu22' }}
+      if: ${{ env.HEPTOOLS_IMAGE == 'ubuntu22' }}
       run: |
         echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.10/dist-packages" >> $GITHUB_ENV
       shell: bash 
 
     - name: set pythonpath for ubuntu24
-      if: ${{ env.CACHE_KEY  == 'lhapdf-ubuntu24' }}
+      if: ${{ env.HEPTOOLS_IMAGE == 'ubuntu24' }}
       run: |
         echo "PYTHONPATH=$PYTHONPATH:/home/runner/.cache/HEPtools/lhapdf6_py3/lib/python3.12/dist-packages" >> $GITHUB_ENV
-      shell: bash 
+      shell: bash
+
+    # The run_card default PDF sets: NNPDF40_lo_as_01180 (mg7 [beam] pdf and the
+    # legacy LO lhaid 331900), the NLO 5F/4F sets (331700 / 334700) and the
+    # QED set used with a photon in the initial state or NLO EW corrections
+    # (NNPDF40_nlo_as_01180_qed = 335900, LO, NLO and mg7).
+    # warm_cache.yml bakes them into the lhapdf cache, but that cache is only
+    # rebuilt when warm_cache runs with a reset, so a branch that changes the
+    # default would otherwise face a cache that predates it: the mg7 tests guard
+    # on the set being present and would all self-skip (test_manager.py counts a
+    # skip as a failure). Fetching them here is a no-op once the cache carries
+    # them. Non-fatal on failure: the tests skip as they did before.
+    - name: ensure the default PDF sets are present
+      run: |
+        DATADIR=/home/runner/.cache/HEPtools/lhapdf6_py3/share/LHAPDF
+        for SET in NNPDF40_lo_as_01180 NNPDF40_nlo_as_01180 NNPDF40_nlo_as_01180_nf_4 \
+                   NNPDF40_nlo_as_01180_qed; do
+          if [ -d "$DATADIR" ] && [ ! -d "$DATADIR/$SET" ]; then
+            ( cd "$DATADIR" \
+              && wget -q https://lhapdfsets.web.cern.ch/current/$SET.tar.gz \
+              && tar -xzpf $SET.tar.gz \
+              && rm -f $SET.tar.gz ) || echo "::warning::could not fetch $SET"
+          fi
+        done
+      shell: bash

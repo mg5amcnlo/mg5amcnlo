@@ -1,0 +1,230 @@
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Created originally by: A. Valassi (Feb 2022) for the MG5aMC CUDACPP plugin.
+# Further modified by: A. Valassi (2022-2024).
+# Integrated with the MadGraph7 project in Feb 2026.
+# --- 
+# February 2022: latest draft for clang 13.0.0 (BasedOnStyle: Google)
+# See https://releases.llvm.org/13.0.0/tools/clang/docs/ClangFormatStyleOptions.html
+---
+Language: Cpp
+BasedOnStyle: Google
+
+AccessModifierOffset: -2 # AV was -1
+AlignAfterOpenBracket: Align # AV ok
+AlignArrayOfStructures: None # AV ok (alternative: Right, but code-generating it would be too complex)
+AlignConsecutiveAssignments: None # AV ok
+AlignConsecutiveBitFields: None # AV ok
+AlignConsecutiveDeclarations: None # AV ok
+AlignConsecutiveMacros: None # AV ok
+AlignEscapedNewlines: DontAlign # AV was Left
+AlignOperands: DontAlign # AV was Align
+AlignTrailingComments: true # AV ok
+AllowAllArgumentsOnNextLine: true # AV ok(?)
+AllowAllConstructorInitializersOnNextLine: true # AV ok (NB: relevant only if ConstructorInitializerAllOnOneLineOrOnePerLine=true)
+AllowAllParametersOfDeclarationOnNextLine: true # AV ok(?)
+AllowShortBlocksOnASingleLine: Always # AV was Never
+AllowShortEnumsOnASingleLine: true # AV ok
+AllowShortCaseLabelsOnASingleLine: true # AV was false
+AllowShortFunctionsOnASingleLine: All # AV ok
+AllowShortLambdasOnASingleLine: All # AV ok
+AllowShortIfStatementsOnASingleLine: WithoutElse # AV ok
+AllowShortLoopsOnASingleLine: true # AV ok
+###AlwaysBreakAfterDefinitionReturnType: None # AV keep defaults (deprecated)
+#AlwaysBreakAfterReturnType: All # AV use this initially, then switch to TopLevelDefinitions!
+AlwaysBreakAfterReturnType: TopLevelDefinitions # AV was None (altearnative: All?)
+AlwaysBreakBeforeMultilineStrings: false # AV was true
+AlwaysBreakTemplateDeclarations: Yes # AV ok
+###AttributeMacros: # AV keep defaults (NB this is not about '__host__' attributes, see llvm/llvm-project/issues/45968)
+###  - __capability
+BinPackArguments: false # AV was true
+BinPackParameters: false # AV was true
+BitFieldColonSpacing: Both # AV ok
+BraceWrapping: # (NB: this is only relevant for "BreakBeforeBraces: Custom")
+  AfterCaseLabel: true # AV was false
+  AfterClass: true # AV was false
+  AfterControlStatement: Always # AV was Never
+  AfterEnum: true # AV was false
+  AfterFunction: true # AV was false
+  AfterNamespace: true # AV was false
+  AfterObjCDeclaration: true # AV was false
+  AfterStruct: true # AV was false
+  AfterUnion: true # AV was false
+  AfterExternBlock: true # AV was false (NB: does not work unless IndentExternBlock is AfterExternBlock?!)
+  BeforeCatch: true # AV was false
+  BeforeElse: true # AV was false
+  BeforeLambdaBody: true # AV was false
+  BeforeWhile: true # AV was false
+  IndentBraces: false # AV ok
+  SplitEmptyFunction: true # AV ok
+  SplitEmptyRecord: true # AV ok
+  SplitEmptyNamespace: true # AV ok
+BreakAfterJavaFieldAnnotations: false
+BreakBeforeBinaryOperators: None # AV ok
+BreakBeforeBraces: Custom # AV was Attach (alternative: Allman)
+BreakBeforeConceptDeclarations: true # AV ok
+###BreakBeforeInheritanceComma: false # (obsolete???)
+BreakBeforeTernaryOperators: true # AV ok
+###BreakConstructorInitializersBeforeComma: true # AV was false (obsolete???)
+BreakConstructorInitializers: BeforeComma # AV was BeforeColon
+BreakInheritanceList: BeforeColon # AV ok (alternative: BeforeComma?)
+BreakStringLiterals: false # AV was true
+ColumnLimit: 0 # AV was 80
+###CommentPragmas: '^[^ ]*' # AV use SpacesInLineCommentPrefix Min=0 Max=1 to allow both "//comment" and "// comment"
+CompactNamespaces: false # AV ok
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 2 # AV was 4
+ContinuationIndentWidth: 2 # AV was 4
+Cpp11BracedListStyle: true # AV ok
+DeriveLineEnding: false # AV was true
+DerivePointerAlignment: false # AV was true
+DisableFormat: false # AV ok
+EmptyLineAfterAccessModifier: Leave # AV was Never
+EmptyLineBeforeAccessModifier: Leave # AV was LogicalBlock
+ExperimentalAutoDetectBinPacking: false # AV ok ("use at your own risk")
+FixNamespaceComments: false # AV was true
+###ForEachMacros: # AV keep defaults
+###  - foreach
+###  - Q_FOREACH
+###  - BOOST_FOREACH
+###IfMacros: # AV keep defaults
+###  - KJ_IF_MAYBE
+IncludeBlocks: Regroup # AV ok
+IncludeCategories:
+  - Regex:           '^<ext/.*\.h>'
+    Priority:        4 # AV was 2
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '^<.*\.h>'
+    Priority:        5 # AV was 1
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '^<.*'
+    Priority:        6 # AV was 2
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           'mgOnGpuConfig.h'
+    Priority:        1 # AV new
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           'mgOnGpu*.*'
+    Priority:        2 # AV new
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '.*'
+    Priority:        3 # AV was 3
+    SortPriority:    0
+    CaseSensitive:   false
+###IncludeIsMainRegex: '([-_](test|unittest))?$' # AV keep defaults
+###IncludeIsMainSourceRegex: '' # AV keep defaults
+IndentAccessModifiers: false # AV ok
+IndentCaseLabels: true # AV ok
+IndentCaseBlocks: false # AV ok
+IndentGotoLabels: false # AV was true
+IndentPPDirectives: None # AV ok (NB: AfterHash and BeforeHash do not seem to work as intended)
+###IndentExternBlock: Indent # AV was AfterExternBlock
+IndentExternBlock: AfterExternBlock # AV ok (only with Custom BraceWrapping.AfterExternBlock = true)
+IndentRequires: false # AV ok(?)
+IndentWidth: 2 # AV ok
+IndentWrappedFunctionNames: false # AV ok
+###InsertTrailingCommas: None # AV keep defaults (Java only?)
+###JavaScriptQuotes: Leave # AV irrelevant
+###JavaScriptWrapImports: true # AV irrelevant
+KeepEmptyLinesAtTheStartOfBlocks: false # AV ok
+LambdaBodyIndentation: Signature # AV ok
+###MacroBlockBegin: '' # AV keep defaults
+###MacroBlockEnd: '' # AV keep defaults
+MaxEmptyLinesToKeep: 1 # AV ok
+NamespaceIndentation: All # AV was None
+###ObjCBinPackProtocolList: Never # AV irrelevant
+###ObjCBlockIndentWidth: 2 # AV irrelevant
+###ObjCBreakBeforeNestedBlockParam: true # AV irrelevant
+###ObjCSpaceAfterProperty: false # AV irrelevant
+###ObjCSpaceBeforeProtocolList: true # AV irrelevant
+###PenaltyBreakAssignment: 2 # AV keep defaults
+###PenaltyBreakBeforeFirstCallParameter: 1 # AV keep defaults
+###PenaltyBreakComment: 300 # AV keep defaults
+###PenaltyBreakFirstLessLess: 120 # AV keep defaults
+###PenaltyBreakString: 1000 # AV keep defaults
+###PenaltyBreakTemplateDeclaration: 10 # AV keep defaults
+###PenaltyExcessCharacter: 1000000 # AV keep defaults
+###PenaltyReturnTypeOnItsOwnLine: 200 # AV keep defaults
+###PenaltyIndentedWhitespace: 0 # AV keep defaults
+PointerAlignment: Left # AV ok
+PPIndentWidth: 0 # AV was -1
+###RawStringFormats: # AV keep defaults
+###  - Language: Cpp
+###    Delimiters:
+###      - cc
+###      - CC
+###      - cpp
+###      - Cpp
+###      - CPP
+###      - 'c++'
+###      - 'C++'
+###    CanonicalDelimiter: ''
+###    BasedOnStyle: google
+###  - Language: TextProto
+###    Delimiters:
+###      - pb
+###      - PB
+###      - proto
+###      - PROTO
+###    EnclosingFunctions:
+###      - EqualsProto
+###      - EquivToProto
+###      - PARSE_PARTIAL_TEXT_PROTO
+###      - PARSE_TEST_PROTO
+###      - PARSE_TEXT_PROTO
+###      - ParseTextOrDie
+###      - ParseTextProtoOrDie
+###      - ParseTestProto
+###      - ParsePartialTestProto
+###    CanonicalDelimiter: pb
+###    BasedOnStyle: google
+ReferenceAlignment: Pointer # AV ok
+ReflowComments: false # AV was true
+ShortNamespaceLines: 1 # AV ok
+SortIncludes: CaseSensitive # AV ok
+###SortJavaStaticImport: Before # irrelevant
+SortUsingDeclarations: false # AV was true
+SpaceAfterCStyleCast: false # AV ok
+SpaceAfterLogicalNot: false # AV ok
+SpaceAfterTemplateKeyword: false # AV was true
+SpaceAroundPointerQualifiers: Default # AV ok (alternative: Before?)
+SpaceBeforeAssignmentOperators: true # AV ok
+SpaceBeforeCaseColon: false # AV ok
+SpaceBeforeCpp11BracedList: false # AV ok
+SpaceBeforeCtorInitializerColon: true # AV ok
+SpaceBeforeInheritanceColon: true # AV ok
+SpaceBeforeParens: Never # AV was ControlStatements
+SpaceBeforeRangeBasedForLoopColon: false # AV was true
+SpaceBeforeSquareBrackets: false # AV ok
+SpaceInEmptyBlock: false # AV ok
+SpaceInEmptyParentheses: false # AV ok
+SpacesBeforeTrailingComments: 1 # AV was 2
+SpacesInAngles: Never # AV ok
+SpacesInConditionalStatement: false # AV ok (does this work?)
+SpacesInContainerLiterals: false # AV was true
+SpacesInCStyleCastParentheses: false # AV ok
+SpacesInLineCommentPrefix:
+  Minimum: 0 # AV was 1
+  Maximum: 1 # AV was -1
+SpacesInParentheses: true # AV was false
+SpacesInSquareBrackets: false # AV ok
+Standard: c++17 # AV was Auto
+###StatementAttributeLikeMacros: # AV keep defaults
+###  - Q_EMIT
+###StatementMacros: # AV keep defaults
+###  - Q_UNUSED
+###  - QT_REQUIRE_VERSION
+###TabWidth: 8 # AV irrelevant if UseTab=Never?
+UseCRLF: false # AV ok (but set DeriveLineEnding=false)
+UseTab: Never # AV ok
+###WhitespaceSensitiveMacros: # AV keep defaults
+###  - STRINGIZE
+###  - PP_STRINGIZE
+###  - BOOST_PP_STRINGIZE
+###  - NS_SWIFT_NAME
+###  - CF_SWIFT_NAME
+...

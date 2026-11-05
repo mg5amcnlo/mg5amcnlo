@@ -82,7 +82,7 @@ contains
     return
   END FUNCTION LANDAU
 
-  !Usefull functions
+  !Useful functions
   FUNCTION LORENTZ(X, CONSTANT, MEAN, GAMMA)
     IMPLICIT NONE
     REAL(KIND(1D0)), INTENT(IN) :: X, CONSTANT, MEAN, GAMMA

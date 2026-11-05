@@ -183,7 +183,9 @@ integer,parameter :: nintervals=4,nintervals_virt=2,ndim=4,n_ord_virt=2,maxchann
 integer :: nchans=2,imode=0,ncalls0=100,itmax=7,nhits_in_grids(2)=[20,30]
 real(8) :: xgrid(0:4,4,2),ymax(4,4,2),ave_virt(2,1,0:2,2)
 real(8) :: ymax_virt(0:2),ans(10,0:2),unc(10,0:2),virtual_fraction(2),average_virtual(0:2,2)
-logical :: use_poly_virtual=.false.
+logical :: use_poly_virtual=.false.,fixed_order=.false.
+real(8) :: channel_moment(2)=0d0
+integer(kind=8) :: channel_moment_calls(2)=0
 contains
 ''' + routines + '''
 subroutine close_run_zero_res

@@ -30,7 +30,7 @@
 ! Tests:                                                                     !
 !                                                                            !
 ! -The N=N test is a test on the reconstructed OPP integrand performed       !
-!  by comparing original and reconstacted integrands at an arbirtary value   !
+!  by comparing original and reconstructed integrands at an arbitrary value   !
 !  of the integration momentum.                                              !
 !                                                                            ! 
 ! -The A=A test checks the 2 amplitudes obtained with dir and inv orders.    !

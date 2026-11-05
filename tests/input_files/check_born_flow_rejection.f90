@@ -301,7 +301,7 @@ subroutine compute_nbody_noborn()
   virtual_over_born=9d0
   call add_record(2d0)
 end subroutine
-subroutine sborn_native(p,weight)
+subroutine sborn_frame(p,weight)
   double precision :: p(0:3,4),weight
   weight=1d0
 end subroutine

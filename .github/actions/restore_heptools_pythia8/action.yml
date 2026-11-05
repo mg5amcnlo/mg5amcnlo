@@ -17,7 +17,7 @@ runs:
         setup_only: ${{ inputs.setup_only }}
 
     - name: Set cache key
-      run: echo "CACHE_KEY=pythia8-$ImageOS" >> $GITHUB_ENV
+      run: echo "CACHE_KEY=pythia8-v2-$ImageOS" >> $GITHUB_ENV && echo "OLD_CACHE_KEY=pythia8-$ImageOS" >> $GITHUB_ENV
       shell: bash
 
     # check if the cache exists (if not an higher level will be called)
@@ -29,11 +29,11 @@ runs:
         key: ${{ env.CACHE_KEY }}-${{ github.run_id }}
         restore-keys: |
           ${{ env.CACHE_KEY }}-
-          ${{ env.CACHE_KEY }}
+          ${{ env.OLD_CACHE_KEY }}-
+          ${{ env.OLD_CACHE_KEY }}
 
     - run: |
         cd $GITHUB_WORKSPACE
-        echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg5_configuration.txt
-        echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg5_configuration.txt
-        echo " mg5amc_py8_interface_path = /home/runner/.cache/HEPtools/MG5aMC_PY8_interface" >>  input/mg5_configuration.txt
+        echo "pythia8_path = /home/runner/.cache/HEPtools/pythia8" >>  input/mg7_configuration.txt
+        echo "hepmc_path = /home/runner/.cache/HEPtools/hepmc" >>  input/mg7_configuration.txt
       shell: bash

@@ -4,9 +4,9 @@ c
 c   date      - MCFIO_CREATIONDATE: creation date
 c   title     - MCFIO_TITLE: title
 c   comment   - MCFIO_COMMENT: comment
-c   dlen      - actual lenght of date
-c   tlen      - actual lenght of title
-c   clen      - actual lenght of comment
+c   dlen      - actual length of date
+c   tlen      - actual length of title
+c   clen      - actual length of comment
 c   numblocks - MCFIO_NUMBLOCKS: number of blocks per event
 c   blkids    - MCFIO_BLOCKIDS: list of block types
 c

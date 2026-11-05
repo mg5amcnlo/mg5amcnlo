@@ -1,0 +1,17 @@
+name: APICURON contribution tracking
+on:
+  pull_request_target:
+    types: [closed]
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+jobs:
+  track:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: BioComputingUP/contribution-event-tracker@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          apicuron-token: ${{ secrets.APICURON_TOKEN }}

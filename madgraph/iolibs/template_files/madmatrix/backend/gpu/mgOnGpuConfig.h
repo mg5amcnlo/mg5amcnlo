@@ -1,0 +1,347 @@
+// Copyright (C) 2020-2026 CERN and UCLouvain.
+// Licensed under the GNU Lesser General Public License (version 3 or later).
+// Created originally by: A. Valassi (Jul 2020) for the MadGraph7 CUDACPP plugin.
+// Further modified by: S. Hageboeck, O. Mattelaer, S. Roiser, J. Teig, A. Valassi (2020-2024).
+// Integrated with the MadGraph7 project in Feb 2026.
+
+#ifndef MGONGPUCONFIG_H
+#define MGONGPUCONFIG_H 1
+
+#include <sstream>
+#include <string>
+
+// Is this a GPU (CUDA, HIP) or CPU implementation?
+#ifdef __CUDACC__ // this must be __CUDACC__
+#define MGONGPUCPP_GPUIMPL cuda
+#elif defined __HIPCC__
+#define MGONGPUCPP_GPUIMPL hip
+#include "hip/hip_runtime.h" // needed for blockDim, blockIdx, threadIdx: better in mgOnGpuConfig.h than in GpuAbstraction.h
+#else
+#undef MGONGPUCPP_GPUIMPL
+#endif
+
+// Make sure that __HIP_PLATFORM_NVIDIA__ is undefined
+// (__HIP_PLATFORM_AMD__ is defined by hipcc or in HiprandRandomNumberKernel.cc)
+#undef __HIP_PLATFORM_NVIDIA__ // disable hiprand for NVidia (curand)
+
+// ** NB1 Throughputs (e.g. 6.8E8) are events/sec for "./gcheck.exe -p 65536 128 12"
+// ** NB2 Baseline on b7g47n0004 fluctuates (probably depends on load on other VMs)
+
+// Choose if curand is supported for generating random numbers
+// For HIP, by default, do not allow curand to be used (hiprand or common random numbers will be used instead)
+// For both CUDA and C++, by default, do not inline, but allow this macro to be set from outside with e.g. -DMGONGPU_HAS_NO_CURAND
+// (there exist CUDA installations, e.g. using the HPC package, which do not include curand - see PR #784 and #785)
+#if defined __HIPCC__
+#define MGONGPU_HAS_NO_CURAND 1
+#else
+//#ifdef __CUDACC__ // this must be __CUDACC__
+//#undef MGONGPU_HAS_NO_CURAND // default
+////#define MGONGPU_HAS_NO_CURAND 1
+//#else
+//#undef MGONGPU_HAS_NO_CURAND // default
+////#define MGONGPU_HAS_NO_CURAND 1
+//#endif
+#endif
+
+// Choose if hiprand is supported for generating random numbers
+// For CUDA, by default, do not allow hiprand to be used (curand or common random numbers will be used instead)
+// For both HIP and C++, by default, do not inline, but allow this macro to be set from outside with e.g. -DMGONGPU_HAS_NO_HIPRAND
+// (there may exist HIP installations which do not include hiprand?)
+#if defined __CUDACC__ // this must be __CUDACC__
+#define MGONGPU_HAS_NO_HIPRAND 1
+#else
+//#ifdef __HIPCC__
+//#undef MGONGPU_HAS_NO_HIPRAND // default
+////#define MGONGPU_HAS_NO_HIPRAND 1
+//#else
+//#undef MGONGPU_HAS_NO_HIPRAND // default
+////#define MGONGPU_HAS_NO_HIPRAND 1
+//#endif
+#endif
+
+// Choose floating point precision (for everything but color algebra #537)
+// If one of these macros has been set from outside with e.g. -DMGONGPU_FPTYPE_FLOAT, nothing happens (issue #167)
+#if not defined MGONGPU_FPTYPE_DOUBLE and not defined MGONGPU_FPTYPE_FLOAT
+// Floating point precision (CHOOSE ONLY ONE)
+#define MGONGPU_FPTYPE_DOUBLE 1 // default
+//#define MGONGPU_FPTYPE_FLOAT 1 // 2x faster
+#endif
+
+// Choose floating point precision (for color algebra alone #537)
+// If one of these macros has been set from outside with e.g. -DMGONGPU_FPTYPE2_FLOAT, nothing happens (issue #167)
+#if not defined MGONGPU_FPTYPE2_DOUBLE and not defined MGONGPU_FPTYPE2_FLOAT
+// Floating point precision (CHOOSE ONLY ONE)
+#define MGONGPU_FPTYPE2_DOUBLE 1 // default
+//#define MGONGPU_FPTYPE2_FLOAT 1 // 2x faster
+#endif
+
+// Choose whether to inline all HelAmps functions
+// This optimization can gain almost a factor 4 in C++, similar to -flto (issue #229)
+// By default, do not inline, but allow this macro to be set from outside with e.g. -DMGONGPU_INLINE_HELAMPS
+//#undef MGONGPU_INLINE_HELAMPS // default
+////#define MGONGPU_INLINE_HELAMPS 1
+
+// Choose whether to hardcode the cIPD physics parameters rather than reading them from user cards
+// This optimization can gain 20% in CUDA in eemumu (issue #39)
+// By default, do not hardcode, but allow this macro to be set from outside with e.g. -DMGONGPU_HARDCODE_PARAM
+// ** NB: The option to use hardcoded cIPD physics parameters is supported again even now when alphas is running (#373)
+// ** NB: Note however that it now only refers to cIPD parameters (cIPC parameters are always accessed through global memory)
+//#undef MGONGPU_HARDCODE_PARAM // default
+////#define MGONGPU_HARDCODE_PARAM 1
+
+/* clang-format off */
+// Complex type in CUDA: thrust or cucomplex or cxsmpl (CHOOSE ONLY ONE)
+// (NB THIS IS MGONGPU_*CU*CXTYPE_xxx)
+#ifdef __CUDACC__ // this must be __CUDACC__
+#define MGONGPU_CUCXTYPE_THRUST 1 // default (~1.15E9/double, ~3.2E9/float)
+//#define MGONGPU_CUCXTYPE_CUCOMPLEX 1 // ~10 percent slower (1.03E9/double, ~2.8E9/float)
+//#define MGONGPU_CUCXTYPE_CXSMPL 1 // ~10 percent slower (1.00E9/double, ~2.9E9/float)
+
+// Complex type in HIP: cxsmpl (ONLY ONE OPTION POSSIBLE? #810)
+// (NB THIS IS MGONGPU_*HIP*CXTYPE_xxx)
+#elif defined __HIPCC__
+#define MGONGPU_HIPCXTYPE_CXSMPL 1 // default for HIP
+
+// Complex type in C++: std::complex or cxsmpl (CHOOSE ONLY ONE)
+// (NB THIS IS MGONGPU_*CPP*CXTYPE_xxx)
+#else
+//#define MGONGPU_CPPCXTYPE_STDCOMPLEX 1 // ~8 percent slower on float, same on double (5.1E6/double, 9.4E6/float)
+#define MGONGPU_CPPCXTYPE_CXSMPL 1 // new default (5.1E6/double, 10.2E6/float)
+#endif
+
+// Choose if cuBLAS and hipBLAS are supported for generating random numbers
+// For both CUDA and HIP, by default, do not inline, but allow this macro to be set from outside with e.g. -DMGONGPU_HAS_NO_BLAS
+// (there may exist CUDA/HIP installations, e.g. using the HPC package, which do not include cuBLAS/hipBLAS?)
+#ifdef __CUDACC__ // this must be __CUDACC__
+//#undef MGONGPU_HAS_NO_BLAS // default
+////#define MGONGPU_HAS_NO_BLAS 1
+#elif defined __HIPCC__
+//#undef MGONGPU_HAS_NO_BLAS // default
+////#define MGONGPU_HAS_NO_BLAS 1
+#else
+#define MGONGPU_HAS_NO_BLAS 1
+#endif
+
+// CUDA nsight compute (ncu) debug: add dummy lines to ease SASS program flow navigation
+#ifdef __CUDACC__ // this must be __CUDACC__
+#undef MGONGPU_NSIGHT_DEBUG // default in CUDA
+//#define MGONGPU_NSIGHT_DEBUG 1 // CURRENTLY NO LONGER SUPPORTED!
+#else
+#undef MGONGPU_NSIGHT_DEBUG // only option in HIP or C++
+#endif /* clang-format on */
+
+// SANITY CHECKS (floating point precision for everything but color algebra #537)
+#if defined MGONGPU_FPTYPE_DOUBLE and defined MGONGPU_FPTYPE_FLOAT
+#error You must CHOOSE (ONE AND) ONLY ONE of MGONGPU_FPTYPE_DOUBLE or defined MGONGPU_FPTYPE_FLOAT
+#endif
+
+// SANITY CHECKS (floating point precision for color algebra alone #537)
+#if defined MGONGPU_FPTYPE2_DOUBLE and defined MGONGPU_FPTYPE2_FLOAT
+#error You must CHOOSE (ONE AND) ONLY ONE of MGONGPU_FPTYPE2_DOUBLE or defined MGONGPU_FPTYPE2_FLOAT
+#endif
+#if defined MGONGPU_FPTYPE2_DOUBLE and defined MGONGPU_FPTYPE_FLOAT
+#error You cannot use double precision for color algebra and single precision elsewhere
+#endif
+
+// SANITY CHECKS (CUDA complex number implementation)
+#ifdef __CUDACC__ // this must be __CUDACC__
+#if defined MGONGPU_CUCXTYPE_THRUST and defined MGONGPU_CUCXTYPE_CUCOMPLEX
+#error You must CHOOSE (ONE AND) ONLY ONE of MGONGPU_CUCXTYPE_THRUST or MGONGPU_CUCXTYPE_CUCOMPLEX for CUDA
+#elif defined MGONGPU_CUCXTYPE_THRUST and defined MGONGPU_CUCXTYPE_CXSMPL
+#error You must CHOOSE (ONE AND) ONLY ONE of MGONGPU_CUCXTYPE_THRUST or MGONGPU_CUCXTYPE_CXSMPL for CUDA
+#elif defined MGONGPU_CUCXTYPE_CUCOMPLEX and defined MGONGPU_CUCXTYPE_CXSMPL
+#error You must CHOOSE (ONE AND) ONLY ONE OF MGONGPU_CUCXTYPE_CUCOMPLEX or MGONGPU_CUCXTYPE_CXSMPL for CUDA
+#endif
+#endif
+
+// SANITY CHECKS (C++ complex number implementation)
+
+// NB: namespace mgOnGpu includes types which are defined in exactly the same way for CPU and GPU builds (see #318 and #725)
+namespace mgOnGpu
+{
+
+  // --- Type definitions
+
+  // Floating point type (for everything but color algebra #537): fptype
+#if defined MGONGPU_FPTYPE_DOUBLE
+  typedef double fptype; // double precision (8 bytes, fp64)
+#elif defined MGONGPU_FPTYPE_FLOAT
+  typedef float fptype;  // single precision (4 bytes, fp32)
+#endif
+
+  // Floating point type (for color algebra alone #537): fptype2
+#if defined MGONGPU_FPTYPE2_DOUBLE
+  typedef double fptype2; // double precision (8 bytes, fp64)
+#elif defined MGONGPU_FPTYPE2_FLOAT
+  typedef float fptype2; // single precision (4 bytes, fp32)
+#endif
+
+  // --- Mixed-precision stage types (3 independent precisions) ---
+  // fptype       (== fptype_amp): wavefunctions, helicity amplitudes, ME, vertex
+  //                               and polarization computation (MGONGPU_FPTYPE_*)
+  // fptype_momenta (== fptype_denom): momenta storage and in-vertex denominators
+  //                               (MGONGPU_FPTYPE_MOMENTA_*, default fptype)
+  // fptype2      (== fptype_colour): color algebra alone (MGONGPU_FPTYPE2_*)
+
+#if defined MGONGPU_FPTYPE_MOMENTA_DOUBLE
+  typedef double fptype_momenta;
+#elif defined MGONGPU_FPTYPE_MOMENTA_FLOAT
+  typedef float fptype_momenta;
+#else
+  typedef fptype fptype_momenta;
+#endif
+  typedef fptype_momenta fptype_denom; // denominator precision == momenta precision
+  typedef fptype fptype_amp;           // amplitudes/wavefunctions == fptype
+  typedef fptype2 fptype_colour;       // color algebra == fptype2
+
+  // Valid precision ordering: colour <= amp <= momenta (4=fp32, 8=fp64)
+  static_assert( sizeof( fptype_colour ) <= sizeof( fptype_amp ), "colour precision must not exceed amp precision" );
+  static_assert( sizeof( fptype_amp ) <= sizeof( fptype_momenta ), "amp precision must not exceed momenta precision" );
+
+  // --- Platform-specific software implementation details
+
+  // Maximum number of blocks per grid
+  // ** NB Some arrays of pointers will be allocated statically to fit all these blocks
+  // ** (the actual memory for each block will then be allocated dynamically only for existing blocks)
+  //const int nbpgMAX = 2048;
+
+  // Maximum number of threads per block
+  //const int ntpbMAX = 256; // AV Apr2021: why had I set this to 256?
+  const int ntpbMAX = 1024; // NB: 512 is ok, but 1024 does fail with "too many resources requested for launch"
+
+  // Alignment requirement for using reinterpret_cast with SIMD vectorized code
+  // (using reinterpret_cast with non aligned memory may lead to segmentation faults!)
+  // Only needed for C++ code but can be enforced also in NVCC builds of C++ code using CUDA>=11.2 and C++17 (#318, #319, #333)
+
+  // Retrieve the compiler that was used to build this module
+  inline std::string
+  getCompiler()
+  {
+    std::stringstream out;
+    // HIP version (HIPCC)
+    // [Use __HIPCC__ instead of MGONGPUCPP_GPUIMPL here!]
+    // [This tests if 'hipcc' was used even to build a .cc file, even if not necessarily 'nvcc -x cu' for a .cu file]
+    // [Check 'hipcc -dM -E -x hip -I ../../src CPPProcess.cc | grep HIP']
+#ifdef __HIPCC__
+#if defined HIP_VERSION_MAJOR && defined HIP_VERSION_MINOR && defined HIP_VERSION_PATCH
+    out << "hipcc " << HIP_VERSION_MAJOR << "." << HIP_VERSION_MINOR << "." << HIP_VERSION_PATCH;
+#else
+    out << "hipcc UNKNOWN";
+#endif
+    out << " (";
+#endif
+    // CUDA version (NVCC)
+    // [Use __NVCC__ instead of MGONGPUCPP_GPUIMPL here!]
+    // [This tests if 'nvcc' was used even to build a .cc file, even if not necessarily 'nvcc -x cu' for a .cu file]
+    // [Check 'nvcc --compiler-options -dM -E dummy.c | grep CUDA': see https://stackoverflow.com/a/53713712]
+#ifdef __NVCC__
+#if defined __CUDACC_VER_MAJOR__ && defined __CUDACC_VER_MINOR__ && defined __CUDACC_VER_BUILD__
+    out << "nvcc " << __CUDACC_VER_MAJOR__ << "." << __CUDACC_VER_MINOR__ << "." << __CUDACC_VER_BUILD__;
+#else
+    out << "nvcc UNKNOWN";
+#endif
+    out << " (";
+#endif
+    // ICX version (either as CXX or as host compiler inside NVCC)
+#if defined __INTEL_COMPILER
+#error "icc is no longer supported: please use icx"
+#elif defined __INTEL_LLVM_COMPILER // alternative: __INTEL_CLANG_COMPILER
+    out << "icx " << __INTEL_LLVM_COMPILER;
+#ifdef __NVCC__
+    out << ", ";
+#else
+    out << " (";
+#endif
+#endif
+    // CLANG version (either as CXX or as host compiler inside NVCC or inside ICX)
+#if defined __clang__
+#if defined __clang_major__ && defined __clang_minor__ && defined __clang_patchlevel__
+#ifdef __APPLE__
+    out << "Apple clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+#else
+    out << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+#endif
+#else
+    out << "clang UNKNOWKN";
+#endif
+#else
+    // GCC version (either as CXX or as host compiler inside NVCC)
+#if defined __GNUC__ && defined __GNUC_MINOR__ && defined __GNUC_PATCHLEVEL__
+    out << "gcc " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__;
+#else
+    out << "gcc UNKNOWKN";
+#endif
+#endif
+#if defined __HIPCC__ or defined __NVCC__ or defined __INTEL_LLVM_COMPILER
+    out << ")";
+#endif
+    return out.str();
+  }
+}
+
+// Expose typedefs and operators outside the namespace
+using mgOnGpu::fptype;
+using mgOnGpu::fptype2;
+using mgOnGpu::fptype_momenta;
+using mgOnGpu::fptype_denom;
+using mgOnGpu::fptype_amp;
+using mgOnGpu::fptype_colour;
+
+// Undefine ARM_NEON (hack for the 'scalar' backend on Apple silicon ARM)
+#ifdef MGONGPU_NOARMNEON
+#undef __ARM_NEON
+#endif
+
+// C++ SIMD vectorization width (this will be used to set neppV)
+#undef MGONGPU_CPPSIMD
+
+// macro for computing denom twice to fill rest of SIMD lane for rest
+#if defined MGONGPU_CPPSIMD and defined MGONGPU_FPTYPE_FLOAT and defined MGONGPU_FPTYPE_MOMENTA_DOUBLE
+#define MGONGPU_SIMD_DENOM64 1
+#endif
+
+/* clang-format off */
+// CUDA nsight compute (ncu) debug: add dummy lines to ease SASS program flow navigation [NB: CURRENTLY NO LONGER SUPPORTED!]
+// Arguments (not used so far): text is __FUNCTION__, code is 0 (start) or 1 (end)
+//#if defined __CUDACC__ && defined MGONGPU_NSIGHT_DEBUG // this must be __CUDACC__
+//#define mgDebugDeclare() __shared__ float mgDebugCounter[mgOnGpu::ntpbMAX];
+//#define mgDebugInitialise() { mgDebugCounter[threadIdx.x] = 0; }
+//#define mgDebug( code, text ) { mgDebugCounter[threadIdx.x] += 1; }
+//#define mgDebugFinalise() { if ( blockIdx.x == 0 && threadIdx.x == 0 ) printf( "MGDEBUG: counter=%f\n", mgDebugCounter[threadIdx.x] ); }
+//#else
+#define mgDebugDeclare() /*noop*/
+#define mgDebugInitialise() /*noop*/
+#define mgDebug( code, text ) /*noop*/
+#define mgDebugFinalise() /*noop*/
+//#endif /* clang-format on */
+
+// Define empty CUDA/HIP declaration specifiers for C++
+
+// For SANITY CHECKS: check that neppR, neppM, neppV... are powers of two (https://stackoverflow.com/a/108360)
+inline constexpr bool
+ispoweroftwo( int n )
+{
+  return ( n > 0 ) && !( n & ( n - 1 ) );
+}
+
+// Compiler version support (#96): require nvcc from CUDA >= 11.2, e.g. to use C++17 (see #333)
+#ifdef __NVCC__
+#if( __CUDACC_VER_MAJOR__ < 11 ) || ( __CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ < 2 )
+#error Unsupported CUDA version: please use CUDA >= 11.2
+#endif
+#endif
+
+// Compiler version support (#96): require clang >= 11
+#if defined __clang__
+#if( __clang_major__ < 11 )
+#error Unsupported clang version: please use clang >= 11
+#endif
+// Compiler version support (#96): require gcc >= 9.3, e.g. for some OMP issues (see #269)
+// [NB skip this check for the gcc toolchain below clang or icx (TEMPORARY? #355)]
+#elif defined __GNUC__
+#if( __GNUC__ < 9 ) || ( __GNUC__ == 9 && __GNUC_MINOR__ < 3 )
+#error Unsupported gcc version: please gcc >= 9.3
+#endif
+#endif
+
+#endif // MGONGPUCONFIG_H

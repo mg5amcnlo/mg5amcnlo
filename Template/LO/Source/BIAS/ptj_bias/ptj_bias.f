@@ -11,7 +11,7 @@ C Schematically, the functional form of the enhancement is
 C    bias_wgt = [ptj(evt)/mean_ptj]^enhancement_power
 C ************************************************************
 C
-C The following lines are read by MG5aMC to set what are the 
+C The following lines are read by MadGraph7 to set what are the 
 C relevant parameters for this bias module.
 C
 C  parameters = {'ptj_bias_target_ptj': 1000.0,

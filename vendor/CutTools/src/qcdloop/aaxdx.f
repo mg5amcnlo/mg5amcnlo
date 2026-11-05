@@ -132,7 +132,7 @@
 *  #] initialisations:
 *  #[ get D0:
 *	D0-function (ff)
-*	   futhermore dotpr and determinants are delivered by ff
+*	   furthermore dotpr and determinants are delivered by ff
 	ldot = .TRUE.
 	ier1 = ier
 	call ffxd0(cdxi(1),xpi,ier1)
@@ -178,7 +178,7 @@
 	    stop
 	endif
 	cl = level-1
-*	go trough the 4 different cancellation patterns
+*	go through the 4 different cancellation patterns
 	if ( awrite ) then
 	    print '(a,i1)','####[ C-function output: to level ',cl
 	endif

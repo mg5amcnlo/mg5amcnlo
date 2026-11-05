@@ -15,11 +15,11 @@
       POW=0
       SELECT CASE(ACTIVE_CONTEXT)
       CASE(8)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 1
-      PMASS( -1,   2)  = ZERO
-      PWIDTH( -1,   2) = ZERO
-      POW( -1,   2) = 1
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 1
+        PMASS( -1,   2)  = ZERO
+        PWIDTH( -1,   2) = ZERO
+        POW( -1,   2) = 1
       END SELECT
       END

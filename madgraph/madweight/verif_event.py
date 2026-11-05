@@ -229,7 +229,7 @@ class Lhco_filter:
         else: sys.exit('FATAL ERROR: No experimental file \"'+file+'\" in Events directory.')
 
             
-        #supress first X valid events:
+        #suppress first X valid events:
         if '21' in self.MWparam.info['mw_run']:
             self.start=int(self.MWparam.info['mw_run']['21'])
             print('start', self.start)
@@ -355,7 +355,7 @@ class Lhco_filter:
         if self.write_events<=self.start:
             return
 
-        #check wich output to update
+        #check which output to update
         if hasattr(self,'f_out'): #output file is defined:
             
             write_order = self.write_order
@@ -377,7 +377,7 @@ class lhco_all_particles_def(dict):
         #2 ########################################################################	
         class lhco_id:
                 """ a class containing the LHCO definition-restriction of on each lhco particles
-                        this defines rules to know of wich type a particle is	
+                        this defines rules to know of which type a particle is
                 """
                 eta_max=1e2
                 pt_max=1e6
@@ -566,7 +566,7 @@ class lhco_all_particles_def(dict):
 
 #2 ########################################################################				
         def identify_particle(self,particle):
-            """ find in wich category the particles belongs """
+            """ find in which category the particles belongs """
 
             #print particle.line[:-1],
             for name in ['begin','jet','miss','electron','photon']: #to fastenize the test in most of the case
@@ -598,7 +598,7 @@ pat_lhco_line=re.compile(r'''^\s*(?P<card>\d*)\s+               #cardinal
                                \s+(?P<phi>[+-\.\de]+)\s+       # phi
                                (?P<pt>[+-\.\de]*)\s+       #pt
                                (?P<jmass>[+-\.\de]+)\s+    #invariant mass of the object
-                               (?P<ntrk>[+-\.\de]+)\s+     #number of tracks associated( muliplied by charge for lepton)
+                               (?P<ntrk>[+-\.\de]+)\s+     #number of associated tracks (multiplied by charge for leptons)
                                (?P<btag>[+-\.\de]+)\s+     #jet: !=0 taggued b//muon: closest jet
                                (?P<hadem>[+-\.\de]+)\s+  #hadronic versus electromagnetic energy deposited
                                (?P<dum1>[+-\.\de]+)\s+   # user free at this stage

@@ -6,7 +6,7 @@ c     This is a modified version for use with multi-pole integrations
 c     it allows you to get the same set of random numbers several times
 c     (1 for each configuration) jj tells it what configuration to use, 
 c     so if you always put jj=1, you basically get the old version of 
-c     ntuple out. It is currently configued to have maxconfig=25.
+c     ntuple out. It is currently configured to have maxconfig=25.
 c     Modified by Tim Stelzer July 5 1995
 c
 c

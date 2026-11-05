@@ -1,0 +1,46 @@
+#*********************************************************************
+#                       MadGraph7                                    *
+#                                                                    *
+#                     default_switch.txt                             *
+#                                                                    *
+#  This file sets YOUR default answer to the "launch" question --     *
+#  which programs are run on the events after the generation.        *
+#  It is the switch counterpart of input/default_run_card_lo.dat:    *
+#  decide once here instead of re-typing "analysis=MadAnalysis5" at  *
+#  every run.                                                        *
+#                                                                    *
+#  Syntax:   switch = value      ('#' starts a comment)              *
+#  The value is the one you would type in the launch question, so    *
+#     analysis = MadAnalysis5                                        *
+#  is the file version of answering "analysis=MadAnalysis5".         *
+#                                                                    *
+#  The same file is read by the three launch questions (LO madevent, *
+#  NLO aMC@NLO and mg7). They do not offer exactly the same switches,*
+#  so each one silently ignores the entries it does not have -- set  *
+#  both 'analysis' (LO/mg7) and 'madanalysis' (NLO) to cover all.    *
+#                                                                    *
+#  A value that is not available (program not installed, switch not  *
+#  offered for this process) is ignored with a warning: the run      *
+#  falls back on the usual automatic default.                        *
+#                                                                    *
+#  Whatever is written here is only the DEFAULT of the question: it  *
+#  can still be changed interactively (or by a command file) at      *
+#  every run.                                                        *
+#*********************************************************************
+#
+#  ---- LO (madevent) and mg7 -----------------------------------------
+#
+#  shower   = Pythia8       # Pythia8 | Pythia6 | OFF
+#  detector = Delphes       # Delphes | PGS | OFF
+#  analysis = MadAnalysis5  # MadAnalysis5 | ExRoot | Rivet | OFF
+#  madspin  = ON            # ON | onshell | full | PA | none | OFF
+#  reweight = ON            # ON | density | OFF
+#
+#  ---- NLO (aMC@NLO) --------------------------------------------------
+#
+#  order       = NLO        # NLO | LO
+#  fixed_order = OFF        # ON (fixed order) | OFF (MC@NLO matched)
+#  shower      = PYTHIA8    # PYTHIA8 | HERWIGPP | OFF
+#  madspin     = ON         # ON | onshell | full | none | OFF
+#  reweight    = ON         # ON | NLO | LO | OFF
+#  madanalysis = ON         # ON | OFF

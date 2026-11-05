@@ -107,6 +107,8 @@ def worker_record(exporter, me, amp_orders):
                  born_orders=sq,
                  links=[link['link'] for link in me.color_links],
                  extra=len(me.extra_cnt_me_list),
+                 frame_map=list(getattr(me, 'user_leg_order', []) or
+                                range(1, len(proc.get_legs_with_decays())+1)),
                  born_identity=born['identical_particle_factor'], sectors=[],
                  helicity_matrices=[helicity_matrix_metadata(matrix, proc['model'])
                      for matrix in [born]+list(me.extra_cnt_me_list)+
@@ -322,7 +324,8 @@ def common_members(lines):
     declarations = {}
     commons = []
     for line in lines:
-        m = re.match(r'\s*(double precision|double complex|real\*8|complex\*16)\s+(.+)', line, re.I)
+        m = re.match(r'\s*(double precision|double complex|real\*8|complex\*16)'
+                     r'(?:\s*,\s*target)?\s*(?:::)?\s+(.+)', line, re.I)
         if m:
             kind = 'complex' if 'complex' in m[1].lower() else 'real'
             for var in re.split(r',\s*(?![^()]*\))', m[2]):
@@ -498,6 +501,11 @@ def explicit_helas_dependencies(root):
     sources = sorted(path for path in directory.iterdir()
                      if path.suffix.lower() in ('.f', '.f90', '.f95', '.for')) if directory.exists() else []
     routines, names = [], set()
+    declaration = re.compile(r'\s*(?:double\s+(?:precision|complex)|'
+                             r'(?:real|complex|integer|logical)(?:\*\d+)?|'
+                             r'type\s*\(\s*(?:aloha|aloha2d)\s*\))'
+                             r'\s*(?:::)?\s+(.+)', re.I)
+    prepared, aloha_records = [], set()
     start = re.compile(r'\s*(?:[\w*]+\s+)*?(?:subroutine|function)\s+(\w+)', re.I)
     for path in sources:
         if path.suffix != '.f':
@@ -508,13 +516,46 @@ def explicit_helas_dependencies(root):
             lines = expand(path)
         except (OSError, MadGraph5Error):
             return False
-        current = []
+        clean, module, record = [], False, None
         for line in lines:
             # String literals and diagnostics cannot declare dependencies.
             line = re.sub(r'''('(?:[^']|'')*'|"(?:[^"]|"")*")''', '', line).split('!', 1)[0].lower()
+            if re.match(r'\s*module\s+aloha_object\s*$', line):
+                if module:
+                    return False
+                module = True
+                continue
+            if module:
+                # The built-in module carries record definitions only. No
+                # module variables, initializers, pointers or procedures may
+                # smuggle model inputs past the argument dependency proof.
+                match = re.fullmatch(r'\s*type\s+(aloha|aloha2d)\s*', line)
+                if match and record is None:
+                    record = match[1]
+                    aloha_records.add(record)
+                elif re.fullmatch(r'\s*end\s*type(?:\s+'+str(record)+r')?\s*', line) and record:
+                    record = None
+                elif re.fullmatch(r'\s*end\s*module(?:\s+aloha_object)?\s*', line) and record is None:
+                    module = False
+                elif record and (line.strip() == 'sequence' or re.fullmatch(
+                        r'\s*(?:double\s+(?:precision|complex)|integer)\s*::\s*'
+                        r'\w+(?:\([0-9,:+\- ]+\))?\s*', line)):
+                    pass
+                elif line.strip():
+                    return False
+                continue
+            clean.append(line)
+        if module or record:
+            return False
+        prepared.append(clean)
+    for lines in prepared:
+        current = []
+        for line in lines:
+            if re.fullmatch(r'\s*use\s+aloha_object\s*', line) and 'aloha' in aloha_records:
+                continue
             if re.search(r'\b(common|use|module|external|save|data|entry|equivalence|procedure)\b', line):
                 return False
-            if '::' in line or re.search(r'\b(read|open|inquire|include)\b', line):
+            if ('::' in line and not declaration.match(line)) or re.search(r'\b(read|open|inquire|include)\b', line):
                 return False
             match = start.match(line)
             if match:
@@ -535,8 +576,6 @@ def explicit_helas_dependencies(root):
                      'max max0 max1 min min0 min1 mod nint real sign sin sinh '
                      'sqrt tan tanh'.split())
     syntax = {'if', 'elseif', 'while', 'parameter', 'dimension', 'write', 'format'}
-    declaration = re.compile(r'\s*(?:double\s+(?:precision|complex)|'
-                             r'(?:real|complex|integer|logical)(?:\*\d+)?)\s+(.+)', re.I)
     for lines in routines:
         arrays = set()
         for line in lines:
@@ -554,7 +593,12 @@ def explicit_helas_dependencies(root):
                 continue
             if any(name not in names for name in re.findall(r'\bcall\s+(\w+)', line)):
                 return False
-            references = set(re.findall(r'\b(\w+)\s*\(', line))
+            # Components of a verified ALOHA record are argument/local data,
+            # not external functions or module state.
+            expressions = re.sub(r'%\s*\w+\s*\(', '%aloha_component(', line) if aloha_records else line
+            references = set(re.findall(r'\b(\w+)\s*\(', expressions))
+            if aloha_records:
+                references.discard('aloha_component')
             if references - names - arrays - intrinsics - syntax:
                 return False
     return True
@@ -746,17 +790,22 @@ def model_aware_helicity_filter(lines):
                     result += ['integer born_model_epoch,helicity_model_epoch',
                                'common/c_born_model_epoch/born_model_epoch',
                                'save helicity_model_epoch',
-                               'data helicity_model_epoch/-1/']
+                               'data helicity_model_epoch/-1/',
+                               'integer born_helicity_frame(2),helicity_frame(2)',
+                               'common/c_born_helicity_frame/born_helicity_frame',
+                               'save helicity_frame', 'data helicity_frame/2*-1/']
                     if scalar:
                         result += ['integer,save::helicity_sector=0']
                 if re.match(r'(?i)\s*ntry(?:\([^)]*\))?\s*=\s*ntry', statement):
                     result.pop()
-                    changed = 'helicity_model_epoch.ne.born_model_epoch'
+                    changed = ('helicity_model_epoch.ne.born_model_epoch.or.'
+                               'any(helicity_frame.ne.born_helicity_frame)')
                     if scalar:
                         changed += '.or.helicity_sector.ne.nfksprocess'
                     result += ['if(%s)then' % changed,
                                'ntry=0', 'goodhel=.false.',
-                               'helicity_model_epoch=born_model_epoch']
+                               'helicity_model_epoch=born_model_epoch',
+                               'helicity_frame=born_helicity_frame']
                     if scalar:
                         result += ['helicity_sector=nfksprocess']
                     result += ['endif', statement]
@@ -801,6 +850,11 @@ def optimize_real_helicities(lines):
         line = re.sub(r'(?i),\s*t_ident\(ncomb\)', '', line)
         line = re.sub(r'(?i),\s*t_save\(ncomb,0:nsqampso\)', '', line)
         line = re.sub(r'(?i)^(\s*integer\s+ihel\s*,\s*iden\s*,\s*i)\s*,\s*j\s*$', r'\1', line)
+        # MG7 replays the learned helicities once to make the first-point
+        # diagram weights follow the same mask as later calls. Native output
+        # computes every good helicity, so no equal-helicity tie is excluded.
+        line = re.sub(r'(?i)(goodhel\(ihel\))\s*\.and\.\s*t_ident\(ihel\)\s*\.le\.\s*0',
+                      r'\1', line)
         if re.match(r'(?i)\s*implicit\s+none\s*$', line):
             result += ['use mc_born_types,only:BornModelState,born_helicity_state_equal', line,
                        'type(BornModelState),save::helicity_model_state,helicity_current_state']
@@ -835,6 +889,91 @@ def write_real_helicity_filter(path):
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def write_native_frame_bridge(path):
+    """Route frame wrappers through native contexts without changing standalone.
+
+    Each context owns the mapping from FKS-sorted legs to the original user
+    order. A frame mask cached for another context must not survive a switch.
+    """
+    from madgraph.iolibs.native_histories import write
+    path = Path(path)
+    source = path.read_text()
+    if re.search(r'(?i)\bframe_map_active\b', source):
+        return
+    source = re.sub(r'(?i)\bcall\s+(sborn|sborn_sf|extra_cnt)\s*\(',
+                    lambda match: 'call '+match[1]+'_native(', source)
+    temporary = path.with_suffix('.frame.tmp')
+    for name in ('sborn_frame', 'sborn_onehel_frame', 'sborn_sf_frame',
+                 'extra_cnt_frame', 'binothlha_frame'):
+        result = []
+        for line in routine(source, name):
+            if line.strip().lower() == 'implicit none':
+                result += ['use mc_born_types,only:born_active_helicity_frame',
+                           'use mc_native_context,only:ensure_native_context,active_context']
+            result.append(line)
+            if line.strip().lower() == 'implicit none':
+                result.append('integer saved_helicity_frame(2),frame_leg')
+            if re.match(r'(?i)\s*call\s+get_frame_mask_born\(', line):
+                result.insert(len(result)-1, 'call ensure_native_context()')
+            if re.match(r'(?i)\s*call\s+(?:sborn_native|sborn_onehel|sborn_sf_native|extra_cnt_native|binothlha)\(', line):
+                result.pop()
+                result += ['saved_helicity_frame=born_active_helicity_frame',
+                           'if(any(ids.ne.0).and..not.'
+                           '(all(ids(1:nincoming).eq.1).and.'
+                           'all(ids(nincoming+1:nexternal-1).eq.0)).and..not.'
+                           '(all(ids(1:nincoming).eq.0).and.'
+                           'all(ids(nincoming+1:nexternal-1).eq.1)))then',
+                           'born_active_helicity_frame=[active_context,0]',
+                           'do frame_leg=1,nexternal-1',
+                           'if(ids(frame_leg).ne.0)born_active_helicity_frame(2)='
+                           'ibset(born_active_helicity_frame(2),frame_leg)',
+                           'enddo', 'endif', line,
+                           'born_active_helicity_frame=saved_helicity_frame']
+        write(temporary, result)
+        pattern = r'^\s{6}subroutine\s+'+name+r'\b[\s\S]*?^\s{6}end\s*$'
+        source, count = re.subn(pattern, lambda _: temporary.read_text().rstrip('\n'),
+                                source, flags=re.I|re.M)
+        if count != 1:
+            raise MadGraph5Error('Missing native frame wrapper: '+name)
+    for name, real in (('get_frame_mask_born', False), ('get_frame_mask_real', True)):
+        result = []
+        for line in routine(source, name):
+            lower = line.strip().lower()
+            if lower == 'implicit none':
+                result.append('use mc_native_context,only:native_epoch'+
+                              ('' if real else ',native_metadata'))
+            if lower == ('integer cached_id_r' if real else 'integer cached_id'):
+                result += ['integer cached_epoch', 'save cached_epoch',
+                           'data cached_epoch/-1/']
+                if not real:
+                    result.append('integer frame_map_active(nexternal-1)')
+            if re.match(r'(?i)\s*if\s*\(frame_id\.ne\.cached_id(?:_r)?\)\s*then', line):
+                line = line.replace(') then', '.or.native_epoch.ne.cached_epoch) then')
+                result.append(line)
+                if not real:
+                    result += ['frame_map_active=frame_map_born',
+                               'if(associated(native_metadata))then',
+                               'if(allocated(native_metadata%frame_map))'
+                               'frame_map_active=native_metadata%frame_map', 'endif']
+                continue
+            if not real:
+                line = line.replace('btest(frame_id, frame_map_born(i))',
+                                    'btest(frame_id, frame_map_active(i))')
+            result.append(line)
+            if re.match(r'(?i)\s*cached_id(?:_r)?\s*=\s*frame_id\s*$', line):
+                result.append('cached_epoch=native_epoch')
+        write(temporary, result)
+        pattern = r'^\s{6}subroutine\s+'+name+r'\b[\s\S]*?^\s{6}end\s*$'
+        source, count = re.subn(pattern, lambda _: temporary.read_text().rstrip('\n'),
+                                source, flags=re.I|re.M)
+        if count != 1:
+            raise MadGraph5Error('Missing native frame bridge routine: '+name)
+    temporary.unlink()
+    if path.is_symlink():
+        path.unlink()
+    path.write_text(source)
 
 
 def finalize(exporter):
@@ -879,6 +1018,9 @@ def finalize(exporter):
     from madgraph.iolibs import native_histories
     native_histories.export(root, records, histories)
     for record in records:
+        frame_bridge = root/'SubProcesses'/record['directory']/'boost_to_frame.f'
+        if frame_bridge.exists():
+            write_native_frame_bridge(frame_bridge)
         for source in (root/'SubProcesses'/record['directory']).glob('matrix_*.f'):
             write_real_helicity_filter(source)
 
@@ -1101,6 +1243,8 @@ def provider_adapter(r, source, members, cache_model_installation=False):
              'integer,save::active_slot=0,model_epoch=0',
              'integer(8),save::clock=0',
              'integer born_model_epoch', 'common/c_born_model_epoch/born_model_epoch',
+             'integer born_helicity_frame(2)',
+             'common/c_born_helicity_frame/born_helicity_frame',
              'logical reuse_amplitudes,rebuild,scaled,model_changed',
              'double precision ratio,factors(%d)' % ng,
              'double complex saveamp(%d,%d)' % (ng,nh),
@@ -1113,7 +1257,10 @@ def provider_adapter(r, source, members, cache_model_installation=False):
              'common/to_amps_born/amp2b,jamp2b',
              'double precision wgt_hel(%d),wgt_hel_split(%d,%d)' % (nh,ns,nh),
              'common/c_born_hel/wgt_hel',
-             'common/c_born_hel_split/wgt_hel_split']
+             'common/c_born_hel_split/wgt_hel_split',
+             'logical learned_goodhel(%d,%d),saved_goodhel(%d)' %
+             (nh,max(1,len(r['sectors'])),nh),
+             'common/c_goodhel/learned_goodhel']
     if degrees and strong:
         lines += ['integer,parameter::strong_degrees(%d)=[%s]' %
                   (ng,','.join(map(str,degrees)))]
@@ -1136,6 +1283,7 @@ def provider_adapter(r, source, members, cache_model_installation=False):
               'double complex amp_split_ewsud_lo2(amp_split_size)',
               'common/to_amp_split_ewsud_lo2/amp_split_ewsud_lo2']
     lines += ['status=0', 'nfksprocess=request%sector',
+              'born_helicity_frame=request%helicity_frame',
               'if(nfksprocess.lt.1.or.nfksprocess.gt.%d) then' % max(1,len(r['sectors'])),
               'status=2', 'return', 'endif']
     if not r['sectors']:
@@ -1252,7 +1400,15 @@ def provider_adapter(r, source, members, cache_model_installation=False):
               'active_slot=slot', 'calculatedBorn=.true.',
               'if(request%helicities) then',
               'result%has_helicities=.true.',
+              # The exact numerical point may have been restored after the
+              # learned zero mask moved to another basis. Query helicities
+              # from its complete cached amplitudes without altering that
+              # mask's validity epoch or forcing a fresh HELAS evaluation.
+              'saved_goodhel=learned_goodhel(:,nfksprocess)',
+              'learned_goodhel(:,nfksprocess)='
+              'any(points(slot)%amplitudes.ne.(0d0,0d0),dim=1)',
               'wgt_hel=0d0', 'wgt_hel_split=0d0', 'call sborn_hel(p,ans)',
+              'learned_goodhel(:,nfksprocess)=saved_goodhel',
               'result%helicities=wgt_hel', 'result%helicity_orders=wgt_hel_split', 'endif',
               'if(request%colour.or.request%charge) then',
               'result%has_soft=.true.',
@@ -1296,6 +1452,8 @@ def write_api(support, records, providers, sizes, histories):
                   'metadata%provider=provider', 'metadata%context=context']
         for key in ('nexternal','nincoming','nprocesses','ngraphs','ncolor','nhelicity','namps','nsqamps','extra'):
             lines += ['metadata%%%s=%d' % (key,r[key])]
+        lines += ['metadata%%frame_map=[%s]' % ','.join(map(str,
+                  r.get('frame_map', range(1, r['nexternal']))))]
         lines += ['metadata%%nsectors=%d' % max(1,len(r['sectors'])),
                   'metadata%%supports_correlations=%s' % ('.true.' if r['sectors'] else '.false.'),
                   'metadata%%nsplitorders=%d' % len(r['orders']),
@@ -1387,6 +1545,7 @@ def write_wrappers(root, r, members):
               'call born_resize_model_state(state,nr,nc)']
     lines += ['state%%%s_values(%s)=%s' % (kind, index, name) for name,kind,index in members]
     lines += ['request%sector=nfksprocess', 'request%charges=charges',
+              'request%helicity_frame=born_active_helicity_frame',
               'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
               'if(status.ne.0)then', "write(*,*)'Born support evaluation failed',status", 'stop 1',
               'endif', 'if(timing_sampled)call timing_leave(timing_born)', 'end']
@@ -1472,6 +1631,7 @@ def write_build(root, support, providers, model_commons, records):
     deps.mkdir(exist_ok=True)
     dep_objects = []
     rules = []
+    modules, module_uses = {}, {}
     script = ('import re, sys\nfrom pathlib import Path\nMadGraph5Error=RuntimeError\n\n'+
               '\n\n'.join(inspect.getsource(f) for f in (statements,expand,rename,write_fortran))+
               '\nnames='+repr(model_commons)+'\n'+
@@ -1484,7 +1644,9 @@ def write_build(root, support, providers, model_commons, records):
                 continue
             name = kind+'_'+path.name
             write_fortran(deps/name, [rename(line, model_commons) for line in expand(path)])
-            dep_objects.append('deps/'+Path(name).stem+'.o')
+            obj = 'deps/'+Path(name).stem+'.o'
+            dep_objects.append(obj)
+            module_uses[obj] = list(statements((deps/name).read_text()))
             inputs = sorted(os.path.relpath(p,support) for p in include_dependencies(path))
             rules += ['deps/%s: refresh_dependency.py %s' % (name,' '.join(inputs)),
                       '\t$(PYTHON) refresh_dependency.py %s $@' % os.path.relpath(path,support)]
@@ -1493,5 +1655,24 @@ def write_build(root, support, providers, model_commons, records):
     objects = ['p%d/%s.o' % (pid, name) for pid in sorted(providers)
                for name in ('matrix','adapter')]
     objects += ['c%d/metadata.o' % r['context'] for r in records]
+    # MG7 HELAS carries type(aloha) wavefunctions. Its module is defined in
+    # aloha_functions.f; every generated HELAS/provider using it must wait
+    # for that object, including in a parallel BornSupport build.
+    for obj, lines in module_uses.items():
+        for line in lines:
+            match = re.match(r'(?i)\s*module\s+(?!procedure\b)(\w+)', line)
+            if match:
+                modules[match[1].lower()] = obj
+    for obj in objects:
+        module_uses[obj] = list(statements((support/Path(obj).with_suffix('.f')).read_text()))
+    for obj, lines in module_uses.items():
+        required = set()
+        for line in lines:
+            match = re.match(r'(?i)\s*use\s+(\w+)', line)
+            if match and match[1].lower() in modules:
+                required.add(modules[match[1].lower()])
+        required.discard(obj)
+        if required:
+            rules.append('%s: %s' % (obj, ' '.join(sorted(required))))
     (support/'providers.mk').write_text('PROVIDER_OBJECTS = '+' '.join(objects)+'\n'+
         'DEPENDENCY_OBJECTS = '+' '.join(dep_objects)+'\n'+ '\n'.join(rules)+'\n')

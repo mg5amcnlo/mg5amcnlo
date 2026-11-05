@@ -4,7 +4,7 @@
 ##				MadWeight				##
 ##				*********				##
 ##									##
-##	Autor:	 Olivier Mattelaer 					##
+##	Author:	 Olivier Mattelaer 					##
 ##		 Pierre Artoisenet					##
 ##									##
 ##	date:	October 09						##
@@ -32,7 +32,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C|     This file is generated automatically by MADWEIGHT-ANALYZER          |
 C+-----------------------------------------------------------------------+     
 ##************************************************************************
 $E$ INTRO_FOR_MAIN $E$
@@ -48,7 +48,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C|     This file is generated automatically by MADWEIGHT-ANALYZER          |
 C+-----------------------------------------------------------------------+     
 ##************************************************************************
 $E$ INTRO_FOR_DATA $E$
@@ -64,7 +64,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C|     This file is generated automatically by MADWEIGHT-ANALYZER          |
 C+-----------------------------------------------------------------------+     
 ##************************************************************************
 $E$ INTRO_FOR_D_SWITCH_F $E$
@@ -80,7 +80,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C|     This file is generated automatically by MADWEIGHT-ANALYZER          |
 C+-----------------------------------------------------------------------+
 
        double precision function multi_channel_weight(config)
@@ -122,7 +122,7 @@ C|                                                                       |
 C|     Author: Pierre Artoisenet (UCL-CP3)                               |
 C|             Olivier Mattelaer (UCL-CP3)                               |
 C+-----------------------------------------------------------------------+
-C|     This file is generated automaticly by MADWEIGHT-ANALYZER          |
+C|     This file is generated automatically by MADWEIGHT-ANALYZER          |
 C+-----------------------------------------------------------------------+     
 ##************************************************************************
 $E$ INTRO_FOR_D_SWITCH_INC $E$

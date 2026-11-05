@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2012 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2012 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -20,6 +20,7 @@ import madgraph.various.lhe_parser as lhe_parser
 import madgraph .various.misc as misc
 import tempfile
 import os
+import re
 import shutil
 import math
 pjoin = os.path.join
@@ -29,6 +30,62 @@ import itertools
 
 class TestEvent(unittest.TestCase):
 
+    # a real MadEvent u u > u u event (ebeam = 6500 GeV) carrying its <mgrwt>
+    # block; used to check that the block can be reconstructed from the event.
+    mgrwt_event = """<event>
+ 4 1 +1.3649000e+06 0.2333376E+02  0.7546771E-02  0.1686156E+00
+          2   -1    0    0  502    0  0.00000000000E+00  0.00000000000E+00  0.14608470417E+03  0.14608470417E+03  0.00000000000E+00 0. -1.
+          2   -1    0    0  501    0 -0.00000000000E+00 -0.00000000000E+00 -0.37876093631E+01  0.37876093631E+01  0.00000000000E+00 0. -1.
+          2    1    1    2  501    0 -0.14853818370E+02 -0.17995227830E+02  0.80624445516E+02  0.83933100500E+02  0.00000000000E+00 0. -1.
+          2    1    1    2  502    0  0.14853818370E+02  0.17995227830E+02  0.61672649296E+02  0.65939213038E+02  0.00000000000E+00 0. -1.
+<mgrwt>
+<rscale>  2 0.23333755E+02</rscale>
+<asrwt>0</asrwt>
+<pdfrwt beam="1">  1        2 0.22474566E-01 0.23333755E+02</pdfrwt>
+<pdfrwt beam="2">  1        2 0.58270925E-03 0.23333755E+02</pdfrwt>
+<totfact> 0.65738256E+05</totfact>
+</mgrwt>
+</event>"""
+
+    def test_reconstruct_lo_weight(self):
+        """The LO reweighting info (<mgrwt>) can be reconstructed from the event
+        for a single-alpha_s process, matching what MadEvent writes."""
+
+        # reference: parse the real <mgrwt>
+        ref = lhe_parser.Event(self.mgrwt_event).parse_lo_weight()
+        self.assertEqual(ref['n_qcd'], 2)
+        self.assertEqual(ref['pdf_pdg_code1'], [2])
+
+        # same event with the <mgrwt> block removed -> reconstruct it
+        stripped = re.sub(r'<mgrwt>.*?</mgrwt>\n?', '',
+                          self.mgrwt_event, flags=re.DOTALL)
+        ev = lhe_parser.Event(stripped)
+        # without nqcd it stays unavailable (backward-compatible behaviour)
+        self.assertIsNone(ev.parse_lo_weight())
+
+        rec = lhe_parser.Event(stripped).parse_lo_weight(nqcd=2,
+                                                         ebeam=(6500., 6500.))
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec['n_qcd'], 2)
+        self.assertEqual(rec['pdf_pdg_code1'], [2])
+        self.assertEqual(rec['pdf_pdg_code2'], [2])
+        self.assertEqual(rec['n_pdfrw1'], 1)
+        self.assertEqual(rec['asrwt'], [])
+        # x, scale reconstructed from the event momenta match the written block
+        # up to the LHE write precision
+        self.assertAlmostEqual(rec['pdf_x1'][0], ref['pdf_x1'][0], places=6)
+        self.assertAlmostEqual(rec['pdf_x2'][0], ref['pdf_x2'][0], places=6)
+        self.assertAlmostEqual(rec['ren_scale'], ref['ren_scale'], places=3)
+        self.assertEqual(rec['pdf_q1'], [rec['ren_scale']])
+
+    def test_reconstruct_lo_weight_ew(self):
+        """A purely electroweak process (nqcd=0) reconstructs with no alpha_s
+        power, so scale/PDF systematics need only the kinematics."""
+        stripped = re.sub(r'<mgrwt>.*?</mgrwt>\n?', '',
+                          self.mgrwt_event, flags=re.DOTALL)
+        rec = lhe_parser.Event(stripped).parse_lo_weight(nqcd=0,
+                                                         ebeam=(6500., 6500.))
+        self.assertEqual(rec['n_qcd'], 0)
 
     def test_equiv_sequence(self):
         """ check the equiv_sequence: staticmethod"""
@@ -521,6 +578,8 @@ class TestEvent(unittest.TestCase):
         # check that first data structure for get_all_momenta is constructed correctly
         # here all particles are considered different
         mother = event.get_all_momenta([(2,-2), (-11,-11,-11,11,11,11)], debug_output=1)
+        misc.sprint(mother.keys())
+        misc.sprint(mother[11]) 
         self.assertEqual(mother, {-11: {(0, 1): [2], (3, 3): [3], (2, 2): [4]}, 11: {(0, 1): [5], (3, 3): [6], (2, 2): [7]}})
 
         mother2 = event.get_all_momenta([(2,-2), (-11,11,-11,11,-11,11)], debug_output=1)
@@ -583,9 +642,9 @@ class TestEvent(unittest.TestCase):
             for j in range(len(all_perms[0])):
                 if all_perms[i][j] == all_perms[0][j]:
                     nb_identical[j] +=1
-        self.assertEqual(nb_identical, [36,36,12,12,12,12,12,12]) # for the electron permuation: 2 repetition and from the positron one 6 repetition.
+        self.assertEqual(nb_identical, [36,36,12,12,12,12,12,12]) # for the electron permutation: 2 repetition and from the positron one 6 repetition.
 
-        # redo the same but where two pair of electron/positron are indistiguishable
+        # redo the same but where two pair of electron/positron are indistinguishable
         input = """
     10      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
             2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1463656627e+03 1.1463656627e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
@@ -665,7 +724,7 @@ class TestEvent(unittest.TestCase):
                                      [9,9,6,3,3,6,3,3]]) # technically other combination are possible 
 
 
-        # redo the same but with less particles (simpler case so should go trough)
+        # redo the same but with less particles (simpler case so should go through)
         input = """
     8      1 +7.8873842e-07 2.27574700e+02 7.54677100e-03 1.14295200e-01
             2 -1    0    0  501    0 +0.0000000000e+00 +0.0000000000e+00 +1.1463656627e+03 1.1463656627e+03 0.0000000000e+00 0.0000e+00 -1.0000e+00
@@ -798,6 +857,296 @@ class TestFxFxDecayScales(unittest.TestCase):
                          [-1, -1, 100, 100, 100])
 
 
+class TestMasslessProjection(unittest.TestCase):
+    """lhe_parser.project_massless_initial_state.
+
+    aMC@NLO writes the incoming partons on the Monte-Carlo mass shell; the
+    matrix element is a massless one. The projection is the exact inverse of
+    put_on_MC_mshell_in (add_write_info.f), so it must be light-like, preserve
+    shat and conserve energy-momentum exactly.
+    """
+
+    class Model(object):
+        """b and Z massive, light quarks and the gluon massless, 81 merged."""
+        MASS = {5: 'MB', 6: 'MT', 23: 'MZ'}
+
+        class Particle(dict):
+            def get(self, name):
+                return self[name]
+
+        def get(self, name):
+            return {81: [1, 2, 3, 4]} if name == 'merged_particles' else None
+
+        def get_particle(self, pdg):
+            return self.Particle(mass=self.MASS.get(abs(int(pdg)), 'ZERO'))
+
+    @staticmethod
+    def m2(p):
+        return p[0]**2 - p[1]**2 - p[2]**2 - p[3]**2
+
+    def project(self, momenta, pdgs, **opts):
+        return lhe_parser.project_massless_initial_state(
+            momenta, pdgs, self.Model(), **opts)
+
+    def test_exact_inverse_is_lightlike_and_conserving(self):
+        """the two-leg light-cone recipe, on real MC-mass momenta"""
+        # E = sqrt(m^2 + pz^2) with m = 0.33, as put_on_MC_mshell_in writes it
+        m = 0.33
+        pz1, pz2 = 146.08470417, -3.7876093631
+        p = [(math.sqrt(m**2 + pz1**2), 0., 0., pz1),
+             (math.sqrt(m**2 + pz2**2), 0., 0., pz2),
+             (-14.85, -17.99, 80.62, 83.93),
+             (14.85, 17.99, 61.67, 65.94)]
+        out = self.project(p, [2, 2, 2, 2])
+        for i in (0, 1):
+            self.assertEqual(self.m2(out[i]), 0.)          # exactly light-like
+            self.assertEqual(out[i][1], 0.)
+            self.assertEqual(out[i][2], 0.)
+        self.assertAlmostEqual(out[0][0] + out[1][0], p[0][0] + p[1][0], 10)
+        self.assertAlmostEqual(out[0][3] + out[1][3], p[0][3] + p[1][3], 10)
+        shat = lambda a, b: self.m2(tuple(x + y for x, y in zip(a, b)))
+        self.assertAlmostEqual(shat(out[0], out[1]) / shat(p[0], p[1]), 1., 10)
+        self.assertEqual(out[2:], [tuple(q) for q in p[2:]])  # final state untouched
+
+    def test_lightlike_input_is_untouched(self):
+        """a MadEvent LO event already has E = |pz|: strict no-op"""
+        p = [(100., 0., 0., 100.), (50., 0., 0., -50.), (150., 0., 0., 50.)]
+        self.assertEqual(self.project(p, [1, -1, 23]), [tuple(q) for q in p])
+
+    def test_scope_is_the_model_mass(self):
+        """a b quark keeps its mass, a merged code is resolved as massless"""
+        p = [(math.sqrt(4.7**2 + 100.**2), 0., 0., 100.),
+             (50., 0., 0., -50.), (0., 0., 0., 0.)]
+        self.assertEqual(self.project(p, [5, -1, 23])[0], tuple(p[0]))
+        merged = [(100.001, 0., 0., 100.), (50.002, 0., 0., -50.), (0., 0., 0., 0.)]
+        out = self.project(merged, [81, -81, 23])
+        self.assertEqual(out[0][0], out[0][3])
+        self.assertEqual(out[1][0], -out[1][3])
+        self.assertAlmostEqual(out[0][0] + out[1][0],
+                               merged[0][0] + merged[1][0], 10)
+
+    def test_one_massless_leg_only(self):
+        """b g: only the gluon moves, and it drops its own small component"""
+        p = [(math.sqrt(4.7**2 + 100.**2), 0., 0., 100.),
+             (50.002, 0., 0., -50.), (0., 0., 0., 0.)]
+        out = self.project(p, [5, 21, 23])
+        self.assertEqual(out[0], tuple(p[0]))
+        self.assertEqual(self.m2(out[1]), 0.)
+
+    def test_untouched_when_the_pattern_does_not_apply(self):
+        """crossed leg (E<0), transverse initial state, 1 -> N decay"""
+        crossed = [(-100.001, 3., 0., 100.), (50.002, 0., 0., -50.), (0., 0., 0., 0.)]
+        self.assertEqual(self.project(crossed, [1, -1, 23]),
+                         [tuple(q) for q in crossed])
+        transverse = [(100.001, 3., 0., 100.), (50.002, 0., 0., -50.), (0., 0., 0., 0.)]
+        self.assertEqual(self.project(transverse, [1, -1, 23]),
+                         [tuple(q) for q in transverse])
+        decay = [(91.188, 10., 0., 20.), (45., 5., 0., 10.), (46., 5., 0., 10.)]
+        self.assertEqual(self.project(decay, [23, 11, -11], n_initial=1),
+                         [tuple(q) for q in decay])
+
+
+class TestMasslessProjectionFinalState(unittest.TestCase):
+    """lhe_parser.project_massless_final_state / project_massless_partons.
+
+    The final-state map has no exact inverse to reproduce, so what is tested
+    is the property it is chosen for: the light partons come out exactly
+    light-like, every direction is untouched, the massive legs keep the
+    invariant mass they had *in the event*, and the total final-state
+    four-momentum is conserved.
+    """
+
+    Model = TestMasslessProjection.Model
+
+    @staticmethod
+    def m2(p):
+        return p[0]**2 - p[1]**2 - p[2]**2 - p[3]**2
+
+    def final(self, momenta, pdgs, **opts):
+        return lhe_parser.project_massless_final_state(
+            momenta, pdgs, self.Model(), **opts)
+
+    def both(self, momenta, pdgs, **opts):
+        # "both" means both halves.  project_massless_partons now defaults to
+        # the initial state alone, so the final-state map is asked for here;
+        # setdefault keeps the one test that passes final_state=False working.
+        opts.setdefault('final_state', True)
+        return lhe_parser.project_massless_partons(
+            momenta, pdgs, self.Model(), **opts)
+
+    @staticmethod
+    def _event(masses, spatial, boost_pz=0.):
+        """a balanced 2 -> N event, built from the final state outwards.
+
+        The final-state three-momenta are given in their own rest frame and sum
+        to zero there; the whole thing is then boosted along z by rapidity
+        ``boost_pz`` and the two incoming legs are set light-like so that the
+        event balances exactly and only the final state has anything to do.
+        """
+        fin = []
+        for m, (px, py, pz) in zip(masses, spatial):
+            fin.append((math.sqrt(m*m + px*px + py*py + pz*pz), px, py, pz))
+        if boost_pz:
+            ch, sh = math.cosh(boost_pz), math.sinh(boost_pz)
+            fin = [(ch*E + sh*pz, px, py, sh*E + ch*pz)
+                   for E, px, py, pz in fin]
+        Q0 = sum(p[0] for p in fin)
+        Qz = sum(p[3] for p in fin)
+        a, b = 0.5*(Q0 + Qz), 0.5*(Q0 - Qz)
+        return [(a, 0., 0., a), (b, 0., 0., -b)] + fin
+
+    @staticmethod
+    def _total(momenta, n_initial=2):
+        return [sum(p[k] for p in momenta[n_initial:]) for k in range(4)]
+
+    @staticmethod
+    def _angle(a, b):
+        """angle between the three-momenta of a and b, in radians"""
+        na = math.sqrt(sum(c*c for c in a[1:]))
+        nb = math.sqrt(sum(c*c for c in b[1:]))
+        c = sum(x*y for x, y in zip(a[1:], b[1:])) / (na*nb)
+        return math.acos(max(-1., min(1., c)))
+
+    # -- the map itself ----------------------------------------------------
+    def test_lightlike_directions_masses_and_conservation(self):
+        """Z Z g with the gluon on the 0.33 GeV Monte-Carlo mass shell"""
+        p = self._event([91.2, 88.7, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)],
+                        boost_pz=1.3)
+        out = self.both(p, [2, -2, 23, 23, 21])
+        # the light parton is exactly light-like
+        g = out[4]
+        self.assertLess(abs(self.m2(g)), 1e-9)
+        self.assertNotEqual(g, tuple(p[4]))
+        # the massive legs keep the invariant mass they had in the event
+        for i in (2, 3):
+            self.assertAlmostEqual(math.sqrt(self.m2(out[i])),
+                                   math.sqrt(self.m2(p[i])), 9)
+        # the total final-state four-momentum is conserved
+        for a, b in zip(self._total(out), self._total(p)):
+            self.assertAlmostEqual(a, b, 9)
+        # the lab directions move only by the O(m_MC^2/s) the rescaling costs
+        for i in range(2, 5):
+            self.assertLess(self._angle(p[i], out[i]), 1e-4)
+
+    def test_directions_are_exact_in_the_final_state_rest_frame(self):
+        """the common rescaling is defined there, so there it moves nothing"""
+        p = self._event([91.2, 88.7, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)])
+        # boost_pz = 0: the event is already in the final-state rest frame
+        out = self.both(p, [2, -2, 23, 23, 21])
+        for i in range(2, 5):
+            self.assertEqual(self._angle(p[i], out[i]), 0.)
+
+    def test_the_scale_factor_is_common_not_per_leg(self):
+        """the naive E := |p| loses m^2/2E per leg; this one loses nothing"""
+        p = self._event([91.2, 91.2, 0.33, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.),
+                         (25., -40., -15.), (-5., -3., -17.)])
+        out = self.both(p, [2, -2, 23, 23, 21, 21])
+        naive = sum(math.sqrt(sum(c*c for c in q[1:])) for q in p[2:])
+        exact = sum(q[0] for q in out[2:])
+        self.assertGreater(sum(q[0] for q in p[2:]) - naive, 1e-4)   # the leak
+        self.assertAlmostEqual(exact, sum(q[0] for q in p[2:]), 9)   # not here
+        for i in (4, 5):
+            self.assertLess(abs(self.m2(out[i])), 1e-9)
+
+    def test_lightlike_final_state_is_untouched(self):
+        """a MadEvent LO event has p^2 = 0 already: strict no-op"""
+        p = [(50., 0., 0., 50.), (50., 0., 0., -50.),
+             (50., 30., 40., 0.), (50., -30., -40., 0.)]
+        self.assertEqual(self.final(p, [1, -1, 21, 21]), [tuple(q) for q in p])
+        self.assertEqual(self.both(p, [1, -1, 21, 21]), [tuple(q) for q in p])
+
+    def test_scope_is_the_model_mass(self):
+        """a b quark keeps its mass, a merged code is resolved as massless"""
+        p = self._event([4.7, 4.7, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)])
+        out = self.both(p, [2, -2, 5, -5, 21])
+        for i in (2, 3):
+            self.assertAlmostEqual(math.sqrt(self.m2(out[i])), 4.7, 9)
+        self.assertLess(abs(self.m2(out[4])), 1e-9)
+        # 81 is merged over the light quarks: massless, so it is projected
+        out = self.both(p, [2, -2, 5, -5, 81])
+        self.assertLess(abs(self.m2(out[4])), 1e-9)
+        # ... while a b in that slot is left with its mass
+        out = self.both(p, [2, -2, 21, 21, 5])
+        self.assertAlmostEqual(math.sqrt(self.m2(out[4])), 0.33, 9)
+
+    def test_a_soft_parton_still_converges(self):
+        """|p| << m_MC: the root find leaves x = O(1) territory, and must not
+        fall back silently -- x is ~4 here, and the map is still exact"""
+        p = self._event([91.2, 91.2, 0.33],
+                        [(0.05, 0.02, 0.01), (-0.02, -0.01, 0.),
+                         (-0.03, -0.01, -0.01)])
+        out = self.both(p, [2, -2, 23, 23, 21])
+        self.assertLess(abs(self.m2(out[4])), 1e-12)
+        for a, b in zip(self._total(out), self._total(p)):
+            self.assertAlmostEqual(a, b, 9)
+        # the light leg really did move a lot
+        q = lambda v: math.sqrt(sum(c*c for c in v[1:]))
+        self.assertGreater(q(out[4])/q(p[4]), 3.)
+
+    # -- the guards --------------------------------------------------------
+    def test_guards_return_the_input(self):
+        """every failure mode hands back the momenta it was given"""
+        base = self._event([91.2, 91.2, 0.33],
+                           [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)])
+        # fewer than two final-state legs
+        one = [(100., 0., 0., 100.), (100., 0., 0., -100.), (200., 0., 0., 0.)]
+        self.assertEqual(self.final(one, [1, -1, 21]), [tuple(q) for q in one])
+        # a leg crossed into the final block (E < 0)
+        crossed = list(base)
+        crossed[4] = (-base[4][0], -base[4][1], -base[4][2], -base[4][3])
+        self.assertEqual(self.final(crossed, [2, -2, 23, 23, 21]),
+                         [tuple(q) for q in crossed])
+        # a spacelike leg
+        space = list(base)
+        space[4] = (1., 10., 0., 0.)
+        self.assertEqual(self.final(space, [2, -2, 23, 23, 21]),
+                         [tuple(q) for q in space])
+        # no massless leg at all
+        self.assertEqual(self.final(base, [2, -2, 23, 23, 5]),
+                         [tuple(q) for q in base])
+        # a model-massless leg at rest in the final-state frame: E := x|p|
+        # would annihilate it, so the whole event is left alone
+        rest = [(91.2, 0., 0., 91.2), (91.2, 0., 0., -91.2),
+                (91.2, 0., 0., 0.), (91.2, 0., 0., 0.)]
+        self.assertEqual(self.final(rest, [2, -2, 23, 21]),
+                         [tuple(q) for q in rest])
+
+    # -- the point of the whole exercise -----------------------------------
+    def test_the_input_is_never_mutated(self):
+        """the projection is for the matrix-element call only: whatever the
+        caller holds -- and writes back to the LHE -- must come out unchanged"""
+        p = self._event([91.2, 91.2, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)],
+                        boost_pz=0.7)
+        m = 0.33
+        p[0] = (math.sqrt(m*m + p[0][3]**2), 0., 0., p[0][3])
+        p[1] = (math.sqrt(m*m + p[1][3]**2), 0., 0., p[1][3])
+        keep = [tuple(q) for q in p]
+        original_object = p
+        out = self.both(p, [2, -2, 23, 23, 21])
+        self.assertEqual([tuple(q) for q in p], keep)
+        self.assertIs(p, original_object)
+        self.assertIsNot(out, p)
+        self.assertNotEqual(out, keep)          # it did do something
+
+    def test_final_state_can_be_switched_off(self):
+        """project_massless_partons(final_state=False) is the initial-state
+        helper and nothing else"""
+        p = self._event([91.2, 91.2, 0.33],
+                        [(30., 40., 12.), (-50., 3., 20.), (20., -43., -32.)])
+        m = 0.33
+        p[0] = (math.sqrt(m*m + p[0][3]**2), 0., 0., p[0][3])
+        p[1] = (math.sqrt(m*m + p[1][3]**2), 0., 0., p[1][3])
+        self.assertEqual(
+            self.both(p, [2, -2, 23, 23, 21], final_state=False),
+            lhe_parser.project_massless_initial_state(p, [2, -2, 23, 23, 21],
+                                                      self.Model()))
+
+
 from madgraph.various.lhe_parser import FourMomentum
 class TestFourMomentum(unittest.TestCase):
 
@@ -860,7 +1209,7 @@ class TESTLHEParser(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = unittest.debug
+        debugging = getattr(unittest, 'debug', False)
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_test")
             if os.path.exists(self.path):
@@ -1220,7 +1569,7 @@ class TESTLHEParserNLO(unittest.TestCase):
 
     def setUp(self):
         
-        debugging = unittest.debug
+        debugging = getattr(unittest, 'debug', False)
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_lhe_nlo_test")
             if os.path.exists(self.path):
@@ -1392,6 +1741,153 @@ class TESTLHEParserNLO(unittest.TestCase):
         for cevent in evt3.nloweight.cevents:
             self.assertIn(len(cevent), (4,5))
 
+
+class TestEventCopyAndText(unittest.TestCase):
+    """Event.copy() is Event(str(event)) without the text round trip, and
+    Event.__str__ collapses blank lines in its free-text parts only."""
+
+    _event = """<event>
+ 5      1 +1.2345678e+00 9.11880000e+01 7.54677100e-03 1.18000000e-01
+       21 -1    0    0  501  502 +0.0000000000e+00 +0.0000000000e+00 +3.1415926535e+02 3.1415926535e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+       21 -1    0    0  503  501 -0.0000000000e+00 -0.0000000000e+00 -2.7182818284e+02 2.7182818284e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+        6  2    1    2  503    0 +1.0000000000e+01 +2.0000000000e+01 +3.0000000000e+01 2.5000000000e+02 1.7300000000e+02 0.0000e+00 0.0000e+00
+        6  1    3    3  503    0 +1.0000000000e+01 +2.0000000000e+01 +3.0000000000e+01 2.5000000000e+02 1.7300000000e+02 0.0000e+00 1.0000e+00
+       -6  1    1    2    0  502 -1.0000000000e+01 -2.0000000000e+01 +1.2329108251e+01 3.3598745187e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+# a comment
+
+<mgrwt>
+<rscale>  0 0.91188000E+02</rscale>
+</mgrwt>
+<rwgt>
+<wgt id='1001'> +1.2345678e+00 </wgt>
+<wgt id='1002'> +2.3456789e+00 </wgt>
+</rwgt>
+</event>"""
+
+    def test_copy_is_the_round_trip(self):
+        event = lhe_parser.Event(self._event)
+        event.parse_reweight()
+        event[3].new_mass = 170.          # not in the text: not copied
+        event._ms_cache = 'cached'
+        copy = event.copy()
+        self.assertEqual(str(copy), str(lhe_parser.Event(str(event))))
+        self.assertFalse(hasattr(copy[3], 'new_mass'))
+        self.assertFalse(hasattr(copy, '_ms_cache'))
+        # mothers point inside the copy, which owns its particles
+        self.assertIs(copy[2].mother1, copy[0])
+        self.assertIs(copy[2].mother2, copy[1])
+        self.assertIs(copy[3].mother1, copy[2])
+        self.assertTrue(all(p.event is copy for p in copy))
+        # and nothing is shared with the original
+        copy[3].px += 1.
+        copy.reweight_data['1001'] = 0.
+        copy.eventflag['x'] = '1'
+        self.assertEqual(event[3].px, 10.)
+        self.assertAlmostEqual(event.reweight_data['1001'], 1.2345678)
+        self.assertNotIn('x', event.eventflag)
+        # full precision, where the text keeps 11 digits
+        event[3].px = 1. / 3.
+        self.assertEqual(event.copy()[3].px, 1. / 3.)
+
+    def test_str_collapses_blank_lines(self):
+        event = lhe_parser.Event(self._event)
+        event.parse_reweight()            # rendered from reweight_data
+        event.tag = '\n\n<scales pt_clust_1="10"></scales>\n\n\n<other/>\n'
+        event.comment = '# one\n\n# two\n'
+        text = str(event)
+        self.assertNotIn('\n\n', text)
+        self.assertTrue(text.startswith('<event>\n 5      1'))
+        self.assertTrue(text.endswith('</event>\n'))
+        self.assertIn('# one\n# two\n<scales pt_clust_1="10"></scales>\n<other/>\n<rwgt>', text)
+        self.assertEqual(text, re.sub('[\n]+', '\n', text))
+
+
+class TestBasicEventCompatibility(unittest.TestCase):
+    """Compatibility tests for NLO_PARTIALWEIGHT.BasicEvent in reweight paths."""
+
+    # Minimal LHE event: 2 initial-state (q qbar), 2 final-state (mu- mu+)
+    _event_str = """
+    4      1 +1.0 100.0 0.01 0.1
+    2  -1    0    0  501    0 +0.0 +0.0 +100.0 100.0 0.0 0.0 1.0
+   -2  -1    0    0    0  501 +0.0 +0.0 -100.0 100.0 0.0 0.0 1.0
+   13   1    1    2    0    0 +10.0 +20.0 +30.0  50.0 0.0 0.0 1.0
+  -13   1    1    2    0    0 -10.0 -20.0 -30.0  50.0 0.0 0.0 1.0
+"""
+
+    def _make_basic_event(self, pdgs):
+        """Build a BasicEvent whose PDGs are given, using a no-merge (real) wgt config."""
+        from madgraph.various.lhe_parser import FourMomentum
+
+        class _FakeWgt:
+            def __init__(self, pdg_list):
+                self.pdgs = list(pdg_list)
+                self.born_related = 1
+                self.real_related = 2
+                self.momenta_config = 2  # == real_related  => constructor skips merge
+                self.to_merge_pdg = [1, 2]
+                self.merge_new_pdg = 21
+                self.type = 1
+
+        event = lhe_parser.Event(self._event_str)
+        momenta = [
+            FourMomentum(100.0, 0.0, 0.0,  100.0),   # initial 1
+            FourMomentum(100.0, 0.0, 0.0, -100.0),   # initial 2
+            FourMomentum( 50.0, 10.0, 20.0,  30.0),  # final 1
+            FourMomentum( 50.0,-10.0,-20.0, -30.0),  # final 2
+        ]
+        return lhe_parser.NLO_PARTIALWEIGHT.BasicEvent(momenta, [_FakeWgt(pdgs)], event)
+
+    def test_identity_mapping(self):
+        """PDGs in the event match the requested order exactly: identity mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]))
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_reordered_final_state(self):
+        """Requesting a permuted final-state order returns the correct mapping."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request final state (-13, 13) instead of (13, -13)
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        # event pos 2 holds pdg 13 -> should map to position 3 (second final)
+        # event pos 3 holds pdg -13 -> should map to position 2 (first final)
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 3, 3: 2})
+        self.assertEqual(out2, {0: 0, 1: 1, 3: 2, 2: 3})
+
+    def test_out1_out2_are_inverse(self):
+        """out1 and out2 must be exact inverses of each other."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        out1, out2 = be.get_mapping(([2, -2], [-13, 13]))
+        for k in out1:
+            self.assertEqual(out2[out1[k]], k)
+        for k in out2:
+            self.assertEqual(out1[out2[k]], k)
+
+    def test_allow_reversed_initial_state(self):
+        """When the initial-state order is flipped, allow_reversed should recover."""
+        be = self._make_basic_event([2, -2, 13, -13])
+        # Request initial (-2, 2) — reversed from the event's (2, -2)
+        out1, out2 = be.get_mapping(([-2, 2], [13, -13]), allow_reversed=True)
+        # After reversal the request becomes (2, -2) so initial positions swap
+        self.assertEqual(out1, {0: 1, 1: 0, 2: 2, 3: 3})
+        self.assertEqual(out2, {1: 0, 0: 1, 2: 2, 3: 3})
+
+    def test_merged_map_remapping(self):
+        """With merged_map, merged PDG codes are transparently remapped."""
+        # The event stores merged PDG 100 for the quark, but the request uses real PDG 2
+        be = self._make_basic_event([100, -100, 13, -13])
+        merged_map = {100: 2}   # 100 -> 2, and by antiparticle convention -100 -> -2
+        out1, out2 = be.get_mapping(([2, -2], [13, -13]), merged_map=merged_map)
+        # Should still produce an identity mapping once PDGs are remapped
+        self.assertEqual(out1, {0: 0, 1: 1, 2: 2, 3: 3})
+        self.assertEqual(out2, {0: 0, 1: 1, 2: 2, 3: 3})
+
+    def test_get_helicity_accepts_merged_map_kwarg(self):
+        """BasicEvent.get_helicity must accept merged_map for reweight compatibility."""
+        be = self._make_basic_event([100, -100, 13, -13])
+        hel = be.get_helicity(([2, -2], [13, -13]), merged_map={100: 2})
+        self.assertEqual(hel, [9, 9, 9, 9])
+
 class TestProductionJacobian(unittest.TestCase):
     """Event.production_jacobian: the production reshuffling jacobian without
     performing the reshuffling, for the sequential (per-particle) accept/reject
@@ -1448,6 +1944,369 @@ class TestProductionJacobian(unittest.TestCase):
         evt = self._event(new_mass=1e6)
         self.assertEqual(evt.production_jacobian(), -1)
         self.assertEqual(evt[2].new_mass, 1e6)  # not resampled behind our back
+
+
+class TestMergeRuns(unittest.TestCase):
+    """MultiEventFile.merge_runs, the merge of the runs of multi_run: each run
+    contributes its own cross section (weighted by its number of events), the
+    relative weights inside a run are kept and the merged file follows the
+    event_norm of the runs."""
+
+    template = """<event>
+ 4 %(pid)6i %(wgt)+.10e 2.26335600e+02 7.54677100e-03 1.12924600e-01
+       21 -1    0    0  501  502 +0.0000000000e+00 +0.0000000000e+00 +1.3497663545e+02 1.3497663545e+02 0.0000000000e+00 0.0000e+00 1.0000e+00
+       21 -1    0    0  502  503 -0.0000000000e+00 -0.0000000000e+00 -5.2972469895e+02 5.2972469895e+02 0.0000000000e+00 0.0000e+00 -1.0000e+00
+        6  1    1    2  501    0 +9.9532160446e+01 +1.0673399736e+02 -2.0404901160e+01 2.2725350854e+02 1.7300000000e+02 0.0000e+00 1.0000e+00
+       -6  1    1    2    0  503 -9.9532160446e+01 -1.0673399736e+02 -3.7434316234e+02 4.3744782585e+02 1.7300000000e+02 0.0000e+00 -1.0000e+00
+#orig %(run)i %(wgt).17e
+<rwgt>
+<wgt id='1'> %(syst)+.10e </wgt>
+<wgt id='bias'> %(bias)+.10e </wgt>
+</rwgt>
+</event>
+"""
+
+    def setUp(self):
+        self.path = tempfile.mkdtemp(prefix='test_mg5')
+        self.banner_text = lhe_parser.EventFile(pjoin(MG5DIR, 'tests',
+                                     'input_files', 'ttbar.lhe.gz')).banner
+
+    def tearDown(self):
+        shutil.rmtree(self.path)
+
+    @staticmethod
+    def make_weights(seed, nevt, xsec, event_norm, neg=0.1):
+        """nevt weights with a tail and some negative ones, normalised to xsec
+        according to event_norm"""
+        import random
+        rng = random.Random(seed)
+        wgts = []
+        for i in range(nevt):
+            w = rng.random()**(-1./3)
+            if rng.random() < neg:
+                w = -w
+            wgts.append(w)
+        if event_norm == 'average':
+            norm = xsec * nevt / sum(wgts)
+        elif event_norm == 'sum':
+            norm = xsec / sum(wgts)
+        else:
+            norm = nevt / sum(abs(w) for w in wgts)
+        return [float('%.10e' % (w*norm)) for w in wgts]
+
+    def write_run(self, irun, wgts, event_norm='average', procs=None, ebeam=6500,
+                  idwtup=-4, integrated=None, nb_event=None, pids=None):
+        """an LHE file with the banner of ttbar.lhe.gz but the event_norm, the
+        <init> block (procs = [(lprup, xsecup, xerrup)]) and MGGenerationInfo
+        given, and one event per weight. The <rwgt> block has a systematics
+        weight (2*wgt) and a bias (1+run)."""
+        import re
+        if procs is None:
+            xsec = sum(wgts)/len(wgts) if event_norm == 'average' else sum(wgts)
+            procs = [(1, xsec, 0.01*abs(xsec))]
+        if integrated is None:
+            integrated = sum(p[1] for p in procs)
+        text = re.sub(r'^\s*\w+\s*=\s*event_norm', ' %s = event_norm' % event_norm,
+                      self.banner_text, flags=re.M)
+        text = re.sub(r'#  Number of Events\s*:\s*\S+', '#  Number of Events        :       %s'
+                      % (nb_event or len(wgts)), text)
+        text = re.sub(r'#  Integrated weight \(pb\)\s*:\s*\S+',
+                      '#  Integrated weight (pb)  :       %s' % integrated, text)
+        # XMAXUP is not used by the merge: give it a meaningless value
+        init = ['2212 2212 %e %e 0 0 247000 247000 %i %i' % (ebeam, ebeam, idwtup, len(procs))]
+        init += ['%e %e %e %i' % (xsec, xerr, 123., lprup) for lprup, xsec, xerr in procs]
+        init.append("<generator name='MadGraph5_aMC@NLO' version='2.5.5'>please cite 1405.0301 </generator>")
+        text = re.sub(r'<init>.*</init>\n', lambda m: '<init>\n%s\n</init>\n' % '\n'.join(init),
+                      text, flags=re.S)
+        path = pjoin(self.path, 'run_%i' % irun, 'unweighted_events.lhe')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w') as fsock:
+            fsock.write(text)
+            for i, w in enumerate(wgts):
+                pid = pids[i] if pids else procs[0][0]
+                fsock.write(self.template % {'wgt': w, 'run': irun, 'pid': pid,
+                                             'syst': 2*w, 'bias': 1+irun})
+            fsock.write('</LesHouchesEvents>\n')
+        return path
+
+    def read(self, path):
+        """events of the merged file: list of (wgt, run, input wgt, rwgt)"""
+        events = []
+        for event in lhe_parser.EventFile(path):
+            run, orig = event.comment.split()[1:3]
+            events.append((event.wgt, int(run), float(orig), dict(event.parse_reweight())))
+        return events
+
+    @staticmethod
+    def init_lines(banner):
+        return [l.split() for l in banner['init'].split('\n') if l.strip()]
+
+    def test_merge_runs_normalisation(self):
+        """average: mean w = sigma, sum: sum w = sigma, unity: sum |w| = N,
+        with sigma = sum_i N_i sigma_i / N_tot; a single factor per run, so
+        that the relative weights and their sign are kept"""
+
+        output = pjoin(self.path, 'merged.lhe')
+        nevts, xsecs = [300, 200], [10., 10.4]
+        lam = [n/sum(nevts) for n in nevts]
+        expected = sum(l*x for l, x in zip(lam, xsecs))
+        for event_norm in ['average', 'sum', 'unity']:
+            paths = []
+            for irun in range(2):
+                wgts = self.make_weights(irun, nevts[irun], xsecs[irun], event_norm)
+                paths.append(self.write_run(irun, wgts, event_norm,
+                                            procs=[(1, xsecs[irun], 0.01*xsecs[irun])]))
+            nb_event, cross = lhe_parser.MultiEventFile.merge_runs(paths, output)
+            self.assertEqual(nb_event, sum(nevts))
+            self.assertAlmostEqual(cross/expected, 1, delta=1e-9)
+            events = self.read(output)
+            # all the events, in the order of the files
+            self.assertEqual([e[1] for e in events], [0]*nevts[0] + [1]*nevts[1])
+            factors = []
+            for irun in range(2):
+                ratios = [w/orig for w, run, orig, _ in events if run == irun]
+                # also checks that the sign is kept
+                self.assertGreater(min(ratios), 0)
+                self.assertAlmostEqual(max(ratios)/min(ratios), 1, delta=1e-6)
+                factors.append(ratios[0])
+            self.assertTrue(any(w < 0 for w, _, _, _ in events))
+            sum_wgt = sum(e[0] for e in events)
+            sum_abs = sum(abs(e[0]) for e in events)
+            if event_norm == 'average':
+                self.assertAlmostEqual(sum_wgt/nb_event/expected, 1, delta=1e-6)
+                self.assertEqual(factors, [1, 1])
+            elif event_norm == 'sum':
+                self.assertAlmostEqual(sum_wgt/expected, 1, delta=1e-6)
+                self.assertAlmostEqual(factors[0]/lam[0], 1, delta=1e-6)
+                self.assertAlmostEqual(factors[1]/lam[1], 1, delta=1e-6)
+            else:
+                self.assertAlmostEqual(sum_abs/nb_event, 1, delta=1e-6)
+                # each run keeps its own cross section
+                self.assertAlmostEqual(factors[0]/factors[1], xsecs[0]/xsecs[1], delta=1e-6)
+            # XMAXUP: the common weight, mean |w|
+            banner = lhe_parser.EventFile(output).get_banner()
+            for line in self.init_lines(banner)[1:2]:
+                self.assertAlmostEqual(float(line[2])*nb_event/sum_abs, 1, delta=1e-6)
+            self.assertAlmostEqual(banner.get_cross()/expected, 1, delta=1e-6)
+
+    def test_merge_runs_init_and_banner(self):
+        """XSECUP/XERRUP weighted by the number of events, first line of <init>
+        (IDWTUP) kept, actual number of events in the banner, header of the
+        first file otherwise unchanged"""
+
+        import re
+        procs = [[(1, 6.0, 0.06), (2, 4.0, 0.05)], [(1, 6.2, 0.07), (2, 4.1, 0.04)]]
+        # as after MadSpin: MGGenerationInfo keeps the cross section before
+        # the decays, <init> has the one of the events
+        integrated = [150.0, 154.5]
+        nevts = [300, 100]
+        paths = []
+        for irun in range(2):
+            wgts = self.make_weights(irun, nevts[irun], sum(p[1] for p in procs[irun]), 'average')
+            pids = [1 + i % 2 for i in range(nevts[irun])]
+            # a wrong number of events in the banner: the events are counted
+            paths.append(self.write_run(irun, wgts, procs=procs[irun], idwtup=-3,
+                                        integrated=integrated[irun], nb_event=1000,
+                                        pids=pids))
+        output = pjoin(self.path, 'merged.lhe.gz')
+        banner_path = pjoin(self.path, 'merged_banner.txt')
+        nb_event, cross = lhe_parser.MultiEventFile.merge_runs(paths, output, banner_path)
+        self.assertEqual(nb_event, 400)
+        lam = [0.75, 0.25]
+        self.assertAlmostEqual(cross, 0.75*10.0 + 0.25*10.3, delta=1e-6)
+
+        lhe = lhe_parser.EventFile(output)
+        banner = lhe.get_banner()
+        init = self.init_lines(banner)
+        self.assertEqual(init[0], self.init_lines(lhe_parser.EventFile(paths[0]).get_banner())[0])
+        self.assertEqual(banner.get_lha_strategy(), -3)
+        self.assertEqual(len(init), 4)
+        self.assertTrue(init[3][0].startswith('<generator'))
+        sum_abs = sum(abs(e.wgt) for e in lhe)
+        for i, (xsec, xerr, xmax, lprup) in enumerate(init[1:3]):
+            self.assertEqual(int(lprup), i+1)
+            self.assertAlmostEqual(float(xsec), sum(lam[r]*procs[r][i][1] for r in range(2)), delta=1e-6)
+            self.assertAlmostEqual(float(xerr), math.sqrt(sum((lam[r]*procs[r][i][2])**2 for r in range(2))), delta=1e-8)
+            self.assertAlmostEqual(float(xmax)/(sum_abs/nb_event), 1, delta=1e-6)
+
+        info = banner['mggenerationinfo']
+        self.assertEqual(int(re.search(r'Number of Events\s*:\s*(\S+)', info).group(1)), 400)
+        self.assertAlmostEqual(float(re.search(r'Integrated weight \(pb\)\s*:\s*(\S+)', info).group(1)),
+                               0.75*150.0 + 0.25*154.5)
+        # header: the one of the first file, but for <MGGenerationInfo> and <init>
+        header = lhe.banner
+        self.assertEqual(header.count('<MGGenerationInfo>'), 1)
+        first = open(paths[0]).read()
+        for tag in ['<MGGenerationInfo>', '</MGGenerationInfo>']:
+            self.assertEqual(first.split(tag)[0 if tag[1] != '/' else 1].split('<init>')[0],
+                             header.split(tag)[0 if tag[1] != '/' else 1].split('<init>')[0])
+        self.assertEqual(open(banner_path).read(), header + '</LesHouchesEvents>\n')
+
+    def test_merge_runs_rwgt(self):
+        """the absolute weights of <rwgt> follow the central weight, the
+        multiplicative bias does not; same output with the generic parser"""
+
+        nevts = [30, 20]
+        paths = [self.write_run(irun, self.make_weights(irun, nevts[irun], 10., 'sum'), 'sum')
+                 for irun in range(2)]
+        output = pjoin(self.path, 'merged.lhe')
+        lhe_parser.MultiEventFile.merge_runs(paths, output)
+        events = self.read(output)
+        for wgt, run, orig, rwgt in events:
+            self.assertAlmostEqual(wgt/orig, nevts[run]/sum(nevts), delta=1e-6)
+            self.assertAlmostEqual(rwgt['1']/wgt, 2, delta=1e-6)
+            self.assertEqual(rwgt['bias'], 1 + run)
+
+        # format not understood by the fast (raw bytes) path: generic parser
+        def raise_error(self):
+            raise ValueError
+            yield
+        with misc.TMP_variable(lhe_parser.EventFile, '_iter_raw_event_chunks', raise_error):
+            lhe_parser.MultiEventFile.merge_runs(paths, output)
+        for event, ref in zip(self.read(output), events):
+            self.assertAlmostEqual(event[0]/ref[0], 1, delta=1e-6)
+            self.assertEqual(event[1:3], ref[1:3])
+            self.assertAlmostEqual(event[3]['1']/ref[3]['1'], 1, delta=1e-6)
+            self.assertEqual(event[3]['bias'], ref[3]['bias'])
+
+    def test_merge_runs_raw_chunks(self):
+        """the fast path reads the files by chunks of events: same result
+        whatever the size of the chunks (events cut between two reads)"""
+
+        import functools
+        nevts = [30, 20]
+        paths = [self.write_run(irun, self.make_weights(irun, nevts[irun], 10., 'sum'), 'sum')
+                 for irun in range(2)]
+        lhe = lhe_parser.EventFile(paths[0])
+        events = open(paths[0], 'rb').read().split(b'</init>\n', 1)[1]
+        events = events.split(b'</LesHouchesEvents>')[0]
+        output = pjoin(self.path, 'merged.lhe')
+        lhe_parser.MultiEventFile.merge_runs(paths, output)
+        ref = open(output, 'rb').read()
+        orig = lhe_parser.EventFile._iter_raw_event_chunks
+        for size in [1, 13, 1000]:
+            chunks = list(lhe._iter_raw_event_chunks(size=size))
+            self.assertEqual(b''.join(chunks), events)
+            self.assertTrue(all(c.rstrip().endswith(b'</event>') for c in chunks))
+            with misc.TMP_variable(lhe_parser.EventFile, '_iter_raw_event_chunks',
+                                   functools.partialmethod(orig, size=size)):
+                self.assertEqual(lhe._scan_raw_weights()[0], nevts[0])
+                lhe_parser.MultiEventFile.merge_runs(paths, output)
+            self.assertEqual(open(output, 'rb').read(), ref)
+
+    def test_merge_runs_failure_keeps_output(self):
+        """a merge that fails leaves the previous output and banner as they
+        were, and no temporary file"""
+
+        paths = [self.write_run(irun, self.make_weights(irun, 20, 10., 'sum'), 'sum')
+                 for irun in range(2)]
+        output = pjoin(self.path, 'merged', 'unweighted_events.lhe.gz')
+        banner_path = pjoin(self.path, 'merged', 'banner.txt')
+        os.makedirs(os.path.dirname(output))
+        lhe_parser.MultiEventFile.merge_runs(paths, output, banner_path)
+        ref = [open(p, 'rb').read() for p in [output, banner_path]]
+
+        def fail(self, out, factor):
+            out.write(b'<event>\n')
+            raise RuntimeError('disk full')
+        with misc.TMP_variable(lhe_parser.EventFile, '_write_raw_rescaled_events', fail):
+            with self.assertRaisesRegex(RuntimeError, 'disk full'):
+                lhe_parser.MultiEventFile.merge_runs(paths, output, banner_path)
+        # an incompatible run
+        other = self.write_run(2, self.make_weights(2, 20, 10., 'average'), 'average')
+        with self.assertRaisesRegex(Exception, 'Cannot merge'):
+            lhe_parser.MultiEventFile.merge_runs(paths + [other], output, banner_path)
+        self.assertEqual([open(p, 'rb').read() for p in [output, banner_path]], ref)
+        self.assertEqual(sorted(os.listdir(os.path.dirname(output))),
+                         ['banner.txt', 'unweighted_events.lhe.gz'])
+
+    def test_merge_runs_no_event_norm(self):
+        """a banner without run_card: no silent guess of the normalisation,
+        the event_norm given by the caller is used"""
+
+        import re
+        nevts = [30, 20]
+        paths = []
+        for irun in range(2):
+            path = self.write_run(irun, self.make_weights(irun, nevts[irun], 10., 'sum'), 'sum')
+            text = re.sub(r'<MGRunCard>.*?</MGRunCard>\n', '', open(path).read(), flags=re.S)
+            self.assertNotIn('event_norm', text.split('</init>')[0])
+            open(path, 'w').write(text)
+            paths.append(path)
+        output = pjoin(self.path, 'merged.lhe')
+        with self.assertRaisesRegex(Exception, 'no event_norm'):
+            lhe_parser.MultiEventFile.merge_runs(paths, output)
+        self.assertFalse(os.path.exists(output))
+        lhe_parser.MultiEventFile.merge_runs(paths, output, event_norm='sum')
+        for wgt, run, orig, _ in self.read(output):
+            self.assertAlmostEqual(wgt/orig, nevts[run]/sum(nevts), delta=1e-6)
+
+    def test_merge_runs_truncated(self):
+        """a run file that ends inside an event is an error, with the raw
+        path and with the generic one, and the previous output is kept"""
+
+        paths = [self.write_run(irun, self.make_weights(irun, 20, 10., 'sum'), 'sum')
+                 for irun in range(2)]
+        output = pjoin(self.path, 'merged.lhe')
+        lhe_parser.MultiEventFile.merge_runs(paths, output)
+        ref = open(output, 'rb').read()
+        # cut the last event of the second run after its first particle
+        text = open(paths[1]).read()
+        start = text.rindex('<event>')
+        cut = text.index('\n', text.index('\n', start + len('<event>\n')) + 1) + 1
+        open(paths[1], 'w').write(text[:cut])
+        with self.assertRaises(EOFError):
+            lhe_parser.MultiEventFile.merge_runs(paths, output)
+        self.assertEqual(open(output, 'rb').read(), ref)
+
+        # generic path (format the raw path does not understand)
+        def raise_error(self):
+            raise ValueError
+            yield
+        with misc.TMP_variable(lhe_parser.EventFile, '_iter_raw_event_chunks', raise_error):
+            with self.assertRaisesRegex(Exception, 'merged 39 events instead of the 40'):
+                lhe_parser.MultiEventFile.merge_runs(paths, output)
+        self.assertEqual(open(output, 'rb').read(), ref)
+        self.assertEqual(sorted(os.listdir(self.path)), ['merged.lhe', 'run_0', 'run_1'])
+
+    def test_merge_runs_mismatch(self):
+        """runs of different generations are not merged"""
+
+        wgts = self.make_weights(0, 20, 10., 'average')
+        output = pjoin(self.path, 'merged.lhe')
+        ref = self.write_run(0, wgts, procs=[(1, 10., 0.1)])
+        cases = [
+            # beam energy
+            ({'ebeam': 7000, 'procs': [(1, 10., 0.1)]}, False),
+            # processes
+            ({'procs': [(2, 10., 0.1)]}, False),
+            ({'procs': [(1, 5., 0.05), (2, 5., 0.05)]}, False),
+            # normalisation
+            ({'event_norm': 'sum', 'procs': [(1, 10., 0.1)]}, False),
+            # cross section 20% away
+            ({'procs': [(1, 12., 0.1)]}, False),
+            # ... but compatible within the errors
+            ({'procs': [(1, 12., 1.)]}, True),
+            ({'procs': [(1, 10.3, 0.1)]}, True),
+            # a run without event
+            ({'procs': [(1, 10., 0.1)], 'wgts': []}, False),
+            ]
+        for i, (opts, valid) in enumerate(cases):
+            path = self.write_run(i+1, opts.pop('wgts', wgts), **opts)
+            if valid:
+                nb_event, _ = lhe_parser.MultiEventFile.merge_runs([ref, path], output)
+                self.assertEqual(nb_event, 40)
+            else:
+                with self.assertRaisesRegex(Exception, 'Cannot merge'):
+                    lhe_parser.MultiEventFile.merge_runs([ref, path], output)
+
+
+# MadGraph7 keeps the overweights only with keep_overweight_weight=True and
+# normalises the weights in expectation (ow_norm = 1 - excess/sigma) rather than
+# rescaling the written sample to sigma exactly, as mg5amcnlo 3.8.1 does: the
+# sample normalisation then carries the statistical spread of the accepted
+# events (a few 1e-5 here), not a 1e-9 rounding error.
+NORM_TOL = 1e-3
 
 
 class TestUnweightOverweight(unittest.TestCase):
@@ -1517,7 +2376,7 @@ class TestUnweightOverweight(unittest.TestCase):
         if not get_wgt:
             get_wgt = lambda event: event.wgt
         output = pjoin(self.path, 'unweighted_events.lhe')
-        nb_event = allevent.unweight(output, get_wgt, trunc_error=1e-2,
+        nb_event = allevent.unweight(output, get_wgt, trunc_error=1e-2, keep_overweight_weight=True,
                                      event_target=event_target,
                                      normalization=normalization)
         events = []
@@ -1551,7 +2410,7 @@ class TestUnweightOverweight(unittest.TestCase):
         # the second getter forces the generic (event parsing) loop
         for normalization, get_wgt in [('average', None), ('sum', None), ('unit', None),
                                        ('sum', lambda event: float(event.wgt))]:
-            # 500: requested number reached; 1500: not reached
+            # 500: requested number reached; 1500: not reached by a fixed max_wgt
             for event_target in [500, 1500]:
                 events, allevent = self.unweight(channels, normalization,
                                                  event_target, get_wgt)
@@ -1559,15 +2418,17 @@ class TestUnweightOverweight(unittest.TestCase):
                 if event_target == 500:
                     self.assertEqual(nb_event, event_target)
                 else:
-                    self.assertLess(nb_event, event_target)
+                    # MadGraph7 lowers max_wgt until the target is reached
+                    # (the overweights it creates are kept, not truncated)
+                    self.assertLessEqual(nb_event, event_target)
                 self.check_overweights(events, allevent.max_wgt)
                 sum_abs = sum(abs(w) for w, _ in events)
                 if normalization == 'average':
-                    self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=1e-6)
+                    self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=NORM_TOL)
                 elif normalization == 'sum':
-                    self.assertAlmostEqual(sum_abs/xsec, 1, delta=1e-6)
+                    self.assertAlmostEqual(sum_abs/xsec, 1, delta=NORM_TOL)
                 else:
-                    self.assertAlmostEqual(sum_abs/event_target, 1, delta=1e-6)
+                    self.assertAlmostEqual(sum_abs/event_target, 1, delta=NORM_TOL)
 
     def test_unweight_overweights_are_unbiased(self):
         """the written sample reproduces the input cross section carried by
@@ -1606,7 +2467,7 @@ class TestUnweightOverweight(unittest.TestCase):
             partial.add(path, across, 0.01*across, across, nb_event=len(wgts))
             output = pjoin(self.path, 'partials%i.lhe' % i)
             partial.unweight(output, lambda event: event.wgt, log_level=5,
-                             trunc_error=1e-2, event_target=300)
+                             trunc_error=1e-2, keep_overweight_weight=True, event_target=300)
             partials.append((output, across, 0.01*across, across))
         allevent = lhe_parser.MultiEventFile()
         allevent.banner = banner_mod.Banner(self.banner_text)
@@ -1614,7 +2475,7 @@ class TestUnweightOverweight(unittest.TestCase):
             allevent.add(*data)
         output = pjoin(self.path, 'unweighted_events.lhe')
         nb_event = allevent.unweight(output, lambda event: event.wgt,
-                                     trunc_error=1e-2, event_target=500,
+                                     trunc_error=1e-2, keep_overweight_weight=True, event_target=500,
                                      normalization='average')
         events = []
         for event in lhe_parser.EventFile(output):
@@ -1622,7 +2483,7 @@ class TestUnweightOverweight(unittest.TestCase):
             events.append((event.wgt, float(orig) * (int(ifile)+1)))
         self.assertEqual(len(events), nb_event)
         sum_abs = sum(abs(w) for w, _ in events)
-        self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=1e-6)
+        self.assertAlmostEqual(sum_abs/nb_event/xsec, 1, delta=NORM_TOL)
         common = min(abs(w) for w, _ in events)
         self.assertGreater(max(abs(w) for w, _ in events)/common, 2)
         for written, orig in events:

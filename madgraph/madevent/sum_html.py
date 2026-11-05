@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -157,7 +157,7 @@ class RunStatistics(dict):
         """Returns a one-line string summarizing the run statistics 
         gathered for the channel G."""
         
-        # Do not return anythign for now if there is no madloop calls. This can
+        # Do not return anything for now if there is no madloop calls. This can
         # change of course if more statistics are gathered, unrelated to MadLoop.
         if self['n_madloop_calls']==0:
             return ''
@@ -269,11 +269,12 @@ class OneResult(object):
         self.th_nunwgt = 0 # associated number of event with th_maxwgt 
                            #(this is theoretical do not correspond to a number of written event)
         self.timing = 0
+        self.subprocess_weights = []  # per-leshouche-row relative weights (from grouped DSIG)
         return
     
     #@cluster.multiple_try(nb_try=5,sleep=20)
     def read_results(self, filepath):
-        """read results.dat and fullfill information"""
+        """read results.dat and fill information"""
         
         if isinstance(filepath, str):
             finput = open(filepath)
@@ -306,17 +307,17 @@ class OneResult(object):
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
                          self.xsec = data[:10]
                 except ValueError:
-                    log = pjoin(os.path.dirname(filepath), 'log.txt')
+                    # filepath may be a file descriptor (not a path string), so
+                    # derive the directory from the opened file object's name.
+                    log = pjoin(os.path.dirname(finput.name), 'log.txt')
                     if os.path.exists(log):
                         if 'end code not correct' in line:
                             error_code = data[4]
-                            log = pjoin(os.path.dirname(filepath), 'log.txt')
                             raise Exception("Reported error: End code %s \n Full associated log: \n%s"\
                                   % (error_code, open(log).read()))
                         else:
-                            log = pjoin(os.path.dirname(filepath), 'log.txt')
                             raise Exception("Wrong formatting in results.dat: %s \n Full associated log: \n%s"\
-                                %  (line, open(log).read()))                        
+                                %  (line, open(log).read()))
                 if len(data) > 10:
                     self.maxwgt = data[10]
                 if len(data) >12:
@@ -357,7 +358,9 @@ class OneResult(object):
     def parse_xml_results(self, xml):
         """ Parse the xml part of the results.dat file."""
 
-        dom = minidom.parseString(xml)
+        # Wrap in a <root> element so minidom can handle multiple top-level XML
+        # fragments (e.g. <run_statistics> and <subprocess_weights> coexisting).
+        dom = minidom.parseString('<root>%s</root>' % xml)
                     
         statistics_node = dom.getElementsByTagName("run_statistics")
         
@@ -367,10 +370,19 @@ class OneResult(object):
             except ValueError as IndexError:
                 logger.warning('Fail to read run statistics from results.dat')
         else:
-            lo_statistics_node = dom.getElementsByTagName("lo_statistics")[0]
-            timing = lo_statistics_node.getElementsByTagName('cumulated_time')[0]
-            timing= timing.firstChild.nodeValue
-            self.timing = 0.3 + float(timing) #0.3 is the typical latency of bash script/...
+            lo_statistics_node = dom.getElementsByTagName("lo_statistics")
+            if lo_statistics_node:
+                timing = lo_statistics_node[0].getElementsByTagName('cumulated_time')[0]
+                timing= timing.firstChild.nodeValue
+                self.timing = 0.3 + float(timing) #0.3 is the typical latency of bash script/...
+
+        subprocess_weights_node = dom.getElementsByTagName("subprocess_weights")
+        if subprocess_weights_node:
+            try:
+                text = subprocess_weights_node[0].firstChild.nodeValue
+                self.subprocess_weights = [float(x) for x in text.split()]
+            except Exception:
+                pass
 
 
     def set_mfactor(self, value):
@@ -456,6 +468,23 @@ class Combine_results(list, OneResult):
         if update_statistics:
             self.run_statistics.aggregate_statistics([_.run_statistics for _ in self])
 
+        # Aggregate per-leshouche-row subprocess weights across G directories.
+        # Use a cross-section-weighted average so that more-contributing channels
+        # dominate the combined weights.
+        sources = [one for one in self if one.subprocess_weights]
+        if sources:
+            total_axsec = sum(one.axsec for one in sources)
+            if total_axsec > 0:
+                n = len(sources[0].subprocess_weights)
+                combined = [0.0] * n
+                for one in sources:
+                    if len(one.subprocess_weights) == n:
+                        for i, w in enumerate(one.subprocess_weights):
+                            combined[i] += w * one.axsec / total_axsec
+                self.subprocess_weights = combined
+            else:
+                self.subprocess_weights = sources[-1].subprocess_weights
+
     def compute_average(self, error=None):
         """compute the value associate to this combination"""
 
@@ -517,7 +546,7 @@ class Combine_results(list, OneResult):
         #    nb_iter = 0 
         #nb_iter = misc.mmin([len(a.ysec_iter) for a in self], 0)
         #misc.sprint(nb_iter)
-        # syncronize all iterations to a single one
+        # synchronize all iterations to a single one
         for oneresult in self:
             oneresult.change_iterations_number(0)
             
@@ -682,6 +711,12 @@ class Combine_results(list, OneResult):
         if self.timing:
             text = """<lo_statistics>\n<cumulated_time> %s </cumulated_time>\n</lo_statistics>"""
             fsock.writelines(text % self.timing)
+
+        if self.subprocess_weights:
+            fsock.writelines('<subprocess_weights>\n')
+            for w in self.subprocess_weights:
+                fsock.writelines('%.10E\n' % w)
+            fsock.writelines('</subprocess_weights>\n')
         
 
 
@@ -707,8 +742,20 @@ function UrlExists(url) {
 </script>
 """ 
 
-def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
-    """ """ 
+def collect_result(cmd, folder_names=[], jobs=None, main_dir=None, apply_symmetry=True):
+    """Collect subprocess integration results.
+
+    Args:
+        cmd: MadEvent command interface.
+        folder_names: Optional glob-like folder suffix patterns to read.
+        jobs: Optional explicit job descriptors.
+        main_dir: Optional base directory override for readonly/gridpack modes.
+        apply_symmetry: If False, do not apply symfact.dat multiplicative
+            factors when attaching channel results.
+
+    Returns:
+        Combine_results: Aggregated run result object with subprocess entries.
+    """ 
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
@@ -733,7 +780,8 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                             dir = folder.replace('*', name)
                         else:
                             dir = folder.replace('*', '_G' + name)
-                        P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), mfactor)
+                        sym_factor = mfactor if apply_symmetry else 1
+                        P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), sym_factor)
                 if jobs:
                     for job in [j for j in jobs if j['p_dir'] == Pdir]:
                         P_comb.add_results(os.path.basename(job['dirname']),\
@@ -748,7 +796,8 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                         path = pjoin(main_dir, os.path.basename(Pdir), os.path.basename(G),'results.dat')
                     else:
                         path = pjoin(G,'results.dat')
-                    P_comb.add_results(os.path.basename(G), path, mfactors[G])
+                    sym_factor = mfactors[G] if apply_symmetry else 1
+                    P_comb.add_results(os.path.basename(G), path, sym_factor)
 
         P_comb.compute_values()
         all.append(P_comb)
@@ -815,4 +864,3 @@ def make_all_html_results(cmd, folder_names = [], jobs=[], get_attr=None):
         return getattr(Presults, get_attr)
 
             
-

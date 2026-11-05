@@ -40,14 +40,14 @@ int GetFileNTuBuildWindow(nTuBuildWindow *window, char* filename)
         (header_c_.n_obj_header != 1)) {
         DialogF(DF_ERR, window->shell, 1,
                 " This file was not created by this application!",
-                 "Acknowldged");
+                 "Acknowledged");
         return 1;
     }
     if (strcmp(line_title_c_.line_title[0].line,
                "ntuBuild Database, v1.0") != 0) {
         DialogF(DF_ERR, window->shell, 1,
                 " This file was created by a wrong version of ntuBuild!",
-                 "Acknowldged");
+                 "Acknowledged");
         return 2;
     }
     /*
@@ -192,11 +192,11 @@ void SaveFileNTuBuildWindow(nTuBuildWindow *window)
     for (iv=0; iv< nVar; iv++) dNTu->varOrdering[iv] = iv;
     UpdateVariableList(window, 0);
     /*
-    ** Check the alignement of the structure. Variable must aligned on 
+    ** Check the alignment of the structure. Variable must aligned on
     ** a word boundary. We got 8+4 bytes offset due to the version and 
     ** the multiplicity value (which is an int ).  So we always add a 
     ** padding variable.  Note: ultimately, this
-    ** machine dependant code, but seems to be ok for 32 bit to 64 
+    ** machine dependent code, but seems to be ok for 32 bit to 64
     ** bit conversion. One way to avoid this is to start the structure
     ** with the longest type, however, it still unsafe as we want
     ** to keep the variable part sepqarated from the arrays of 

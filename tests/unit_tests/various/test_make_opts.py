@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -18,7 +18,7 @@
 MadGraphCmd.__init__, set_fortran_compiler / set_cpp_compiler) and read by many
 more: it is copied verbatim into every new output directory and then parsed by
 ``make``. ``MG5DIR/Template/LO/Source/make_opts`` in particular is shared by
-every MG5aMC process on the machine, and MadSpin forks a worker per core, each
+every MadGraph7 process on the machine, and MadSpin forks a worker per core, each
 of which can be exporting a decay matrix element at the same moment.
 
 If any of those writers truncates the file in place (which ``open(..,'w')`` and

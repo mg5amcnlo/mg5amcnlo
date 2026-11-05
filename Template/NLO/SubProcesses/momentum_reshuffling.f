@@ -131,9 +131,9 @@ C-----Local
 *     Authors: Marco Zaro                                              *
 *     Given momenta p(nu,nexternal-1) produce q(nu,external-1).        * 
 *     Only in this function, iresh, pdg_old, pdg_new are 2-component   *
-*     arrays, with the informations on the two particles whose mass    *
+*     arrays, with the information on the two particles whose mass    *
 *     Is going to be changed.                                          *
-*     Reshuffling is perfomed conserving the invariant mass and total  *
+*     Reshuffling is performed conserving the invariant mass and total  *
 *     momentum of the two particles. Also the angles in the combined   *
 *     rest frame are preserved. The other momenta are left unchanged   *
 ************************************************************************

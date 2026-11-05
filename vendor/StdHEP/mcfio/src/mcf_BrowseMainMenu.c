@@ -171,7 +171,7 @@ static void setMemMappedCB(Widget w,  caddr_t clientData, caddr_t callData)
          (McfioPanelState != NO_FILE_OPEN)) {
              if (McfioPanelState == SCANNING) {
                  DialogF(DF_WARN, McfioMainPanelW, 1,
-"You can not changed I/O acces mode while scanning the file. \n\
+"You cannot change I/O access mode while scanning the file. \n\
   Stop running first !.... ", "Acknowledged");
                  McfioSetMemoryMappedIO  = old_set;
                  return;
@@ -198,7 +198,7 @@ static void setDecodingCB(Widget w,  caddr_t clientData, caddr_t callData)
 {
       if (DialogF(DF_QUES, McfioMainPanelW, 2, 
 " Upon decrypting the Ntuple header, you might need to re-create \n\
-  internals pointer lists in case the file was geenrated on a different UNIX\n\
+  internals pointer lists in case the file was generated on a different UNIX\n\
   flavor. By default, this step is skipped.",
      "Re-Created Pointers", "Skip ") == 1) mcfioC_SetForSaveDecoding(1);
      else  mcfioC_SetForSaveDecoding(0); 

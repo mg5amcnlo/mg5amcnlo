@@ -180,7 +180,7 @@ class MW_info(dict,P_info):
 
     #3#########################################################################
     def init_run_opt(self,value=1):
-        """ init all the run scheduling paramater to value """
+        """ init all the run scheduling parameter to value """
         self.run_opt={}
         self.run_opt['param']=value
         self.run_opt['analyzer']=value
@@ -192,9 +192,9 @@ class MW_info(dict,P_info):
         self.run_opt['collect']=value
         self.run_opt['plot']=value 
         self.run_opt['madweight_main']=value
-        self.run_opt['relaunch']=0           #only for bugging case... -> desactivate
-        self.run_opt['refine']=0             #only for bugging case... -> desactivate
-        self.run_opt['clean']=0              #dangerous... -> desactivate
+        self.run_opt['relaunch']=0           #only for bugging case... -> deactivate
+        self.run_opt['refine']=0             #only for bugging case... -> deactivate
+        self.run_opt['clean']=0              #dangerous... -> deactivate
         self.run_opt['status']=0             # not in the mean stream
         self.control_opt()
 
@@ -204,7 +204,7 @@ class MW_info(dict,P_info):
             those default value and the type are defined in MW_param_default.inc
             structure of this file:
             block tag type value #comment
-            additionaly check if the mw_parameter['?3'] is a list
+            additionally check if the mw_parameter['?3'] is a list
         """
         
         #define convertissor
@@ -410,7 +410,7 @@ class MW_info(dict,P_info):
         except:
             print('no mapping card found')
             for i in range(1,self.nb_card+1):
-                self.param_is_actif[i]=1 #if no file defined all card are supose to be used
+                self.param_is_actif[i]=1 #if no file defined all cards are supposed to be used
             self.actif_param=list(range(1,self.nb_card+1))
             return
 

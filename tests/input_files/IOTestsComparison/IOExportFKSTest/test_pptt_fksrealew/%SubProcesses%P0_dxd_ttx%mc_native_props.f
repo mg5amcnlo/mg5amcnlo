@@ -15,38 +15,38 @@
       POW=0
       SELECT CASE(ACTIVE_CONTEXT)
       CASE(1)
-      PMASS( -1,   1)  = ABS(MDL_MT)
-      PWIDTH( -1,   1) = ABS(MDL_WT)
-      POW( -1,   1) = 1
-      PMASS( -1,   2)  = ABS(MDL_MT)
-      PWIDTH( -1,   2) = ABS(MDL_WT)
-      POW( -1,   2) = 1
+        PMASS( -1,   1)  = ABS(MDL_MT)
+        PWIDTH( -1,   1) = ABS(MDL_WT)
+        POW( -1,   1) = 1
+        PMASS( -1,   2)  = ABS(MDL_MT)
+        PWIDTH( -1,   2) = ABS(MDL_WT)
+        POW( -1,   2) = 1
       CASE(3)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 2
-      PMASS( -1,   2)  = ZERO
-      PWIDTH( -1,   2) = ZERO
-      POW( -1,   2) = 2
-      PMASS( -1,   3)  = ABS(MDL_MZ)
-      PWIDTH( -1,   3) = ABS(MDL_WZ)
-      POW( -1,   3) = 2
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 2
+        PMASS( -1,   2)  = ZERO
+        PWIDTH( -1,   2) = ZERO
+        POW( -1,   2) = 2
+        PMASS( -1,   3)  = ABS(MDL_MZ)
+        PWIDTH( -1,   3) = ABS(MDL_WZ)
+        POW( -1,   3) = 2
       CASE(4)
-      PMASS( -1,   1)  = ABS(MDL_MT)
-      PWIDTH( -1,   1) = ABS(MDL_WT)
-      POW( -1,   1) = 1
-      PMASS( -1,   2)  = ABS(MDL_MT)
-      PWIDTH( -1,   2) = ABS(MDL_WT)
-      POW( -1,   2) = 1
+        PMASS( -1,   1)  = ABS(MDL_MT)
+        PWIDTH( -1,   1) = ABS(MDL_WT)
+        POW( -1,   1) = 1
+        PMASS( -1,   2)  = ABS(MDL_MT)
+        PWIDTH( -1,   2) = ABS(MDL_WT)
+        POW( -1,   2) = 1
       CASE(5)
-      PMASS( -1,   1)  = ZERO
-      PWIDTH( -1,   1) = ZERO
-      POW( -1,   1) = 2
-      PMASS( -1,   2)  = ABS(MDL_MT)
-      PWIDTH( -1,   2) = ABS(MDL_WT)
-      POW( -1,   2) = 1
-      PMASS( -1,   3)  = ABS(MDL_MT)
-      PWIDTH( -1,   3) = ABS(MDL_WT)
-      POW( -1,   3) = 1
+        PMASS( -1,   1)  = ZERO
+        PWIDTH( -1,   1) = ZERO
+        POW( -1,   1) = 2
+        PMASS( -1,   2)  = ABS(MDL_MT)
+        PWIDTH( -1,   2) = ABS(MDL_WT)
+        POW( -1,   2) = 1
+        PMASS( -1,   3)  = ABS(MDL_MT)
+        PWIDTH( -1,   3) = ABS(MDL_WT)
+        POW( -1,   3) = 1
       END SELECT
       END

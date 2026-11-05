@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 import copy
+import fractions
 import itertools
 import logging
 import math
@@ -24,9 +25,12 @@ import math
 
 import tests.unit_tests as unittest
 
+import madgraph
+import madgraph.various.misc as misc
 import madgraph.core.base_objects as base_objects
+import madgraph.core.color_amp as color_amp
 import madgraph.core.diagram_generation as diagram_generation
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 from madgraph import MadGraph5Error, InvalidCmd
 #===============================================================================
 # AmplitudeTest
@@ -803,6 +807,39 @@ class DiagramGenerationTest(unittest.TestCase):
 
             self.assertRaises(InvalidCmd, self.myamplitude.generate_diagrams)
             self.assertEqual(len(self.myamplitude.get('diagrams')), 0)
+
+    def test_diagram_generation_merged_charge_tuple(self):
+        """Check merged-flavor charge tuples allow/forbid processes correctly."""
+
+        import madgraph.interface.master_interface as Cmd
+        cmd = Cmd.MasterCmd()
+        cmd.do_import('model sm')
+        model = cmd._curr_model
+
+        # This process must be rejected: no concrete quark-flavor assignment can conserve charge.
+        invalid_legs = base_objects.LegList([
+            base_objects.Leg({'id':21, 'state':False}),
+            base_objects.Leg({'id':21, 'state':False}),
+            base_objects.Leg({'id':24, 'state':True}),
+            base_objects.Leg({'id':24, 'state':True}),
+            base_objects.Leg({'id':81, 'state':True}),
+            base_objects.Leg({'id':-81, 'state':True})
+        ])
+        invalid_proc = base_objects.Process({'legs': invalid_legs, 'model': model})
+        invalid_amp = diagram_generation.Amplitude({'process': invalid_proc})
+        self.assertRaises(InvalidCmd, invalid_amp.generate_diagrams)
+        self.assertEqual(len(invalid_amp.get('diagrams')), 0)
+
+        # This process must remain allowed: at least one flavor assignment conserves charge.
+        valid_legs = base_objects.LegList([
+            base_objects.Leg({'id':81, 'state':False}),
+            base_objects.Leg({'id':-81, 'state':False}),
+            base_objects.Leg({'id':24, 'state':True})
+        ])
+        valid_proc = base_objects.Process({'legs': valid_legs, 'model': model})
+        valid_amp = diagram_generation.Amplitude({'process': valid_proc})
+        valid_amp.generate_diagrams()
+        self.assertGreater(len(valid_amp.get('diagrams')), 0)
 
     def test_diagram_generation_photons(self):
         """Test the number of diagram generated for uu~>na with n up to 6"""
@@ -3712,7 +3749,11 @@ class TestDiagramTag(unittest.TestCase):
         myproc = base_objects.Process({'legs':myleglist,
                                        'model':self.base_model})
 
-        myamplitude = diagram_generation.Amplitude(myproc)
+        # DiagramTag is what is checked here, against diagram numbers, so it
+        # wants the plain generation order -- the four gluon merging reorders
+        # them
+        with misc.TMP_variable(madgraph, 'merge_quartic_vertices', False):
+            myamplitude = diagram_generation.Amplitude(myproc)
 
         tags = []
         permutations = []
@@ -3861,3 +3902,532 @@ class TestDiagramTag(unittest.TestCase):
                                  diagram_generation.DiagramTag(\
                                      dtag.diagram_from_tag(self.base_model)))
 
+#===============================================================================
+# TestQuarticUnrolling
+#===============================================================================
+class TestQuarticUnrolling(unittest.TestCase):
+    """Test the unrolling of quartic vertices into pairs of cubic ones"""
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+
+    def make_amplitude(self, initial, final, orders=None):
+        myleglist = base_objects.LegList(
+            [base_objects.Leg({'id':pdg, 'state':False}) for pdg in initial] +
+            [base_objects.Leg({'id':pdg, 'state':True}) for pdg in final])
+        mydict = {'legs':myleglist, 'model':self.base_model}
+        if orders:
+            mydict['orders'] = orders
+        return diagram_generation.Amplitude(base_objects.Process(mydict))
+
+    def colour_directions(self, amplitude):
+        """Return {(diagram, colour chain): (direction, norm)} where direction
+        is the colour vector of that contribution normalised to its first non
+        zero entry. Two contributions can be summed exactly when they share a
+        direction, the relative weight being the ratio of their norms. This is
+        computed from the colour algebra and is completely independent from
+        the unrolling being tested."""
+
+        basis = color_amp.ColorBasis()
+        basis.build(amplitude)
+        components = {}
+        for index, key in enumerate(sorted(basis.keys())):
+            for (diag, chain, coeff, imag, nc, loop_nc) in basis[key]:
+                components.setdefault((diag, chain), {})[index] = \
+                    (fractions.Fraction(coeff), imag, nc, loop_nc)
+
+        res = {}
+        for piece, entries in components.items():
+            first = min(entries)
+            norm, imag, nc, loop_nc = entries[first]
+            res[piece] = (tuple(sorted(
+                (i, c / norm, m ^ imag, n - nc, l - loop_nc)
+                for i, (c, m, n, l) in entries.items())), norm)
+        return res
+
+    def check_process(self, initial, final, nlink, orders=None):
+        """Every link must reproduce the colour algebra, and every quartic
+        contribution must be linked to exactly one cubic diagram."""
+
+        amplitude = self.make_amplitude(initial, final, orders)
+        links = amplitude.unroll_quartic_vertices()
+        directions = self.colour_directions(amplitude)
+        diagrams = amplitude.get('diagrams')
+
+        self.assertEqual(len(links), nlink)
+
+        for (diag, chain), (target, coeff) in links.items():
+            target_chain = (0,) * len(diagrams[target].get('vertices'))
+            source_dir, source_norm = directions[(diag, chain)]
+            target_dir, target_norm = directions[(target, target_chain)]
+            # same colour direction, and the coefficient is the relative weight
+            self.assertEqual(source_dir, target_dir)
+            self.assertEqual(coeff, source_norm / target_norm)
+            # the target is a genuine cubic diagram
+            self.assertEqual(amplitude.unrolled_diagram(
+                diagrams[target], {},
+                diagram_generation.get_unrollable_quartic_vertices(
+                    self.base_model)).get('vertices'),
+                diagrams[target].get('vertices'))
+
+        # nothing is left behind: the contributions which are not linked are
+        # exactly the ones carried by a diagram without any quartic vertex
+        unrollable = diagram_generation.get_unrollable_quartic_vertices(
+            self.base_model)
+        cubic = [i for i, d in enumerate(diagrams)
+                 if not any(v.get('id') in unrollable
+                            for v in d.get('vertices'))]
+        unlinked = [piece for piece in directions if piece not in links]
+        self.assertEqual(sorted(piece[0] for piece in unlinked), sorted(cubic))
+
+    def test_unrollable_vertices_sm(self):
+        """The four gluon vertex is the only one factorising in the SM"""
+
+        unrollable = diagram_generation.get_unrollable_quartic_vertices(
+            self.base_model)
+        self.assertEqual(len(unrollable), 1)
+        (cubic, pairings), = unrollable.values()
+        quartic, = unrollable.keys()
+        self.assertEqual([p.get_pdg_code() for p in
+                          self.base_model.get_interaction(quartic).get('particles')],
+                         [21, 21, 21, 21])
+        self.assertEqual([p.get_pdg_code() for p in
+                          self.base_model.get_interaction(cubic).get('particles')],
+                         [21, 21, 21])
+        # each colour structure splits the four legs into two pairs
+        self.assertEqual(pairings, [((0, 1), (2, 3)),
+                                    ((0, 2), (1, 3)),
+                                    ((0, 3), (1, 2))])
+
+    def test_unroll_gg_gg(self):
+        """g g > g g: the contact term merges into the s, t and u channel"""
+
+        self.check_process([21, 21], [21, 21], 3)
+
+    def test_unroll_gg_ggg(self):
+        """g g > g g g: 45 contributions collapse onto the 15 cubic diagrams"""
+
+        self.check_process([21, 21], [21, 21, 21], 30)
+
+    def test_unroll_gg_gggg(self):
+        """g g > g g g g: 510 contributions collapse onto 105 cubic diagrams"""
+
+        self.check_process([21, 21], [21, 21, 21, 21], 405)
+
+    def test_unroll_bbx_ggg(self):
+        """A quartic vertex sitting next to a colour triplet line"""
+
+        self.check_process([5, -5], [21, 21, 21], 3)
+
+    def test_unroll_gg_ttxg(self):
+        """The quartic vertex feeding an internal gluon of a t t~ pair"""
+
+        self.check_process([21, 21], [6, -6, 21], 3)
+
+    def test_links_match_helas_colour_indices(self):
+        """The links must be usable against HelasAmplitude.
+
+        helas_objects colorizes the reconstructed base amplitude, whose
+        vertex order can differ from the generated diagrams, so the chains
+        only line up with HelasAmplitude.get('color_indices') when the
+        unrolling is run on get_base_amplitude()."""
+
+        import madgraph.core.helas_objects as helas_objects
+
+        amplitude = self.make_amplitude([21, 21], [21, 21, 21])
+        matrix_element = helas_objects.HelasMatrixElement(amplitude)
+        base = matrix_element.get('base_amplitude')
+
+        known = {}
+        for diagram in matrix_element.get('diagrams'):
+            for helas_amp in diagram.get('amplitudes'):
+                known[(diagram.get('number') - 1,
+                       tuple(helas_amp.get('color_indices')))] = \
+                    helas_amp.get('number')
+
+        links = base.unroll_quartic_vertices()
+        self.assertTrue(links)
+        for (diag, chain), (target, _) in links.items():
+            target_chain = (0,) * len(base.get('diagrams')[target].get('vertices'))
+            self.assertIn((diag, chain), known)
+            self.assertIn((target, target_chain), known)
+        # every amplitude is either a merge target or folded into one
+        self.assertEqual(len(known) - len(links),
+                         len(set(target for target, _ in links.values())))
+
+    def test_no_unrolling_without_quartic(self):
+        """Processes without a four gluon vertex give no link"""
+
+        amplitude = self.make_amplitude([5, -5], [5, -5])
+        self.assertEqual(amplitude.unroll_quartic_vertices(), {})
+
+#===============================================================================
+# TestSeedRule
+#===============================================================================
+class TestSeedRule(unittest.TestCase):
+    """Test the seed rule: no two cubic gluon vertices sharing a line.
+
+    Unrolling a quartic vertex always yields two cubic vertices joined by the
+    line which replaced it, so the diagrams generation has to keep are exactly
+    those with no such pair to contract back."""
+
+    def setUp(self):
+        self.base_model = import_ufo.import_model('sm')
+        self.cubic_ids = diagram_generation.get_unrollable_cubic_ids(
+            self.base_model)
+        self.merge_quartic = madgraph.merge_quartic_vertices
+
+    def tearDown(self):
+        madgraph.merge_quartic_vertices = self.merge_quartic
+
+    def make_diagrams(self, initial, final, seed):
+        """The generated diagrams, either the full set or -- with the seed
+        rule on and the expansion stopped -- the seed it starts from."""
+
+        madgraph.merge_quartic_vertices = seed
+        myleglist = base_objects.LegList(
+            [base_objects.Leg({'id':pdg, 'state':False}) for pdg in initial] +
+            [base_objects.Leg({'id':pdg, 'state':True}) for pdg in final])
+        process = base_objects.Process({'legs':myleglist,
+                                        'model':self.base_model})
+        if not seed:
+            return diagram_generation.Amplitude(process).get('diagrams')
+
+        class SeedOnlyAmplitude(diagram_generation.Amplitude):
+            """Stops after the seed, so that it can be looked at"""
+            def expand_seed_diagrams(self, seed):
+                return seed
+
+        return SeedOnlyAmplitude(process).get('diagrams')
+
+    def cubic_adjacencies(self, diagram):
+        """Number of lines joining two cubic gluon vertices, counted without
+        any help from the generation. A line is recognised by its leg number
+        being live, a vertex reusing the smallest number coming in for the leg
+        it produces."""
+
+        vertices = diagram.get('vertices')
+        last = len(vertices) - 1
+        live = {}
+        count = 0
+        for i, vertex in enumerate(vertices):
+            legs = vertex.get('legs')
+            for leg in (legs if i == last else legs[:-1]):
+                producer = live.pop(leg.get('number'), None)
+                if producer is not None and \
+                   vertices[producer].get('id') in self.cubic_ids and \
+                   vertex.get('id') in self.cubic_ids:
+                    count += 1
+            if i != last:
+                live[legs[-1].get('number')] = i
+        self.assertFalse(live)
+        return count
+
+    def check_process(self, initial, final, nfull, nseed):
+        """The generated seed has to be exactly the full generation filtered
+        on the rule -- same diagrams, not merely the same count."""
+
+        full = self.make_diagrams(initial, final, False)
+        seed = self.make_diagrams(initial, final, True)
+        self.assertEqual(len(full), nfull)
+        self.assertEqual(len(seed), nseed)
+
+        def tags(diagrams):
+            return set(str(diagram_generation.UnrollDiagramTag(
+                diagram, self.base_model, len(initial)))
+                       for diagram in diagrams)
+
+        self.assertEqual(tags(seed),
+                         tags([d for d in full
+                               if not self.cubic_adjacencies(d)]))
+        self.assertFalse([d for d in seed if self.cubic_adjacencies(d)])
+
+    def test_seed_gg_gg(self):
+        """g g > g g: only the contact term has no cubic pair"""
+
+        self.check_process([21, 21], [21, 21], 4, 1)
+
+    def test_seed_gg_ggg(self):
+        """g g > g g g: the ten one quartic one cubic diagrams"""
+
+        self.check_process([21, 21], [21, 21, 21], 25, 10)
+
+    def test_seed_gg_gggg(self):
+        """g g > g g g g: 45 with a quartic in the middle, 10 with two"""
+
+        self.check_process([21, 21], [21, 21, 21, 21], 220, 55)
+
+    def test_seed_gg_ggggg(self):
+        """g g > g g g g g"""
+
+        self.check_process([21, 21], [21, 21, 21, 21, 21], 2485, 385)
+
+    def test_seed_gg_ttxgg(self):
+        """A cubic gluon vertex next to a quark line is not touched"""
+
+        self.check_process([21, 21], [6, -6, 21, 21], 123, 84)
+
+    def check_expansion(self, initial, final, nfull, nlink):
+        """Expanding the seed has to give the baseline diagram set back, and
+        the links it records have to be the ones the colour algebra gives."""
+
+        base = self.make_diagrams(initial, final, False)
+        madgraph.merge_quartic_vertices = True
+        myleglist = base_objects.LegList(
+            [base_objects.Leg({'id':pdg, 'state':False}) for pdg in initial] +
+            [base_objects.Leg({'id':pdg, 'state':True}) for pdg in final])
+        amplitude = diagram_generation.Amplitude(base_objects.Process(
+            {'legs':myleglist, 'model':self.base_model}))
+        expanded = amplitude.get('diagrams')
+
+        def tags(diagrams):
+            return set(str(diagram_generation.UnrollDiagramTag(
+                diagram, self.base_model, len(initial)))
+                       for diagram in diagrams)
+
+        # same diagrams, and no diagram reached twice
+        self.assertEqual(len(expanded), nfull)
+        self.assertEqual(len(base), nfull)
+        self.assertEqual(tags(expanded), tags(base))
+        self.assertEqual(len(tags(expanded)), nfull)
+
+        # the links recorded while expanding, and the independent ones
+        recorded = amplitude.get_quartic_unroll_links()
+        colour = amplitude.unroll_quartic_vertices()
+        self.assertEqual(len(recorded), nlink)
+        self.assertEqual(set(recorded), set(colour))
+        for key, target in recorded.items():
+            self.assertEqual(target, colour[key][0])
+
+    def test_expand_gg_gg(self):
+        """g g > g g: the contact term unrolls into s, t and u"""
+
+        self.check_expansion([21, 21], [21, 21], 4, 3)
+
+    def test_expand_gg_ggg(self):
+        """g g > g g g"""
+
+        self.check_expansion([21, 21], [21, 21, 21], 25, 30)
+
+    def test_expand_gg_gggg(self):
+        """g g > g g g g: 55 seeds reach all 220 diagrams"""
+
+        self.check_expansion([21, 21], [21, 21, 21, 21], 220, 405)
+
+    def test_expand_gg_ttxgg(self):
+        """Expansion leaves the quark lines alone"""
+
+        self.check_expansion([21, 21], [6, -6, 21, 21], 123, 54)
+
+    def test_current_sums_gg_ggg(self):
+        """g g > g g g: seven quartic amplitudes become a current sum"""
+
+        self.check_current_sums([21, 21], [21, 21, 21], 7, 7)
+
+    def test_current_sums_gg_gggg(self):
+        """g g > g g g g: thirty sums take sixty amplitude calls away"""
+
+        self.check_current_sums([21, 21], [21, 21, 21, 21], 30, 60)
+
+    def test_current_sums_inactive_by_default(self):
+        """No current sum unless madgraph.merge_quartic_vertices is set"""
+
+        import madgraph.core.helas_objects as helas_objects
+
+        madgraph.merge_quartic_vertices = False
+        myleglist = base_objects.LegList(
+            [base_objects.Leg({'id':21, 'state':False})] * 2 +
+            [base_objects.Leg({'id':21, 'state':True})] * 3)
+        matrix_element = helas_objects.HelasMatrixElement(
+            diagram_generation.Amplitude(base_objects.Process(
+                {'legs':myleglist, 'model':self.base_model})))
+        self.assertEqual(matrix_element.get_quartic_current_sums(),
+                         ([], {}, set()))
+        self.assertEqual(matrix_element.get_quartic_sum_me_ids(), [])
+
+    def check_current_sums(self, initial, final, nsum, nfolded):
+        """A current sum has to stand for exactly the amplitude it takes away:
+        the same vertex, with the quartic current where the target has the
+        cubic one."""
+
+        import madgraph.core.helas_objects as helas_objects
+
+        madgraph.merge_quartic_vertices = True
+        myleglist = base_objects.LegList(
+            [base_objects.Leg({'id':pdg, 'state':False}) for pdg in initial] +
+            [base_objects.Leg({'id':pdg, 'state':True}) for pdg in final])
+        matrix_element = helas_objects.HelasMatrixElement(
+            diagram_generation.Amplitude(base_objects.Process(
+                {'legs':myleglist, 'model':self.base_model})))
+
+        sums, uses, folded = matrix_element.get_quartic_current_sums()
+        merges = matrix_element.get_quartic_amplitude_merges()
+        self.assertEqual(len(sums), nsum)
+        self.assertEqual(len(folded), nfolded)
+        # every sum gets a wavefunction slot, out of the same pool as the
+        # wavefunctions themselves
+        slots = matrix_element.get_quartic_sum_me_ids()
+        self.assertEqual(len(slots), nsum)
+        self.assertTrue(all(slot > 0 for slot in slots))
+
+        amplitudes = dict((amplitude.get('number'), amplitude)
+                          for diagram in matrix_element.get('diagrams')
+                          for amplitude in diagram.get('amplitudes'))
+        unrollable = diagram_generation.get_unrollable_quartic_vertices(
+            self.base_model)
+
+        # every sum is a quartic current against the cubic pair it splits into
+        for cubic, quartic, coeff in sums:
+            self.assertTrue(helas_objects.HelasMatrixElement.is_unrolled_pair(
+                quartic, cubic, unrollable, self.cubic_ids))
+
+        # and every amplitude taken away is the target with some of the
+        # substitutions applied, which is exactly what reading the sums gives
+        for source in folded:
+            self.assertIn(source, merges)
+            target, coeff = merges[source]
+            self.assertIn(target, uses)
+            swap = dict((cubic, sums[index][1].get('number'))
+                        for cubic, index in uses[target].items())
+            mothers = [mother.get('number')
+                       for mother in amplitudes[target].get('mothers')]
+            options = []
+            for size in range(1, len(swap) + 1):
+                for combination in itertools.combinations(sorted(swap), size):
+                    options.append(sorted(swap[number]
+                                          if number in combination else number
+                                          for number in mothers))
+            self.assertIn(sorted(mother.get('number') for mother in
+                                 amplitudes[source].get('mothers')), options)
+            self.assertEqual(amplitudes[source].get('interaction_id'),
+                             amplitudes[target].get('interaction_id'))
+
+        # a folded amplitude must not also be a target
+        self.assertFalse(folded & set(uses))
+
+    def check_auto_order(self, initial, final):
+        """'auto' has to generate the 'speed' order, and 'slots' has to be
+        that same order reversed.
+
+        This is what lets an output pick between the two: by then the diagrams
+        exist and only their order can still be changed, so the two modes are
+        only interchangeable at that point if one is the other backwards."""
+
+        def tags(mode):
+            madgraph.merge_quartic_vertices = mode
+            amplitude = diagram_generation.Amplitude(base_objects.Process(
+                {'legs':base_objects.LegList(
+                    [base_objects.Leg({'id':pdg, 'state':False})
+                     for pdg in initial] +
+                    [base_objects.Leg({'id':pdg, 'state':True})
+                     for pdg in final]),
+                 'model':self.base_model}))
+            return [str(diagram_generation.UnrollDiagramTag(
+                        diagram, self.base_model, len(initial)))
+                    for diagram in amplitude.get('diagrams')]
+
+        speed, slots, auto = tags('speed'), tags('slots'), tags('auto')
+        self.assertEqual(slots, speed[::-1])
+        # and it is a reordering, nothing gained or lost
+        self.assertEqual(sorted(slots), sorted(speed))
+        self.assertEqual(len(set(speed)), len(speed))
+        # 'auto' only takes that order once the process is big enough to pay
+        # for it, and otherwise leaves the generation order alone
+        if len(initial) + len(final) >= madgraph.merge_quartic_min_legs:
+            self.assertEqual(auto, speed)
+        else:
+            self.assertEqual(auto, tags(False))
+
+    def test_auto_order_gg_ggg(self):
+        self.check_auto_order([21, 21], [21, 21, 21])
+
+    def test_auto_order_gg_gggg(self):
+        self.check_auto_order([21, 21], [21, 21, 21, 21])
+
+    def test_auto_current_sums(self):
+        """'auto' keeps the sums, being the 'speed' order; 'slots' drops them
+        because reversing puts every target ahead of what feeds it"""
+
+        import madgraph.core.helas_objects as helas_objects
+
+        # five legs, so below merge_quartic_min_legs: 'auto' does not seed and
+        # so has no sums, while asking for 'speed' by name still does
+        for mode, wanted in (('auto', 0), ('speed', 7), ('slots', 0)):
+            madgraph.merge_quartic_vertices = mode
+            amplitude = diagram_generation.Amplitude(base_objects.Process(
+                {'legs':base_objects.LegList(
+                    [base_objects.Leg({'id':21, 'state':False})] * 2 +
+                    [base_objects.Leg({'id':21, 'state':True})] * 3),
+                 'model':self.base_model}))
+            element = helas_objects.HelasMatrixElement(amplitude)
+            self.assertEqual(len(element.get_quartic_current_sums()[0]), wanted)
+
+    def test_auto_multiplicity_gate(self):
+        """'auto' leaves the seed rule off below merge_quartic_min_legs, where
+        it is measured not to pay for itself, and takes it above"""
+
+        def seeded(nfinal, mode):
+            madgraph.merge_quartic_vertices = mode
+            amplitude = diagram_generation.Amplitude(base_objects.Process(
+                {'legs':base_objects.LegList(
+                    [base_objects.Leg({'id':21, 'state':False})] * 2 +
+                    [base_objects.Leg({'id':21, 'state':True})] * nfinal),
+                 'model':self.base_model}))
+            return bool(amplitude.seed_forbidden_cubic_ids)
+
+        threshold = madgraph.merge_quartic_min_legs
+        for nfinal in (2, 3, 4):
+            wanted = (2 + nfinal) >= threshold
+            self.assertEqual(seeded(nfinal, 'auto'), wanted)
+            # asking for it by name is unconditional, that being the way to
+            # get the merging on a small process
+            self.assertTrue(seeded(nfinal, 'speed'))
+            self.assertTrue(seeded(nfinal, 'slots'))
+            self.assertFalse(seeded(nfinal, False))
+
+    def test_amplitude_slots(self):
+        """The AMP array is recycled: an amplitude summed into another frees
+        its entry, and the entries have to be reusable without two live
+        amplitudes ever sharing one"""
+
+        import madgraph.core.helas_objects as helas_objects
+
+        madgraph.merge_quartic_vertices = 'speed'
+        amplitude = diagram_generation.Amplitude(base_objects.Process(
+            {'legs':base_objects.LegList(
+                [base_objects.Leg({'id':21, 'state':False})] * 2 +
+                [base_objects.Leg({'id':21, 'state':True})] * 4),
+             'model':self.base_model}))
+        element = helas_objects.HelasMatrixElement(amplitude)
+        slots, nslots, folds_at = element.get_amplitude_slots()
+
+        self.assertEqual(element.get_number_of_amplitudes(), 510)
+        self.assertTrue(nslots < 510)
+        self.assertEqual(max(slots.values()), nslots)
+        self.assertEqual(min(slots.values()), 1)
+
+        # replay the emission and check no entry is written while it still
+        # holds something with a reader to come
+        folded = set(element.get_quartic_current_sums()[2])
+        order = [a.get('number') for d in element.get('diagrams')
+                 for a in d.get('amplitudes') if a.get('number') not in folded]
+        self.assertEqual(len(order), len(slots))
+        live = {}
+        for i, number in enumerate(order):
+            self.assertNotIn(slots[number], live)
+            live[slots[number]] = number
+            for target, source, coeff in folds_at.get(i, []):
+                self.assertIn(slots[source], live)
+                del live[slots[source]]
+
+    def test_seed_inactive_by_default(self):
+        """Nothing changes unless madgraph.merge_quartic_vertices is set"""
+
+        madgraph.merge_quartic_vertices = False
+        amplitude = diagram_generation.Amplitude(base_objects.Process(
+            {'legs':base_objects.LegList(
+                [base_objects.Leg({'id':21, 'state':False})] * 2 +
+                [base_objects.Leg({'id':21, 'state':True})] * 2),
+             'model':self.base_model}))
+        self.assertEqual(amplitude.seed_forbidden_cubic_ids, frozenset())
+        self.assertEqual(len(amplitude.get('diagrams')), 4)

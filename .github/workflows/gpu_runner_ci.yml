@@ -1,0 +1,571 @@
+# GPU CI on a CECI cluster, through a self-hosted runner that lives inside ONE Slurm
+# allocation per workflow run: all the CI jobs below share that allocation.
+# Called by gpu_manneback_cuda.yml and gpu_lemaitre4_hip.yml; see .github/gpu_ci/README.md.
+#
+#   start_runner    vmadgraph       ask ceci-gate, on the vmadgraph VM, to sbatch the runner
+#                                   on the GPU partition; wait until it is online. If cancelled
+#                                   (or timed out, or failed) before that, scancel the runner job
+#   build_madspace  cluster runner  madspace with the CUDA/HIP backend (cached on the cluster)
+#   pp_ttx          cluster runner  p p > t t~ with mg7 on the GPU
+#   pp_jj           cluster runner  p p > j j with mg7 on the GPU (cuts on several jets)
+#   madspace_tests  cluster runner  the madspace unit tests on the GPU, .github/gpu_ci/madspace_tests_gpu.sh
+#   acceptance      cluster runner  the acceptance tests that need a GPU, .github/gpu_ci/acceptance_gpu.sh
+#   interference    cluster runner  squared split orders (interference), .github/gpu_ci/interference_gpu.sh
+#   madmatrix       cluster runner  GPU against CPU backend of madmatrix, .github/gpu_ci/madmatrix_gpu.sh
+#   ...             cluster runner  more CI jobs: same needs, if and runs-on, and add them to
+#                                   stop_runner's needs
+#   stop_runner     cluster runner  clean up and end the allocation (no ssh key needed)
+#   watchdog        vmadgraph       wait for the end of the allocation; if it ends before stop_runner
+#                                   ran (time limit, node failure...), cancel the run, whose jobs
+#                                   left would otherwise wait 24 hours for the dead runner
+#
+# Re-run with "Re-run all jobs" only. "Re-run failed jobs" (or one job) does not re-run
+# start_runner, so no runner is started for that attempt: the cluster jobs are skipped, and
+# stop_runner (and the watchdog, if re-run) fail at once on the vmadgraph runner. They detect it
+# from the output `attempt` of start_runner, which such a re-run reuses from an older attempt.
+#
+# The runner runs under a personal cluster account, hence:
+#   - the ssh key is not on GitHub: only the Unix user `ceci` of the vmadgraph VM holds it,
+#     and the CI reaches the cluster through /usr/local/sbin/ceci-gate (.github/gpu_ci/vm_gate),
+#     which checks with the GitHub API that the run is not over, comes from
+#     gpu_lemaitre4_hip.yml or gpu_manneback_cuda.yml, and was started by a GitHub login or
+#     is on a branch listed on the VM (/etc/ceci-gate/allowed_actors, allowed_branches);
+#   - the runner refuses every job that is not part of the workflow run that started it
+#     (.github/gpu_ci/job_started_hook.sh), so no other run can use it.
+
+name: GPU CI on a CECI cluster (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      cluster:
+        description: 'cluster known to ceci-gate (.github/gpu_ci/vm_gate/ceci-gate): lemaitre4 or manneback'
+        type: string
+        required: true
+      runner_label:
+        description: 'label (and name) of the runner registered by .github/gpu_ci/install_runner.sh; must be the label ceci-gate starts for the cluster'
+        type: string
+        required: true
+      partition:
+        description: 'Slurm partition'
+        type: string
+        required: true
+      backend:
+        description: 'GPU backend: cuda or hip'
+        type: string
+        required: true
+      modules:
+        description: 'Modules to load on the GPU node, in order (space separated)'
+        type: string
+        required: true
+      gres:
+        type: string
+        default: 'gpu:1'
+      cpus:
+        type: string
+        default: '8'
+      mem:
+        type: string
+        default: '32G'
+      time_limit:
+        description: 'Slurm --time of the runner allocation, i.e. of all the CI jobs together'
+        type: string
+        default: '00:20:00'
+      extra_sbatch:
+        description: 'Extra sbatch options, space separated, no quotes'
+        type: string
+        default: ''
+      gpu_arch:
+        description: 'CUDA compute capability (e.g. 80) or HIP target (e.g. gfx942); empty = the GPU of the node'
+        type: string
+        default: ''
+      nevents:
+        type: string
+        default: '10000'
+      pdf_set:
+        type: string
+        default: 'NNPDF23_lo_as_0130_qed'
+      keep_workdir:
+        description: 'Keep the run directory on the cluster even if every job succeeds'
+        type: boolean
+        default: false
+      interference:
+        description: 'Also run the interference (squared split-order) checks, .github/gpu_ci/interference_gpu.sh'
+        type: boolean
+        default: false
+
+# the jobs on the cluster runner (personal account) only read; the watchdog raises its own
+permissions:
+  contents: read
+
+env:
+  RUN_TAG: mg7-run-${{ github.run_id }}-${{ github.run_attempt }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  start_runner:
+    # one vmadgraph runner per cluster (labels vmadgraph-lemaitre4 / vmadgraph-manneback), so a
+    # run waiting in one cluster's Slurm queue does not block the other; see .github/gpu_ci/README.md
+    runs-on: [self-hosted, vmadgraph, "vmadgraph-${{ inputs.cluster }}"]
+    timeout-minutes: 300 # mostly the time the runner job waits in the Slurm queue
+    env:
+      CLUSTER: ${{ inputs.cluster }}
+      PARTITION: ${{ inputs.partition }}
+      GRES: ${{ inputs.gres }}
+      CPUS: ${{ inputs.cpus }}
+      MEM: ${{ inputs.mem }}
+      TIME_LIMIT: ${{ inputs.time_limit }}
+      EXTRA_SBATCH: ${{ inputs.extra_sbatch }}
+    outputs:
+      # the attempt that started the runner. A re-run of failed jobs (or of one job) does not
+      # re-run this job, and reuses this output: the other jobs compare it with github.run_attempt
+      attempt: ${{ github.run_attempt }}
+    steps:
+      # ceci-gate starts the runner `runner_label` of the cluster (fixed in ceci-gate), with the
+      # cluster scripts installed on the VM, not the ones of this checkout
+      - name: start the runner in a Slurm job and wait until it is online
+        id: start
+        run: |
+          sudo -n -u ceci /usr/local/sbin/ceci-gate start-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" \
+            --partition="$PARTITION" --gres="$GRES" --cpus="$CPUS" --mem="$MEM" --time="$TIME_LIMIT" \
+            --extra="$EXTRA_SBATCH"
+      # The run was cancelled, or this job timed out or failed, before the runner was online:
+      # stop_runner will not run, and the runner job could stay queued for hours (the partition
+      # is full), holding back every later run of the cluster (--dependency=singleton). Once the
+      # runner is online, stop_runner ends the allocation instead, even in a cancelled run.
+      - name: cancel the runner job
+        if: always() && steps.start.outcome != 'success'
+        run: sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
+
+  build_madspace:
+    needs: start_runner
+    # only in the attempt that started the runner, see stop_runner
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+    outputs:
+      venv: ${{ steps.build.outputs.venv }}
+      madspace_prefix: ${{ steps.build.outputs.madspace_prefix }}
+    steps:
+      - name: where are we
+        run: echo "Slurm job $SLURM_JOB_ID on $(hostname), partition $SLURM_JOB_PARTITION, $SLURM_CPUS_PER_TASK cpus"
+      - uses: actions/checkout@v5
+      - name: build madspace for ${{ inputs.backend }}
+        id: build
+        run: .github/gpu_ci/build_madspace_gpu.sh
+
+  pp_ttx:
+    needs: [start_runner, build_madspace]
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+      NEVENTS: ${{ inputs.nevents }}
+      PDF_SET: ${{ inputs.pdf_set }}
+      VENV: ${{ needs.build_madspace.outputs.venv }}
+      MADSPACE_PREFIX: ${{ needs.build_madspace.outputs.madspace_prefix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/pp_ttx" >> "$GITHUB_ENV"
+      - name: p p > t t~ on the GPU
+        run: .github/gpu_ci/pp_ttx_mg7.sh
+      - name: collect logs and cards
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt pp_ttx.mg7 output.log generate_events.log \
+              PROC_pp_ttx/Cards PROC_pp_ttx/Events/*/info.json PROC_pp_ttx/Events/*/*.log 2> /dev/null) | tar -xf - -C results || true
+          find results -type f | sort
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### p p > t t~ on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'p p > t t~ on the GPU' step."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-pp_ttx-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+  interference:
+    # input interference (true on push): squared split orders on the GPU backend of madmatrix,
+    # standalone and through umami, and an interference sample with mg7
+    needs: [start_runner, build_madspace]
+    if: inputs.interference && needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+      # no PDF_SET: the mg7 check runs with the PDF set of its reference
+      VENV: ${{ needs.build_madspace.outputs.venv }}
+      MADSPACE_PREFIX: ${{ needs.build_madspace.outputs.madspace_prefix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/interference" >> "$GITHUB_ENV"
+      - name: interference on the GPU
+        run: .github/gpu_ci/interference_gpu.sh
+      - name: collect logs
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt checks.log *.mg5 *.log \
+              PROC_uux/Cards PROC_uux/Events/*/info.json 2> /dev/null) | tar -xf - -C results || true
+          find results -type f | sort
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### interference on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'interference on the GPU' step."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-interference-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+  madmatrix:
+    # the GPU backend of madmatrix against its CPU backend with check_sa.exe: running flavour
+    # couplings (MSSM), a subprocess with no good helicity, a non-blocking stream
+    needs: [start_runner, build_madspace]
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+      VENV: ${{ needs.build_madspace.outputs.venv }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/madmatrix" >> "$GITHUB_ENV"
+      - name: madmatrix on the GPU
+        run: .github/gpu_ci/madmatrix_gpu.sh
+      - name: collect logs
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt checks.log *.mg5 *.log 2> /dev/null) | tar -xf - -C results || true
+          find results -type f | sort
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### madmatrix on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'madmatrix on the GPU' step."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-madmatrix-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+  pp_jj:
+    # p p > j j: cuts on several objects (the jets), which p p > t t~ does not have
+    needs: [start_runner, build_madspace]
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+      NEVENTS: ${{ inputs.nevents }}
+      PROCESS: p p > j j
+      TAG: pp_jj
+      PDF_SET: ${{ inputs.pdf_set }}
+      VENV: ${{ needs.build_madspace.outputs.venv }}
+      MADSPACE_PREFIX: ${{ needs.build_madspace.outputs.madspace_prefix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/pp_jj" >> "$GITHUB_ENV"
+      - name: p p > j j on the GPU
+        run: .github/gpu_ci/pp_ttx_mg7.sh
+      - name: collect logs and cards
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt pp_jj.mg7 output.log generate_events.log \
+              PROC_pp_jj/Cards PROC_pp_jj/Events/*/info.json PROC_pp_jj/Events/*/*.log 2> /dev/null) | tar -xf - -C results || true
+          find results -type f | sort
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### p p > j j on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'p p > j j on the GPU' step."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-pp_jj-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+
+  madspace_tests:
+    # madspace GPU runtime operations against the CPU runtime (histogram, rank-4 kernels)
+    needs: [start_runner, build_madspace]
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      # no VENV: the python3 of the modules (see madspace_tests_gpu.sh)
+      MADSPACE_PREFIX: ${{ needs.build_madspace.outputs.madspace_prefix }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/madspace_tests" >> "$GITHUB_ENV"
+      - name: madspace tests on the GPU
+        run: .github/gpu_ci/madspace_tests_gpu.sh
+      - name: collect logs
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt tests.log junit.xml 2> /dev/null) | tar -xf - -C results || true
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### madspace tests on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'madspace tests on the GPU' step."
+            fi
+            if [ -f results/tests.log ]; then
+              echo
+              echo '```'
+              grep -E '^(FAILED|ERROR|XFAIL|SKIPPED) ' results/tests.log | head -100 || true
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-madspace_tests-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+  acceptance:
+    # the acceptance tests that need a GPU (tests/test_manager.py), which skip elsewhere;
+    # here a skip fails the job. The list is in .github/gpu_ci/acceptance_gpu.sh
+    needs: [start_runner, build_madspace]
+    if: needs.start_runner.outputs.attempt == github.run_attempt
+    runs-on: [self-hosted, "${{ inputs.runner_label }}"]
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      BACKEND: ${{ inputs.backend }}
+      MODULES: ${{ inputs.modules }}
+      GPU_ARCH: ${{ inputs.gpu_arch }}
+      VENV: ${{ needs.build_madspace.outputs.venv }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run directory
+        run: echo "WORKDIR=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs/$RUN_TAG/acceptance" >> "$GITHUB_ENV"
+      - name: acceptance tests on the GPU
+        run: .github/gpu_ci/acceptance_gpu.sh
+      - name: collect logs
+        if: always()
+        run: |
+          mkdir -p results
+          (cd "$WORKDIR" && tar -cf - --ignore-failed-read summary.txt *.log 2> /dev/null) | tar -xf - -C results || true
+          find results -type f | sort
+      - name: job summary
+        if: always()
+        run: |
+          {
+            echo "### acceptance tests on ${{ inputs.cluster }} ($BACKEND)"
+            if [ -f results/summary.txt ]; then
+              echo "| | |"
+              echo "|---|---|"
+              sed 's/^\([^=]*\)=\(.*\)$/| \1 | \2 |/' results/summary.txt
+            else
+              echo "No summary.txt: the job stopped early, see the log of the 'acceptance tests on the GPU' step."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-acceptance-${{ inputs.cluster }}-${{ inputs.backend }}
+          path: results/
+          if-no-files-found: warn
+
+  stop_runner:
+    # must list every job that runs on the self-hosted runner
+    needs: [start_runner, build_madspace, pp_ttx, pp_jj, madspace_tests, interference, madmatrix, acceptance]
+    if: always() && needs.start_runner.result == 'success'
+    # In an attempt that did not start the runner (a re-run of failed jobs, or of one job), a job
+    # for the runner label would wait 24 hours, holding the concurrency group of the cluster.
+    # There, stop_runner runs on the vmadgraph runner of the cluster instead, and fails at once.
+    runs-on: ${{ needs.start_runner.outputs.attempt == github.run_attempt && fromJSON(format('["self-hosted", "{0}"]', inputs.runner_label)) || fromJSON(format('["self-hosted", "vmadgraph", "vmadgraph-{0}"]', inputs.cluster)) }}
+    defaults:
+      run:
+        shell: bash -l -eo pipefail {0}
+    env:
+      CLEAN: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !inputs.keep_workdir }}
+    steps:
+      - name: check that this attempt started the runner
+        if: needs.start_runner.outputs.attempt != github.run_attempt
+        shell: bash
+        env:
+          STARTED: ${{ needs.start_runner.outputs.attempt }}
+        run: |
+          echo "::error::attempt $GITHUB_RUN_ATTEMPT re-runs some jobs only, without start_runner: its runner, started in attempt ${STARTED:-?}, is gone, so the cluster jobs were skipped. Use \"Re-run all jobs\"."
+          exit 1
+      - name: clean up the run directories
+        run: |
+          RUNS=${GLOBALSCRATCH:-$HOME}/mg7-gpu-ci/runs
+          if [ "$CLEAN" = true ]; then rm -rf -- "${RUNS:?}/$RUN_TAG"; fi
+          # directories kept by failed runs are removed after two weeks
+          find "$RUNS" -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + || true
+      - name: end the Slurm allocation
+        run: touch "$CI_STOP_FILE" # set by runner_batch.sh, which then stops the runner
+
+  watchdog:
+    # Slurm can end the allocation before stop_runner ran: time limit, node failure, preemption.
+    # The runner dies with it, and the jobs not started yet, stop_runner included, then wait
+    # 24 hours for it, holding the concurrency group of the cluster (no later run starts).
+    # The watchdog stays on the vmadgraph runner, which outlives the allocation: ceci-gate
+    # watch-runner returns when the Slurm job of the runner has ended, and unless stop_runner
+    # has completed by then, the run is cancelled.
+    needs: start_runner
+    runs-on: [self-hosted, vmadgraph, "vmadgraph-${{ inputs.cluster }}"]
+    timeout-minutes: 250 # above the longest allocation ceci-gate accepts (MAX_MINUTES = 240)
+    permissions:
+      actions: write # list the jobs of this run, and cancel it
+    env:
+      CLUSTER: ${{ inputs.cluster }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # a re-run of this job alone, or with the failed jobs, has no allocation to watch (see stop_runner)
+      - name: check that this attempt started the runner
+        if: needs.start_runner.outputs.attempt != github.run_attempt
+        shell: bash
+        env:
+          STARTED: ${{ needs.start_runner.outputs.attempt }}
+        run: |
+          echo "::error::attempt $GITHUB_RUN_ATTEMPT re-runs some jobs only, without start_runner: its runner, started in attempt ${STARTED:-?}, is gone, so there is nothing to watch. Use \"Re-run all jobs\"."
+          exit 1
+      - name: wait for the end of the allocation
+        id: watch
+        shell: bash
+        run: |
+          WATCH=$RUNNER_TEMP/watch-runner.log
+          ENDED=
+          # ceci-gate keeps one ssh connection open for the whole run: call again if it drops
+          for TRY in $(seq 10); do
+            sudo -n -u ceci /usr/local/sbin/ceci-gate watch-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" 2>&1 | tee "$WATCH" || true
+            ENDED=$(sed -n 's/^ALLOCATION_ENDED //p' "$WATCH")
+            [ -n "$ENDED" ] && break
+            echo "::warning::ceci-gate watch-runner stopped before the end of the allocation (try $TRY of 10)"
+            sleep 60
+          done
+          if [ -z "$ENDED" ]; then
+            echo "::error::cannot watch the allocation of the runner through ceci-gate (is it up to date on the VM? .github/gpu_ci/README.md). If the allocation ends early, cancel this run by hand."
+            exit 1
+          fi
+          # ENDED is "JOBID STATE ...": a state of a job still alive is no end (an older
+          # remote_watch_runner.sh on the VM gave up on a job that squeue left out once)
+          STATE=${ENDED#* }
+          case ${STATE%% *} in
+            PENDING|CONFIGURING|RUNNING|SUSPENDED|COMPLETING|REQUEUED|RESIZING|SIGNALING|STAGE_OUT)
+              echo "::error::ceci-gate watch-runner returned while the runner job is still alive ($ENDED): not cancelling the run. Install remote_watch_runner.sh on the VM again (.github/gpu_ci/README.md); if the allocation ends early, cancel this run by hand."
+              exit 1 ;;
+          esac
+          # the normal end: stop_runner completed, then runner_batch.sh stopped the runner
+          for _ in $(seq 12); do
+            STOP=$(printf 'Authorization: Bearer %s\n' "$GH_TOKEN" | # not on the command line
+              curl -sS --fail --max-time 60 -H @- -H 'Accept: application/vnd.github+json' \
+                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" |
+              python3 -c 'import json, sys; print(" ".join(j["status"] for j in json.load(sys.stdin)["jobs"] if j["name"].split(" / ")[-1] == "stop_runner"))') || STOP="?"
+            if [ "$STOP" = completed ]; then
+              echo "The allocation ended after stop_runner: $ENDED"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "early=true" >> "$GITHUB_OUTPUT"
+          # only this log keeps it: the force-cancel drops the annotations and summaries of the run
+          echo "::error::the Slurm allocation of the runner ended before stop_runner ran ($ENDED): cancelling the run, whose jobs left would wait 24 hours for the runner. If the state is TIMEOUT, raise time_limit."
+          exit 1
+      - name: cancel the run
+        if: failure() && steps.watch.outputs.early == 'true'
+        shell: bash
+        # force-cancel: a plain cancel would still queue stop_runner (if: always()) for the dead runner.
+        # Before, while the run is not over (ceci-gate checks it), scancel the runner job in case
+        # it is still there: it would hold the runner, and the next runner job behind it
+        run: |
+          sudo -n -u ceci /usr/local/sbin/ceci-gate cancel-runner "$CLUSTER" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" ||
+            echo "::warning::could not scancel the runner job; the next start_runner cancels it"
+          printf 'Authorization: Bearer %s\n' "$GH_TOKEN" |
+            curl -sS --fail --max-time 60 -X POST -H @- -H 'Accept: application/vnd.github+json' \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/force-cancel"
+          echo "Cancellation of run $GITHUB_RUN_ID requested"

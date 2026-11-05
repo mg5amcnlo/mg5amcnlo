@@ -1,0 +1,17 @@
+#title: check that multiple vector size returns the same value
+import model sm
+set automatic_html_opening False --no_save
+set notification_center False --no_save
+generate p p > t t~
+output madevent_simd %s -f -nojpeg
+launch  
+set nevents 100
+set floating_type m
+set vector_size 16
+launch
+set vector_size 32
+launch
+set vector_size 64
+#check run_01 505.5 2.749 100
+#check run_02 505.5 2.749 100 
+#check run_03 505.5 2.749 100

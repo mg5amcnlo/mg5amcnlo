@@ -56,7 +56,7 @@ def Clean_run(run_name):
     
 #1 #########################################################################
 def Clean_event(run_name,mode='short'):
-    """ supress one complete MW_run (except Event file) """
+    """ suppress one complete MW_run (except Event file) """
 
     clean=Clean('s')
     if mode=='control-only':
@@ -81,7 +81,7 @@ def Clean_event(run_name,mode='short'):
 
 #1 #########################################################################
 def Clean_weight(run_name,mode='short'):
-    """ supress one complete MW_run (except Event file) """
+    """ suppress one complete MW_run (except Event file) """
 
     clean=Clean('s')
     if mode=='short':
@@ -105,7 +105,7 @@ def Clean_weight(run_name,mode='short'):
 
 #1 #########################################################################
 class Clean:
-    """ supress one file or directory (check the content) sume rules of preservation can be defined
+    """ suppress one file or directory (check the content) some rules of preservation can be defined
         supported option:
           f : (force)   remove rules of preservation
           s : (silent)  remove print at each delete
@@ -213,7 +213,7 @@ class Clean:
                     value,mess=self.suppress_dir(os.path.join(pos,element),opt)
                 else:
                     value=0
-                    mess="unknow data type "+str(element)+str(os.path.isdir(element))
+                    mess="unknown data type "+str(element)+str(os.path.isdir(element))
                 supress*=value
                 if mess:
                     message+=mess+'\n'

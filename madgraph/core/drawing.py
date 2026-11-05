@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -48,6 +48,25 @@ import math
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
 import madgraph.various.misc as misc
+
+#===============================================================================
+# Display labels for the merged-flavor particles
+#===============================================================================
+# The merged-flavor particles created by Model.define_merge_particle_for carry
+# internal model names ('_quark', '_anti_quark', '_lepton', ...). Those names
+# are what the user types on the interface (multiparticle definitions, process
+# generation) and what model['name2pdg'] resolves, so they must NOT be renamed.
+# In a *drawn* diagram those underscore-prefixed names are however unreadable,
+# so the labels below are substituted at drawing time only.
+# The sign convention follows the model: the merged '_lepton' is built from the
+# electron (PDG 11, charge -1), hence the particle is 'L-' and its antiparticle
+# 'L+'. The generic '_merged%d' particles (PDG 90+n) have no canonical short
+# label -- their content depends on which PDGs were merged -- so they keep
+# their model name.
+MERGED_PARTICLE_DRAW_NAME = {81: 'Q', -81: 'Qx',
+                             82: 'L-', -82: 'L+',
+                             83: 'v', -83: 'vx'}
+
 #===============================================================================
 # FeynmanLine
 #===============================================================================
@@ -198,7 +217,12 @@ class FeynmanLine(object):
                 name += '_pol'
             return name
 
-        
+        # merged-flavor particles are drawn with a short readable label
+        # (the model name '_quark', ... stays untouched: the interface needs it)
+        # ('name' already means 'antiname' for a negative pid, see below)
+        if name == 'name' and pid in MERGED_PARTICLE_DRAW_NAME:
+            return MERGED_PARTICLE_DRAW_NAME[pid]
+
         if pid > 0:
             return model_info.get(name)
         elif model_info:
@@ -551,13 +575,13 @@ class VertexPoint(object):
     def remove_line(self, line_to_del):
         """Remove the line from the lineList. Didn't touch to vertex associate
         to begin/end point. This happens only if we fuse two vertex together. 
-        (Then the line will be completely drop out, such that we dont't care
+        (Then the line will be completely drop out, such that we don't care
         about those vertex point."""
 
         assert isinstance(line_to_del, FeynmanLine), \
                    'trying to remove in a Vertex_Point a non FeynmanLine Object'
 
-        # Find the first item in the list and remove it. note that we cann't use
+        # Find the first item in the list and remove it. note that we can't use
         #standard delete as remove because it's use '==' and not 'is'. 
         for i, line in enumerate(self.lines):
             if line is line_to_del:
@@ -632,7 +656,7 @@ class VertexPoint(object):
         return tag
 
     def __eq__(self, other):
-        """Define equality with pointeur equality."""
+        """Define equality with pointer equality."""
 
         return self is other
 
@@ -654,16 +678,16 @@ class FeynmanDiagram(object):
     2) Associate to each vertex a level. [define_level]
         The level represents the distance between the initial vertex and the 
         current vertex. This distance is define has the number of non T-channel 
-        particles needed to connect this particles to a initial state starting
+        particles needed to connect this particles to an initial state starting
         point.
     3) Compute the position of each vertex [find_initial_vertex_position]
         The x-coordinate will proportional to the level. The vertex at level=0.
         will have x=0 coordinate (vertex associate with initial state particle)
         The vertex with the highest level value should be at x=1.
         
-        If an external particles cann't be place at the border at the current 
+        If an external particles can't be place at the border at the current
         level. we will try to place it one level later, potentially up to last
-        level. A option can force to place all external particles at x=1.
+        level. An option can force to place all external particles at x=1.
         
         the y-coordinate are chosen such that 
             - external particles try to have (y=0 or y=1) coordinates
@@ -686,7 +710,7 @@ class FeynmanDiagram(object):
         amplitude: tell if the diagram has already fixed the I/O state of the fermion
         opt: A DrawingOpt instance with all options for drawing the diagram."""
 
-        # Check if input are what we are expecting 
+        # Check if inputs are what we are expecting
         assert isinstance(diagram, base_objects.Diagram), \
                            'first argument should derivate from Diagram object'
         assert isinstance(model, base_objects.Model), \
@@ -1061,7 +1085,7 @@ class FeynmanDiagram(object):
             self.initial_vertex[1].lines[0].inverse_part_antipart()
             # Associate position to T-vertex  
             t_vertex = self.find_vertex_position_tchannel()
-            # Associatie position to level 2 and following (auto-recursive fct)
+            # Associate position to level 2 and following (auto-recursive fct)
             self.find_vertex_position_at_level(t_vertex, 2)
             self.initial_vertex[0].def_position(0, 0)
             self.initial_vertex[1].def_position(0, 1)
@@ -1139,7 +1163,7 @@ class FeynmanDiagram(object):
         if    equals 0, the external lines are authorizes to end only 
                    at the end of the diagram (in x=1 axis) so this will forbid
                    to put any vertex at y=0-1 (except if x=1)
-        if bigger than 0, minimal distance in before putting a external line
+        if bigger than 0, minimal distance in before putting an external line
                   on the border of the diagram.
         
         
@@ -1324,7 +1348,7 @@ class FeynmanDiagram(object):
             max_size preserving the orientation.
         2) external indicating the minimal x-gap for an external line. This 
             constraints is already take into account in previous stage. But that
-            stage cann't do non integer gap. So this routines correct this."""
+            stage can't do non integer gap. So this routines correct this."""
         
         finalsize = self.opt.max_size
         
@@ -1427,7 +1451,7 @@ class FeynmanDiagram(object):
         for i, line in enumerate(self.lineList):
             for j in range(i + 1, len(self.lineList)):
                 line2 = self.lineList[j]
-                #check if they are a unvalid intersection
+                #check whether there is an invalid intersection
                 if line.begin == line2.end or line.begin == line2.begin:
                     continue
                 elif line.has_intersection(line2):
@@ -1445,7 +1469,7 @@ class FeynmanDiagram(object):
         
         This function is not used for the moment. The initial purpose was the
         avoid duplication of identical diagram in the output (these could happen
-        if we contract non propagating line). But the number of such comparaison
+        if we contract non propagating line). But the number of such comparison
         rise as the number of diagram square such that the total time needed for
         this feature was consider as too (time-)expansive."""
         
@@ -1522,7 +1546,7 @@ class FeynmanDiagramHorizontal(FeynmanDiagram):
         #of a previous level.
         vertex_at_level = self.find_vertex_at_level(vertexlist, level)
         vertex_at_level2 = [] # Will be the same list as vertex_at level but 
-                              #with a potential different order and whitout some
+                              #with a potential different order and without some
                               #(already fixed) external particles
 
         min_pos = 0              # Starting of the current interval
@@ -1621,7 +1645,7 @@ class DiagramDrawer(object):
     
     This framework is base on the idea that we can create the diagram line after
     line. Indeed all line object (FeynmanLine) contains the full information 
-    needed to be drawed independently of the rest of the diagram. 
+    needed to be drawn independently of the rest of the diagram.
     
     In order to create a class with this framework you should start to write the
     draw_straight, draw_curly, ... method which are called by the framework.
@@ -1637,7 +1661,7 @@ class DiagramDrawer(object):
     """
 
     class DrawDiagramError(Exception):
-        """Standard error for error occuring to create output of a Diagram."""
+        """Standard error for error occurring to create output of a Diagram."""
 
     def __init__(self, diagram=None, filename=None, model=None, amplitude=None, \
                                                                     opt=None):
@@ -1753,7 +1777,7 @@ class DiagramDrawer(object):
                 opt = DrawOption()
         elif not isinstance(opt, DrawOption):
             raise self.DrawDiagramError('The Option to draw the diagram are' + \
-                                        ' in a invalid format')
+                                        ' in an invalid format')
 
         # Upgrade diagram to FeynmanDiagram or FeynmanDiagramHorizontal 
         
@@ -1865,7 +1889,7 @@ class DiagramDrawer(object):
         """Draw the line information.
         First, call the method associate the line type [draw_XXXXXX]
         Then finalize line representation by adding his name and, if it's an 
-        external particle, the MadGraph5_aMC@NLO number associate to it."""
+        external particle, the MadGraph7 number associate to it."""
 
         # Find the type line of the particle [straight, wavy, ...]
         line_type = line.get_info('line')
@@ -1878,7 +1902,7 @@ class DiagramDrawer(object):
         # Finalize the line representation with adding the name of the particle
         name = line.get_name()
         self.associate_name(line, name)
-        # And associate the MadGraph5_aMC@NLO Number if it is an external particle
+        # And associate the MadGraph7 Number if it is an external particle
         if line.is_external():
             number = line.number
             self.associate_number(line, number)
@@ -1965,7 +1989,7 @@ class DiagramDrawer(object):
 
     def associate_number(self, line, number):
         """Method to associate a number to 'line'. By default this method is 
-        call only for external particles and the number is the MadGraph5_aMC@NLO number 
+        call only for external particles and the number is the MadGraph7 number 
         associate to the particle. The default routine doesn't do anything"""
         pass
     
@@ -1982,10 +2006,10 @@ class DrawOption(object):
            non_propagating [True]:contracts non propagating lines"""    
 
     class DrawingOptionError(Exception):
-        """Error raising if an invalid entry is set in a option."""
+        """Error raising if an invalid entry is set in an option."""
 
     def __init__(self, opt=''):
-        """Fullfill option with standard value."""
+        """Fill option with standard value."""
         
         #define default
         self.external = 0
@@ -1993,20 +2017,21 @@ class DrawOption(object):
         self.horizontal = False
         self.max_size = 1.5
         self.contract_non_propagating = True
+        self.generate_only = False
 
         if isinstance(opt, dict):
             for key, value in opt.items():
                 self.set(key, value)
         else:    
             for value in ['external','add_gap','horizontal','max_size',
-                                                    'contract_non_propagating']:
+                                    'contract_non_propagating','generate_only']:
                 if hasattr(opt, value):
                     self.set(value, getattr(opt, value))
 
     def set(self, key, value):
         """Check and attribute the given value."""
         
-        if key in ['horizontal', 'contract_non_propagating']:
+        if key in ['horizontal', 'contract_non_propagating','generate_only']:
             value = self.pass_to_logical(value)
             setattr(self, key, value)
         elif(key in ['external', 'max_size', 'add_gap']):
@@ -2051,7 +2076,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         are going timelike. T-channel are going from particle 1 to particle 2
     2) Associate to each vertex a level. [define_level]
         This level is define has the number of non T-channel 
-        particles needed to connect this particles to a initial state starting
+        particles needed to connect this particles to an initial state starting
         point. 
         The Loop is dispatched on only two channel. If some T-channel 
         started between the initial particles those are going in negative 
@@ -2062,9 +2087,9 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         will have x=0 coordinate (vertex associate with initial state particle)
         The vertex with the highest level value should be at x=1.
         
-        If an external particles cann't be place at the border at the current 
+        If an external particles can't be place at the border at the current
         level. we will try to place it one level later, potentially up to last
-        level. A option can force to place all external particles at x=1.
+        level. An option can force to place all external particles at x=1.
         
         the y-coordinate are chosen such that 
             - external particles try to have (y=0 or y=1) coordinates
@@ -2094,7 +2119,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         """Define all the object for the Feynman Diagram Drawing (Vertex and 
         Line) following the data include in 'self.diagram'
         'contract' defines if we contract to one point the non propagating line.
-        Compare to usual load we glue the cutted propagator of the Loop.
+        Compare to usual load we glue the cut propagator of the Loop.
         """ 
 
         if self.diagram['tag'] and not self.fdstructures is None:
@@ -2110,7 +2135,7 @@ class LoopFeynmanDiagram(FeynmanDiagram):
         loop_line = [line for line in self.lineList if line.loop_line]
         
         
-        # Fuse the cutted particles (the first and the last but one of the list)
+        # Fuse the cut particles (the first and the last but one of the list)
         fake_line = loop_line[-1]
         self.fuse_line(loop_line[0], loop_line[-2])
         # delete the fake line:

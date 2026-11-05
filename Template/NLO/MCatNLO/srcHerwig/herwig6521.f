@@ -186,7 +186,7 @@ C add entry
       JDAHEP(2,IHEP)=JDA2
       DO I=1,4
         PHEP(I,IHEP)=P4(I)
-C KORAL-B and KORAL-Z do not provide vertex and/or lifetime informations
+C KORAL-B and KORAL-Z do not provide vertex and/or lifetime information
         VHEP(I,IHEP)=0.0
       END DO
       PHEP(5,IHEP)=PINV
@@ -330,7 +330,7 @@ C     MAKES COLOUR CONNECTIONS BETWEEN JETS
 C     MODIFIED 12/10/97 BY BRW FOR SUSY PROCESSES
 C     MODIFIED 11/01/01 BY PR  FOR SPIN CORRELATIONS(PROBLEM WITH ORDER
 C                                                    OF DECAYS)
-C     NEW VARAIBLE BACK TO ALLOW CODE TO SEARCH DOWN CHAIN
+C     NEW VARIABLE BACK TO ALLOW CODE TO SEARCH DOWN CHAIN
 C-----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       INTEGER IHEP,IST,ID,JC,KC,JD,JHEP,LHEP,ID2,NTRY,KHEP
@@ -596,7 +596,7 @@ C---CHECK INFRA-RED CUT-OFF FOR GAMMA/GLUON
           EMIT=0
           GOTO 5
         ENDIF
-C---CALCULATE MASS-DEPENDENT SUPRESSION
+C---CALCULATE MASS-DEPENDENT SUPPRESSION
         IF (MOD(IPROC,10).GT.0) THEN
           EPS=(RMASS(ID)/EM)**2
           MASDEP=X(1)**2+X(2)**2
@@ -1288,7 +1288,7 @@ C---FIND AN UNTREATED CMF
 C-----SET THE VECTOR BOSON RAPIDITY
         Y=HALF*LOG((PHEP(4,ICMF)+PHEP(3,ICMF))/
      &       (PHEP(4,ICMF)-PHEP(3,ICMF)))
-C------SET PARTICLE IDENTIES
+C------SET PARTICLE IDENTITIES
 c------ID1=QUARK, ID2=ANTIQUARK, IDBOS=VECTOR BOSON, ID4-5 BOSON DECAY
         IDBOS=IDHW(ICMF)
         ID1=IDHW(JMOHEP(1,ICMF))
@@ -3014,7 +3014,7 @@ C
 C     On input PPAR(1-5,*) contains:
 C     (E*sqrt(Xi),Xi,3-mom (if external),E,M-sq (if external))
 C
-C     On output PPAR(1-5,*) (if TMPAR(*)), containts:
+C     On output PPAR(1-5,*) (if TMPAR(*)), contains:
 C     (P-trans,Xi or Xilast,P-long,E,M)
 C-----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
@@ -4292,7 +4292,7 @@ CDECK  ID>, HWBRC1.
 C-----------------------------------------------------------------------
       SUBROUTINE HWBRC1(JC,ID,JHEP,COL,IFGO)
 C-----------------------------------------------------------------------
-C--Function to find the right daugther of a decaying gluino
+C--Function to find the right daughter of a decaying gluino
 C-----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       INTEGER ID,JHEP,KC,JC
@@ -5407,7 +5407,7 @@ C Decide if cluster contains a b-(anti)quark
       ELSE
         IB=1
       ENDIF
-C-- Set the positon of the cluster to be that of the heavy quark
+C-- Set the position of the cluster to be that of the heavy quark
       CALL HWVEQU(4,VHEP(1,THEP),VCLUS)
 C--SPLIT THE BARYONIC CLUSTER INTO A HEAVY FLAVOUR MESON AND A HEAVY
 C--FLAVOUR BARYON
@@ -7131,7 +7131,7 @@ C--set up the maximum weight
         ENDIF
 C--if not initialising generate the momenta
       ELSE
-C--generate a configuation
+C--generate a configuration
         NTRY = 0
  100    NTRY = NTRY+1
         CALL HWD3M0(ID,NDIA,WGT,WGTM,RHOIN,IDSPIN)
@@ -8455,7 +8455,7 @@ C--compute the width and maximum weight if initialising
 C--set up the maximum weight
         WT4MAX(ITYPE(1),ITYPE(2),IMODE) = WMAX
       ELSE
-C--generate a configuation
+C--generate a configuration
         NTRY = 0
         IF(SYSPIN.AND.NSPN.NE.0) CALL HWWARN('HWD4ME',501)
  100    NTRY = NTRY+1
@@ -10964,7 +10964,7 @@ C---FIND BOOSTED W/H MOMENTUM
         ENDIF
         WHEP=JDAHEP(1,WHEP)
         IF (ISTHEP(WHEP).NE.190) GOTO 41
-C---AND HENCE ITS CHILDRENS MOMENTA
+C---AND HENCE ITS CHILDREN'S MOMENTA
         CALL HWULOB(PHEP(1,WHEP),PDW(1,3),PHEP(1,NHEP+1))
         CALL HWVDIF(4,PHEP(1,WHEP),PHEP(1,NHEP+1),PHEP(1,NHEP+2))
         PHEP(5,NHEP+2)=PDW(5,2)
@@ -11151,7 +11151,7 @@ C-----------------------------------------------------------------------
       ENDIF
       IF (IDKPRD(4,IM).NE.0) THEN
 C Weak decay of meson or baryon
-C Idenitify decaying heavy quark and spectator
+C Identify decaying heavy quark and spectator
         ID=IDHW(IHEP)
         IF (ID.EQ.136.OR.ID.EQ.140.OR.ID.EQ.144.OR.
      &      ID.EQ.150.OR.ID.EQ.155.OR.ID.EQ.158.OR.ID.EQ.161.OR.
@@ -11567,7 +11567,7 @@ C--Find the masses of the final state and zero parameters
         M23SQT(J) = ZERO
         M12SQT(J) = ZERO
       ENDDO
-C--Evaluate the coefficents for the mode we want
+C--Evaluate the coefficients for the mode we want
       IF(IG.GE.450.AND.IG.LE.453) THEN
 C--NEUTRALINO
         NSP = IG-449
@@ -11976,7 +11976,7 @@ C--Now calculate the m12sq etc for the actual point
       M12SQ = M(1)**2+M(2)**2+2*HWULDO(PHEP(1,MHEP),PHEP(1,MHEP+1))
       M13SQ = M(1)**2+M(3)**2+2*HWULDO(PHEP(1,MHEP),PHEP(1,MHEP+2))
       M23SQ = M(2)**2+M(3)**2+2*HWULDO(PHEP(1,MHEP+1),PHEP(1,MHEP+2))
-C--Now calulate the matrix element
+C--Now calculate the matrix element
       TEST2 = HWDRM1(TEST,M12SQ,M13SQ,M23SQ,A,B,MX,
      &                       M,SM,SW,INFCOL,AM,1,ND)
 C--Now test the value againest the limit
@@ -12460,7 +12460,7 @@ C--zero off diagonal elements
           RHOLP(1,2) = ZERO
           RHOPS(2,1) = ZERO
           RHOPS(1,2) = ZERO
-C--set up for polarized incoming beams in lepton collisons
+C--set up for polarized incoming beams in lepton collisions
           IF(IDHW(JMOHEP(1,IDSPN(IDEC))).GE.121.AND.
      &       IDHW(JMOHEP(1,IDSPN(IDEC))).LE.132) THEN
             RHOLP(1,1) = HALF*(ONE+EPOLN(3))
@@ -14762,7 +14762,7 @@ C--Les Houches Common Block
      &                XMAXUP(MAXPUP),LPRUP(MAXPUP)
       IF (IERROR.NE.0)  RETURN
 C--pick the type of event to generate if using Les Houches accord
-C--first choice according to maxiumum weight
+C--first choice according to maximum weight
       IF(IPROC.LT.0) THEN
         IF(ABS(IDWTUP).EQ.1) THEN
           IF(ITYPLH.EQ.0) THEN
@@ -15938,7 +15938,7 @@ C--calculate qqbar---> q'q'barZ
         ENDDO
       ENDDO
       DO I=1,2
-C--calculate the matrix element, N.B. two possibe colour flows
+C--calculate the matrix element, N.B. two possible colour flows
        DO P1=1,2
         DO P2=1,2
          DO P3=1,2
@@ -16390,12 +16390,12 @@ C--now obtain the matrix elements squared for the quarks
       DO PL=1,2
       DO PB=1,2
       DO PBB=1,2
-C--different quarks in inital and final states
+C--different quarks in initial and final states
          DO I=1,2
             MQP(I) = MQAMP(I,P1,PL,PB,PBB)+MQAMP(3,P1,PL,PB,PBB)
             FLOW(I,1) = FLOW(I,1)+DREAL(DCONJG(MQP(I))*MQP(I))
          ENDDO
-C--same quark in inital and final state
+C--same quark in initial and final state
          DO P2=1,2
             FLOW(3,2) = FLOW(3,2)+DREAL(
      &          DCONJG(MQQAMP(P1,P2,PL,PB,PBB))*MQQAMP(P1,P2,PL,PB,PBB))
@@ -18680,7 +18680,7 @@ C   Momentum conservation somehow gets taken care of HWBGEN!
       ELSE
         EVWGT=ZERO
 C---generation of the 5 variables Y,Q2,SHAT,Z,PHI and Jacobian computation
-C---in the largest phase space avalaible for selected processes and
+C---in the largest phase space available for selected processes and
 C---filling of logical vector INSIDE to tag contributing ones
         CALL HWHBRN (IFGO)
         IF(IFGO) GOTO 999
@@ -19942,7 +19942,7 @@ C-----------------------------------------------------------------------
       IF(GENEV) THEN
         RCS = HCS*HWRGEN(1)
       ELSE
-C--to the initalisation
+C--to the initialisation
         IF(FSTCLL) THEN
 C--G(I,1) is the right charge and G(I,2) is the left charge
           DO I=1,12
@@ -19981,7 +19981,7 @@ C--first the qqbar initial states
           ENDDO
         ENDDO
       ENDDO
-C--then the gluon gluon inital state
+C--then the gluon gluon initial state
       IDP(1) = 13
       IDP(2) = 13
       DIST(1) = DISF(IDP(1),1)*DISF(IDP(1),2)
@@ -21754,7 +21754,7 @@ C-----------------------------------------------------------------------
 C RECALL THAT N1,N3,N5 MUST BE OUTGOING FERMIONS, AND N2,N4,N6 MUST BE
 C OUTGOING ANTI-FERMIONS; 3,4 FOR W-, 5,6 FOR W+
 C
-C EQ1 AND T31 ARE FOR OUTOING INITIAL QUARK
+C EQ1 AND T31 ARE FOR OUTGOING INITIAL QUARK
 C CHOOSE APPROPRIATE CASE ACCORDING TO NUPDN
 C NUPDN=1 FOR UUBAR COLLISIONS, NUPDN=2 FOR DDBAR COLLISIONS
 C NFINAL CHOOSES THE FINAL DECAYS, 1 FOR DOUBLE LEPTON, 2 FOR 1 FLAVOR
@@ -21821,7 +21821,7 @@ C-----------------------------------------------------------------------
 C RECALL THAT N1,N3,N5 MUST BE OUTGOING FERMIONS, AND N2,N4,N6 MUST BE
 C OUTGOING ANTI-FERMIONS; 3,4 FOR Z0, 5,6 FOR Z0
 C
-C EQ1 AND T31 ARE FOR OUTOING INITIAL QUARK
+C EQ1 AND T31 ARE FOR OUTGOING INITIAL QUARK
 C CHOOSE APPROPRIATE CASE ACCORDING TO NUPDN
 C NUPDN=1 FOR UUBAR COLLISIONS, NUPDN=2 FOR DDBAR COLLISIONS
 C NFINAL CHOOSES THE FINAL DECAYS, 1 FOR DOUBLE LEPTON, 2 FOR 1 FLAVOR
@@ -22294,7 +22294,7 @@ C--copy the momenta and change the sign of the beam
         PCM(J,1)=-P(J,1)
         PCM(J,2)=-P(J,2)
   120   CONTINUE
-C--use the e+e- code to calulate the spinor products
+C--use the e+e- code to calculate the spinor products
         CALL HWHEW2(6,PCM(1,1),ZH,ZCH,ZD)
 C--calculate the matrix elements
        IF (IPRC.EQ.0) THEN
@@ -22445,7 +22445,7 @@ C--generate the parton momentum fractions and find the pdf's
       XF   = ONE/XJAC
       EMSCA=ETOT
       CALL HWSGEN(.FALSE.)
-C--Centre of mass collison angle
+C--Centre of mass collision angle
       COSTH = (THAT-BMS2(1)+ETOT*PRW(4,1))/ETOT/PST
       PHI   = HWRUNI(4,ZERO,TWO*PIFAC)
       SINTH = SQRT(ONE-COSTH**2)
@@ -22837,7 +22837,7 @@ C--the various propagators we need
         S134 = HALF*W12*(S12-MW2)/(ZD(1,3)+ZD(1,4)+ZD(3,4))
         S156 = HALF*W12*(S12-MW2)/(ZD(1,5)+ZD(1,6)+ZD(5,6))
         W34  = ONE/((S34-MW2)**2+GMW**2)/SWEIN**2/FOUR
-C--calculate the coefficents of the various amplitudes
+C--calculate the coefficients of the various amplitudes
         F(1)  = HWHEW4(1,2,3,4,5,6)
         F(2)  = HWHEW4(1,2,5,6,3,4)
         F(3)  = HWHEW4(1,2,3,4,6,5)
@@ -22961,7 +22961,7 @@ C-----------------------------------------------------------------------
 C     Massive spin-2 resonance (massive graviton)
 C     Universal tensor coupling to the energy-momentum tensor is assumed
 C     viz L = - G(mu,nu) T(mu,nu) / GRVLAM
-C     If GAMGRV is zero, it is revaluated during the first run
+C     If GAMGRV is zero, it is reevaluated during the first run
 C     MEAN EVWGT = SIGMA IN NB
 C-----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
@@ -26849,7 +26849,7 @@ CDECK  ID>, HWHIGV.
 *-- Author :  Stefano Moretti
 C-----------------------------------------------------------------------
 C...Generate completely differential cross section (EVWGT) in the variables
-C...X(I) with I=1,4 (see below) for the processes of ther series
+C...X(I) with I=1,4 (see below) for the processes of the series
 C...IPROC=2600,2700 as described in the HERWIG 6 documentation file.
 C...It includes interface to PDFs and takes into account color connections
 C...among partons.
@@ -29720,7 +29720,7 @@ C--Extract masses and width's needed
              MS2(I)  = MS(I)**2
              MSWD(I) = MS(I)*SWD(I)
           ENDDO
-C--Now set up the parmaters for multichannel integration
+C--Now set up the parameters for multichannel integration
           RAND = ZERO
           DO K=1,3
             CHANPB(1) = ZERO
@@ -29970,7 +29970,7 @@ C--Electroweak parameters
           MZ    = RMASS(200)
           MW2   = MW**2
           MZ2   = MZ**2
-C--Now set up the parmaters for multichannel integration
+C--Now set up the parameters for multichannel integration
           RAND = ZERO
           DO K=1,3
             CHANPB(1) = ZERO
@@ -30946,7 +30946,7 @@ C--select the process from the IPROC code
             CALL HWWARN('HWHREE',501)
           ENDIF
         ENDIF
-C--calculate the kinematic varibles
+C--calculate the kinematic variables
         EVWGT  = ZERO
         S      = PHEP(5,3)**2
         THTMIN = ONE-FOUR*PTMIN**2/S
@@ -31000,7 +31000,7 @@ C--Now the loop to actually calculate the cross sections
             MET = ZERO
             IF(GENEV) GOTO 60
 C--calculate the matrix element
-C--set all coefficents to zero
+C--set all coefficients to zero
             FSLL = Z0
             FSLR = Z0
             FSRL = Z0
@@ -32072,7 +32072,7 @@ C--Now the loop to actually calculate the cross-sections
      &                 *LAM(CUP,INT((GR+1)/2),I1,J1,K1,L1)*MIX(GR)
                     ENDIF
                   ENDDO
-C--Now the t-channel diagrams if the s-channel particles is a sneutrino
+C--Now the t-channel diagrams if the s-channel particle is a sneutrino
                   IF(GN.EQ.2) THEN
                     ECM=SQRT(PCM**2+MQ1**2)
                     TH=MQ1**2-SQSH*(ECM-PCM*COSTH)
@@ -32525,7 +32525,7 @@ C--t channel L/R mixing
      &               SH*C(2,L,GT-1)*(TH*A(L,GR)+ML*MN*B(L,GR))
      &               /(TH-MST(GT-1))
             ENDIF
-C--multiply by lamda and factors
+C--multiply by lambda and factors
             MEN(L,GN,J,K) = FAC*ME2*EC**2*LAMDA2(I,J,K)**2*PCM
  110        I2=I1+6
             HCS = HCS+MEN(L,GN,J,K)*DISF(J1,1)*DISF(K1,2)
@@ -32963,7 +32963,7 @@ CDECK  ID>, HWHRSS.
 C-----------------------------------------------------------------------
       SUBROUTINE HWHRSS(TYPE,ID1,ID2,ID3,ID4,R4,IPERM)
 C-----------------------------------------------------------------------
-C     IDENTIDY HARD R-PARITY VIOLATING PROCESS
+C     IDENTIFY HARD R-PARITY VIOLATING PROCESS
 C-----------------------------------------------------------------------
       INCLUDE 'HERWIG65.INC'
       INTEGER ID3, ID4, R4, IPERM,TYPE,ID1,ID2,NEUTD1(8),SLEPID(8),
@@ -33181,7 +33181,7 @@ C---IF MOMENTUM CANNOT BE CONSERVED, STOP GENERATING HARD SCATTERS
      $     -PHEP(3,ITGN+2) .GT.-PHEP(3,ITGN).OR.IERROR.NE.0) THEN
         IF (IERROR.GT.0) THEN
           WRITE (6,'(A/A)')
-     $       ' THIS ERROR OCCURED DURING A SECONDARY SCATTER AND WAS',
+     $       ' THIS ERROR OCCURRED DURING A SECONDARY SCATTER AND WAS',
      $       ' CAUGHT BY HWHSCT, SO EVENT IS NOT KILLED AFTER ALL'
           REPORT=1
         ELSE
@@ -33211,7 +33211,7 @@ C---IF THERE WERE ANY PROBLEMS, STOP GENERATING HARD SCATTERS
       IF (IERROR.NE.0) THEN
         IF (IERROR.GT.0) THEN
           WRITE (6,'(A/A)')
-     $       ' THIS ERROR OCCURED DURING A SECONDARY SCATTER AND WAS',
+     $       ' THIS ERROR OCCURRED DURING A SECONDARY SCATTER AND WAS',
      $       ' CAUGHT BY HWHSCT, SO EVENT IS NOT KILLED AFTER ALL'
           REPORT=3
         ELSE
@@ -36325,7 +36325,7 @@ C-----------------------------------------------------------------------
       SUBROUTINE HWHS06(ID,ME)
 C-----------------------------------------------------------------------
 C  Subroutine to calculate the helicity amplitudes for the 2-to-2 cross
-C  section gluon gluon --> fermion antifermion (2st colour flow)
+C  section gluon gluon --> fermion antifermion (2nd colour flow)
 C  N.B. a gauge choice has been made to simplify the triple gluon vertex
 C  This diagram 5 from DAMTP-2001-83 with the gauge choice L1=2 L2=1
 C-----------------------------------------------------------------------
@@ -36679,7 +36679,7 @@ C-----------------------------------------------------------------------
       SUBROUTINE HWHS15(ID,ME)
 C-----------------------------------------------------------------------
 C  Subroutine to calculate the helicity amplitudes for the 2-to-2 cross
-C  section gluon gluon --> fermion antifermion (2st colour flow)
+C  section gluon gluon --> fermion antifermion (2nd colour flow)
 C  N.B. a gauge choice has been made to simplify the triple gluon vertex
 C  This diagram 5 from DAMTP-2001-83 with opposite helicity for 4
 C  and gauge choice L1=2 L2=1
@@ -40582,7 +40582,7 @@ C---MAX COS(THETA) FOR W'S IN E+E- -> W+W-
       CTMAX=0.9999
 C   Minimum virtuality^2 of partons to use in calculating distances
       VMIN2=0.1
-C   Exageration factor for lifetimes of weakly decaying heavy particles
+C   Exaggeration factor for lifetimes of weakly decaying heavy particles
       EXAG=1.
 C   Include colour rearrangement in cluster formation
       CLRECO=.FALSE.
@@ -40590,7 +40590,7 @@ C   Probability for colour rearrangement to occur
       PRECO=1./9.
 C   Minimum lifetime for particle to be considered stable
       PLTCUT=1.D-8
-C   Incude neutral B-meson mixing
+C   Include neutral B-meson mixing
       MIXING=.TRUE.
 C   Set B_s and B_d mixing parameters: X=Delta m/Gamma
       XMIX(1)=10.0
@@ -41077,7 +41077,7 @@ C-----------------------------------------------------------------------
 C--initialize for tevatron or LHC based on energy
       TEV = NINT(PBEAM1/1000.0D0).EQ.1
       LHC = NINT(PBEAM1/1000.0D0).EQ.7
-C--first the initalisation
+C--first the initialisation
       IF(IOPT.EQ.1) THEN
         IPRO = MOD(IPROC/100,100)
         IPRC=MOD(IPROC,100)
@@ -41226,7 +41226,7 @@ C--compute the weights for the various channels
               WITOT = WITOT+WA(ICH)*CHNPRB(ICH)
             ENDIF
           ENDDO
-C--now pick the next set of probablities for the different channels
+C--now pick the next set of probabilities for the different channels
           TOTAL = ZERO
           DO ICH=1,IMAXCH
             IF(CHON(ICH)) THEN
@@ -45974,7 +45974,7 @@ C--add an extra photon for top or W
         NHEP0=NHEP
         KK1=JDAHEP(1,IHEP)
         KK2=JDAHEP(2,IHEP)
-C--copy the colour mother infomation
+C--copy the colour mother information
         DO KK=KK1,KK2
           JMOH(KK)=JMOHEP(2,KK)
           JMOHEP(2,KK)=0
@@ -45982,7 +45982,7 @@ C--copy the colour mother infomation
 C--call photos
         IPOS=-IHEP
         CALL PHOTOS(IPOS)
-C--reset the colour mother infomation
+C--reset the colour mother information
         DO KK=KK1,KK2
           JMOHEP(2,KK)=JMOH(KK)
         ENDDO
@@ -47108,7 +47108,7 @@ C     FOR PHOTON DREES+GRASSIE IS USED
 C
 C     N.B. IF IBEAM.GT.0.AND.MODPDF(IBEAM).GE.0 THEN NSET IS
 C     IGNORED AND CERN PDFLIB WITH AUTHOR GROUP=AUTPDF(IBEAM) AND
-C     SET=MODPDF(IBEAM) IS USED.  FOR COMPATABILITY WITH VERSIONS 3
+C     SET=MODPDF(IBEAM) IS USED.  FOR COMPATIBILITY WITH VERSIONS 3
 C     AND EARLIER, AUTPDF SHOULD BE SET TO 'MODE'
 C     NOTE THAT NO CONSISTENCY CHECK IS MADE, FOR EXAMPLE THAT THE
 C     REQUESTED SET FOR A PHOTON IS ACTUALLY A PHOTON SET
@@ -48396,7 +48396,7 @@ C-----------------------------------------------------------------------
      &           FVTHR=1.666666666666667D0, THIRD=.3333333333333333D0)
       PARAMETER (RMAX=1.D6)
       IF (ABS(R).LT.1.D-3) THEN
-C Use assymptotic formula
+C Use asymptotic formula
          HWUAER=-FVTHR-LOG(ABS(R))
       ELSEIF (ABS(R).GT.RMAX) THEN
          HWUAER=ZERO
@@ -48783,7 +48783,7 @@ c      DATA NRES/458/
       PARAMETER (NLAST=458,NNEXT=NLAST+1,NLEFT=NMXRES-NLAST)
       PARAMETER (NREST=NMXRES-120)
       DATA NRES/NLAST/
-C Don't forget to change the three occurances above as well
+C Don't forget to change the three occurrences above as well
       DATA MMWIDE,MMLONG,MMHOFF,MMVOFF/190,280,-39,-35/
       DATA ISEED/12345,67890/
       DATA (RNAME(I),IDPDG(I),IFLAV(I),ICHRG(I),RMASS(I),RLTIM(I),
@@ -59724,7 +59724,7 @@ CDECK  ID>, HWUDPR.
 C-----------------------------------------------------------------------
       SUBROUTINE HWUDPR
 C-----------------------------------------------------------------------
-C     Prints out particle properies/decay tables in a number of formats:
+C     Prints out particle properties/decay tables in a number of formats:
 C     If (PRNDEF) ASCII to stout
 C     If (PRNTEX) LaTeX to the file HW_decays.tex
 C                 Paper size and offsets as set in HWUEPR
@@ -60844,7 +60844,7 @@ C-----------------------------------------------------------------------
       COMMON/HWSFSB/VALSAVE
       SAVE ITMP
       DATA ITMP/0,12,-12,0,0,12,-12,0/
-C--read in the information frmo the Les Houches common block if needed
+C--read in the information from the Les Houches common block if needed
       IF(IPROC.LE.0) CALL HWIGUP
 C---MSSM Higgs processes: additional IDs to distinguish from SM-like ones.
       IMSSM=0
@@ -61255,7 +61255,7 @@ C  MASSES OF TOP HADRONS (ASSUME BINDING NEGLIGIBLE)
       RMASS(232)=RMASS(243)
       DO 160 I=233,242
   160 RMASS(I+22)=RMASS(I)
-C Set up an array of cluster mass threholds
+C Set up an array of cluster mass thresholds
       CLMXPW=CLMAX**CLPOW
       RCLPOW=ONE/CLPOW
       CALL HWVZRO(144,CTHRPW(1,1))

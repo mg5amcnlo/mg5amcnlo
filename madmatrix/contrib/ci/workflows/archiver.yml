@@ -1,0 +1,292 @@
+# Copyright (C) 2020-2026 CERN and UCLouvain.
+# Licensed under the GNU Lesser General Public License (version 3 or later).
+# Created originally by: A. Valassi (Sep 2024) for the MG5aMC CUDACPP plugin.
+# Further modified by: D. Massaro, A. Valassi (2024-2025).
+# Integrated with the MadGraph7 project in Feb 2026.
+#----------------------------------------------------------------------------------------------------------------------------------
+
+name: Archiver
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+on:
+  push:
+
+    tags:
+    # Include version tags such as 'cudacpp_for3.6.0_v1.00.00' or 'cudacpp_for3.6.0_v1.00.00_test001'
+    # Include version tags such as 'valassi_cudacpp_for3.6.0_v1.00.00' or 'valassi_cudacpp_for3.6.0_v1.00.00_test001'
+    - '*cudacpp_for*_v*'
+
+    # Exclude running tags such as 'cudacpp_for3.6.0_latest'
+    # Exclude running tags such as 'valassi_cudacpp_for3.6.0_latest'
+    # See https://github.com/orgs/community/discussions/25114
+    - '!*cudacpp_for*_latest'
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+jobs:
+
+  archiver:
+
+    runs-on: ubuntu-latest
+
+    # TEMPORARY! this will change eventually...
+    if: |
+      ( github.repository == 'madgraph5/madgraph4gpu' && startsWith( github.ref, 'refs/tags/cudacpp_for' ) )
+      || ( github.repository == 'valassi/madgraph4gpu' && startsWith( github.ref, 'refs/tags/valassi_cudacpp_for' ) )
+
+    steps:
+
+    - name: checkout_PR
+      uses: actions/checkout@v4
+      with:
+        submodules: 'true'
+        path: branch_PR
+
+    - name: create_tarball_and_versiontxt
+      run: |
+        echo "Current directory is $(pwd)"
+        WORKDIR=$(pwd)
+        echo "WORKDIR=${WORKDIR}" >> $GITHUB_ENV
+        echo "WORKDIR is ${WORKDIR}"
+        cd branch_PR
+        echo "Current directory is now $(pwd)"
+        echo "Current branch is \"$(git branch | \grep ^* | sed 's/^* //')\""
+        .github/workflows/archiver.sh
+        mv cudacpp.tar.gz ${WORKDIR}
+        mv VERSION.txt ${WORKDIR}
+
+    - name: check_versiontag_and_update_versiontxt
+      run: |
+        echo "Current directory is $(pwd)"
+        echo "WORKDIR is ${WORKDIR}"
+        githubref=$${{ github.ref }}
+        echo "(From github.ref)        githubref           = ${githubref}"
+        tagname=${githubref#/tags/}
+        echo "(From github.ref)        tagname             = ${tagname}"
+        echo "TAGNAME=${tagname}" >> $GITHUB_ENV
+        REPOSITORY=$${{ github.repository }}
+        echo "(From github.repository) REPOSITORY          = ${REPOSITORY}"
+        ###REPOOWNER=${REPOSITORY%/*} # owner is empty??
+        REPONAME=${REPOSITORY#*/} # owner is empty??
+        echo "(From github.repository) REPONAME            = ${REPONAME}"
+        tmpsuffix=${tagname#*cudacpp_for}
+        TAGPREFIX=${tagname/${tmpsuffix}} # determine TAGPREFIX from triggering tag because github.repository_owner is empty(???)
+        echo "(From tagname)           TAGPREFIX           = ${TAGPREFIX}"
+        REPOOWNER=${TAGPREFIX%cudacpp_for}
+        if [ "${REPOOWNER}" == "${TAGPREFIX}" ]; then
+          echo "INTERNAL ERROR! Invalid TAGPREFIX '${TAGPREFIX}'" # does not end in 'cudacpp_for'?
+          exit 1 # this causes the job to fail without running the next steps
+        elif [ "${REPOOWNER}" == "" ]; then
+          REPOOWNER=madgraph5 # TEMPORARY! Will change eventually...
+        elif [ "${REPOOWNER%_}" != "${REPOOWNER}" ]; then
+          REPOOWNER=${REPOOWNER%_}
+        else
+          echo "INTERNAL ERROR! Invalid REPOOWNER '${REPOOWNER}'" # empty or does not end in '-'?
+          exit 1 # this causes the job to fail without running the next steps
+        fi
+        echo "(From tagname)           REPOOWNER           = ${REPOOWNER}"
+        REPOSITORY=${REPOOWNER}/${REPONAME}
+        echo "(From tagname)           REPOSITORY          = ${REPOSITORY}"
+        echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
+        # Check version tag
+        cudacpp_version=$(cat ${WORKDIR}/VERSION.txt | awk '/^cudacpp_version/{print $3}')
+        mg5_version=$(cat ${WORKDIR}/VERSION.txt | awk '/^mg5_version_current/{print $3}')
+        echo "MG5_VERSION=${mg5_version}" >> $GITHUB_ENV
+        mg5_commit=$(cat ${WORKDIR}/VERSION.txt | awk '/^mg5_commit_current/{print $3}')
+        echo "(From VERSION.txt)       cudacpp_version     = ${cudacpp_version}"
+        echo "(From VERSION.txt)       mg5_version_current = ${mg5_version}"
+        echo "(From VERSION.txt)       mg5_commit_current  = ${mg5_commit}"
+        tagname_version=${TAGPREFIX}${mg5_version}_v${cudacpp_version}
+        echo "(From VERSION.txt)       supported tagname   = ${tagname_version}[_...]"
+        if [ "${tagname/${tagname_version}}" == "${tagname}" ]; then
+          echo "ERROR! Invalid tagname '${tagname}' does not start with '${tagname_version}'"
+          exit 1 # this causes the job to fail without running the next steps
+        fi
+        tagname_suffix="${tagname/${tagname_version}}"
+        if [ `python3 -c "import re; print(re.match('(|_[0-9a-z]+)$','${tagname_suffix}') is not None)"` == "False" ]; then
+          echo "ERROR! Invalid tagname '${tagname}' (valid format is '${tagname_version}[_txt]' where txt only contains letters or digits)"
+          exit 1 # this causes the job to fail without running the next steps
+        fi
+        echo "OK! Tagname '${tagname}' respects the expected format"
+        tagname_latest=${TAGPREFIX}${mg5_version}_latest
+        echo "TAGNAME_LATEST=${tagname_latest}" >> $GITHUB_ENV
+        if [ "${tagname_suffix}" == "" ]; then
+          tagname_makelatest=true
+          echo "INFO: tagname ${tagname} is a release tag: will update running tag ${tagname_latest}"
+        else
+          tagname_makelatest=false
+          echo "INFO: tagname ${tagname} is a pre-release tag: will NOT update running tag ${tagname_latest}"
+        fi
+        echo "TAGNAME_MAKELATEST=${tagname_makelatest}" >> $GITHUB_ENV
+        # Update VERSION.txt
+        echo "" >> ${WORKDIR}/VERSION.txt
+        echo "VERSION TAG:   ${tagname}" >> ${WORKDIR}/VERSION.txt
+        echo "RUNNING TAG:   ${tagname_latest}" >> ${WORKDIR}/VERSION.txt
+        # Release notes for the version tag
+        echo "Version tag ${tagname} ([changelog](https://github.com/${REPOSITORY}/blob/${tagname}/epochX/cudacpp/CODEGEN/PLUGIN/CUDACPP_SA_OUTPUT/CHANGELOG.md))" > ${WORKDIR}/versiontag.txt
+        echo "" >> ${WORKDIR}/versiontag.txt
+        echo "Validated for mg5amcnlo version ${mg5_version} (commit [${mg5_commit}](https://github.com/mg5amcnlo/mg5amcnlo/commit/${mg5_commit}))" >> ${WORKDIR}/versiontag.txt
+        echo "" >> ${WORKDIR}/versiontag.txt
+        echo "---" >> ${WORKDIR}/versiontag.txt
+        echo "" >> ${WORKDIR}/versiontag.txt
+        if [ "${tagname_makelatest}" != "true" ]; then
+          echo "This is a test or pre-release tag: to use it, you must install it directly as follows<sub>" >> ${WORKDIR}/versiontag.txt
+        else
+          echo "This is a release tag: you may install the *latest* release tag ${tagname_latest} as follows<sub>" >> ${WORKDIR}/versiontag.txt
+          echo "MG5_aMC>install cudacpp" >> ${WORKDIR}/versiontag.txt
+          echo "</sub>" >> ${WORKDIR}/versiontag.txt # hack to display smaller text in markdown
+          echo "Alternatively, you may install directly this specific tag as follows<sub>" >> ${WORKDIR}/versiontag.txt
+        fi
+        echo "MG5_aMC>install cudacpp --cudacpp_tarball=https://github.com/${REPOSITORY}/releases/download/${tagname}/cudacpp.tar.gz" >> ${WORKDIR}/versiontag.txt
+        echo "</sub>" >> ${WORKDIR}/versiontag.txt # hack to display smaller text in markdown
+        echo "" >> ${WORKDIR}/versiontag.txt
+        echo "---" >> ${WORKDIR}/versiontag.txt
+        echo "" >> ${WORKDIR}/versiontag.txt
+        cat ${WORKDIR}/VERSION.txt | egrep '^(commit|TARBALL) ' >> ${WORKDIR}/versiontag.txt
+
+    - name: delete_versiontag_releaseonly
+      # See https://cli.github.com/manual/gh_release_delete
+      # See https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-github-cli-in-workflows
+      run: |
+        echo "Current directory is $(pwd)"
+        cd branch_PR
+        echo "Current directory is now $(pwd)"
+        echo "Current branch is \"$(git branch | \grep ^* | sed 's/^* //')\""
+        echo "Retrieve release ${{ env.TAGNAME }}"
+        python3 -c 'print("-"*132)'
+        if gh release view ${{ env.TAGNAME }}; then
+          python3 -c 'print("-"*132)'
+          echo "Delete release ${{ env.TAGNAME }}"
+          gh release delete ${{ env.TAGNAME }} -y
+        else
+          python3 -c 'print("-"*132)'
+          echo "Release ${{ env.TAGNAME }} does not exist"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: delete_runningtag_releaseandtag
+      if: ${{ env.TAGNAME_MAKELATEST == 'true' }}
+      # See https://cli.github.com/manual/gh_release_delete
+      # See https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/using-github-cli-in-workflows
+      run: |
+        echo "Current directory is $(pwd)"
+        cd branch_PR
+        echo "Current directory is now $(pwd)"
+        echo "Current branch is \"$(git branch | \grep ^* | sed 's/^* //')\""
+        echo "Retrieve release ${{ env.TAGNAME_LATEST }}"
+        python3 -c 'print("-"*132)'
+        if gh release view ${{ env.TAGNAME_LATEST }}; then
+          python3 -c 'print("-"*132)'
+          echo "Delete release ${{ env.TAGNAME_LATEST }} and the associated tag"
+          gh release delete ${{ env.TAGNAME_LATEST }} -y --cleanup-tag
+        else
+          python3 -c 'print("-"*132)'
+          echo "Release ${{ env.TAGNAME_LATEST }} does not exist"
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: create_runningtag
+      if: ${{ env.TAGNAME_MAKELATEST == 'true' }}
+      run: |
+        echo "Current directory is $(pwd)"
+        echo "WORKDIR is ${WORKDIR}"
+        cd branch_PR
+        echo "Current directory is now $(pwd)"
+        echo "Current branch is \"$(git branch | \grep ^* | sed 's/^* //')\""
+        tagname=${TAGNAME}
+        echo "(From GITHUB_ENV)        tagname             = ${tagname}"
+        tagname_latest=${TAGNAME_LATEST}
+        echo "(From GITHUB_ENV)        tagname_latest      = ${tagname_latest}"
+        commit=$(cat ${WORKDIR}/VERSION.txt | awk '/^commit/{print $2}')
+        echo "(From VERSION.txt)       commit              = ${commit}"
+        mg5_version=$(cat ${WORKDIR}/VERSION.txt | awk '/^mg5_version_current/{print $3}')
+        mg5_commit=$(cat ${WORKDIR}/VERSION.txt | awk '/^mg5_commit_current/{print $3}')
+        echo "(From VERSION.txt)       mg5_version_current = ${mg5_version}"
+        echo "(From VERSION.txt)       mg5_commit_current  = ${mg5_commit}"
+        # Create running tag
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        echo "INFO: create running tag ${tagname_latest}"
+        git tag -f ${tagname_latest} ${commit} -m "Running tag ${tagname_latest}"
+        git push -f --tags
+        # Release notes for the running tag
+        echo "Running tag ${tagname_latest} ([changelog](https://github.com/${REPOSITORY}/blob/${tagname_latest}/epochX/cudacpp/CODEGEN/PLUGIN/CUDACPP_SA_OUTPUT/CHANGELOG.md))" > ${WORKDIR}/runningtag.txt
+        echo "This is equivalent to version tag ${tagname}" >> ${WORKDIR}/runningtag.txt
+        echo "" >> ${WORKDIR}/runningtag.txt
+        echo "Validated for mg5amcnlo version ${mg5_version} (commit [${mg5_commit}](https://github.com/mg5amcnlo/mg5amcnlo/commit/${mg5_commit}))" >> ${WORKDIR}/runningtag.txt
+        echo "" >> ${WORKDIR}/runningtag.txt
+        echo "---" >> ${WORKDIR}/runningtag.txt
+        echo "" >> ${WORKDIR}/runningtag.txt
+        cat ${WORKDIR}/VERSION.txt | egrep '^(commit|TARBALL) ' >> ${WORKDIR}/runningtag.txt
+
+    - name: release_versiontag
+      # See https://github.com/softprops/action-gh-release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: ${{ env.TAGNAME }}
+        prerelease: ${{ env.TAGNAME_MAKELATEST != 'true' }}
+        make_latest: ${{ env.TAGNAME_MAKELATEST }}
+        body_path: versiontag.txt
+        # Previous attempt to upload files from ${HOME}/VERSION.txt and ${HOME}/cudacpp.tar.gz failed
+        # The current implementation uploads files from the default ${WORKDIR} (without giving the explicit full path)
+        files: |
+          cudacpp.tar.gz
+          VERSION.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: release_runningtag
+      if: ${{ env.TAGNAME_MAKELATEST == 'true' }}
+      # See https://github.com/softprops/action-gh-release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: ${{ env.TAGNAME_LATEST }}
+        prerelease: ${{ env.TAGNAME_MAKELATEST != 'true' }}
+        make_latest: ${{ env.TAGNAME_MAKELATEST }}
+        tag_name: refs/tags/${{ env.TAGNAME_LATEST }}
+        body_path: runningtag.txt
+        # Previous attempt to upload files from ${HOME}/VERSION.txt and ${HOME}/cudacpp.tar.gz failed
+        # The current implementation uploads files from the default ${WORKDIR} (without giving the explicit full path)
+        files: |
+          cudacpp.tar.gz
+          VERSION.txt
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: checkout_INFO
+      if: ${{ env.TAGNAME_MAKELATEST == 'true' }}
+      uses: actions/checkout@v4
+      with:
+        ref: INFO
+        path: branch_INFO
+
+    - name: commit_infodat
+      if: ${{ env.TAGNAME_MAKELATEST == 'true' }}
+      run: |
+        echo "Current directory is $(pwd)"
+        echo "WORKDIR is ${WORKDIR}"
+        cd branch_INFO
+        echo "Current directory is now $(pwd)"
+        echo "Current branch is \"$(git branch | \grep ^* | sed 's/^* //')\""
+        echo "${{ env.MG5_VERSION }} https://github.com/madgraph5/madgraph4gpu/releases/download/${{ env.TAGNAME }}/cudacpp.tar.gz" >> version_info.dat
+        echo "Updated version_info.dat"
+        python3 -c 'print("-"*132)'
+        tail -n1 version_info.dat
+        python3 -c 'print("-"*132)'
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        if [ -z "$(git status --porcelain version_info.dat)" ]; then
+          echo "No changes detected in version_info.dat: nothing to commit"
+        else
+          echo "Commit and push version_info.dat"
+          echo "Update version_info.dat" > msg.txt
+          echo "" >> msg.txt
+          git diff version_info.dat | tail --lines=+6 >> msg.txt
+          git commit -F msg.txt version_info.dat
+          git push
+        fi
+
+#----------------------------------------------------------------------------------------------------------------------------------

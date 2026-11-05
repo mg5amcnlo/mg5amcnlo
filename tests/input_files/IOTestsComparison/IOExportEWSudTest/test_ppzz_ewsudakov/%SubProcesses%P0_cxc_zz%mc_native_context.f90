@@ -30,7 +30,7 @@ if(sector.lt.1.or.sector.gt.size(native_context_ids))stop "Invalid native sector
 context=native_context_ids(sector)
 active_sector=native_sector_ids(sector)
 if(context.eq.active_context)return
-if(contexts(context)%%context.eq.0)then
+if(contexts(context)%context.eq.0)then
 call born_query(context_providers(context),context,contexts(context),status)
 if(status.ne.0)stop "Native Born metadata query failed"
 endif

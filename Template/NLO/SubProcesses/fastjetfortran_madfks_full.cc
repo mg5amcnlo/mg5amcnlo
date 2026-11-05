@@ -110,7 +110,7 @@ namespace fwrapper {
     amcatnlo_transfer_jets(f77jets, njets);
  
     // Determine which parton/particle ended-up in which jet
-    // set all jet entrie to zero first
+    // set all jet entries to zero first
     for(unsigned int ii=0; ii<npart; ++ii) whichjet[ii]=0;       
 
     // Loop over jets and find constituents
@@ -288,7 +288,7 @@ void amcatnlo_fastjetppgenkt_(const double * p, const int & npart,
                      const double & palg,
                      double * f77jets, int & njets, int * whichjet) {
 
-    // jsut call amacatnlo_fastjetppgenkt_etamax passing etamax=-1.
+    // just call amacatnlo_fastjetppgenkt_etamax passing etamax=-1.
     double etamax = -1.;
     amcatnlo_fastjetppgenkt_etamax_(p,npart,R,ptjetmin,etamax,palg,
                                     f77jets,njets,whichjet);

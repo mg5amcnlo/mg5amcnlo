@@ -175,7 +175,7 @@ PhaseWindow *CreatePanel(Display *display, int setsEventNum,
 }
 
 /*
-** Add a window to the the window list.
+** Add a window to the window list.
 */
 void AddToWindowList(StdHepWindow *window) 
 {

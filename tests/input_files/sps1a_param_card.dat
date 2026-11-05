@@ -40,7 +40,7 @@ BLOCK SPINFO  # Spectrum calculator information
 #
 BLOCK MODSEL  # Model selection
      1     1   sugra
-     2 1 # fake line for the formating line point of view                                             
+     2 1 # fake line for the formatting line point of view
 #
 BLOCK SMINPUTS  # Standard Model inputs
      1     1.27934000E+02   # alpha_em^-1(M_Z)^MSbar

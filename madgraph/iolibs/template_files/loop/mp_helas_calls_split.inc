@@ -1,4 +1,5 @@
       SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
+      USE ALOHA_OBJECT
 C  
       IMPLICIT NONE
 C  
@@ -23,6 +24,11 @@ C
      %(real_mp_format)s P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  INTEGER H
+C
+C LOCAL VARIABLES
+C
+	  INTEGER FLAVOR(NEXTERNAL)
+	  DATA FLAVOR /NEXTERNAL*1/
 C  
 C GLOBAL VARIABLES
 C  
@@ -32,7 +38,7 @@ C
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
 	  %(mp_born_amps_decl)s
-	  %(complex_mp_format)s W(20,NWAVEFUNCS%(ncomb_helas_objs)s)
+	  type(mp_aloha) W(NWAVEFUNCS%(ncomb_helas_objs)s)
 	  common/%(proc_prefix)sMP_WFS/W  
 C
 C ----------

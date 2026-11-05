@@ -253,8 +253,8 @@ class Coupling(UFOBaseClass):
         return self.pole(0)
 
     def pole(self, x):
-        """ the self.value attribute can be a dictionary directly specifying the Laurent serie using normal
-        parameter or just a string which can possibly contain CTparameter defining the Laurent serie."""
+        """ the self.value attribute can be a dictionary directly specifying the Laurent series using normal
+        parameter or just a string which can possibly contain CTparameter defining the Laurent series."""
         
         if isinstance(self.value,dict):
             if -x in list(self.value.keys()):
@@ -270,9 +270,9 @@ class Coupling(UFOBaseClass):
                if not CTparam:
                    CTparam=param
                else:
-                   raise UFOError("UFO does not support yet more than one occurence of CTParameters in the couplings values.")
+                   raise UFOError("UFO does not yet support more than one occurrence of CTParameters in the coupling values.")
            elif numberOfMatches>1:
-               raise UFOError("UFO does not support yet more than one occurence of CTParameters in the couplings values.")
+               raise UFOError("UFO does not yet support more than one occurrence of CTParameters in the coupling values.")
 
         if not CTparam:
             if x==0:

@@ -3,7 +3,7 @@
 #
 # Copyright (c) 2011 The MadGraph Development team and Contributors
 #
-# This file is a part of the MadGraph 5 project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #

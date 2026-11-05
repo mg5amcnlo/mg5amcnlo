@@ -76,7 +76,7 @@ class Card(dict):
         self.info = self #retro compatibility
         
         self.file=file
-        self.charged = 0 # most of the file are automaticaly read, but not all
+        self.charged = 0 # most of the file are automatically read, but not all
         
         if not type:
             self.type=self.detect_type()
@@ -99,8 +99,8 @@ class Card(dict):
         
     #2 #########################################################################
     def read_card(self,name_card):
-        """ DEPRECIATED """
-        print("warning depreciated funtion read_card in use")
+        """ DEPRECATED """
+        print("warning: deprecated function read_card in use")
         raise Exception
         self.read(name_card)
         
@@ -503,7 +503,7 @@ class Particles_file(Card):
         """ return a list of pid for each tag -d'ont treat multiple tag-"""
  
         if not self.charged:
-            self.read() #not automaticly read for the moment
+            self.read() #not automatically read for the moment
         pid={}
         for data in self.info['particles']:
             
@@ -524,7 +524,7 @@ class Particles_file(Card):
         
         
         if not self.charged:
-            self.read() #not automaticly read for the moment
+            self.read() #not automatically read for the moment
         dict_mass={}
         dict_width={}
         for data in self.info['particles']:
@@ -554,7 +554,7 @@ class Particles_file(Card):
 
         return {1: 'd', 2: 'u', 3: 's', 4: 'c', 5: 'b', 6: 't', 11: 'e', 12: 've', 13: 'mu', 14: 'vm', 15: 'ta', 16: 'vt', 21: 'g', 22: 'A', 23: 'Z', 24: 'W', 25: 'h'}
 #        if not self.charged:
-#            self.read() #not automaticly read for the moment
+#            self.read() #not automatically read for the moment
 #        out={}
 #        for data in self.info['particles']:
 #            pid=abs(int(data[-1]))

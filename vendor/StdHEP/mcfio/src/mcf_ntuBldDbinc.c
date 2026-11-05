@@ -63,7 +63,7 @@ static void dbin_getrec(char* fname[],void (*interpret)(void))
   long inc_depth_old = 0;
   const int nchmx = 300;
   /*
-  ** Start be intializing all these globals, to be able to call this routine
+  ** Start be initializing all these globals, to be able to call this routine
   ** more than once.. 
   */
   inc_depth = 0;
@@ -236,7 +236,7 @@ static void lineparse()
       if (tok2[0] == '$') {
          tmp1 = strchr(&tok2[1], '/');
          if (tmp1 == NULL) {
-              fprintf(stderr, "DBin error, Unkonw path %s\n", tok2);
+              fprintf(stderr, "DBin error, Unknown path %s\n", tok2);
               return;
          }
          envName = (char *) malloc(sizeof(char) * (strlen(tok2)+1));
@@ -246,7 +246,7 @@ static void lineparse()
          free(envName);
          
          if (env == NULL) { 
-              fprintf(stderr, "DBin error, Unkonw path %s\n", tok2);
+              fprintf(stderr, "DBin error, Unknown path %s\n", tok2);
               return;
          }
          strcpy(filename,env); l = strlen(env); filename[l] = '/'; l++;

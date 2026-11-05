@@ -227,7 +227,7 @@ c madevent_vegas or madevent_mint
          write(lun,40) 'cp -f ../$3\_G$i/mint_grids .'
          write(lun,35) "fi"
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
+         write(lun,35) 'echo "Cannot find directory ../$3\_G$i/"'//
      &        ' > log.txt'
          write(lun,35) 'exit'
          write(lun,30) 'fi'
@@ -243,7 +243,7 @@ c madevent_mintMC
          write(lun,30) 'if [[ -e ../G$3$i ]]; then'
          write(lun,35) 'cp -f ../G$3$i/mint_grids ./preset_mint_grids'
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
+         write(lun,35) 'echo "Cannot find directory ../G$3$i/"'//
      &        ' > log.txt'
          write(lun,35) 'exit'
          write(lun,30) 'fi'
@@ -311,7 +311,7 @@ c madevent_vegas or madevent_mint
          write(lun,40) 'cp -f $CONDOR_INITIAL_DIR/$3\_G$i/mint_grids .'
          write(lun,35) "fi"
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../$3\_G$i/"'//
+         write(lun,35) 'echo "Cannot find directory ../$3\_G$i/"'//
      &        ' > log2.txt'
          write(lun,30) 'fi'
          write(lun,25) 'fi'
@@ -329,7 +329,7 @@ c madevent_mintMC
          write(lun,35) 'cp -f $CONDOR_INITIAL_DIR/G$3$i/mint_grids '//
      &        './preset_mint_grids'
          write(lun,30) 'else'
-         write(lun,35) 'echo "Cannot find direcotry ../G$3$i/"'//
+         write(lun,35) 'echo "Cannot find directory ../G$3$i/"'//
      &        ' > log.txt'
          write(lun,35) 'exit'
          write(lun,30) 'fi'

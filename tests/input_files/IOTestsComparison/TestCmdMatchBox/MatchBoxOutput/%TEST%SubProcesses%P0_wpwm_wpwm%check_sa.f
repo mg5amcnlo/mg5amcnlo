@@ -4,6 +4,7 @@ C     THIS IS THE DRIVER FOR CHECKING THE STANDALONE MATRIX ELEMENT.
 C     IT USES A SIMPLE PHASE SPACE GENERATOR
 C     Fabio Maltoni - 3rd Febraury 2007
 C**************************************************************************
+          use model_object
       IMPLICIT NONE
 C     
 C     CONSTANTS  
@@ -31,10 +32,21 @@ C
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      CHARACTER*30 SQRTS_STR
+      CHARACTER*30 NB_TRY_STR, UFLAVOR_STR
+      INTEGER ARGC
+      INTEGER NB_TRY, unique_flavor
+      INTEGER MAXFLAVOR
+      PARAMETER (MAXFLAVOR=1)
+      INTEGER FLAVOR(NEXTERNAL, MAXFLAVOR)
+      INTEGER PDG_FOR_FLAVOR(NEXTERNAL,MAXFLAVOR)
+      INTEGER FLAV_IDX
+      INTEGER GET_FLAVOR_INDEX
+C
       LOGICAL READPS
 C     
 C     EXTERNAL
-C     
+C
       REAL*8 DOT
       EXTERNAL DOT
       
@@ -50,7 +62,7 @@ c     models are read from Cards/param_card.dat. The secondary parameters are ca
 c     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 c     in coupl.inc .
 
-      call setpara('param_card.dat')  !first call to setup the paramaters
+      call setpara('param_card.dat')  !first call to set up the parameters
       include "pmass.inc"             !set up masses
 
       TOTALMASS = 0.0d0
@@ -60,16 +72,32 @@ c     in coupl.inc .
 
 c---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
-c     the MadGraph5_aMC@NLO matrix-element.       
+c     the MadGraph7 matrix-element.       
 c     Alternatevely, here the user can call or set the four momenta at his will, see below.
-c       
+c     	
+      ARGC = COMMAND_ARGUMENT_COUNT()
       IF(nincoming.EQ.1) THEN
-         SQRTS=PMASS(1)
+        SQRTS=PMASS(1)
       ELSE
-         SQRTS=1000d0              !CMS energy in GEV
+        SQRTS=1000d0              !CMS energy in GEV
+c---  Allow the energy to be set via command-line argument: ./check <energy> [nb_try] [flavor_idx]
+         IF (ARGC .GE. 1) THEN
+            CALL GET_COMMAND_ARGUMENT(1, SQRTS_STR)
+            READ(SQRTS_STR,*) SQRTS
+         ENDIF
          IF (SQRTS.le.2.0d0*TOTALMASS) THEN
             SQRTS = 2.0d0*TOTALMASS
          ENDIF
+      ENDIF
+      NB_TRY = 1
+      unique_flavor = 0
+      IF (ARGC .GE. 2) THEN
+        CALL GET_COMMAND_ARGUMENT(2, NB_TRY_STR)
+        READ(NB_TRY_STR,*) NB_TRY
+      ENDIF
+      IF (ARGC .GE. 3) THEN
+        CALL GET_COMMAND_ARGUMENT(3, UFLAVOR_STR)
+        READ(UFLAVOR_STR,*) unique_flavor
       ENDIF
 
       call printout()
@@ -103,17 +131,32 @@ c
       enddo
       write (*,*) "-----------------------------------------------------------------------------"
 
+              FLAVOR(:,:) =1
+        PDG_FOR_FLAVOR(1,1) = 24
+        PDG_FOR_FLAVOR(2,1) = -24
+        PDG_FOR_FLAVOR(3,1) = 24
+        PDG_FOR_FLAVOR(4,1) = -24
 c     
 c     Now we can call the matrix element!
 c
-      CALL SMATRIX(P,MATELEM)
+      do I=1, MAXFLAVOR
+      IF(unique_flavor.gt.0.and.unique_flavor.ne.I) CYCLE
+      FLAV_IDX = GET_FLAVOR_INDEX(FLAVOR(1,I))
+      do J=1, NB_TRY
+      CALL SMATRIX(P,FLAV_IDX, MATELEM)
+      enddo
 c
-
-      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)    
+      write(*,*) "PDG", PDG_FOR_FLAVOR(:,I)
+      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
       write (*,*) "-----------------------------------------------------------------------------"
+      enddo
 
       if (.false.)then
-          call get_density_matrix(P)
+         do I=1, MAXFLAVOR
+            write (*,*) "==== density matrix for flavor", I,
+     .                  " (PDG ", PDG_FOR_FLAVOR(:,I), ") ===="
+            call get_density_matrix(P, FLAVOR(1,I))
+         enddo
       endif
 cc
 cc      Copy down here (or read in) the four momenta as a string. 
@@ -148,20 +191,21 @@ c      write (*,*) "-------------------------------------------------"
 
       end
     
-       SUBROUTINE get_density_matrix(P)
+       SUBROUTINE get_density_matrix(P, FLAVOR)
        implicit none
 C---  integer nexternal ! number particles (incoming+outgoing) in the me
        INCLUDE "nexternal.inc"
        REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
+       INTEGER FLAVOR(NEXTERNAL) ! per-particle merged-flavor index (1-based)
        INTEGER NHEL(NEXTERNAL)
        INTEGER N_CHANGING  ! might need changing
        PARAMETER (N_CHANGING=1)
        INTEGER N_COMB
-       PARAMETER (N_COMB=2) ! total number of different helicity  combination to consider 
+       PARAMETER (N_COMB=2) ! total number of different helicity  combination to consider
        INTEGER POS(N_CHANGING)
        INTEGER ALLOW_HEL(N_CHANGING*N_COMB)
        DOUBLE COMPLEX INTER((N_COMB*(N_COMB+1))/2)
-       
+
        INTEGER I,J, SOL
        INTEGER K
 
@@ -171,14 +215,14 @@ C---  integer nexternal ! number particles (incoming+outgoing) in the me
        POS(1) =1 
         endif
 
-c      density matrix helicity index value for particle  
+c      density matrix helicity index value for particle
        ALLOW_HEL(1) = +1 
        ALLOW_HEL(2) = -1
 
 
 c     The value of alphas is 0 to keep the value of the param_card
 c     The value of mu_r2 is set to 0 but it is a dummy variable at tree-level anyway
-       call GET_DENSITY(P, POS, N_CHANGING, ALLOW_HEL, N_COMB, 0d0, 0d0, INTER)
+       call GET_DENSITY(P,  POS, N_CHANGING, ALLOW_HEL, N_COMB, FLAVOR, 0d0, 0d0, INTER)
        
        SOL=0
        DO I=1, N_COMB
@@ -211,7 +255,7 @@ C****************************************************************************
 
 
       SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
-C---- auxiliary function to change convention between MadGraph5_aMC@NLO and rambo
+C---- auxiliary function to change convention between MadGraph7 and rambo
 c---- four momenta.       
       IMPLICIT NONE
       INCLUDE "nexternal.inc"
@@ -507,8 +551,6 @@ C         LOCAL
       IRANMR = 97
       JRANMR = 33
       END
-
-
 
 
 

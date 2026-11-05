@@ -77,8 +77,8 @@ C     ----------
 
 C     ERROR CODES CONVENTION
 C     
-C     1         ::  None physical PS point input
-C     100-1000  ::  Error in the origianl method for restoring
+C     1         ::  Nonphysical PS point input
+C     100-1000  ::  Error in the original method for restoring
 C      precision
 C     1000-9999 ::  Error when restoring precision ala PSMC
 C     
@@ -141,7 +141,7 @@ C     Report to the user or update the PS point.
 
       IF (WARNED.GE.20.AND..NOT.TOLD_SUPPRESS) THEN
         WRITE(*,*) 'INFO:: Further warnings from the improve_ps'
-     $   //' routine will now be supressed.'
+     $   //' routine will now be suppressed.'
         TOLD_SUPPRESS=.TRUE.
       ENDIF
 
@@ -403,6 +403,15 @@ C     stores the result in P and for the quadruple precision
 C     version , it also modifies the global variables
 C     PS and MP_DONE accordingly.
 
+C     Both rotations are exact axis permutations, so exact zeros
+C     survive. When some external leg is EXACTLY at rest -- what
+C     boost_to_frame arranges for a polarised particle selected alone
+C     by me_frame -- HELAS takes that particle's spin axis from the
+C     frame z axis instead of its momentum, and a permutation moving z
+C     would change |M|^2 and fake an instability (blocker B11). The
+C     rotations are then taken about z (pi/2 and pi), which are just as
+C     exact and leave that spin axis where it is. Moving and massless
+C     particles carry their helicity axis along, so nothing changes.
       SUBROUTINE ROTATE_PS(P_IN,P,ROTATION)
       IMPLICIT NONE
 C     
@@ -419,14 +428,35 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
+      LOGICAL ATREST
+      DOUBLE PRECISION ZERO
+      PARAMETER (ZERO=0.0D0)
 
 C     ----------
 C     BEGIN CODE
 C     ----------
 
+      ATREST=.FALSE.
       DO I=1,NEXTERNAL
-C       rotation=1 => (xp=z,yp=-x,zp=-y)
-        IF(ROTATION.EQ.1) THEN
+        IF(P_IN(1,I).EQ.ZERO.AND.P_IN(2,I).EQ.ZERO.AND.
+     &     P_IN(3,I).EQ.ZERO) ATREST=.TRUE.
+      ENDDO
+
+      DO I=1,NEXTERNAL
+C       a leg at rest, rotation=1 => pi/2 about z (xp=-y,yp=x,zp=z)
+        IF(ATREST.AND.ROTATION.EQ.1) THEN
+          P(0,I)=P_IN(0,I)
+          P(1,I)=-P_IN(2,I)
+          P(2,I)=P_IN(1,I)
+          P(3,I)=P_IN(3,I)
+C         a leg at rest, rotation=2 => pi about z (xp=-x,yp=-y,zp=z)
+        ELSEIF(ATREST.AND.ROTATION.EQ.2) THEN
+          P(0,I)=P_IN(0,I)
+          P(1,I)=-P_IN(1,I)
+          P(2,I)=-P_IN(2,I)
+          P(3,I)=P_IN(3,I)
+C         rotation=1 => (xp=z,yp=-x,zp=-y)
+        ELSEIF(ROTATION.EQ.1) THEN
           P(0,I)=P_IN(0,I)
           P(1,I)=P_IN(3,I)
           P(2,I)=-P_IN(1,I)
@@ -448,6 +478,15 @@ C         rotation=2 => (xp=-z,yp=y,zp=x)
       END
 
 
+C     Both rotations are exact axis permutations, so exact zeros
+C     survive. When some external leg is EXACTLY at rest -- what
+C     boost_to_frame arranges for a polarised particle selected alone
+C     by me_frame -- HELAS takes that particle's spin axis from the
+C     frame z axis instead of its momentum, and a permutation moving z
+C     would change |M|^2 and fake an instability (blocker B11). The
+C     rotations are then taken about z (pi/2 and pi), which are just as
+C     exact and leave that spin axis where it is. Moving and massless
+C     particles carry their helicity axis along, so nothing changes.
       SUBROUTINE MP_ROTATE_PS(P_IN,P,ROTATION)
       IMPLICIT NONE
 C     
@@ -464,6 +503,9 @@ C
 C     LOCAL VARIABLES 
 C     
       INTEGER I,J
+      LOGICAL ATREST
+      REAL*16 ZERO
+      PARAMETER (ZERO=0.0E0)
 C     
 C     GLOBAL VARIABLES
 C     
@@ -474,9 +516,27 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
+      ATREST=.FALSE.
       DO I=1,NEXTERNAL
-C       rotation=1 => (xp=z,yp=-x,zp=-y)
-        IF(ROTATION.EQ.1) THEN
+        IF(P_IN(1,I).EQ.ZERO.AND.P_IN(2,I).EQ.ZERO.AND.
+     &     P_IN(3,I).EQ.ZERO) ATREST=.TRUE.
+      ENDDO
+
+      DO I=1,NEXTERNAL
+C       a leg at rest, rotation=1 => pi/2 about z (xp=-y,yp=x,zp=z)
+        IF(ATREST.AND.ROTATION.EQ.1) THEN
+          P(0,I)=P_IN(0,I)
+          P(1,I)=-P_IN(2,I)
+          P(2,I)=P_IN(1,I)
+          P(3,I)=P_IN(3,I)
+C         a leg at rest, rotation=2 => pi about z (xp=-x,yp=-y,zp=z)
+        ELSEIF(ATREST.AND.ROTATION.EQ.2) THEN
+          P(0,I)=P_IN(0,I)
+          P(1,I)=-P_IN(1,I)
+          P(2,I)=-P_IN(2,I)
+          P(3,I)=P_IN(3,I)
+C         rotation=1 => (xp=z,yp=-x,zp=-y)
+        ELSEIF(ROTATION.EQ.1) THEN
           P(0,I)=P_IN(0,I)
           P(1,I)=P_IN(3,I)
           P(2,I)=-P_IN(1,I)
@@ -706,7 +766,7 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J, P1, P2
+      INTEGER I,J, P1, P2, IABSORB
       REAL*16 NEWP(0:3,NEXTERNAL), PBUFF(0:3)
       REAL*16 BUFF, BUFF2, XSCALE, APPROX_ZEROS(NAPPROXZEROS)
       REAL*16 MASSES(NEXTERNAL)
@@ -750,13 +810,30 @@ C     First make sur that the space like momentum is exactly conserved
           PBUFF(J)=PBUFF(J)+NEWP(J,I)
         ENDDO
       ENDDO
-      DO I=NINITIAL+1,NEXTERNAL-1
-        DO J=1,3
-          PBUFF(J)=PBUFF(J)-NEWP(J,I)
-        ENDDO
+C     Absorb the residual in the final-state leg with the largest
+C     |p|, not in leg NEXTERNAL: that leg is never at rest, so an
+C     exactly vanishing three-momentum survives. HELAS reads the
+C     spin axis of a polarised leg off 'pp.eq.0', so a 1e-14
+C     residual there builds the longitudinal vector along noise.
+C     Largest |p| is also the smallest relative distortion.
+      IABSORB=NEXTERNAL
+      BUFF=ZERO
+      DO I=NINITIAL+1,NEXTERNAL
+        BUFF2=NEWP(1,I)**2+NEWP(2,I)**2+NEWP(3,I)**2
+        IF (BUFF2.GT.BUFF) THEN
+          BUFF=BUFF2
+          IABSORB=I
+        ENDIF
+      ENDDO
+      DO I=NINITIAL+1,NEXTERNAL
+        IF (I.NE.IABSORB) THEN
+          DO J=1,3
+            PBUFF(J)=PBUFF(J)-NEWP(J,I)
+          ENDDO
+        ENDIF
       ENDDO
       DO J=1,3
-        NEWP(J,NEXTERNAL)=PBUFF(J)
+        NEWP(J,IABSORB)=PBUFF(J)
       ENDDO
 
 C     Now find the 'x' rescaling factor

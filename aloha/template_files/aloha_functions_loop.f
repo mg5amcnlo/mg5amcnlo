@@ -2,7 +2,7 @@ C###############################################################################
 C
 C Copyright (c) 2010 The ALOHA Development team and Contributors
 C
-C This file is a part of the MadGraph5_aMC@NLO project, an application which
+C This file is a part of the MadGraph7 project, an application which
 C automatically generates Feynman diagrams and matrix elements for arbitrary
 C high-energy processes in the Standard Model and beyond.
 C
@@ -10,7 +10,34 @@ C It is subject to the ALOHA license which should accompany this
 C distribution.
 C
 C###############################################################################
-      subroutine ixxxxx(p, fmass, nhel, nsf ,fi)
+      module ALOHA_OBJECT
+         TYPE ALOHA
+            SEQUENCE
+            double complex::W(4)
+            double complex :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA
+         TYPE ALOHA2D
+            SEQUENCE
+            double complex::W(16)
+            double complex :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA2D
+         TYPE MP_ALOHA
+            SEQUENCE
+            complex*32 :: W(4)
+            complex*32 :: P(0:3)
+            integer :: flv_index
+         END TYPE MP_ALOHA
+         TYPE MP_ALOHA2D
+            SEQUENCE
+            complex*32 :: W(16)
+            complex*32 :: P(0:3)
+            integer :: flv_index
+         END TYPE MP_ALOHA2D
+      end module ALOHA_OBJECT
+
+      subroutine ixxxxx(p, fmass, nhel, nsf, flavor ,fi)
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number.
@@ -22,13 +49,15 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fi(6)          : fermion wavefunction               |fi>
+c       type(aloha) fi         : fermion wavefunction               |fi>
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex fi(8),chi(2)
+      type(aloha) fi
+      double complex chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,ip,im,nh
+      integer nhel,nsf,ip,im,nh,flavor
 
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
@@ -75,10 +104,11 @@ c      fi(5) = dcmplx(p(0),p(3))*nsf
 c      fi(6) = dcmplx(p(1),p(2))*nsf
 
 c     Convention for loop computations
-      fi(1) = dcmplx(p(0),0.D0)*(-nsf)
-      fi(2) = dcmplx(p(1),0.D0)*(-nsf)
-      fi(3) = dcmplx(p(2),0.D0)*(-nsf)
-      fi(4) = dcmplx(p(3),0.D0)*(-nsf)
+      fi%P(0) = p(0)*(-nsf)
+      fi%P(1) = p(1)*(-nsf)
+      fi%P(2) = p(2)*(-nsf)
+      fi%P(3) = p(3)*(-nsf)
+      fi%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -94,10 +124,10 @@ c     Convention for loop computations
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(5) = ip     * sqm(ip)
-            fi(6) = im*nsf * sqm(ip)
-            fi(7) = ip*nsf * sqm(im)
-            fi(8) = im     * sqm(im)
+            fi%W(1) = ip     * sqm(ip)
+            fi%W(2) = im*nsf * sqm(ip)
+            fi%W(3) = ip*nsf * sqm(im)
+            fi%W(4) = im     * sqm(im)
 
          else
 
@@ -122,24 +152,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
                chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fi(5) = sfomeg(1)*chi(im)
-            fi(6) = sfomeg(1)*chi(ip)
-            fi(7) = sfomeg(2)*chi(im)
-            fi(8) = sfomeg(2)*chi(ip)
+            fi%W(1) = sfomeg(1)*chi(im)
+            fi%W(2) = sfomeg(1)*chi(ip)
+            fi%W(3) = sfomeg(2)*chi(im)
+            fi%W(4) = sfomeg(2)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -148,15 +178,15 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(5) = dcmplx( rZero )
-            fi(6) = dcmplx( rZero )
-            fi(7) = chi(1)
-            fi(8) = chi(2)
+            fi%W(1) = dcmplx( rZero )
+            fi%W(2) = dcmplx( rZero )
+            fi%W(3) = chi(1)
+            fi%W(4) = chi(2)
          else
-            fi(5) = chi(2)
-            fi(6) = chi(1)
-            fi(7) = dcmplx( rZero )
-            fi(8) = dcmplx( rZero )
+            fi%W(1) = chi(2)
+            fi%W(2) = chi(1)
+            fi%W(3) = dcmplx( rZero )
+            fi%W(4) = dcmplx( rZero )
          endif
       endif
 c
@@ -164,7 +194,7 @@ c
       end
 
 
-      subroutine ixxxso(p, fmass, nhel, nsf ,fi)
+      subroutine ixxxso(p, fmass, nhel, nsf, flavor ,fi)
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number.
@@ -176,13 +206,15 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fi(6)          : fermion wavefunction               |fi>
+c       type(aloha) fi         : fermion wavefunction               |fi>
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex fi(4),chi(2)
+      type(aloha) fi
+      double complex chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,ip,im,nh
+      integer nhel,nsf,ip,im,nh,flavor
 
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
@@ -234,6 +266,12 @@ c$$$      fi(2) = dcmplx(p(1),0.D0)*(-nsf)
 c$$$      fi(3) = dcmplx(p(2),0.D0)*(-nsf)
 c$$$      fi(4) = dcmplx(p(3),0.D0)*(-nsf)
 
+      fi%P(0) = p(0)*(-nsf)
+      fi%P(1) = p(1)*(-nsf)
+      fi%P(2) = p(2)*(-nsf)
+      fi%P(3) = p(3)*(-nsf)
+      fi%flv_index = flavor
+
       nh = nhel*nsf
 
       if ( fmass.ne.rZero ) then
@@ -247,10 +285,10 @@ c$$$      fi(4) = dcmplx(p(3),0.D0)*(-nsf)
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(1) = ip     * sqm(ip)
-            fi(2) = im*nsf * sqm(ip)
-            fi(3) = ip*nsf * sqm(im)
-            fi(4) = im     * sqm(im)
+            fi%W(1) = ip     * sqm(ip)
+            fi%W(2) = im*nsf * sqm(ip)
+            fi%W(3) = ip*nsf * sqm(im)
+            fi%W(4) = im     * sqm(im)
 
          else
 
@@ -275,24 +313,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
                chi(2) = dcmplx( nh*p(1) , p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fi(1) = sfomeg(1)*chi(im)
-            fi(2) = sfomeg(1)*chi(ip)
-            fi(3) = sfomeg(2)*chi(im)
-            fi(4) = sfomeg(2)*chi(ip)
+            fi%W(1) = sfomeg(1)*chi(im)
+            fi%W(2) = sfomeg(1)*chi(ip)
+            fi%W(3) = sfomeg(2)*chi(im)
+            fi%W(4) = sfomeg(2)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -301,15 +339,15 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = dcmplx( nh*p(1), p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(1) = dcmplx( rZero )
-            fi(2) = dcmplx( rZero )
-            fi(3) = chi(1)
-            fi(4) = chi(2)
+            fi%W(1) = dcmplx( rZero )
+            fi%W(2) = dcmplx( rZero )
+            fi%W(3) = chi(1)
+            fi%W(4) = chi(2)
          else
-            fi(1) = chi(2)
-            fi(2) = chi(1)
-            fi(3) = dcmplx( rZero )
-            fi(4) = dcmplx( rZero )
+            fi%W(1) = chi(2)
+            fi%W(2) = chi(1)
+            fi%W(3) = dcmplx( rZero )
+            fi%W(4) = dcmplx( rZero )
          endif
       endif
 c
@@ -317,7 +355,7 @@ c
       end
 
 
-      subroutine mp_ixxxxx(p, fmass, nhel, nsf ,fi)
+      subroutine mp_ixxxxx(p, fmass, nhel, nsf, flavor ,fi)
 c
 c This subroutine computes a fermion wavefunction with the flowing-IN
 c fermion number, in QUADRUPLE PRECISIOn
@@ -329,21 +367,24 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fi(6)          : fermion wavefunction               |fi>
+c       type(mp_aloha) fi      : fermion wavefunction               |fi>
 c
+      use ALOHA_OBJECT
       implicit none
-      complex*32 fi(8),chi(2)
+      type(mp_aloha) fi
+      complex*32 chi(2)
       real*16 p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,ip,im,nh
+      integer nhel,nsf,ip,im,nh,flavor
 
       real*16 rZero, rHalf, rTwo
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 c     Convention for loop computations
-      fi(1) = cmplx(p(0),rZero,KIND=16)*(-nsf)
-      fi(2) = cmplx(p(1),rZero,KIND=16)*(-nsf)
-      fi(3) = cmplx(p(2),rZero,KIND=16)*(-nsf)
-      fi(4) = cmplx(p(3),rZero,KIND=16)*(-nsf)
+      fi%P(0) = p(0)*(-nsf)
+      fi%P(1) = p(1)*(-nsf)
+      fi%P(2) = p(2)*(-nsf)
+      fi%P(3) = p(3)*(-nsf)
+      fi%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -358,10 +399,10 @@ c     Convention for loop computations
             ip = (1+nh)/2
             im = (1-nh)/2
 
-            fi(5) = ip     * sqm(ip)
-            fi(6) = im*nsf * sqm(ip)
-            fi(7) = ip*nsf * sqm(im)
-            fi(8) = im     * sqm(im)
+            fi%W(1) = ip     * sqm(ip)
+            fi%W(2) = im*nsf * sqm(ip)
+            fi%W(3) = ip*nsf * sqm(im)
+            fi%W(4) = im     * sqm(im)
 
          else
 
@@ -386,24 +427,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
                chi(2) = cmplx( nh*p(1) , p(2),KIND=16)/sqrt(rTwo*pp*pp3)
             endif
 
-            fi(5) = sfomeg(1)*chi(im)
-            fi(6) = sfomeg(1)*chi(ip)
-            fi(7) = sfomeg(2)*chi(im)
-            fi(8) = sfomeg(2)*chi(ip)
+            fi%W(1) = sfomeg(1)*chi(im)
+            fi%W(2) = sfomeg(1)*chi(ip)
+            fi%W(3) = sfomeg(2)*chi(im)
+            fi%W(4) = sfomeg(2)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = sqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = sqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = cmplx( sqp0p3 ,KIND=16)
          if ( sqp0p3.eq.rZero ) then
@@ -412,22 +453,22 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = cmplx( nh*p(1), p(2) ,KIND=16)/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fi(5) = cmplx( rZero ,KIND=16)
-            fi(6) = cmplx( rZero ,KIND=16)
-            fi(7) = chi(1)
-            fi(8) = chi(2)
+            fi%W(1) = cmplx( rZero ,KIND=16)
+            fi%W(2) = cmplx( rZero ,KIND=16)
+            fi%W(3) = chi(1)
+            fi%W(4) = chi(2)
          else
-            fi(5) = chi(2)
-            fi(6) = chi(1)
-            fi(7) = cmplx( rZero ,KIND=16)
-            fi(8) = cmplx( rZero ,KIND=16)
+            fi%W(1) = chi(2)
+            fi%W(2) = chi(1)
+            fi%W(3) = cmplx( rZero ,KIND=16)
+            fi%W(4) = cmplx( rZero ,KIND=16)
          endif
       endif
 c
       return
       end
 
-      subroutine oxxxxx(p,fmass,nhel,nsf , fo)
+      subroutine oxxxxx(p,fmass,nhel,nsf, flavor , fo)
 c
 c This subroutine computes a fermion wavefunction with the flowing-OUT
 c fermion number.
@@ -439,13 +480,15 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fo(6)          : fermion wavefunction               <fo|
+c       type(aloha) fo         : fermion wavefunction               <fo|
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex fo(8),chi(2)
+      type(aloha) fo
+      double complex chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,nh,ip,im
+      integer nhel,nsf,nh,ip,im,flavor
 
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
@@ -492,10 +535,11 @@ c      fo(5) = dcmplx(p(0),p(3))*nsf
 c      fo(6) = dcmplx(p(1),p(2))*nsf
 
 c     Convention for loop computations
-      fo(1) = dcmplx(p(0),0.D0)*(nsf)
-      fo(2) = dcmplx(p(1),0.D0)*(nsf)
-      fo(3) = dcmplx(p(2),0.D0)*(nsf)
-      fo(4) = dcmplx(p(3),0.D0)*(nsf)
+      fo%P(0) = p(0)*nsf
+      fo%P(1) = p(1)*nsf
+      fo%P(2) = p(2)*nsf
+      fo%P(3) = p(3)*nsf
+      fo%flv_index = flavor
 
 
       nh = nhel*nsf
@@ -511,10 +555,10 @@ c     Convention for loop computations
 
             im = nhel * (1+nh)/2
             ip = nhel * -1 * ((1-nh)/2)
-            fo(5) = im     * sqm(abs(ip))
-            fo(6) = ip*nsf * sqm(abs(ip))
-            fo(7) = im*nsf * sqm(abs(im))
-            fo(8) = ip     * sqm(abs(im))
+            fo%W(1) = im     * sqm(abs(ip))
+            fo%W(2) = ip*nsf * sqm(abs(ip))
+            fo%W(3) = im*nsf * sqm(abs(im))
+            fo%W(4) = ip     * sqm(abs(im))
 
          else
 
@@ -540,24 +584,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
                chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fo(5) = sfomeg(2)*chi(im)
-            fo(6) = sfomeg(2)*chi(ip)
-            fo(7) = sfomeg(1)*chi(im)
-            fo(8) = sfomeg(1)*chi(ip)
+            fo%W(1) = sfomeg(2)*chi(im)
+            fo%W(2) = sfomeg(2)*chi(ip)
+            fo%W(3) = sfomeg(1)*chi(im)
+            fo%W(4) = sfomeg(1)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -566,15 +610,15 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(5) = chi(1)
-            fo(6) = chi(2)
-            fo(7) = dcmplx( rZero )
-            fo(8) = dcmplx( rZero )
+            fo%W(1) = chi(1)
+            fo%W(2) = chi(2)
+            fo%W(3) = dcmplx( rZero )
+            fo%W(4) = dcmplx( rZero )
          else
-            fo(5) = dcmplx( rZero )
-            fo(6) = dcmplx( rZero )
-            fo(7) = chi(2)
-            fo(8) = chi(1)
+            fo%W(1) = dcmplx( rZero )
+            fo%W(2) = dcmplx( rZero )
+            fo%W(3) = chi(2)
+            fo%W(4) = chi(1)
          endif
 
       endif
@@ -582,7 +626,7 @@ c
       return
       end
 
-      subroutine oxxxso(p,fmass,nhel,nsf , fo)
+      subroutine oxxxso(p,fmass,nhel,nsf, flavor , fo)
 c
 c This subroutine computes a fermion wavefunction with the flowing-OUT
 c fermion number.
@@ -594,53 +638,18 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fo(6)          : fermion wavefunction               <fo|
+c       type(aloha) fo         : fermion wavefunction               <fo|
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex fo(4),chi(2)
+      type(aloha) fo
+      double complex chi(2)
       double precision p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,nh,ip,im
+      integer nhel,nsf,nh,ip,im,flavor
 
       double precision rZero, rHalf, rTwo
       parameter( rZero = 0.0d0, rHalf = 0.5d0, rTwo = 2.0d0 )
-
-c#ifdef HELAS_CHECK
-c      double precision p2
-c      double precision epsi
-c      parameter( epsi = 2.0d-5 )
-c      integer stdo
-c      parameter( stdo = 6 )
-c#endif
-c
-c#ifdef HELAS_CHECK
-c      pp = sqrt(p(1)**2+p(2)**2+p(3)**2)
-c      if ( abs(p(0))+pp.eq.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx is zero momentum'
-c      endif
-c      if ( p(0).le.rZero ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx has non-positive energy'
-c         write(stdo,*)
-c     &        '         : p(0) = ',p(0)
-c      endif
-c      p2 = (p(0)-pp)*(p(0)+pp)
-c      if ( abs(p2-fmass**2).gt.p(0)**2*epsi ) then
-c         write(stdo,*)
-c     &        ' helas-error : p(0:3) in oxxxxx has inappropriate mass'
-c         write(stdo,*)
-c     &        '             : p**2 = ',p2,' : fmass**2 = ',fmass**2
-c      endif
-c      if ( abs(nhel).ne.1 ) then
-c         write(stdo,*) ' helas-error : nhel in oxxxxx is not -1,1'
-c         write(stdo,*) '             : nhel = ',nhel
-c      endif
-c      if ( abs(nsf).ne.1 ) then
-c         write(stdo,*) ' helas-error : nsf in oxxxxx is not -1,1'
-c         write(stdo,*) '             : nsf = ',nsf
-c      endif
-c#endif
 
 c     Convention for trees
 c      fo(5) = dcmplx(p(0),p(3))*nsf
@@ -652,6 +661,11 @@ c$$$      fo(2) = dcmplx(p(1),0.D0)*(nsf)
 c$$$      fo(3) = dcmplx(p(2),0.D0)*(nsf)
 c$$$      fo(4) = dcmplx(p(3),0.D0)*(nsf)
 
+      fo%P(0) = p(0)*nsf
+      fo%P(1) = p(1)*nsf
+      fo%P(2) = p(2)*nsf
+      fo%P(3) = p(3)*nsf
+      fo%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -666,10 +680,10 @@ c$$$      fo(4) = dcmplx(p(3),0.D0)*(nsf)
             ip = -((1+nh)/2)
             im =  (1-nh)/2
 
-            fo(1) = im     * sqm(im)
-            fo(2) = ip*nsf * sqm(im)
-            fo(3) = im*nsf * sqm(-ip)
-            fo(4) = ip     * sqm(-ip)
+            fo%W(1) = im     * sqm(im)
+            fo%W(2) = ip*nsf * sqm(im)
+            fo%W(3) = im*nsf * sqm(-ip)
+            fo%W(4) = ip     * sqm(-ip)
 
          else
 
@@ -695,24 +709,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
                chi(2) = dcmplx( nh*p(1) , -p(2) )/dsqrt(rTwo*pp*pp3)
             endif
 
-            fo(1) = sfomeg(2)*chi(im)
-            fo(2) = sfomeg(2)*chi(ip)
-            fo(3) = sfomeg(1)*chi(im)
-            fo(4) = sfomeg(1)*chi(ip)
+            fo%W(1) = sfomeg(2)*chi(im)
+            fo%W(2) = sfomeg(2)*chi(ip)
+            fo%W(3) = sfomeg(1)*chi(im)
+            fo%W(4) = sfomeg(1)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = dsqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = dsqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = dcmplx( sqp0p3 )
          if ( sqp0p3.eq.rZero ) then
@@ -721,15 +735,15 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = dcmplx( nh*p(1), -p(2) )/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(1) = chi(1)
-            fo(2) = chi(2)
-            fo(3) = dcmplx( rZero )
-            fo(4) = dcmplx( rZero )
+            fo%W(1) = chi(1)
+            fo%W(2) = chi(2)
+            fo%W(3) = dcmplx( rZero )
+            fo%W(4) = dcmplx( rZero )
          else
-            fo(1) = dcmplx( rZero )
-            fo(2) = dcmplx( rZero )
-            fo(3) = chi(2)
-            fo(4) = chi(1)
+            fo%W(1) = dcmplx( rZero )
+            fo%W(2) = dcmplx( rZero )
+            fo%W(3) = chi(2)
+            fo%W(4) = chi(1)
          endif
 
       endif
@@ -737,7 +751,7 @@ c
       return
       end
 
-      subroutine mp_oxxxxx(p,fmass,nhel,nsf , fo)
+      subroutine mp_oxxxxx(p,fmass,nhel,nsf, flavor , fo)
 c
 c This subroutine computes a fermion wavefunction with the flowing-OUT
 c fermion number in quadruple precision.
@@ -749,23 +763,25 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fo(6)          : fermion wavefunction               <fo|
+c       type(mp_aloha) fo      : fermion wavefunction               <fo|
 c
+      use ALOHA_OBJECT
       implicit none
-      complex*32 fo(8),chi(2)
+      type(mp_aloha) fo
+      complex*32 chi(2)
       real*16 p(0:3),sf(2),sfomeg(2),omega(2),fmass,
      &     pp,pp3,sqp0p3,sqm(0:1)
-      integer nhel,nsf,nh,ip,im
+      integer nhel,nsf,nh,ip,im,flavor
 
       real*16 rZero, rHalf, rTwo
       parameter( rZero = 0.0e0_16, rHalf = 0.5e0_16, rTwo = 2.0e0_16 )
 
 c     Convention for loop computations
-      fo(1) = cmplx(p(0),rZero,KIND=16)*nsf
-      fo(2) = cmplx(p(1),rZero,KIND=16)*nsf
-      fo(3) = cmplx(p(2),rZero,KIND=16)*nsf
-      fo(4) = cmplx(p(3),rZero,KIND=16)*nsf
-
+      fo%P(0) = p(0)*nsf
+      fo%P(1) = p(1)*nsf
+      fo%P(2) = p(2)*nsf
+      fo%P(3) = p(3)*nsf
+      fo%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -780,10 +796,10 @@ c     Convention for loop computations
             ip = -((1+nh)/2)
             im =  (1-nh)/2
 
-            fo(5) = im     * sqm(im)
-            fo(6) = ip*nsf * sqm(im)
-            fo(7) = im*nsf * sqm(-ip)
-            fo(8) = ip     * sqm(-ip)
+            fo%W(1) = im     * sqm(im)
+            fo%W(2) = ip*nsf * sqm(im)
+            fo%W(3) = im*nsf * sqm(-ip)
+            fo%W(4) = ip     * sqm(-ip)
 
          else
 
@@ -810,24 +826,24 @@ c           Light-cone identity avoids the |p|+p3 cancellation.
      & sqrt(rTwo*pp*pp3)
             endif
 
-            fo(5) = sfomeg(2)*chi(im)
-            fo(6) = sfomeg(2)*chi(ip)
-            fo(7) = sfomeg(1)*chi(im)
-            fo(8) = sfomeg(1)*chi(ip)
+            fo%W(1) = sfomeg(2)*chi(im)
+            fo%W(2) = sfomeg(2)*chi(ip)
+            fo%W(3) = sfomeg(1)*chi(im)
+            fo%W(4) = sfomeg(1)*chi(ip)
 
          endif
 
       else
 
-         if(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
+         if(p(3).lt.0d0.and.(p(1).ne.0d0.or.p(2).ne.0d0)) then
+c  p(0)+p(3) is a cancelling difference of two ~|p| numbers for a
+c  backward-moving massless fermion, and everything below divides by
+c  it. Take it from the light-cone identity p+ p- = pT^2 instead.
+            sqp0p3 = sqrt((p(1)**2+p(2)**2)/(abs(p(0))-p(3)))*nsf
+         elseif(p(1).eq.0d0.and.p(2).eq.0d0.and.p(3).lt.0d0) then
             sqp0p3 = 0d0
          else
-c           Light-cone identity avoids the E+p3 cancellation.
-            if ( p(3).lt.rZero .and. p(0)-p(3).gt.rZero ) then
-               sqp0p3 = sqrt((p(1)**2+p(2)**2)/(p(0)-p(3)))*nsf
-            else
-               sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
-            endif
+            sqp0p3 = sqrt(max(p(0)+p(3),rZero))*nsf
          end if
          chi(1) = cmplx( sqp0p3 ,KIND=16)
          if ( sqp0p3.eq.rZero ) then
@@ -836,15 +852,15 @@ c           Light-cone identity avoids the E+p3 cancellation.
             chi(2) = cmplx( nh*p(1), -p(2) , KIND=16)/sqp0p3
          endif
          if ( nh.eq.1 ) then
-            fo(5) = chi(1)
-            fo(6) = chi(2)
-            fo(7) = cmplx( rZero , KIND=16)
-            fo(8) = cmplx( rZero , KIND=16)
+            fo%W(1) = chi(1)
+            fo%W(2) = chi(2)
+            fo%W(3) = cmplx( rZero , KIND=16)
+            fo%W(4) = cmplx( rZero , KIND=16)
          else
-            fo(5) = cmplx( rZero , KIND=16)
-            fo(6) = cmplx( rZero , KIND=16)
-            fo(7) = chi(2)
-            fo(8) = chi(1)
+            fo%W(1) = cmplx( rZero , KIND=16)
+            fo%W(2) = cmplx( rZero , KIND=16)
+            fo%W(3) = chi(2)
+            fo%W(4) = chi(1)
          endif
 
       endif
@@ -866,12 +882,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : PSEUDOR  wavefunction    epsilon^mu^nu(t)
+c       type(aloha2d) tc       : PSEUDOR  wavefunction    epsilon^mu^nu(t)
 c
+      use ALOHA_OBJECT
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(20)
+      type(aloha2d) tc
 
       double complex ft(6,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -882,17 +899,17 @@ c
       parameter( rOne = 1.0d0, rTwo = 2.0d0 )
 
 
-      tc(5)=NHEL
+      tc%W(1)=NHEL
 
 c     Convention for trees
 c      tc(17) = dcmplx(p(0),p(3))*nst
 c      tc(18) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      tc(1) = dcmplx(p(0),0.D0)*nst
-      tc(2) = dcmplx(p(1),0.D0)*nst
-      tc(3) = dcmplx(p(2),0.D0)*nst
-      tc(4) = dcmplx(p(3),0.D0)*nst
+      tc%P(0) = p(0)*nst
+      tc%P(1) = p(1)*nst
+      tc%P(2) = p(2)*nst
+      tc%P(3) = p(3)*nst
 
       return
       end
@@ -911,12 +928,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : PSEUDOR  wavefunction    epsilon^mu^nu(t)
+c       type(mp_aloha2d) tc    : PSEUDOR  wavefunction    epsilon^mu^nu(t)
 c
+      use ALOHA_OBJECT
       implicit none
       real*16 p(0:3), tmass
       integer nhel, nst
-      complex*32 tc(20)
+      type(mp_aloha2d) tc
 
       complex*32 ft(6,4), ep(4), em(4), e0(4)
       real*16 pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -927,17 +945,17 @@ c
       parameter( rOne = 1.0e0_16, rTwo = 2.0e0_16 )
 
 
-      tc(5)=NHEL
+      tc%W(1)=NHEL
 
 c     Convention for trees
 c      tc(17) = dcmplx(p(0),p(3))*nst
 c      tc(18) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      tc(1) = cmplx(p(0),0.0e0_16,KIND=16)*nst
-      tc(2) = cmplx(p(1),0.0e0_16,KIND=16)*nst
-      tc(3) = cmplx(p(2),0.0e0_16,KIND=16)*nst
-      tc(4) = cmplx(p(3),0.0e0_16,KIND=16)*nst
+      tc%P(0) = p(0)*nst
+      tc%P(1) = p(1)*nst
+      tc%P(2) = p(2)*nst
+      tc%P(3) = p(3)*nst
 
       return
       end
@@ -951,10 +969,11 @@ c       real    p(0:3)         : four-momentum of scalar boson
 c       integer nss  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex sc(3)          : scalar wavefunction                   s
+c       type(aloha) sc         : scalar wavefunction                   s
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex sc(5)
+      type(aloha) sc
       double precision p(0:3)
       integer nss
 
@@ -993,17 +1012,17 @@ c         write(stdo,*) '             : nss = ',nss
 c      endif
 c#endif
 
-      sc(5) = dcmplx( rOne )
+      sc%W(1) = dcmplx( rOne )
 
 c     Convention for trees
 c      sc(2) = dcmplx(p(0),p(3))*nss
 c      sc(3) = dcmplx(p(1),p(2))*nss
 
 c     Convention for loop computations
-      sc(1) = dcmplx(p(0),0.D0)*nss
-      sc(2) = dcmplx(p(1),0.D0)*nss
-      sc(3) = dcmplx(p(2),0.D0)*nss
-      sc(4) = dcmplx(p(3),0.D0)*nss
+      sc%P(0) = p(0)*nss
+      sc%P(1) = p(1)*nss
+      sc%P(2) = p(2)*nss
+      sc%P(3) = p(3)*nss
 c
       return
       end
@@ -1018,27 +1037,28 @@ c       real    p(0:3)         : four-momentum of scalar boson
 c       integer nss  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex sc(3)          : scalar wavefunction                   s
+c       type(mp_aloha) sc      : scalar wavefunction                   s
 c
+      use ALOHA_OBJECT
       implicit none
-      complex*32 sc(5)
+      type(mp_aloha) sc
       real*16 p(0:3)
       integer nss
 
       real*16 rOne
       parameter( rOne = 1.0e0_16 )
 
-      sc(5) = cmplx( rOne , KIND=16)
+      sc%W(1) = cmplx( rOne , KIND=16)
 
 c     Convention for trees
 c      sc(2) = dcmplx(p(0),p(3))*nss
 c      sc(3) = dcmplx(p(1),p(2))*nss
 
 c     Convention for loop computations
-      sc(1) = cmplx(p(0),0.0e0_16, KIND=16)*nss
-      sc(2) = cmplx(p(1),0.0e0_16, KIND=16)*nss
-      sc(3) = cmplx(p(2),0.0e0_16, KIND=16)*nss
-      sc(4) = cmplx(p(3),0.0e0_16, KIND=16)*nss
+      sc%P(0) = p(0)*nss
+      sc%P(1) = p(1)*nss
+      sc%P(2) = p(2)*nss
+      sc%P(3) = p(3)*nss
 c
       return
       end
@@ -1055,12 +1075,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c       type(aloha2d) tc       : tensor wavefunction    epsilon^mu^nu(t)
 c
+      use ALOHA_OBJECT
       implicit none
       double precision p(0:3), tmass
       integer nhel, nst
-      double complex tc(20)
+      type(aloha2d) tc
 
       double complex ft(8,4), ep(4), em(4), e0(4)
       double precision pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -1085,10 +1106,10 @@ c      ft(5,1) = dcmplx(p(0),p(3))*nst
 c      ft(6,1) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      ft(5,1) = dcmplx(p(0),0.D0)*nst
-      ft(6,1) = dcmplx(p(1),0.D0)*nst
-      ft(7,1) = dcmplx(p(2),0.D0)*nst
-      ft(8,1) = dcmplx(p(3),0.D0)*nst
+      tc%P(0) = p(0)*nst
+      tc%P(1) = p(1)*nst
+      tc%P(2) = p(2)*nst
+      tc%P(3) = p(3)*nst
 
       if ( nhel.ge.0 ) then
 c construct eps+
@@ -1197,27 +1218,22 @@ c construct eps0
         end if
       end if
 
-      tc(5) = ft(1,1)
-      tc(6) = ft(1,2)
-      tc(7) = ft(1,3)
-      tc(8) = ft(1,4)
-      tc(9) = ft(2,1)
-      tc(10) = ft(2,2)
-      tc(11) = ft(2,3)
-      tc(12) = ft(2,4)
-      tc(13) = ft(3,1)
-      tc(14) = ft(3,2)
-      tc(15) = ft(3,3)
-      tc(16) = ft(3,4)
-      tc(17) = ft(4,1)
-      tc(18) = ft(4,2)
-      tc(19) = ft(4,3)
-      tc(20) = ft(4,4)
-
-      tc(1) = ft(5,1)
-      tc(2) = ft(6,1)
-      tc(3) = ft(7,1)
-      tc(4) = ft(8,1)
+      tc%W(1) = ft(1,1)
+      tc%W(2) = ft(1,2)
+      tc%W(3) = ft(1,3)
+      tc%W(4) = ft(1,4)
+      tc%W(5) = ft(2,1)
+      tc%W(6) = ft(2,2)
+      tc%W(7) = ft(2,3)
+      tc%W(8) = ft(2,4)
+      tc%W(9) = ft(3,1)
+      tc%W(10) = ft(3,2)
+      tc%W(11) = ft(3,3)
+      tc%W(12) = ft(3,4)
+      tc%W(13) = ft(4,1)
+      tc%W(14) = ft(4,2)
+      tc%W(15) = ft(4,3)
+      tc%W(16) = ft(4,4)
 
       return
       end
@@ -1235,12 +1251,13 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(18)         : tensor wavefunction    epsilon^mu^nu(t)
+c       type(mp_aloha2d) tc    : tensor wavefunction    epsilon^mu^nu(t)
 c
+      use ALOHA_OBJECT
       implicit none
       real*16 p(0:3), tmass
       integer nhel, nst
-      complex*32 tc(20)
+      type(mp_aloha2d) tc
 
       complex*32 ft(8,4), ep(4), em(4), e0(4)
       real*16 pt, pt2, pp, pzpt, emp, sqh, sqs
@@ -1265,10 +1282,10 @@ c      ft(5,1) = dcmplx(p(0),p(3))*nst
 c      ft(6,1) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      ft(5,1) = cmplx(p(0),0.0e0_16,KIND=16)*nst
-      ft(6,1) = cmplx(p(1),0.0e0_16,KIND=16)*nst
-      ft(7,1) = cmplx(p(2),0.0e0_16,KIND=16)*nst
-      ft(8,1) = cmplx(p(3),0.0e0_16,KIND=16)*nst
+      tc%P(0) = p(0)*nst
+      tc%P(1) = p(1)*nst
+      tc%P(2) = p(2)*nst
+      tc%P(3) = p(3)*nst
 
       if ( nhel.ge.0 ) then
 c construct eps+
@@ -1377,27 +1394,22 @@ c construct eps0
         end if
       end if
 
-      tc(5) = ft(1,1)
-      tc(6) = ft(1,2)
-      tc(7) = ft(1,3)
-      tc(8) = ft(1,4)
-      tc(9) = ft(2,1)
-      tc(10) = ft(2,2)
-      tc(11) = ft(2,3)
-      tc(12) = ft(2,4)
-      tc(13) = ft(3,1)
-      tc(14) = ft(3,2)
-      tc(15) = ft(3,3)
-      tc(16) = ft(3,4)
-      tc(17) = ft(4,1)
-      tc(18) = ft(4,2)
-      tc(19) = ft(4,3)
-      tc(20) = ft(4,4)
-
-      tc(1) = ft(5,1)
-      tc(2) = ft(6,1)
-      tc(3) = ft(7,1)
-      tc(4) = ft(8,1)
+      tc%W(1) = ft(1,1)
+      tc%W(2) = ft(1,2)
+      tc%W(3) = ft(1,3)
+      tc%W(4) = ft(1,4)
+      tc%W(5) = ft(2,1)
+      tc%W(6) = ft(2,2)
+      tc%W(7) = ft(2,3)
+      tc%W(8) = ft(2,4)
+      tc%W(9) = ft(3,1)
+      tc%W(10) = ft(3,2)
+      tc%W(11) = ft(3,3)
+      tc%W(12) = ft(3,4)
+      tc%W(13) = ft(4,1)
+      tc%W(14) = ft(4,2)
+      tc%W(15) = ft(4,3)
+      tc%W(16) = ft(4,4)
 
       return
       end
@@ -1414,10 +1426,11 @@ c                                (0 is forbidden if vmass=0.0)
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
+c       type(aloha) vc         : vector wavefunction       epsilon^mu(v)
 c
+      use ALOHA_OBJECT
       implicit none
-      double complex vc(8)
+      type(aloha) vc
       double precision p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
       integer nhel,nsv,nsvahl
 
@@ -1481,10 +1494,10 @@ c      vc(5) = dcmplx(p(0),p(3))*nsv
 c      vc(6) = dcmplx(p(1),p(2))*nsv
 
 c     Convention for loop computations
-      vc(1) = dcmplx(p(0),0.D0)*nsv
-      vc(2) = dcmplx(p(1),0.D0)*nsv
-      vc(3) = dcmplx(p(2),0.D0)*nsv
-      vc(4) = dcmplx(p(3),0.D0)*nsv
+      vc%P(0) = p(0)*nsv
+      vc%P(1) = p(1)*nsv
+      vc%P(2) = p(2)*nsv
+      vc%P(3) = p(3)*nsv
 
 c#ifdef HELAS_CHECK
 c nhel=4 option for scalar polarization
@@ -1510,25 +1523,25 @@ c#endif
 
          if ( pp.eq.rZero ) then
 
-            vc(5) = dcmplx( rZero )
-            vc(6) = dcmplx(-hel*sqh )
-            vc(7) = dcmplx( rZero , nsvahl*sqh )
-            vc(8) = dcmplx( hel0 )
+            vc%W(1) = dcmplx( rZero )
+            vc%W(2) = dcmplx(-hel*sqh )
+            vc%W(3) = dcmplx( rZero , nsvahl*sqh )
+            vc%W(4) = dcmplx( hel0 )
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(5) = dcmplx( hel0*pp/vmass )
-            vc(8) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
+            vc%W(1) = dcmplx( hel0*pp/vmass )
+            vc%W(4) = dcmplx( hel0*p(3)*emp+hel*pt/pp*sqh )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(6) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc%W(2) = dcmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       )
-               vc(7) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc%W(3) = dcmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       )
             else
-               vc(6) = dcmplx( -hel*sqh )
-               vc(7) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
+               vc%W(2) = dcmplx( -hel*sqh )
+               vc%W(3) = dcmplx( rZero , nsvahl*sign(sqh,p(3)) )
             endif
 
          endif
@@ -1537,15 +1550,15 @@ c#endif
 
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(5) = dcmplx( rZero )
-         vc(8) = dcmplx( hel*pt/pp*sqh )
+         vc%W(1) = dcmplx( rZero )
+         vc%W(4) = dcmplx( hel*pt/pp*sqh )
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(6) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
-            vc(7) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
+            vc%W(2) = dcmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh )
+            vc%W(3) = dcmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh )
         else
-            vc(6) = dcmplx( -hel*sqh )
-            vc(7) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
+            vc%W(2) = dcmplx( -hel*sqh )
+            vc%W(3) = dcmplx( rZero , nsv*sign(sqh,p(3)) )
          endif
 
       endif
@@ -1565,10 +1578,11 @@ c                                (0 is forbidden if vmass=0.0)
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex vc(6)          : vector wavefunction       epsilon^mu(v)
+c       type(mp_aloha) vc      : vector wavefunction       epsilon^mu(v)
 c
+      use ALOHA_OBJECT
       implicit none
-      complex*32 vc(8)
+      type(mp_aloha) vc
       real*16 p(0:3),vmass,hel,hel0,pt,pt2,pp,pzpt,emp,sqh
       integer nhel,nsv,nsvahl
 
@@ -1584,10 +1598,10 @@ c
       pt = min(pp,sqrt(pt2))
 
 c     Convention for loop computations
-      vc(1) = cmplx(p(0),0.e0_16, KIND=16)*nsv
-      vc(2) = cmplx(p(1),0.e0_16, KIND=16)*nsv
-      vc(3) = cmplx(p(2),0.e0_16, KIND=16)*nsv
-      vc(4) = cmplx(p(3),0.e0_16, KIND=16)*nsv
+      vc%P(0) = p(0)*nsv
+      vc%P(1) = p(1)*nsv
+      vc%P(2) = p(2)*nsv
+      vc%P(3) = p(3)*nsv
 
       if ( vmass.ne.rZero ) then
 
@@ -1595,25 +1609,25 @@ c     Convention for loop computations
 
          if ( pp.eq.rZero ) then
 
-            vc(5) = cmplx( rZero , KIND=16)
-            vc(6) = cmplx(-hel*sqh , KIND=16)
-            vc(7) = cmplx( rZero , nsvahl*sqh , KIND=16)
-            vc(8) = cmplx( hel0 , KIND=16)
+            vc%W(1) = cmplx( rZero , KIND=16)
+            vc%W(2) = cmplx(-hel*sqh , KIND=16)
+            vc%W(3) = cmplx( rZero , nsvahl*sqh , KIND=16)
+            vc%W(4) = cmplx( hel0 , KIND=16)
 
          else
 
             emp = p(0)/(vmass*pp)
-            vc(5) = cmplx( hel0*pp/vmass , KIND=16)
-            vc(8) = cmplx( hel0*p(3)*emp+hel*pt/pp*sqh , KIND=16 )
+            vc%W(1) = cmplx( hel0*pp/vmass , KIND=16)
+            vc%W(4) = cmplx( hel0*p(3)*emp+hel*pt/pp*sqh , KIND=16 )
             if ( pt.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(6) = cmplx( hel0*p(1)*emp-p(1)*pzpt ,
+               vc%W(2) = cmplx( hel0*p(1)*emp-p(1)*pzpt ,
      &                         -nsvahl*p(2)/pt*sqh       , KIND=16)
-               vc(7) = cmplx( hel0*p(2)*emp-p(2)*pzpt ,
+               vc%W(3) = cmplx( hel0*p(2)*emp-p(2)*pzpt ,
      &                          nsvahl*p(1)/pt*sqh       , KIND=16)
             else
-               vc(6) = cmplx( -hel*sqh , KIND=16)
-               vc(7) = cmplx( rZero , nsvahl*sign(sqh,p(3)) , KIND=16)
+               vc%W(2) = cmplx( -hel*sqh , KIND=16)
+               vc%W(3) = cmplx( rZero , nsvahl*sign(sqh,p(3)) , KIND=16)
             endif
 
          endif
@@ -1622,15 +1636,15 @@ c     Convention for loop computations
 
          pp = p(0)
          pt = sqrt(p(1)**2+p(2)**2)
-         vc(5) = cmplx( rZero , KIND=16)
-         vc(8) = cmplx( hel*pt/pp*sqh , KIND=16)
+         vc%W(1) = cmplx( rZero , KIND=16)
+         vc%W(4) = cmplx( hel*pt/pp*sqh , KIND=16)
          if ( pt.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(6) = cmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh , KIND=16)
-            vc(7) = cmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh , KIND=16)
+            vc%W(2) = cmplx( -p(1)*pzpt , -nsv*p(2)/pt*sqh , KIND=16)
+            vc%W(3) = cmplx( -p(2)*pzpt ,  nsv*p(1)/pt*sqh , KIND=16)
          else
-            vc(6) = cmplx( -hel*sqh , KIND=16)
-            vc(7) = cmplx( rZero , nsv*sign(sqh,p(3)), KIND=16 )
+            vc%W(2) = cmplx( -hel*sqh , KIND=16)
+            vc%W(3) = cmplx( rZero , nsv*sign(sqh,p(3)), KIND=16 )
          endif
 
       endif
@@ -2036,142 +2050,152 @@ C===============================================================================
 
       SUBROUTINE LCUT_F(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
-      COMPLEX*16 W(20)
+      TYPE(ALOHA) W
       
       CALL LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE LCUT_AF(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
-      COMPLEX*16 W(20)
+      TYPE(ALOHA) W
       
       CALL LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE LCUT_V(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
-      COMPLEX*16 W(20)
+      TYPE(ALOHA) W
       
-      W(5)=(0.d0,0.d0)
-      W(6)=(0.d0,0.d0)
-      W(7)=(0.d0,0.d0)
-      W(8)=(0.d0,0.d0)
-      W(CFIG+4)=(1.d0,0.d0)
+      W%W(1)=(0.d0,0.d0)
+      W%W(2)=(0.d0,0.d0)
+      W%W(3)=(0.d0,0.d0)
+      W%W(4)=(0.d0,0.d0)
+      W%W(CFIG)=(1.d0,0.d0)
       
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
       SUBROUTINE LCUT_S(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
-      COMPLEX*16 W(20)
+      TYPE(ALOHA) W
 
-      W(5)=(1.D0,0.D0)
+      W%W(1)=(1.D0,0.D0)
 
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
       SUBROUTINE LCUT_AS(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*16 Q(0:3)
       INTEGER CFIG
-      COMPLEX*16 W(20)
+      TYPE(ALOHA) W
 
-      W(5)=(1.D0,0.D0)
+      W%W(1)=(1.D0,0.D0)
 
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
       SUBROUTINE MP_LCUT_F(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
-      COMPLEX*32 W(20)
+      TYPE(MP_ALOHA) W
       
       CALL MP_LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE MP_LCUT_AF(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
-      COMPLEX*32 W(20)
+      TYPE(MP_ALOHA) W
       
       CALL MP_LCUT_V(Q,CFIG,W)
       END
 
       SUBROUTINE MP_LCUT_V(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
-      COMPLEX*32 W(20)
+      TYPE(MP_ALOHA) W
       COMPLEX*32 IONE, IZERO
       PARAMETER (IONE=(1.0e0_16,0.0e0_16))
       PARAMETER (IZERO=(0.0e0_16,0.0e0_16))      
       
-      W(5)=IZERO
-      W(6)=IZERO
-      W(7)=IZERO
-      W(8)=IZERO
-      W(CFIG+4)=IONE
+      W%W(1)=IZERO
+      W%W(2)=IZERO
+      W%W(3)=IZERO
+      W%W(4)=IZERO
+      W%W(CFIG)=IONE
 
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
       SUBROUTINE MP_LCUT_AS(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
-      COMPLEX*32 W(20)
+      TYPE(MP_ALOHA) W
       COMPLEX*32 IONE
       PARAMETER (IONE=(1.0e0_16,0.0e0_16))
 
-      W(5)=IONE
+      W%W(1)=IONE
 
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
       SUBROUTINE MP_LCUT_S(Q,CFIG,W)
 
+      USE ALOHA_OBJECT
       COMPLEX*32 Q(0:3)
       INTEGER CFIG
-      COMPLEX*32 W(20)
+      TYPE(MP_ALOHA) W
       COMPLEX*32 IONE
       PARAMETER (IONE=(1.0e0_16,0.0e0_16))
 
-      W(5)=IONE
+      W%W(1)=IONE
 
-      W(1)=Q(0)
-      W(2)=Q(1)
-      W(3)=Q(2)
-      W(4)=Q(3)
+      W%P(0)=Q(0)
+      W%P(1)=Q(1)
+      W%P(2)=Q(2)
+      W%P(3)=Q(3)
 
       END
 
@@ -3076,5 +3100,45 @@ c         end if
          
       endif
 c
+      return
+      end
+
+      subroutine sumw_1(w1, w2, wout)
+c
+c     Sum two currents standing for the same off shell line: the four
+c     gluon current and the pair of three gluon vertices it factorises
+c     into carry the same colour factor, so the amplitude reading the sum
+c     gets both contributions from a single call. See
+c     HelasMatrixElement.get_quartic_current_sums.
+c
+c     The two share their momentum, so only the wavefunction is added and
+c     everything else is taken over from the first one.
+c
+          use ALOHA_OBJECT
+      implicit none
+      type(aloha) w1
+      type(aloha) w2
+      type(aloha) wout
+
+      wout = w1
+      wout%W(:) = w1%W(:) + w2%W(:)
+
+      return
+      end
+
+
+      subroutine subw_1(w1, w2, wout)
+c
+c     As sumw_1, for the contributions which enter with a minus sign.
+c
+          use ALOHA_OBJECT
+      implicit none
+      type(aloha) w1
+      type(aloha) w2
+      type(aloha) wout
+
+      wout = w1
+      wout%W(:) = w1%W(:) - w2%W(:)
+
       return
       end

@@ -209,7 +209,7 @@ C                                         decay channels)
       COMMON/HWUCLU/CLDKWT(NMXCDK),CTHRPW(12,12),PRECO,RESN(12,12),
      & RMIN(12,12),LOCN(12,12),NCLDK(NMXCDK),NRECO,CLRECO
 C
-C Variables controling mixing and vertex information
+C Variables controlling mixing and vertex information
 C--VTXPIP should have been a 5-vector, problems with NAG compiler
       COMMON/HWDIST/EXAG,GEV2MM,HBAR,PLTCUT,VMIN2,VTXPIP(5),XMIX(2),
      & XMRCT(2),YMIX(2),YMRCT(2),IOPDKL,MAXDKL,MIXING,PIPSMR

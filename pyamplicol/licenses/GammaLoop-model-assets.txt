@@ -1,0 +1,16 @@
+GammaLoop Model Asset License
+
+Local SPDX identifier: LicenseRef-GammaLoop-No-Restrictions
+
+The bundled UFO source models and their derived JSON forms were distributed
+as GammaLoop model assets. GammaLoop's accompanying LICENSE.md states:
+
+There are no usage restrictions for `GammaLoop`.
+
+The upstream license separately calls attention to Symbolica's license
+restrictions. Symbolica is not part of these model assets and its terms are
+recorded independently in licenses/Symbolica.txt.
+
+This notice applies only to the eligible GammaLoop-origin model assets listed
+in src/pyamplicol/assets/models/PROVENANCE.toml. Files carrying their own
+copyright or license notice retain that notice.

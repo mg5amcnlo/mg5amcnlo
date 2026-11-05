@@ -10,7 +10,7 @@ c*************************************************************************
 c      parameter (ng = 43, maxdim = 25, maxinvar= 57 , maxconfigs=20)
 
       double precision  xgmin,     xgmax
-      parameter        (xgmin=-1d0, xgmax=1d0)
+      parameter        (xgmin=0d0, xgmax=1d0)
 
       integer    maxevents         !Requires about 1K/event
       parameter (maxevents=200000)  !Maximum # events to write to disk

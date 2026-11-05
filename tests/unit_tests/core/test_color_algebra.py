@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -165,6 +165,11 @@ class ColorObjectTest(unittest.TestCase):
 
         self.assertEqual(my_f.simplify(),
                          color.ColorFactor([col_str1, col_str2]))
+
+        # f is real, so complex conjugation must NOT reverse the indices
+        # (which would flip the sign of the totally antisymmetric f)
+        self.assertEqual(color.f(1, 2, 3).complex_conjugate(),
+                         color.f(1, 2, 3))
 
     def test_d_object(self):
         """Test the d color object"""
@@ -672,22 +677,22 @@ class ColorFactorTest(unittest.TestCase):
 
         options= []
         import itertools
-        all = itertools.product([True, False], repeat=2)
+        all = itertools.product([True, False], repeat=4)
         for opt in all:
             options.append({
                             'rule_eps_aeps_sum': opt[0],
                             'rule_eps_aeps_nosum': opt[1],
-                            #'rule_eps_T': opt[2],
-                            # 'rule_aeps_T': opt[3]
+                            'rule_eps_T': opt[2],
+                             'rule_aeps_T': opt[3]
 
             })
                             
         nb_checked = 0
         for mode in options:
-            #with misc.TMP_variable(color.Epsilon, 'rule_eps_T', mode['rule_eps_T']):
+            with misc.TMP_variable(color.Epsilon, 'rule_eps_T', mode['rule_eps_T']):
                 with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_sum', mode['rule_eps_aeps_sum']):   
                     with misc.TMP_variable(color.Epsilon, 'rule_eps_aeps_nosum', mode['rule_eps_aeps_nosum']):
-                        #with misc.TMP_variable(color.EpsilonBar, 'rule_aeps_T', mode['rule_aeps_T']): 
+                        with misc.TMP_variable(color.EpsilonBar, 'rule_aeps_T', mode['rule_aeps_T']): 
                             out1 = my_color_factor.full_simplify()
                             try:
                                 value, power = out1.set_Nc()

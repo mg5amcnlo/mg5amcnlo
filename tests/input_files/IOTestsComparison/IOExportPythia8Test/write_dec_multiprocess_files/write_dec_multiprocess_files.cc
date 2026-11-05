@@ -142,11 +142,16 @@ t[9]=matrix_gux_zux_z_uux();
              // Mirror initial state momenta for mirror process
                 perm[0]=1;
                 perm[1]=0;
+                int flv_tmp = flavor[0];
+                flavor[0] = flavor[1];  
+                flavor[1] = flv_tmp;
                 // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
+                calculate_wavefunctions(perm, helicities[ihel], flavor);
                 // Mirror back
                 perm[0]=0;
                 perm[1]=1;
+                flavor[1] = flavor[0];
+                flavor[0] = flv_tmp;
                 // Calculate matrix elements
                 t[10]=matrix_gd_zd_z_ddx();
 t[11]=matrix_gd_zd_z_uux();
@@ -196,11 +201,16 @@ t[9]=matrix_gux_zux_z_uux();
              // Mirror initial state momenta for mirror process
                 perm[0]=1;
                 perm[1]=0;
+                int flv_tmp = flavor[0];
+                flavor[0] = flavor[1];  
+                flavor[1] = flv_tmp;
                 // Calculate wavefunctions
-                calculate_wavefunctions(perm, helicities[ihel]);
+                calculate_wavefunctions(perm, helicities[ihel], flavor);
                 // Mirror back
                 perm[0]=0;
                 perm[1]=1;
+                flavor[1] = flavor[0];
+                flavor[0] = flv_tmp;
                 // Calculate matrix elements
                 t[10]=matrix_gd_zd_z_ddx();
 t[11]=matrix_gd_zd_z_uux();
@@ -642,7 +652,7 @@ return 1.;
 //--------------------------------------------------------------------------
 // Evaluate |M|^2 for each subprocess
 
-void Sigma_sm_gd_ddxd::calculate_wavefunctions(const int perm[], const int hel[]){
+void Sigma_sm_gd_ddxd::calculate_wavefunctions(const int perm[], const int hel[], const int flavor[]){
 // Calculate wavefunctions for all processes
 double p[nexternal][4];
 int i;
@@ -657,16 +667,16 @@ for(i=0;i < nexternal;i++){
 
 // Calculate all wavefunctions
 vxxxxx(p[perm[0]],mME[0],hel[0],-1,w[0]);
-ixxxxx(p[perm[1]],mME[1],hel[1],+1,w[1]);
-oxxxxx(p[perm[2]],mME[2],hel[2],+1,w[2]);
-ixxxxx(p[perm[3]],mME[3],hel[3],-1,w[3]);
+ixxxxx(p[perm[1]],mME[1],hel[1],+1, flavor[1],w[1]);
+oxxxxx(p[perm[2]],mME[2],hel[2],+1, flavor[2],w[2]);
+ixxxxx(p[perm[3]],mME[3],hel[3],-1, flavor[3],w[3]);
 FFV1_3(w[3],w[2],pars->GDZ2,pars->MZ,pars->WZ,w[4]);
-oxxxxx(p[perm[4]],mME[4],hel[4],+1,w[5]);
+oxxxxx(p[perm[4]],mME[4],hel[4],+1, flavor[4],w[5]);
 FFV1_2(w[1],w[0],pars->GQQ,pars->zero,pars->zero,w[6]);
 FFV1_1(w[5],w[0],pars->GQQ,pars->zero,pars->zero,w[7]);
 FFV1_2_3(w[3],w[2],pars->GUZ1,pars->GUZ2,pars->MZ,pars->WZ,w[8]);
-oxxxxx(p[perm[1]],mME[1],hel[1],-1,w[9]);
-ixxxxx(p[perm[4]],mME[4],hel[4],-1,w[10]);
+oxxxxx(p[perm[1]],mME[1],hel[1],-1, flavor[1],w[9]);
+ixxxxx(p[perm[4]],mME[4],hel[4],-1, flavor[4],w[10]);
 FFV1_2(w[10],w[0],pars->GQQ,pars->zero,pars->zero,w[11]);
 FFV1_1(w[9],w[0],pars->GQQ,pars->zero,pars->zero,w[12]);
 

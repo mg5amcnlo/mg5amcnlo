@@ -418,7 +418,7 @@ c Add the minimal photon pTs to tau
                   taumin_j(iFKS,ichan)=taumin_j(iFKS,ichan)+ptgmin
                   xm(i)=emass(i)+ptgmin
                elseif (is_a_lp(i)) then
-c Add the postively charged lepton pTs to tau
+c Add the positively charged lepton pTs to tau
                   if (j_fks.gt.nincoming) then
                      taumin(iFKS,ichan)=taumin(iFKS,ichan)+dsqrt(ptl**2+emass(i)**2)
                   else

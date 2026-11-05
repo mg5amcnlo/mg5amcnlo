@@ -708,7 +708,7 @@
 		zx = zr*(zx+c2(i))
 	    enddo
 	else
-	    print *,'zff0li: error: argumnet must <= 1, not ',r2
+	    print *,'zff0li: error: argument must <= 1, not ',r2
 	    zx = 0
 	endif
 

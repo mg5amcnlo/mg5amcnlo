@@ -1,12 +1,12 @@
 ##############################################################################
 #
-# Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2010 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -50,6 +50,13 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertEqual(detect(pjoin(root_path, 'input_files','run_card_matching.dat')),
                          'run_card.dat')
 
+        # mg7 run_card (TOML format): concrete card + template
+        self.assertEqual(detect(pjoin(root_path, 'input_files','mg7_run_card.toml')),
+                         'run_card.toml')
+        self.assertEqual(detect(pjoin(root_path,'..','madgraph','iolibs',
+                                      'template_files','mg7','run_card.toml')),
+                         'run_card.toml')
+
         # PYTHIA_CARD
         self.assertEqual(detect(pjoin(card_dir, 'pythia_card_default.dat')),
                          'pythia_card.dat')
@@ -68,8 +75,8 @@ class TestMadEventCmd(unittest.TestCase):
 
         card_dir= pjoin(root_path,'..','Template/Common', 'Cards')
 
-        # PLOT_CARD
-        self.assertEqual(detect(pjoin(card_dir, 'plot_card.dat')),
+        # PLOT_CARD (MadAnalysis4 is gone, but old banners still carry the card)
+        self.assertEqual(detect(pjoin(root_path, 'input_files', 'plot_card.dat')),
                          'plot_card.dat')
 
         # Delphes
@@ -131,7 +138,7 @@ class TestMadEventCmd(unittest.TestCase):
         
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
-           If this test failes, this is due to a un-expected ':' in a command of
+           If this test fails, this is due to a un-expected ':' in a command of
            the cmd interface.
         """
         cmd = mecmd.MadEventCmdShell
@@ -317,15 +324,22 @@ AlphaS_Type: ipol
         if self.saved_datapath is not None:
             os.environ['LHAPDF_DATA_PATH'] = self.saved_datapath
 
-    def get_fake_cmd(self):
+    def get_fake_cmd(self, **options):
         common_run = self.common_run
         class FakeRunCmd(object):
             patch_lhapdf_info_file = staticmethod(
                           common_run.CommonRunCmd.patch_lhapdf_info_file)
+            use_shared_pdfsets_dir = staticmethod(
+                          common_run.CommonRunCmd.use_shared_pdfsets_dir)
+            get_shared_pdfsets_dirs = common_run.CommonRunCmd.get_shared_pdfsets_dirs
             copy_lhapdf_set = common_run.CommonRunCmd.copy_lhapdf_set
         cmd = FakeRunCmd()
         cmd.me_dir = self.me_dir
-        cmd.options = {'cluster_local_path': None, 'run_mode': 2}
+        # cvmfs_lhapdf_path is None unless a test asks for it: the default
+        # points at a real mount which may exist on the machine running this
+        cmd.options = {'cluster_local_path': None, 'run_mode': 2,
+                       'cvmfs_lhapdf_path': None}
+        cmd.options.update(options)
         cmd.lhapdf_pdfsets = {}
         return cmd
 
@@ -369,3 +383,160 @@ AlphaS_Type: ipol
         self.assertFalse(os.path.exists(local_set))
         self.assertIn('AlphaS_FlavorScheme: variable', open(global_info).read())
         self.assertIn('AlphaS_NumFlavors: 5', open(global_info).read())
+
+class TestSharedPdfsetsDir(unittest.TestCase):
+    """a PDF set readable from every node (CVMFS, or the user-declared
+    cluster_local_path) is used in place, so it is never copied into
+    lib/PDFsets -- which is exactly what would be shipped to the node."""
+
+    def setUp(self):
+        import madgraph.interface.common_run_interface as common_run
+        self.common_run = common_run
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_cvmfs_test')
+        # stand-in for /cvmfs/sft.cern.ch/lcg/external/lhapdfsets/current
+        self.cvmfs = pjoin(self.tmpdir, 'cvmfs')
+        os.makedirs(pjoin(self.cvmfs, 'MYSET'))
+        # the local LHAPDF data directory, holding a different set
+        self.pdfsets_dir = pjoin(self.tmpdir, 'share', 'LHAPDF')
+        os.makedirs(pjoin(self.pdfsets_dir, 'OTHERSET'))
+        self.me_dir = pjoin(self.tmpdir, 'PROC')
+        os.makedirs(pjoin(self.me_dir, 'lib', 'PDFsets'))
+        self.saved = {key: os.environ.get(key) for key in
+                      ('LHAPATH', 'CLUSTER_LHAPATH', 'LHAPDF_DATA_PATH')}
+        for key in self.saved:
+            os.environ.pop(key, None)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        for key, value in self.saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def get_fake_cmd(self, **options):
+        common_run = self.common_run
+        class FakeRunCmd(object):
+            patch_lhapdf_info_file = staticmethod(
+                          common_run.CommonRunCmd.patch_lhapdf_info_file)
+            use_shared_pdfsets_dir = staticmethod(
+                          common_run.CommonRunCmd.use_shared_pdfsets_dir)
+            get_shared_pdfsets_dirs = common_run.CommonRunCmd.get_shared_pdfsets_dirs
+            copy_lhapdf_set = common_run.CommonRunCmd.copy_lhapdf_set
+            get_pdf_input_filename = common_run.CommonRunCmd.get_pdf_input_filename
+        cmd = FakeRunCmd()
+        cmd.me_dir = self.me_dir
+        cmd.options = {'cluster_local_path': None, 'run_mode': 2,
+                       'cvmfs_lhapdf_path': self.cvmfs}
+        cmd.options.update(options)
+        cmd.lhapdf_pdfsets = {}
+        return cmd
+
+    def test_set_on_cvmfs_is_not_copied_locally(self):
+        cmd = self.get_fake_cmd()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir)
+        self.assertFalse(os.path.exists(
+                              pjoin(self.me_dir, 'lib', 'PDFsets', 'MYSET')))
+        # ... and LHAPDF is told where to read it, keeping the local dir too
+        self.assertIn(self.cvmfs, os.environ['LHAPATH'].split(':'))
+        self.assertIn(self.pdfsets_dir, os.environ['LHAPATH'].split(':'))
+        self.assertEqual(os.environ['CLUSTER_LHAPATH'], os.environ['LHAPATH'])
+
+    def test_nothing_is_shipped_to_the_node(self):
+        """an empty lib/PDFsets means the node reads the PDF on its own"""
+
+        cmd = self.get_fake_cmd()
+        cmd.run_card = {'pdlabel': 'lhapdf'}
+        # no Source/PDF/pdf_list.txt: the lhapdf branch is the one reached
+        os.makedirs(pjoin(self.me_dir, 'Source', 'PDF'))
+        open(pjoin(self.me_dir, 'Source', 'PDF', 'pdf_list.txt'), 'w').close()
+        cmd.copy_lhapdf_set(['MYSET'], self.pdfsets_dir)
+        self.assertEqual(cmd.get_pdf_input_filename(), '')
+        # a set which is NOT on the mirror is copied, and then shipped
+        cmd = self.get_fake_cmd()
+        cmd.run_card = {'pdlabel': 'lhapdf'}
+        cmd.copy_lhapdf_set(['OTHERSET'], self.pdfsets_dir)
+        self.assertTrue(os.path.isdir(
+                            pjoin(self.me_dir, 'lib', 'PDFsets', 'OTHERSET')))
+        self.assertEqual(cmd.get_pdf_input_filename(),
+                         pjoin(self.me_dir, 'lib', 'PDFsets'))
+
+    def test_cvmfs_disabled(self):
+        """with the mirror switched off, the ordinary local copy is made"""
+
+        cmd = self.get_fake_cmd(cvmfs_lhapdf_path=None)
+        self.assertEqual(cmd.get_shared_pdfsets_dirs(), [])
+        # OTHERSET lives in the local data dir, not on the mirror
+        cmd.copy_lhapdf_set(['OTHERSET'], self.pdfsets_dir)
+        self.assertTrue(os.path.isdir(
+                            pjoin(self.me_dir, 'lib', 'PDFsets', 'OTHERSET')))
+        self.assertNotIn('CLUSTER_LHAPATH', os.environ)
+
+    def test_cluster_local_path_only_for_a_cluster_run(self):
+        cmd = self.get_fake_cmd(cvmfs_lhapdf_path=None,
+                                cluster_local_path=self.cvmfs)
+        self.assertEqual(cmd.get_shared_pdfsets_dirs(), [])
+        cmd.options['run_mode'] = 1
+        self.assertEqual(cmd.get_shared_pdfsets_dirs()[0], self.cvmfs)
+
+
+class TestPythia8MergingPlugin(unittest.TestCase):
+    """Since Pythia8 8.318, main164 loads its merging hook as a plugin, with
+    a readString that Pythia8 ignores after reading a card with Main:subrun
+    lines (all of ours): the card of a CKKW-L shower requests the plugin."""
+
+    def setUp(self):
+        import madgraph.various.banner as banner_mod
+        self.banner_mod = banner_mod
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_py8_merging')
+        self.template = open(pjoin(madgraph.MG5DIR, 'Template', 'LO', 'Cards',
+                                   'pythia8_card_default.dat')).read()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def make_pythia8(self, version):
+        """a fake Pythia8 installation, with main164.cc as in this version"""
+        py8 = pjoin(self.tmpdir, 'pythia%s' % version)
+        os.makedirs(pjoin(py8, 'share', 'Pythia8', 'examples'))
+        os.makedirs(pjoin(py8, 'lib'))
+        if version == '8318':
+            source = ('    pythia.readString("Init:plugins += {libpythia8amcatnloHooks.so"\n'
+                      '      "::aMCatNLOHooks}");\n')
+            open(pjoin(py8, 'lib', 'libpythia8amcatnloHooks.so'), 'w').close()
+        else:
+            source = '    pythia.setUserHooksPtr(mergingHooks);\n'
+        with open(pjoin(py8, 'share', 'Pythia8', 'examples', 'main164.cc'), 'w') as fsock:
+            fsock.write(source)
+        return py8
+
+    def setup_card(self, pythia8_path, run_type, **run_card):
+        """the card of the shower, as do_pythia8 sets it up"""
+        class FakeCmd(object):
+            pass
+        cmd = FakeCmd()
+        cmd.run_tag, cmd.run_name, cmd.me_dir = 'tag_1', 'run_01', self.tmpdir
+        cmd.to_store = []
+        cmd.options = {'run_mode': 2, 'pythia8_path': pythia8_path}
+        cmd.proc_characteristic = {'max_n_matched_jets': 2}
+        cmd.run_card = self.banner_mod.RunCardLO()
+        for name, value in run_card.items():
+            cmd.run_card[name] = value
+        card = self.banner_mod.PY8Card(self.template)
+        card.read(self.template + 'Merging:Process = guess\n', setter='user')
+        mecmd.MadEventCmd.setup_Pythia8RunAndCard(cmd, card, run_type)
+        return card
+
+    def test_ckkwl_requests_the_merging_plugin(self):
+        ckkwl = {'ickkw': 0, 'xqcut': 0.0, 'ktdurham': 30.0}
+        py8 = self.make_pythia8('8318')
+        card = self.setup_card(py8, 'CKKW', **ckkwl)
+        self.assertEqual(card.init_plugins,
+                         ['%s::aMCatNLOHooks::add' %
+                          os.path.abspath(pjoin(py8, 'lib', 'libpythia8amcatnloHooks.so'))])
+        # up to Pythia8 8.317, main164 sets the hook itself
+        card = self.setup_card(self.make_pythia8('8317'), 'CKKW', **ckkwl)
+        self.assertEqual(card.init_plugins, [])
+        # main164 does not merge an MLM shower
+        card = self.setup_card(py8, 'MLM', ickkw=1, xqcut=30.0)
+        self.assertEqual(card.init_plugins, [])

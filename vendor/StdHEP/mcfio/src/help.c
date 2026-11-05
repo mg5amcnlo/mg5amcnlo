@@ -191,7 +191,7 @@ Widget CreateHelpDialog(Widget parent, char *title, char *text)
 **	title		Window title for the dialog
 **	bits		Null terminated string containing the text to present
 **	width		Width of the bitmap in pixels
-**	height 		height ot the bitmap in pixels
+**	height 		height of the bitmap in pixels
 **
 ** Return Value
 **

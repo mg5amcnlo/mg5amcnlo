@@ -1,11 +1,11 @@
 ################################################################################
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors             
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors             
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which           
+# This file is a part of the MadGraph7 project, an application which           
 # automatically generates Feynman diagrams and matrix elements for arbitrary    
 # high-energy processes in the Standard Model and beyond.                       
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this             
+# It is subject to the MadGraph7 license which should accompany this             
 # distribution.                                                                 
 #                                                                               
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch            
@@ -130,7 +130,7 @@ class Cluster(object):
         self.cluster_retry_wait = float(opts['cluster_retry_wait']) if 'cluster_retry_wait' in opts else 300
         self.options = dict(opts)
         self.retry_args = {}
-        # controlling jobs in controlled type submision
+        # controlling jobs in controlled type submission
         self.packet = {}
         self.id_to_packet = {}
 
@@ -218,7 +218,7 @@ class Cluster(object):
     def cluster_submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, 
                 log=None, input_files=[], output_files=[], required_output=[],
                 nb_submit=0, packet_member=None):
-            """This function wrap the cluster submition with cluster independant
+            """This function wrap the cluster submission with cluster independent
                method should not be overwritten (but for DAG type submission)"""
                
             id = self.submit2(prog, argument, cwd, stdout, stderr, log, input_files, 
@@ -310,7 +310,7 @@ class Cluster(object):
             idle, run, finish, fail = self.control(me_dir)
             update_first(idle, run, finish)
         
-        #usefull shortcut for readibility
+        #useful shortcut for readability
         longtime, shorttime = self.options['cluster_status_update']
         
         nb_job = 0
@@ -464,7 +464,7 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
             if not (os.path.exists(path) and os.stat(path).st_size != 0) :
                 break
         else:
-            # all requested output are present
+            # all requested outputs are present
             if time_check > 0:
                 logger.info('Job %s Finally found the missing output.' % (job_id))
             del self.retry_args[job_id]
@@ -751,7 +751,7 @@ class MultiCore(Cluster):
                             self.stoprequest.set()
                             self.remove(fail_msg)
                     # handle the case when this is a python function. Note that
-                    # this use Thread so they are NO built-in parralelization this is 
+                    # this use Thread so they are NO built-in parallelization this is
                     # going to work on a single core! (but this is fine for IO intensive 
                     # function. for CPU intensive fct this will slow down the computation
                     else:
@@ -906,6 +906,19 @@ class MultiCore(Cluster):
                     self.queue.join()
                     break
                 
+                if self.stoprequest.isSet() and Running <= 0 and not force_one_more_loop:
+                    # A job failed: the workers have stopped and the jobs
+                    # still in the queue will never start. Drop them rather
+                    # than wait for them forever; the failure is raised below.
+                    while True:
+                        try:
+                            self.queue.get_nowait()
+                        except queue.Empty:
+                            break
+                        self.queue.task_done()
+                    update_status(0, 0, Done)
+                    break
+
                 if (Idle, Running, Done) != last_status:
                     if first and update_first:
                         update_first(Idle, Running, Done)
@@ -942,7 +955,7 @@ class MultiCore(Cluster):
                 elif isinstance(self.fail_msg, str):
                     raise Exception(self.fail_msg)
                 elif self.fail_msg:
-                    # can happend that stoprequest is set bu not fail if no job have been resubmitted
+                    # can happen that stoprequest is set but not fail if no job have been resubmitted
                     raise self.fail_msg[1].with_traceback(self.fail_msg[2])
                 # self.fail_msg is None can happen when no job was submitted -> ignore
 
@@ -969,7 +982,7 @@ class MultiCore(Cluster):
                 raise Exception(self.fail_msg)
             elif self.fail_msg:
                 raise self.fail_msg[1].with_traceback(self.fail_msg[2])
-            # else return orignal error
+            # else return original error
             raise 
 
         if not self.keep_thread:
@@ -1065,7 +1078,7 @@ class CondorCluster(Cluster):
                 and os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
                 dico['dmtcp_path'] = self.options['dmtcp']
             else:
-                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not installed.')
 
             if 'cluster_vacatetime' in self.options and self.options['cluster_vacatetime']\
                 and self.options['cluster_vacatetime'] != 'None':
@@ -1229,7 +1242,7 @@ class CondorCluster(Cluster):
                 and os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
                 dico['dmtcp_path'] = self.options['dmtcp']
             else:
-                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not installed.')
 
             if 'cluster_vacatetime' in self.options and self.options['cluster_vacatetime']\
                 and self.options['cluster_vacatetime'] != 'None':
@@ -1558,7 +1571,7 @@ class SGECluster(Cluster):
             text += ' ' + ' '.join(argument)
 
         #if anything slips through argument
-        #print "!=== inteded change ",text.replace('/srv/nfs','')
+        #print "!=== intended change ",text.replace('/srv/nfs','')
         #text = text.replace('/srv/nfs','')
         homePath = os.getenv("HOME")
         if homePath:
@@ -1825,8 +1838,9 @@ class GECluster(Cluster):
 
         a = misc.Popen(['qsub','-o', stdout,
                                      '-e', stderr,
+                                     '-V', # export the submission environment (incl. MG5_CITATION_DIR)
                                      tmp_submit],
-                                     stdout=subprocess.PIPE, 
+                                     stdout=subprocess.PIPE,
                                      stderr=subprocess.STDOUT,
                                      stdin=subprocess.PIPE, cwd=cwd)
 
@@ -1982,7 +1996,7 @@ class SLURMCluster(Cluster):
 
             if not os.path.exists(pjoin(self.options['dmtcp'], 'bin'))\
                 or not os.path.exists(pjoin(self.options['dmtcp'], 'lib')):
-                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not istalled.')
+                raise ClusterManagmentError(f'DMTCP path {self.options["dmtcp"]} does not exist or DMTCP not installed.')
 
             if 'cluster_requirement' in self.options and self.options['cluster_requirement']\
                 and self.options['cluster_requirement'] != 'None':
@@ -2006,8 +2020,12 @@ class SLURMCluster(Cluster):
         if 'cluster_walltime' in self.options and self.options['cluster_walltime']\
               and self.options['cluster_walltime'] != 'None':
                 command.insert(1, '-t')
-                command.insert(2, self.options['cluster_walltime'])            
-            
+                command.insert(2, self.options['cluster_walltime'])
+
+        # export the full submission environment to the job (incl.
+        # MG5_CITATION_DIR) regardless of the site default for SBATCH_EXPORT
+        command.insert(1, '--export=ALL')
+
 
         jobenv = os.environ.copy()
         if MADEVENT: jobenv['RUN_DIR'] = LOCALDIR

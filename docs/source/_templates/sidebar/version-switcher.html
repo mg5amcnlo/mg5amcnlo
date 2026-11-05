@@ -1,0 +1,87 @@
+{# versions.json lives at the SITE root, one level above this version's docs
+   root. pathto('', 1) is the relative path from the current page to that
+   version root, so "../" from there is the site root -- which is what makes
+   this file work unchanged both at madgraphteam.github.io/MadGraph7/ and at
+   docs.madgraph.org. Fetched at RUNTIME on purpose: an already-published
+   version then lists versions released after it was built, with no rebuild.
+   Hidden by default and only shown once the fetch succeeds, so a local
+   `make html` (no versions.json to find) shows no broken widget. #}
+<div class="mg7-versions" id="mg7-versions" hidden>
+  <label class="mg7-versions__label" for="mg7-version-select">Version</label>
+  <select id="mg7-version-select" aria-label="Documentation version"></select>
+</div>
+<style>
+  .mg7-versions {
+    margin: 0 var(--sidebar-item-spacing-horizontal, 1rem) .75rem;
+  }
+  .mg7-versions__label {
+    display: block;
+    margin-bottom: .2rem;
+    font-size: var(--font-size--small--2, .75rem);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--color-foreground-muted);
+  }
+  .mg7-versions select {
+    width: 100%;
+    padding: .3rem .4rem;
+    border-radius: .25rem;
+    font-size: var(--font-size--small, .875rem);
+    color: var(--color-foreground-primary);
+    background: var(--color-background-primary);
+    border: 1px solid var(--color-background-border);
+  }
+</style>
+<script>
+(function () {
+  var current = {{ docs_version | default("dev") | tojson }};
+  var versionRoot = new URL({{ pathto('', 1) | tojson }} || "./", window.location.href);
+  var siteRoot = new URL("../", versionRoot);
+
+  fetch(new URL("versions.json", siteRoot).href, { cache: "no-cache" })
+    .then(function (r) {
+      if (!r.ok) throw new Error("status " + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      var sel = document.getElementById("mg7-version-select");
+      var seen = false;
+
+      (data.versions || []).forEach(function (v) {
+        var opt = document.createElement("option");
+        opt.value = new URL(v.url, siteRoot).href;
+        opt.textContent = v.title || v.name;
+        if (v.name === current) {
+          opt.selected = true;
+          seen = true;
+        }
+        sel.appendChild(opt);
+      });
+
+      if (!seen) {
+        // The build running this page isn't in versions.json (e.g. a
+        // workflow_dispatch dry run). Label it rather than silently
+        // selecting the wrong entry, and don't navigate away from it.
+        var opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = current + " (this build)";
+        opt.selected = true;
+        sel.insertBefore(opt, sel.firstChild);
+      }
+
+      sel.addEventListener("change", function () {
+        // Navigate to the other version's root, not the current page path:
+        // this exact page may not exist in that version.
+        if (sel.value) {
+          window.location.assign(sel.value);
+        }
+      });
+
+      document.getElementById("mg7-versions").hidden = false;
+    })
+    .catch(function () {
+      // No versions.json reachable (local build, or served off-site):
+      // leave the switcher hidden rather than show a broken control.
+    });
+})();
+</script>

@@ -10,7 +10,7 @@ CONTAINS
     ! CTMODE=2 ---> ROTATE THE LOOP PROPAGATOR DIRECTION,i.e D0...DN-1 to DN-1...D0
     ! IMODE=0, IBP reduction
     ! IMODE=1, PaVe reduction
-    ! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
+    ! IMODE=2, PaVe reduction with stability improved by IBP reduction
     IMPLICIT NONE
     INTEGER,INTENT(IN)::NLOOPLINE,MAXRANK,IMODE,NCOEFS
     INTEGER,INTENT(IN),OPTIONAL::CTMODE
@@ -140,7 +140,7 @@ CONTAINS
   SUBROUTINE tensor_integral_reduce2(IMODE,NLOOPLINE,MAXRANK,NCOEFS,PDEN,PijMatrix,M2L,MU,TICOEFS,TSTABLE)
     ! IMODE=0, IBP reduction 
     ! IMODE=1, PaVe reduction 
-    ! IMODE=2, PaVe reduction with stablility improved by IBP reduction     
+    ! IMODE=2, PaVe reduction with stability improved by IBP reduction
     IMPLICIT NONE
     INTEGER,INTENT(IN)::NLOOPLINE,MAXRANK,IMODE,NCOEFS
     REAL(KIND(1d0)),INTENT(IN)::MU
@@ -282,7 +282,7 @@ CONTAINS
        sy,syfactor,numzerp,zerp,PDEN,PijMatrix,M2L,NCOEFS,coefs)
     ! IMODE=0, IBP reduction
     ! IMODE=1, PaVe reduction
-    ! IMODE=2, PaVe reduction with stablility improved by IBP reduction
+    ! IMODE=2, PaVe reduction with stability improved by IBP reduction
     IMPLICIT NONE
     INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS,xiarraymax,xiarraymax2,xiarraymax3
     INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE-numzerp),INTENT(IN)::sy
@@ -411,7 +411,7 @@ CONTAINS
        sy,syfactor,numzerp,zerp,PDEN,M2L,NCOEFS,coefs)
     ! IMODE=0, IBP reduction  
     ! IMODE=1, PaVe reduction
-    ! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
+    ! IMODE=2, PaVe reduction with stability improved by IBP reduction
     IMPLICIT NONE
     INTEGER,INTENT(IN)::ntot,numzerp,NLOOPLINE,IMODE,NCOEFS,xiarraymax,xiarraymax2,xiarraymax3
     INTEGER,DIMENSION(xiarraymax2,-1:NLOOPLINE-numzerp),INTENT(IN)::sy

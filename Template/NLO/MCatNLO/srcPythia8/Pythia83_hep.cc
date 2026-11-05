@@ -1,10 +1,18 @@
 // Driver for Pythia 8. Reads an input file dynamically created on
 // the basis of the inputs specified in MCatNLO_MadFKS_PY8.Script 
+// The events are written in the HepMC3 format if compiled with -DHEPMC3
+// (shower_card: hepmc_format), in the HepMC2 one otherwise.
 #include "Pythia8/Pythia.h"
+#ifdef HEPMC3
+#include "Pythia8Plugins/HepMC3.h"
+#else
 #include "Pythia8Plugins/HepMC2.h"
+#endif
 #include "Pythia8Plugins/CombineMatchingInput.h"
+#ifndef HEPMC3
 #include "HepMC/GenEvent.h"
 #include "HepMC/IO_GenEvent.h"
+#endif
 
 using namespace Pythia8;
 
@@ -58,12 +66,22 @@ int main() {
     return 0;
   };
 
+#ifdef HEPMC3
+  Pythia8ToHepMC toHepMC(outputname);
+  // Only store the weight and the cross section set below.
+  toHepMC.set_store_pdf(false);
+  toHepMC.set_store_proc(false);
+  toHepMC.set_store_xsec(false);
+  toHepMC.set_store_weights(false);
+  toHepMC.setWeightNames(vector<string>(1, "Weight"));
+#else
   HepMC::Pythia8ToHepMC ToHepMC;
   HepMC::IO_GenEvent ascii_io(outputname.c_str(), std::ios::out);
   // Do not store cross section information, as this will be done manually.
   ToHepMC.set_store_pdf(false);
   ToHepMC.set_store_proc(false);
   ToHepMC.set_store_xsec(false);
+#endif
 
   // Cross section an error.
   double sigmaTotal  = 0.;
@@ -86,7 +104,6 @@ int main() {
       ++iPrintLHA;
     }
 
-    HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     double evtweight = pythia.info.weight();
     double normhepmc;
     // ALWAYS NORMALISE HEPMC WEIGHTS TO SUM TO THE CROSS SECTION
@@ -96,6 +113,14 @@ int main() {
       normhepmc = double(iEventtot) / double(iEventshower);
     }
     sigmaTotal += evtweight*normhepmc;
+#ifdef HEPMC3
+    toHepMC.fillNextEvent(pythia);
+    // The weights must be set before the cross section.
+    toHepMC.setWeights(vector<double>(1, evtweight*normhepmc));
+    toHepMC.setXSec(sigmaTotal, pythia.info.sigmaErr());
+    toHepMC.writeEvent();
+#else
+    HepMC::GenEvent* hepmcevt = new HepMC::GenEvent();
     hepmcevt->weights().push_back(evtweight*normhepmc);
     ToHepMC.fill_next_event( pythia, hepmcevt );
     // Add the weight of the current event to the cross section.
@@ -106,6 +131,7 @@ int main() {
     // Write the HepMC event to file. Done with it.
     ascii_io << hepmcevt;    
     delete hepmcevt;
+#endif
   }
 
   pythia.stat();

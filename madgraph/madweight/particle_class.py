@@ -21,7 +21,7 @@ class Particle:
     def add_mother(self,obj):
         self.mother=obj
 
-    def def_twin(self):  #this routine is normaly not used any more#
+    def def_twin(self):  #this routine is normally not used any more#
         """ not use anymore: define the twin for the particle if not defined """
         print('WARNING: Particle.def_twin() is an old routine. This routine hasn\'t been updated since 1/2/08')
         #but perhaps no update are needed
@@ -68,7 +68,7 @@ class Particle:
 
             
     def all_mother(self):
-        """convinient alias"""
+        """convenient alias"""
         return self.def_all_mother()
     
     def detect_neut_in_decay(self):
@@ -147,7 +147,7 @@ class external_part(Particle):
     def unaligned_propa(self,part,total=1):
         """ compute the number of propa in common
             return the total number of propagator before the two particle (default)
-            in addtion it can give the number of uncorelated propagator for the two particle (put total=0) 
+            in addition it can give the number of uncorrelated propagator for the two particles (put total=0)
         """
         not_defined_mother=[]
         if part.mother in self.all_mother():

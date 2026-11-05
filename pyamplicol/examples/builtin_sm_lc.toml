@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: 0BSD
+# Built-in Standard Model generation at leading color with default recurrence.
+# Writes a transactional schema-v3 artifact and root API bundle.
+
+schema_version = 1
+action = "generate"
+
+[model]
+source = "built-in-sm"
+
+[process]
+entries = [{ expression = "u u~ > g g", name = "uubar_gg" }]
+
+[color]
+accuracy = "lc"
+
+[generation]
+output = "artifacts/builtin_sm_lc"
+mode = "error"
+emit_api_bundle = true
+
+[evaluator]
+backend = "jit"
+batch_size = 128
+
+[evaluator.jit]
+optimization_level = 2
+compress = false
+
+[output]
+progress = "auto"
+log_level = "info"

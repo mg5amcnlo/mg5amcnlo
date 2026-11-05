@@ -15,8 +15,16 @@ include ../arch_mcfio
 FFLAGS += -std=legacy
 CFLAGS += -Wno-implicit-function-declaration -Wno-incompatible-pointer-types
 
+# Sun RPC / XDR headers (rpc/types.h, rpc/xdr.h) used by mcfio:
+#  - old glibc and macOS ship them in the base system    -> no extra flag needed
+#  - glibc >= 2.32 (Ubuntu 20.10+, 24.04, ...) removed them; they now live in
+#    libtirpc (package: libtirpc-dev) under /usr/include/tirpc
+# Auto-detect so the user only has to install the package, never edit this file.
+XDRINC := $(shell pkg-config --cflags libtirpc 2>/dev/null || \
+          { test -d /usr/include/tirpc && echo -I/usr/include/tirpc; })
+
 FINC = -I.
-CINC = -I. -I/usr/include/tirpc
+CINC = -I. $(XDRINC)
 HLIB =
 ifdef HISTO_DIR
    CFLAGS += -DHISTO

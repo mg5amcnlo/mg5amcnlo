@@ -7,6 +7,9 @@ module mc_born_types
   integer, parameter :: BORN_INCOMPLETE_HISTORY=5
   ! Provider model COMMONs share one installation inside the Born library.
   integer, save :: born_installed_provider=0
+  ! Scoped caller basis for the learned zero mask; numerical cache keys keep
+  ! their exact momentum/model semantics. Raw callers retain the zero key.
+  integer, save :: born_active_helicity_frame(2)=0
   type BornModelState
     real(8), allocatable :: real_values(:)
     complex(8), allocatable :: complex_values(:)
@@ -21,6 +24,7 @@ module mc_born_types
     integer :: nsectors=0, nsplitorders=0, namplitudes=0, extra=0
     logical :: supports_correlations=.false.
     integer, allocatable :: fks(:,:)
+    integer, allocatable :: frame_map(:)
     integer, allocatable :: born_ids(:,:), born_mothers(:,:,:), born_colours(:,:,:)
     integer, allocatable :: configurations(:), tree(:,:,:), sprop(:,:), tprid(:,:)
     logical, allocatable :: force_bw(:,:)
@@ -33,6 +37,7 @@ module mc_born_types
   end type
   type BornRequest
     integer :: sector=1, m=0, n=0, extra=0
+    integer :: helicity_frame(2)=0
     integer :: single_helicity=0
     integer, allocatable :: helicity(:)
     logical :: helicities=.false., colour=.false., charge=.false.

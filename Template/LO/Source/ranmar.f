@@ -43,7 +43,7 @@ c     before pattern repeats
 c
 c
 c     TJS 12/3/2010
-c     multipied iseed to give larger values more likely to make change
+c     multiplied iseed to give larger values more likely to make change
 c     get offset for multiple runs of single process
 c
 c

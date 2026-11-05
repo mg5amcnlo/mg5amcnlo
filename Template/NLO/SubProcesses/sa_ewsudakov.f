@@ -1,6 +1,6 @@
       Program DRIVER
 c**************************************************************************
-c     This is the driver for the whole calulation
+c     This is the driver for the whole calculation
 c**************************************************************************
       implicit none
       include 'nexternal.inc'

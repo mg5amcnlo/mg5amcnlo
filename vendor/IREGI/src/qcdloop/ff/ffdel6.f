@@ -563,7 +563,7 @@
 *  #] declarations:
 *  #[ work:
 	if ( nn.gt.1024 ) then
-	    print  *,'ffsort: can only sort up to 1024 elments, not ',nn
+	    print  *,'ffsort: can only sort up to 1024 elements, not ',nn
 	    stop
 	endif
 	do 10 i=1,nn

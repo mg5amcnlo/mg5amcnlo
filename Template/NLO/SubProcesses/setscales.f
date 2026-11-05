@@ -49,7 +49,7 @@ c
 c This subroutine sets the values of the renormalization, factorization,
 c and Ellis-Sexton scales, and computes the value of alpha_S through the
 c call to set_ren_scale (for backward compatibility).
-c The scale and couplings values are updated in the relevant common blocks
+c The scale and coupling values are updated in the relevant common blocks
 c (mostly in run.inc, and one  in coupl.inc)
       implicit none
       include "genps.inc"
@@ -180,6 +180,9 @@ c the value of variable scale in common block /to_scale/
 c this is to avoid too low dynamic scales      
       double precision minscaleR
       parameter (minscaleR=2d0)
+c Running Wilson coefficients use the same model scale as alphaS.
+      double precision model_scale
+      common /model_scale/model_scale
 c
       temp_scale_id='  '
       if(fixed_ren_scale)then
@@ -195,6 +198,7 @@ c
 c The following is for backward compatibility. DO NOT REMOVE
       scale=muR
       g=sqrt(4d0*pi*alphas(scale))
+      model_scale=muR
       call update_as_param()
 c
       return

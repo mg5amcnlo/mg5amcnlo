@@ -4,6 +4,7 @@ C     THIS IS THE DRIVER FOR CHECKING THE STANDALONE MATRIX ELEMENT.
 C     IT USES A SIMPLE PHASE SPACE GENERATOR
 C     Fabio Maltoni - 3rd Febraury 2007
 C**************************************************************************
+          use model_object
       IMPLICIT NONE
 C     
 C     CONSTANTS  
@@ -13,10 +14,8 @@ C
 C     
 C     INCLUDE FILES
 C     
-C---  the include file with the values of the parameters and masses	
+C---  the include file with the values of the parameters and masses 
       INCLUDE "coupl.inc"
-C---  the include file with the values of the LDMEs 
-      INCLUDE "ldme.inc"
 C---  integer nexternal ! number particles (incoming+outgoing) in the me 
       INCLUDE "nexternal.inc" 
 C---  particle masses
@@ -24,24 +23,37 @@ C---  particle masses
       REAL*8 TOTALMASS      
 C---  integer    n_max_cg
       INCLUDE "ngraphs.inc"     !how many diagrams (could be useful to know...)
+C---  long-distance matrix elements and bound-state masses (onia_card.dat)
+      INCLUDE "ldme.inc"
 
 C     
 C     LOCAL
 C     
       INTEGER I,J,K
       REAL*8 P(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
-      REAL*8 P_RESH(0:3,NEXTERNAL)   ! four momenta. Energy is the zeroth component.
       REAL*8 SQRTS,MATELEM           ! sqrt(s)= center of mass energy 
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      CHARACTER*30 SQRTS_STR
+      CHARACTER*30 NB_TRY_STR, UFLAVOR_STR
+      INTEGER ARGC
+      INTEGER NB_TRY, unique_flavor
+      INTEGER MAXFLAVOR
+      PARAMETER (MAXFLAVOR=%(maxflavor)d)
+      INTEGER FLAVOR(NEXTERNAL, MAXFLAVOR)
+      INTEGER PDG_FOR_FLAVOR(NEXTERNAL,MAXFLAVOR)
+      INTEGER FLAV_IDX
+      INTEGER %(proc_prefix)sGET_FLAVOR_INDEX
 C
-C     GLOBAL
-C
+      LOGICAL READPS
+C     momenta the bound states are put on (filled by MATRIX)
+      REAL*8 P_RESH(0:3,NEXTERNAL)
+      COMMON/%(proc_prefix)sONIA_RESH/P_RESH
       INTEGER MOM_RESH_TYPE
       COMMON/TO_MOM_RESH_TYPE/MOM_RESH_TYPE
 C     
 C     EXTERNAL
-C     
+C
       REAL*8 DOT
       EXTERNAL DOT
       
@@ -57,11 +69,10 @@ c     models are read from Cards/param_card.dat. The secondary parameters are ca
 c     in Source/MODEL/couplings.f. The values are stored in common blocks that are listed
 c     in coupl.inc .
 
-      call setpara('param_card.dat')  !first call to setup the paramaters
+      call setpara('param_card.dat')  !first call to set up the parameters
       call setonia('onia_card.dat')   !first call to setup the LDMEs
-      include "pmass.inc"             !set up masses
-
       MOM_RESH_TYPE = 1
+      include "pmass.inc"             !set up masses
 
       TOTALMASS = 0.0d0
       DO I=1,NEXTERNAL
@@ -70,26 +81,57 @@ c     in coupl.inc .
 
 c---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
-c     the MadGraph5_aMC@NLO matrix-element.       
+c     the MadGraph7 matrix-element.       
 c     Alternatevely, here the user can call or set the four momenta at his will, see below.
 c     	
+      ARGC = COMMAND_ARGUMENT_COUNT()
       IF(nincoming.EQ.1) THEN
-         SQRTS=PMASS(1)
+        SQRTS=PMASS(1)
       ELSE
-         SQRTS=1000d0              !CMS energy in GEV
+        SQRTS=1000d0              !CMS energy in GEV
+c---  Allow the energy to be set via command-line argument: ./check <energy> [nb_try] [flavor_idx]
+         IF (ARGC .GE. 1) THEN
+            CALL GET_COMMAND_ARGUMENT(1, SQRTS_STR)
+            READ(SQRTS_STR,*) SQRTS
+         ENDIF
          IF (SQRTS.le.2.0d0*TOTALMASS) THEN
             SQRTS = 2.0d0*TOTALMASS
          ENDIF
       ENDIF
+      NB_TRY = 1
+      unique_flavor = 0
+      IF (ARGC .GE. 2) THEN
+        CALL GET_COMMAND_ARGUMENT(2, NB_TRY_STR)
+        READ(NB_TRY_STR,*) NB_TRY
+      ENDIF
+      IF (ARGC .GE. 3) THEN
+        CALL GET_COMMAND_ARGUMENT(3, UFLAVOR_STR)
+        READ(UFLAVOR_STR,*) unique_flavor
+      ENDIF
 
       call printout()
 
-      CALL GET_MOMENTA(SQRTS,PMASS,P)
+C     If the file PS.input is present in the folder, take the momenta from it, else, generate them with GET_MOMENTA
+      inquire(FILE='PS.input', EXIST=READPS)
+      IF (READPS) THEN
+        OPEN(5, FILE='PS.input', ERR=6, STATUS='OLD',ACTION='READ')
+        DO I=1,NEXTERNAL
+          READ(5,*,END=7) P(0,I),P(1,I),P(2,I),P(3,I)
+        ENDDO
+        GOTO 7
+ 6      CONTINUE
+        STOP 'Could not read the PS.input phase-space point.'
+ 7      CONTINUE
+        CLOSE(5)
+      ELSE
+        CALL GET_MOMENTA(SQRTS,PMASS,P)
+      ENDIF
 c
-c	  write the information on the four momenta 
+c     write the information on the four momenta 
 c
       write (*,*)
       write (*,*) " Phase space point:"
+      write (*,*)
       write (*,*) "-----------------------------------------------------------------------------"
       write (*,*)  "n        E             px             py              pz               m "
       do i=1,nexternal
@@ -98,30 +140,65 @@ c
       enddo
       write (*,*) "-----------------------------------------------------------------------------"
 
+      %(flavor_def)s
 c     
 c     Now we can call the matrix element!
 c
-      CALL SMATRIX(P,P_RESH,MATELEM)
-c
+      do I=1, MAXFLAVOR
+      IF(unique_flavor.gt.0.and.unique_flavor.ne.I) CYCLE
+      FLAV_IDX = %(proc_prefix)sGET_FLAVOR_INDEX(FLAVOR(1,I))
+      do J=1, NB_TRY
+      CALL %(proc_prefix)sSMATRIX(P,FLAV_IDX, MATELEM)
+      enddo
       write (*,*) " Reshuffled momenta:"
       write (*,*) "-----------------------------------------------------------------------------"
       write (*,*)  "n        E             px             py              pz               m "
-      do i=1,nexternal
-         write (*,'(i2,1x,5e15.7)') i, P_RESH(0,i), P_RESH(1,i),
-     .     P_RESH(2,i), P_RESH(3,i), dsqrt(dabs(DOT(P_RESH(0,i),
-     .     P_RESH(0,i))))
+      do k=1,nexternal
+         write (*,'(i2,1x,5e15.7)') k, P_RESH(0,k), P_RESH(1,k),
+     .     P_RESH(2,k), P_RESH(3,k), dsqrt(dabs(DOT(P_RESH(0,k),
+     .     P_RESH(0,k))))
       enddo
       write (*,*) "-----------------------------------------------------------------------------"
-
+c
+      write(*,*) "PDG", PDG_FOR_FLAVOR(:,I)
       write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
       write (*,*) "-----------------------------------------------------------------------------"
+      enddo
+
+cc
+cc      Copy down here (or read in) the four momenta as a string. 
+cc      
+cc
+c      buff(1)=" 1   0.5E+03  0.0000000E+00  0.0000000E+00  0.5E+03"
+c      buff(2)=" 2   0.5E+03  0.0000000E+00  0.0000000E+00  -0.5E+03"
+c      buff(3)=" 3   0.5466073E+04  0.4443190E+03  0.2446331E+04 -0.4864732E+04"
+c      buff(4)=" 4   0.8785819E+03 -0.2533886E+03  0.2741971E+03  0.7759741E+03"
+c      buff(5)=" 5   0.4916306E+04 -0.1909305E+03 -0.2720528E+04  0.4088757E+04"
+cc
+cc      Here the k,E,px,py,pz are read from the string into the momenta array.
+cc      k=1,2          : incoming
+cc      k=3,nexternal  : outgoing
+cc
+c      do i=1,nexternal
+c         read (buff(i),*) k, P(0,i),P(1,i),P(2,i),P(3,i)
+c      enddo
+c
+cc- print the momenta out
+c
+c      do i=1,nexternal
+c         write (*,'(i2,1x,5e15.7)') i, P(0,i),P(1,i),P(2,i),P(3,i), 
+c     .dsqrt(dabs(DOT(p(0,i),p(0,i))))
+c      enddo
+c
+c      CALL %(prefix)sSMATRIX(P,MATELEM)
+c
+c      write (*,*) "-------------------------------------------------"
+c      write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)   
+c      write (*,*) "-------------------------------------------------"
 
       end
-	
-	  
-	  
-	  
-	   double precision function dot(p1,p2)
+    
+       double precision function dot(p1,p2)
 C****************************************************************************
 C     4-Vector Dot product
 C****************************************************************************
@@ -131,28 +208,28 @@ C****************************************************************************
       end
 
 
-	  SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
-C---- auxiliary function to change convention between MadGraph5_aMC@NLO and rambo
-c---- four momenta. 	  
-	  IMPLICIT NONE
-	  INCLUDE "nexternal.inc"
-C	  ARGUMENTS
-	  REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
+      SUBROUTINE GET_MOMENTA(ENERGY,PMASS,P)
+C---- auxiliary function to change convention between MadGraph7 and rambo
+c---- four momenta.       
+      IMPLICIT NONE
+      INCLUDE "nexternal.inc"
+C     ARGUMENTS
+      REAL*8 ENERGY,PMASS(NEXTERNAL),P(0:3,NEXTERNAL),PRAMBO(4,10),WGT
 C         LOCAL
          INTEGER I
          REAL*8 etot2,mom,m1,m2,e1,e2
 
          ETOT2=energy**2
-         m1=pmass(1)
-         m2=pmass(2)
-         mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
-     -        2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
-         mom=dsqrt(mom)
-         e1=DSQRT(mom**2+m1**2)
-         e2=DSQRT(mom**2+m2**2)
 
          if(nincoming.eq.2) then
 
+             m1=pmass(1)
+             m2=pmass(2)
+             mom=(Etot2**2 - 2*Etot2*m1**2 + m1**4 -
+     &            2*Etot2*m2**2 - 2*m1**2*m2**2 + m2**4)/(4.*Etot2)
+             mom=dsqrt(mom)
+             e1=DSQRT(mom**2+m1**2)
+             e2=DSQRT(mom**2+m2**2)
             P(0,1)=e1
             P(1,1)=0d0
             P(2,1)=0d0
@@ -165,10 +242,10 @@ C         LOCAL
              
             call rambo(nexternal-2,energy,pmass(nincoming+1),prambo,WGT)
             DO I=3, NEXTERNAL
-               P(0,I)=PRAMBO(4,I-2)	
+               P(0,I)=PRAMBO(4,I-2) 
                P(1,I)=PRAMBO(1,I-2)
                P(2,I)=PRAMBO(2,I-2)
-               P(3,I)=PRAMBO(3,I-2)	
+               P(3,I)=PRAMBO(3,I-2) 
             ENDDO
              
           elseif(nincoming.eq.1) then 
@@ -180,15 +257,15 @@ C         LOCAL
              
              call rambo(nexternal-1,energy,pmass(2),prambo,WGT)
              DO I=2, NEXTERNAL
-                P(0,I)=PRAMBO(4,I-1)	
+                P(0,I)=PRAMBO(4,I-1)    
                 P(1,I)=PRAMBO(1,I-1)
                 P(2,I)=PRAMBO(2,I-1)
-                P(3,I)=PRAMBO(3,I-1)	
+                P(3,I)=PRAMBO(3,I-1)    
              ENDDO
           endif
           
-	  RETURN
-	  END
+      RETURN
+      END
       
 
       SUBROUTINE RAMBO(N,ET,XM,P,WT)
@@ -428,8 +505,6 @@ C         LOCAL
       IRANMR = 97
       JRANMR = 33
       END
-
-
 
 
 

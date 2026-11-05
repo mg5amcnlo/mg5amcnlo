@@ -1,0 +1,568 @@
+{
+  "captured_at": "2026-07-16T08:30:24Z",
+  "dependency_ids": [
+    "dependency:analytic-oracles"
+  ],
+  "evidence_schema_version": 2,
+  "evidence_set_id": "evidence-set:analytic-oracles",
+  "kind": "pyamplicol-reference-oracle-evidence",
+  "oracle": {
+    "content_sha256": "089eb1fce800160a2144e21312658ddd22f343c75bdd9e1a1f636290123647ef",
+    "id": "oracle:analytic-scalars",
+    "implementation": "tools/developer/analytic_oracles.py Decimal formulas",
+    "independence_statement": "Closed-form scalar formulas consume only captured momenta and model defaults; they do not import generation or runtime evaluators.",
+    "name": "Independent closed-form scalar oracles",
+    "revision": "54045e93070c87caab43063eae7c1807fb4ae70d",
+    "tolerance_ceiling": {
+      "absolute": "0.000000000000001",
+      "relative": "0.000000000001"
+    },
+    "validation_profile": "high-precision"
+  },
+  "records": [
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalars_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_contact_2to2",
+        "case=case:scalars_2to2:lc",
+        "point=point:scalars_2to2:generic-1"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "407b10ad06eec811330bb380f4dd8fd6b3c317eeb3532ddbccebb07126ac388c",
+      "helicity_ids": [
+        "h:+0,+0,+0,+0"
+      ],
+      "id": "evidence:analytic:case:scalars_2to2:lc:point:scalars_2to2:generic-1",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "4a94d68460c1d85be8ca3f23e8a305a7cc88a2d6c46ffe5197e9eef20c765d9d",
+      "observed_helicity_totals": null,
+      "observed_total": "0.5",
+      "observed_values": [
+        [
+          "0.5"
+        ]
+      ],
+      "oracle_output_sha256": "dcd1e9621a78ddb55f07befcae557d301c4028c2ded7682de79af7c30e991bcd",
+      "physics_case_sha256": "6c7aab7fe96336599c451077935929599de9073a62146baea8c6a89c52661eca",
+      "point_id": "point:scalars_2to2:generic-1",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > scalar_0 scalar_0",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-scalar_0-1",
+          "leg:outgoing-scalar_0-2"
+        ],
+        "ordered_external_pdgs": [
+          1000,
+          1000,
+          1000,
+          1000
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalars_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_contact_2to2",
+        "case=case:scalars_2to2:lc",
+        "point=point:scalars_2to2:generic-2"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "3b82d21faf8b40ad57a791b5ea65c7aeada9236833801cb7583893e52efb7d1c",
+      "helicity_ids": [
+        "h:+0,+0,+0,+0"
+      ],
+      "id": "evidence:analytic:case:scalars_2to2:lc:point:scalars_2to2:generic-2",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "d3e5490b2206e81186e35dbf1d29bd05f35fe481a90dee45476ff40c43426c50",
+      "observed_helicity_totals": null,
+      "observed_total": "0.5",
+      "observed_values": [
+        [
+          "0.5"
+        ]
+      ],
+      "oracle_output_sha256": "5e42e72679d7ac0cb61e45f4cf2088c569f938b85b18b176faf3577b8dc00f85",
+      "physics_case_sha256": "6c7aab7fe96336599c451077935929599de9073a62146baea8c6a89c52661eca",
+      "point_id": "point:scalars_2to2:generic-2",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > scalar_0 scalar_0",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-scalar_0-1",
+          "leg:outgoing-scalar_0-2"
+        ],
+        "ordered_external_pdgs": [
+          1000,
+          1000,
+          1000,
+          1000
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalars_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_contact_2to2",
+        "case=case:scalars_2to2:lc",
+        "point=point:scalars_2to2:generic-3"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "7755c0e119c47854195d85ae56879391ea102fd973b086160b7743abf09c38c7",
+      "helicity_ids": [
+        "h:+0,+0,+0,+0"
+      ],
+      "id": "evidence:analytic:case:scalars_2to2:lc:point:scalars_2to2:generic-3",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "279100e04553b34e67f299af4c92f10ef737dccdd8586d68259214856cd630d0",
+      "observed_helicity_totals": null,
+      "observed_total": "0.5",
+      "observed_values": [
+        [
+          "0.5"
+        ]
+      ],
+      "oracle_output_sha256": "2e8f6dc5e31e28d606cd01f71fb81930adea4d2d180ddd7f98abd91549c60890",
+      "physics_case_sha256": "6c7aab7fe96336599c451077935929599de9073a62146baea8c6a89c52661eca",
+      "point_id": "point:scalars_2to2:generic-3",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > scalar_0 scalar_0",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-scalar_0-1",
+          "leg:outgoing-scalar_0-2"
+        ],
+        "ordered_external_pdgs": [
+          1000,
+          1000,
+          1000,
+          1000
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalars_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_contact_2to2",
+        "case=case:scalars_2to2:lc",
+        "point=point:scalars_2to2:stress-near-collinear"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "fdf3d29e1c6332dff190eb391e1d5f94437e33495834d186991f8780c6d64cbc",
+      "helicity_ids": [
+        "h:+0,+0,+0,+0"
+      ],
+      "id": "evidence:analytic:case:scalars_2to2:lc:point:scalars_2to2:stress-near-collinear",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "c952531ebc6a62c8c1e70a0f39c19fce040468dbe56c7f9f406cb7bd67af0d0c",
+      "observed_helicity_totals": null,
+      "observed_total": "0.5",
+      "observed_values": [
+        [
+          "0.5"
+        ]
+      ],
+      "oracle_output_sha256": "2e1ccda21a5ea249a4fe6ec98c0b5b0440722530526fe0ea851ff8290b0f6999",
+      "physics_case_sha256": "6c7aab7fe96336599c451077935929599de9073a62146baea8c6a89c52661eca",
+      "point_id": "point:scalars_2to2:stress-near-collinear",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > scalar_0 scalar_0",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-scalar_0-1",
+          "leg:outgoing-scalar_0-2"
+        ],
+        "ordered_external_pdgs": [
+          1000,
+          1000,
+          1000,
+          1000
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalar_gravity_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_gravity_2to2",
+        "case=case:scalar_gravity_2to2:lc",
+        "point=point:scalar_gravity_2to2:generic-1"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "f42628d6a7b442331bcf25a6bb00b7efb7a96f7e08d4d4d40ade9fcbeba006b4",
+      "helicity_ids": [
+        "h:+0,+0,-2,-2",
+        "h:+0,+0,-2,+2",
+        "h:+0,+0,+2,-2",
+        "h:+0,+0,+2,+2"
+      ],
+      "id": "evidence:analytic:case:scalar_gravity_2to2:lc:point:scalar_gravity_2to2:generic-1",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "4f236f91d069ceca8d8f1bf83d8954fb32e9bed80e22024f3b2c1031756c3bd9",
+      "observed_helicity_totals": null,
+      "observed_total": "2743669908.184639318638142032821703315049439062061889915248831052018262890773100820174156360043279541",
+      "observed_values": [
+        [
+          "0"
+        ],
+        [
+          "1371834954.09231965931907101641085165752471953103094495762441552600913144538655041008707818002163977"
+        ],
+        [
+          "1371834954.09231965931907101641085165752471953103094495762441552600913144538655041008707818002163977"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "oracle_output_sha256": "94781f9c11685c8369617a1840ab4f763ea4da0e512795083afaf7d81d799a2d",
+      "physics_case_sha256": "f34ef0ce85a69fc7f40ac6c3bea4eba7dacbd383e3b4507505ec0028e700143e",
+      "point_id": "point:scalar_gravity_2to2:generic-1",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > graviton graviton",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-graviton-1",
+          "leg:outgoing-graviton-2"
+        ],
+        "ordered_external_pdgs": [
+          2000,
+          2000,
+          1337,
+          1337
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalar_gravity_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_gravity_2to2",
+        "case=case:scalar_gravity_2to2:lc",
+        "point=point:scalar_gravity_2to2:generic-2"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "b34edd33e9f66e14766f6fc57800b22b54f9bb2d48b0759a907a7d958d19f726",
+      "helicity_ids": [
+        "h:+0,+0,-2,-2",
+        "h:+0,+0,-2,+2",
+        "h:+0,+0,+2,-2",
+        "h:+0,+0,+2,+2"
+      ],
+      "id": "evidence:analytic:case:scalar_gravity_2to2:lc:point:scalar_gravity_2to2:generic-2",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "9399cdbe88cbe7a5f89d58ce8f6fc7322cdca18c4f2f930cfe89412d36ed4ab2",
+      "observed_helicity_totals": null,
+      "observed_total": "2373424789.808567548632738845845699652078622579654373087863029936866673188711710756796479496175387764",
+      "observed_values": [
+        [
+          "0"
+        ],
+        [
+          "1186712394.904283774316369422922849826039311289827186543931514968433336594355855378398239748087693882"
+        ],
+        [
+          "1186712394.904283774316369422922849826039311289827186543931514968433336594355855378398239748087693882"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "oracle_output_sha256": "678ce97b2ad8d686c31183083b0ef3be072cf5afe0d5801a6517168bacbf8686",
+      "physics_case_sha256": "f34ef0ce85a69fc7f40ac6c3bea4eba7dacbd383e3b4507505ec0028e700143e",
+      "point_id": "point:scalar_gravity_2to2:generic-2",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > graviton graviton",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-graviton-1",
+          "leg:outgoing-graviton-2"
+        ],
+        "ordered_external_pdgs": [
+          2000,
+          2000,
+          1337,
+          1337
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalar_gravity_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_gravity_2to2",
+        "case=case:scalar_gravity_2to2:lc",
+        "point=point:scalar_gravity_2to2:generic-3"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "1134177a2c106806558a7423210aa048ec82978eaf904ae198388b6c77c4f1e6",
+      "helicity_ids": [
+        "h:+0,+0,-2,-2",
+        "h:+0,+0,-2,+2",
+        "h:+0,+0,+2,-2",
+        "h:+0,+0,+2,+2"
+      ],
+      "id": "evidence:analytic:case:scalar_gravity_2to2:lc:point:scalar_gravity_2to2:generic-3",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "80712a181baf34040d3b2cc4560101a06ee601fa801be0f0c24d1619ea938d38",
+      "observed_helicity_totals": null,
+      "observed_total": "2887822815.354558927617123212371712726562866000574361481260754141281104310045653472058674492333223616",
+      "observed_values": [
+        [
+          "0"
+        ],
+        [
+          "1443911407.677279463808561606185856363281433000287180740630377070640552155022826736029337246166611808"
+        ],
+        [
+          "1443911407.677279463808561606185856363281433000287180740630377070640552155022826736029337246166611808"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "oracle_output_sha256": "3e9417e0f4fb6077512f4f183aea24d0e5f9288181808192268086097680b462",
+      "physics_case_sha256": "f34ef0ce85a69fc7f40ac6c3bea4eba7dacbd383e3b4507505ec0028e700143e",
+      "point_id": "point:scalar_gravity_2to2:generic-3",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > graviton graviton",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-graviton-1",
+          "leg:outgoing-graviton-2"
+        ],
+        "ordered_external_pdgs": [
+          2000,
+          2000,
+          1337,
+          1337
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    },
+    {
+      "arithmetic": "analytic",
+      "arithmetic_precision_bits": 333,
+      "case_id": "case:scalar_gravity_2to2:lc",
+      "certified_decimal_digits": 12,
+      "color_ids": [
+        "flow:singlet"
+      ],
+      "command": [
+        "tools/developer/analytic_oracles.py",
+        "scalar_gravity_2to2",
+        "case=case:scalar_gravity_2to2:lc",
+        "point=point:scalar_gravity_2to2:stress-near-collinear"
+      ],
+      "coverage": "resolved",
+      "evidence_record_sha256": "b7efb4934037768650f2d4f25024f0bb332183f555b63ce48ff4058a02653037",
+      "helicity_ids": [
+        "h:+0,+0,-2,-2",
+        "h:+0,+0,-2,+2",
+        "h:+0,+0,+2,-2",
+        "h:+0,+0,+2,+2"
+      ],
+      "id": "evidence:analytic:case:scalar_gravity_2to2:lc:point:scalar_gravity_2to2:stress-near-collinear",
+      "independent_of_pyamplicol": true,
+      "input_sha256": "22ce5ac27dba01f1e684c4e1eabf0e1082a38079e4cc5c315c3d150cee22d3e9",
+      "observed_helicity_totals": null,
+      "observed_total": "0.06249999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999997",
+      "observed_values": [
+        [
+          "0"
+        ],
+        [
+          "0.03124999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999998"
+        ],
+        [
+          "0.03124999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999998"
+        ],
+        [
+          "0"
+        ]
+      ],
+      "oracle_output_sha256": "6bedd892437584afbacd001c03af24ba446c5c62806c202584dc41efdebe30cf",
+      "physics_case_sha256": "f34ef0ce85a69fc7f40ac6c3bea4eba7dacbd383e3b4507505ec0028e700143e",
+      "point_id": "point:scalar_gravity_2to2:stress-near-collinear",
+      "process_identity": {
+        "color_order_count": 1,
+        "expression": "scalar_0 scalar_0 > graviton graviton",
+        "ordered_color_legs": [],
+        "ordered_external_leg_ids": [
+          "leg:incoming-scalar_0-1",
+          "leg:incoming-scalar_0-2",
+          "leg:outgoing-graviton-1",
+          "leg:outgoing-graviton-2"
+        ],
+        "ordered_external_pdgs": [
+          2000,
+          2000,
+          1337,
+          1337
+        ],
+        "row_id": null,
+        "source_to_row_permutation": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "round_trip_decimal_digits": 100,
+      "tolerances": {
+        "absolute": "0.000000000000001",
+        "relative": "0.000000000001"
+      }
+    }
+  ]
+}

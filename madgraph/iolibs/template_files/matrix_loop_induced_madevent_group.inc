@@ -1,8 +1,8 @@
-SUBROUTINE SMATRIX%(proc_id)s(P,RHEL, RCOL, channel, proc_id, ANS, hel_selected, icol)
+SUBROUTINE SMATRIX%(proc_id)s(P, iflav, RHEL, RCOL, channel, ivec, ANS, hel_selected, icol)
 C  
 %(info_lines)s
 C 
-C MadGraph5_aMC@NLO for Madevent Version
+C MadGraph7 for Madevent Version
 C 
 C Returns amplitude squared summed/avg over colors
 c and helicities
@@ -14,7 +14,7 @@ C
     IMPLICIT NONE
     double precision RHEL
     double precision RCOL
-    integer channel, proc_id, hel_selected, icol, ivec
+    integer iflav, channel, hel_selected, icol, ivec
 C  
 C CONSTANTS
 C  
@@ -46,7 +46,7 @@ C   When set negative, the security above is removed
 	PARAMETER (MULTICHANNEL_THRES=1.0d-5)
 
 c
-c global (due to reading writting) 
+c global (due to reading writing)
 c
         LOGICAL GOODHEL(NCOMB,MAXSPROC)
 	INTEGER NTRY(MAXSPROC)
@@ -71,14 +71,14 @@ C   This stores the different between the full matrix element squared and the su
 
 		real t_before
 
-C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
+C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
 
 		REAL*8 , ALLOCATABLE :: ANS_ML(:,:)
       	REAL*8 , ALLOCATABLE :: PREC_FOUND(:)
 		INTEGER ML_RET_CODE
 		INTEGER ML_ANS_DIMENSION
-C Prec_found ans ans_ml are saved so that they don't have to be re-allocated everytime
+C Prec_found ans ans_ml are saved so that they don't have to be re-allocated every time
 		SAVE ML_ANS_DIMENSION,ANS_ML,PREC_FOUND
 
 
@@ -148,14 +148,14 @@ C Unless this is the first iteration, make sure to never double check the helici
 C       The double check is turned off here even for the first iteration because the further iteration would anyway be wrong since the new HelFilter is not output. We keep it here as it can be used for diagnostics, for example by triggering a crash if the double-check fails instead of trying to recompute the filter.
         CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
 	  ENDIF
-C So that TIR integrals can be reused accross helicity configuration.
+C So that TIR integrals can be reused across helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.
 C Of course this is only necessary when using MadLoop for several helicity for the same PS point
       IF ((.not.FORCE_ML_Helicity_Sum).and.ISUM_HEL.eq.0) THEN
 	    CALL %(ml_prefix)sSET_AUTOMATIC_CACHE_CLEARING(.FALSE.)
 	  ENDIF
       CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
-C In case there is an initialization phase for MadLoop (i.e. everytime except when MC over helicity and disabling the Loop filter, which is the default.
+C In case there is an initialization phase for MadLoop (i.e. every time except when MC over helicity and disabling the Loop filter, which is the default.
 	  CALL %(ml_prefix)sFORCE_STABILITY_CHECK(.TRUE.)
       ALLOCATE(ANS_ML(0:3,0:ML_ANS_DIMENSION))
 	  ALLOCATE(PREC_FOUND(0:ML_ANS_DIMENSION))
@@ -181,7 +181,8 @@ C     This is of course only necessary if the automatic TIR Cache clearing was t
 
 
     ANS = 0D0
-    IVEC= 1
+C   IVEC is now received as an argument (the call site passes the vector index,
+C   or 1 for the non-vectorised path); do not overwrite it here.
 
     DO I=1,NCOMB
        TS(I)=0d0
@@ -243,7 +244,7 @@ c of an explicit polarisation in the process
 		  hel_jacobian   = 1.0d0
 !         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
           ref_helicity_grid = DS_get_dimension(ref_grid,'Helicity')
-		  IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%%n_tot_entries.eq.0)) then 
+		  IF((DS_get_dim_status('Helicity').eq.1).and.(ref_helicity_grid%n_tot_entries.eq.0)) then 
 !           If we finished the initialization we can update the grid so as to start sampling over it.
 !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
@@ -339,8 +340,22 @@ c         Set right sign for ANS, based on sign of chosen helicity
     ENDIF
 
 C Amplitude(s) for diagram number %(n_tot_diags)d
-C This last line is a tag do not remove it. 
+C This last line is a tag do not remove it.
 	END
+
+
+      SUBROUTINE GET_FLAVOR%(proc_id)s(IFLAV, FLAVOR_OUT)
+C     Returns the flavor array for a given flavor index IFLAV
+C     (called by the flavor dispatcher in auto_dsig).
+      IMPLICIT NONE
+      include 'nexternal.inc'
+      INTEGER IFLAV, I
+      INTEGER FLAVOR_OUT(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL,%(max_flavor)s)
+      %(get_flavor_matrix)s
+      FLAVOR_OUT(:) = FLAVOR(:, IFLAV)
+      RETURN
+      END
 
 	SUBROUTINE PROCESS_MADLOOP_OUTPUT%(proc_id)s(P,time_before, me_answer, finite, OneEps, TwoEps, prec, return_code)
 c

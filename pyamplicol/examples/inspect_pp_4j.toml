@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: 0BSD
+# Summarize the flavour-blind p p > j j j j artifact: its 23 generated
+# representatives and the process-group map of all 486 subprocesses.
+
+schema_version = 1
+action = "inspect"
+
+[evaluation]
+artifact = "artifacts/pp_4j_flavor_blind"
+
+[output]
+format = "human"
+color = "auto"
+progress = "off"

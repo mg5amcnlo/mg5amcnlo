@@ -43,7 +43,7 @@
      +		+1,+1,+1,+1, -1,-1,+1,+1, -1,-1/
 *  #] declarations:
 *  #[ check:
-*	check whether tehre is anything to do
+*	check whether there is anything to do
 	if ( init .ne. 0 ) return
 	init = 1
 	print *,'===================================================='
@@ -142,7 +142,7 @@
 *
 *	calculate the coefficients of the series expansion
 *	li2(x) = sum bn*z^n/(n+1)!, z = -log(1-x), bn are the
-*	bernouilli numbers (zero for odd n>1).
+*	bernoulli numbers (zero for odd n>1).
 *
 	bf(1) = - 1.D+0/4.D+0
 	bf(2) = + 1.D+0/36.D+0
@@ -335,7 +335,7 @@
 	isgn34 = 1
 	isgnal = 1
 *
-*	the cutoff has to be initialized because of the memory mechansim
+*	the cutoff has to be initialized because of the memory mechanism
 *
 	delta = 0
 *
@@ -392,7 +392,7 @@
 *
 *	calculate the coefficients of the series expansion
 *	li2(x) = sum bn*z^n/(n+1)!, z = -log(1-x), bn are the
-*	bernouilli numbers (zero for odd n>1).
+*	bernoulli numbers (zero for odd n>1).
 *
 	if ( bf(1) .ne. - 1.D+0/4.D+0 )
      +	print *,'ffexi: error: bf(1) is corrupted'
@@ -809,7 +809,7 @@ C	path = '/usr/local/ff/'
 	DOUBLE PRECISION array(n1+n2)
 	include 'ff.h'
 	if ( array(n1+n2) .eq. 0 ) then
-	   print *,'ffbnd: fatal: array not intialized; did you call ',
+	   print *,'ffbnd: fatal: array not initialized; did you call ',
      +		'ffini?'
 	   stop
 	endif
@@ -831,7 +831,7 @@ C	path = '/usr/local/ff/'
 	DOUBLE COMPLEX carray(n1+n2)
 	include 'ff.h'
 	if ( carray(n1+n2) .eq. 0 ) then
-	   print *,'ffbnd: fatal: array not intialized; did you call ',
+	   print *,'ffbnd: fatal: array not initialized; did you call ',
      +		'ffini?'
 	   stop
 	endif

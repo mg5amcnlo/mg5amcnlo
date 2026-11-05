@@ -20,8 +20,8 @@ except ImportError:
     import internal.madweight.MW_fct as MW_fct
     
 
-###f77 forbiden term
-#forbiden=["goto","return","stop","call","write","read","do","while","end ","continue","asign","pause","print","rewind","backspace","endfile","open","close","inquire","entry","optional","save","equivalence","intent","target","rule","compute","system","enddo"]
+###f77 forbidden term
+#forbiden=["goto","return","stop","call","write","read","do","while","end ","continue","assign","pause","print","rewind","backspace","endfile","open","close","inquire","entry","optional","save","equivalence","intent","target","rule","compute","system","enddo"]
 
 
 def create_TF_main(name,make, MW_dir):
@@ -61,7 +61,7 @@ def create_TF_main(name,make, MW_dir):
 
 #1 ################################################################################# 
 class XML_input(xml.sax.handler.ContentHandler):
-    """ This class will organize in python obect the TF_param.dat file 
+    """ This class will organize in python object the TF_param.dat file
         (written in xml) 
     """
 
@@ -314,7 +314,7 @@ class TF_block(dict):
  
     #2 #############################################################################    
     def def_info(self,text):
-        """ store the information on the block (comming from the xml) """
+        """ store the information on the block (coming from the xml) """
         self.infotext=text
 
     #2 #############################################################################    
@@ -339,7 +339,7 @@ class TF_on_var:
 
     #2 #############################################################################    
     def def_include(self,text):
-        """ store the information on the block (comming from the xml) """
+        """ store the information on the block (coming from the xml) """
         self.includetext=text
     
 
@@ -353,7 +353,7 @@ class TF_on_var:
         
 #1 #################################################################################    
 class TF_in_SubProcesses:
-    """ Class for building transfert functions routine in a specific SubProcess"""
+    """ Class for building transfer functions routine in a specific SubProcess"""
 
     #2 #############################################################################    
     def __init__(self,TF_data,MW_sub):
@@ -436,7 +436,7 @@ class TF_in_SubProcesses:
         
     #2 #############################################################################     
     def text_get_central_point(self):
-        """ return the get_centralPoint function in a  unformated text 
+        """ return the get_centralPoint function in unformatted text
             (need to pass in mod_file for comment, and to f77_format    
         """
         
@@ -484,7 +484,7 @@ class TF_in_SubProcesses:
 
     #2 #############################################################################     
     def text_transfer_fct(self):
-        """ return the transfer_fct function in a  unformated text 
+        """ return the transfer_fct function in unformatted text
             (need to pass in mod_file for comment, and to f77_format    
         """
 
@@ -527,7 +527,7 @@ class TF_in_SubProcesses:
         
     #2 #############################################################################     
     def text_tf_E_for_part(self):
-        """ return the different tf_E_for_XX function in a  unformated text 
+        """ return the different tf_E_for_XX function in unformatted text
             (need to pass in mod_file for comment, and to f77_format    
         """    
 
@@ -553,7 +553,7 @@ class TF_in_SubProcesses:
     
     #2 #############################################################################     
     def text_tf_E_for_one_part(self,i):
-        """ return the different tf_E_for_XX function in a  unformated text 
+        """ return the different tf_E_for_XX function in unformatted text
             (need to pass in mod_file for comment, and to f77_format    
         """  
         
@@ -704,7 +704,7 @@ def update_dir(name,make,MW_dir):
 
                                 
 #def check_valid(text):
-#    for name in forbiden:
+#    for name in forbidden:
 #        Pattern=re.compile(name,re.I)
 #        if Pattern.search(text):
 #            print "ERROR: invalid usage of statement: ",name
@@ -748,10 +748,3 @@ if(__name__=="__main__"):
         made_make=0
     os.chdir('./Source/MadWeight/transfer_function')
     create_TF_main(name,made_make,MW_dir)
-    
-##    file=six.input("file: ")
-##    ff=open(file,'r')
-##    gg=open(file+'_70.f','w')
-##    text=ff.read()
-##    text=MW_fct.put_in_fortran_format(text)
-##    gg.writelines(text)

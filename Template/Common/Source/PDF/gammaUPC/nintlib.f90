@@ -782,7 +782,7 @@ CONTAINS
     !    the corresponding estimates of the integration errors.
     !
     !    Output, real ( kind = 8 ) DEV1(K2).  Entries K1 through K2 contain
-    !    estimates of the reliability of the the integration.
+    !    estimates of the reliability of the integration.
     !    If consecutive values DEV1(K) and DEV1(K+1) do not differ
     !    by more than 10 percent, then ERR1(K) can be taken as
     !    a reliable upper bound on the difference between EST1(K)
@@ -795,7 +795,7 @@ CONTAINS
     !    the corresponding estimates of the integration errors.
     !
     !    Output, real ( kind = 8 ) DEV2(K2).  Entries K2 through K2 contain
-    !    estimates of the reliability of the the integration.
+    !    estimates of the reliability of the integration.
     !    If consecutive values DEV2(K) and DEV2(K+2) do not differ
     !    by more than 10 percent, then ERR2(K) can be taken as
     !    a reliable upper bound on the difference between EST2(K)
@@ -1333,7 +1333,7 @@ CONTAINS
   END SUBROUTINE tuple_next
 
   ! For the infinite integrals of the highly oscilatory functions
-  ! let us use the modfied W transform proposed by Sidi (https://www.jstor.org/stable/2008589)
+  ! let us use the modified W transform proposed by Sidi (https://www.jstor.org/stable/2008589)
   ! Original reference: "A User-Friendly Extrapolation Method for Oscillatory Infinite Integrals" By Avram Sidi
   ! Also see eq.(8) in "Evaluating infinite integrals involving bessel functions of arbitrary order", By S. Lucas and H. Stone
   ! Journal of Computational and Applied Mathematics 64 (1995) 217-231

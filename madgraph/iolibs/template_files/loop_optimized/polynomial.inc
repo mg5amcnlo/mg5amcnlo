@@ -139,7 +139,7 @@ C
 ## if(ninja_available){
       SUBROUTINE %(mp_prefix)s%(proc_prefix)sINVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
 C       Just a handy subroutine to modify the coefficients for the
-C       tranformation q_loop -> -q_loop
+C       transformation q_loop -> -q_loop
 C       It is only used for the NINJA interface
         USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS
         IMPLICIT NONE

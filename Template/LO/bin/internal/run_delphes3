@@ -24,20 +24,52 @@ if [ ! -e $delphesdir/DelphesSTDHEP ]; then
 fi
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$ROOTSYS/lib
+
+# HepMC3 files (HEPMCoutput:format = hepmc3 in the pythia8_card) are read by
+# DelphesHepMC3, HepMC2 ones by DelphesHepMC2: look at the header.
+hepmc_reader=DelphesHepMC2
+header=""
+if [ -p $file ]; then
+  # a fifo can only be read once: take its first lines here, and give them
+  # back to Delphes together with the rest of the stream (see below)
+  exec 3< $file
+  for i in 1 2 3; do
+    IFS= read -r line <&3 || break
+    header="$header$line"$'\n'
+  done
+elif [ -f $file ]; then
+  if [ ${file: -3} == ".gz" ]; then
+    header=`gunzip --stdout $file 2>/dev/null | head -n 5`
+  else
+    header=`head -n 5 $file`
+  fi
+fi
+if echo "$header" | grep -q "HepMC::Asciiv3"; then
+  hepmc_reader=DelphesHepMC3
+fi
+if [ ${file: -4} != ".hep" -a ${file: -7} != ".hep.gz" -a ! -e $delphesdir/$hepmc_reader ]; then
+  echo "No Delphes executable found at $delphesdir/$hepmc_reader. Quitting..."
+  exit
+fi
+
 if [ ${file: -3} == ".gz" ]
 then
   if [ ${file: -7} == ".hep.gz" ]
   then
       gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   else
-      gunzip --stdout $file | $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+      gunzip --stdout $file | $delphesdir/$hepmc_reader ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   fi
 else
   if [ ${file: -4} == ".hep" ]
   then
       $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file
+  elif [ -p $file ]
+  then
+      { printf '%s' "$header"; cat <&3; } | $delphesdir/$hepmc_reader ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root
+      exec 3<&-
   else
-      $delphesdir/DelphesHepMC2 ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
+      $delphesdir/$hepmc_reader ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
   fi
 fi
 

@@ -72,7 +72,7 @@ c others: same as 1 (for now)
             nintcurr=nintervals/ifold(kdim)
             if(nintcurr*ifold(kdim).ne.nintervals) then
                write(*,*)
-     # 'mint: the values in the ifold array shoud be divisors of',
+     # 'mint: the values in the ifold array should be divisors of',
      #  nintervals
                stop
             endif
@@ -206,7 +206,7 @@ c integrands
       real * 8 xn(100),r
       integer kint,jint
       do kint=1,nint
-c xacc (xerr) already containe a factor equal to the interval size
+c xacc (xerr) already contain a factor equal to the interval size
 c Thus the integral of rho is performed by summing up
          if(nhits(kint).ne.0) then
             xacc(kint)= xacc(kint-1)

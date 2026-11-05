@@ -89,7 +89,7 @@ c
           end if 
           if (mcfio_NTupleMult(istr_old, ntu22, glob_c.version)
      &           .eq. -1) then 
-            print *, 'Problem decoding Multiplicty from Ntuple glob22'
+            print *, 'Problem decoding Multiplicity from Ntuple glob22'
             stop
           end if
           if (glob_c.nglob .gt. 5) then
@@ -105,13 +105,13 @@ c
              
 c              if (mcfio_NTuple(istr_old, ntu22, glob_c.version)
 c     &           .eq. -1) then 
-c            print *, 'Problem decoding Multiplicty from Ntuple glob22'
+c            print *, 'Problem decoding Multiplicity from Ntuple glob22'
 c              stop
 c              end if
 c             call check_glob22(i)
 c              if (mcfio_NTuple(istr_old, ntu23, version_glo23)
 c     &           .eq. -1) then 
-c            print *, 'Problem decoding Multiplicty from Ntuple glob23'
+c            print *, 'Problem decoding Multiplicity from Ntuple glob23'
 c              stop
 c              end if
           end if          

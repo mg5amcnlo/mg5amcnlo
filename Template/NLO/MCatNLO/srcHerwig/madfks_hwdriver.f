@@ -94,7 +94,7 @@ C---JIMMY UNDERLYING EVENT OVERRIDES PDF ASSIGNMENTS: MUST USE LO**
             WRITE(*,*)'JIMMY underlying event requires PDFs=LO**'
             DO I=1,2
                IF(AUTPDF(I).NE.'LHAPDF'.AND.AUTPDF(I).NE.'LHAEXT')THEN
-                  WRITE(*,*)'PDF error 1 in MG5_aMC@NLO'
+                  WRITE(*,*)'PDF error 1 in MadGraph7'
                   STOP
                ENDIF
                IF(MODPDF(I).NE.20651)THEN

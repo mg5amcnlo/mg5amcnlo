@@ -235,7 +235,7 @@
 		xmax = abs(cs)*10d0**(-mod((ier1-ieri(i)),50))
 	    else
 *
-*		rotate to calculable posistion
+*		rotate to calculable position
 *
 		call ffrot4(irota4,del2s,xqi4,dqiqj4,qiDqj4,xpi4,dpipj4,
      +			piDpj4,5,itype,ieri(i))
@@ -287,7 +287,7 @@
 	    xmx5(i) = xmax*absc(cfac)
 	    if ( ldot ) then
 		call ffdl3p(fdl3i(i),piDpj4,10,ii4,ii4,ieri(i))
-*		let's hope tha tthese have been set by ffxd0e...
+*		let's hope that these have been set by ffxd0e...
 		fdl4si(i) = fdel4s
 		if ( ltest ) then
 		    ier0 = 0

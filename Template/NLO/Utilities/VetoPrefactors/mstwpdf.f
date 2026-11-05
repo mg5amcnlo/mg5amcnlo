@@ -378,7 +378,7 @@ C--   If mb2 < qsq < mb2+eps, then qsq = mb2+eps.
 
 C--   Calculate the anomalous dimension, dlog(xf)/dlog(qsq),
 C--   evaluated at qsqmin.  Then extrapolate the PDFs to low
-C--   qsq < qsqmin by interpolating the anomalous dimenion between
+C--   qsq < qsqmin by interpolating the anomalous dimension between
 C--   the value at qsqmin and a value of 1 for qsq << qsqmin.
 C--   If value of PDF at qsqmin is very small, just set
 C--   anomalous dimension to 1 to prevent rounding errors.
@@ -669,7 +669,7 @@ C--   If extrapolation into large q AND small x:
 C----------------------------------------------------------------------
 
       integer function locx(xx,nx,x)
-C--   returns an integer j such that x lies inbetween xx(j) and xx(j+1).
+C--   returns an integer j such that x lies in between xx(j) and xx(j+1).
 C--   nx is the length of the array with xx(nx) the highest element.
       implicit none
       integer nx,jl,ju,jm

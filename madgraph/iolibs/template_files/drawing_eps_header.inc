@@ -1,6 +1,6 @@
 %!MadGraph
 %
-% Feynman Diagrams drawn by MadGraph5_aMC@NLO
+% Feynman Diagrams drawn by MadGraph7
 %
 % Using FEYNMAN DRAW
 % A program by David J. Summers to draw

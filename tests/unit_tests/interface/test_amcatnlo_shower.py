@@ -176,7 +176,9 @@ elif mode in ('HWU', 'FXFX'):
         compiler.write_text('#!/bin/sh\ncp analysis_fixture Pythia8.exe\n'
                             'printf "FXFX\\nRandom:seed = 123\\n" > Pythia8.cmd\n'
                             'echo "Compiler stdout"\necho "Compiler stderr" >&2\n')
-        with mock.patch.object(interface, 'check_pythia8_fxfx_plugin'):
+        with mock.patch.object(interface, 'check_pythia8_fxfx_plugin'), \
+             mock.patch.object(self.cmd, 'get_pythia8_hepmc_setup',
+                               return_value=(3, '')):
             self.cmd.run_mcatnlo(str(self.input), {})
         rundir = self.assert_clean(shower='PYTHIA8')
         for index in range(1, 4):

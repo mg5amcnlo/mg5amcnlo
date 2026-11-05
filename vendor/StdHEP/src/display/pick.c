@@ -231,7 +231,7 @@ int FindTrack(StdHepWindow *window, int x, int y)
     }
     /* 
     ** One now has to convert the Segment index to the track Index, 
-    ** which depends on the current visibility of the choosen particle.
+    ** which depends on the current visibility of the chosen particle.
     */
     if (minDist > MIN_PICK_DIST) return NO_TRACK;
     else  return minIndex;

@@ -2,13 +2,19 @@
 
 name: running unittest
 # Controls when the workflow will run
-#    branches: [ main LTS ]
+# branches: [ main LTS ]
 on:
   # Triggers the workflow on push or pull request events but only for the 3.4.0 branch
   push:
+    # All branches, no tags: a release tag points at a commit that already
+    # ran this suite when it was pushed to main, and release.yml gates on
+    # that main run rather than re-testing the same tree. '**' is needed
+    # over '*' so branch names containing a slash still match.
+    branches:
+      - '**'
     paths-ignore:
       - 'docs/**'
-#      - '.github/**'
+# - '.github/**'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -17,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: 'running unittest'     
+        description: 'running unittest' 
         required: true
 
 env:
@@ -32,635 +38,631 @@ concurrency:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "build"
-  test_additional_unittest:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+
+
+  unittest_bundle_1:
+    # former jobs, run one after the other: test_additional_unittest unittest_0
+    #   unittest_2 unittest_3 unittest_7 unittest_11 unittest_12 unittest_16
+    #   unittest_17 unittest_18_1 unittest_20 unittest_23 unittest_25
+    #   unittest_26 unittest_28 unittest_31 unittest_32 unittest_33
+    #   unittest_customize_model
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
 
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_helas_diagrams_gg_wpwmttx
+      # ---- unittest_0 ----
+      - name: "unittest_0"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py -v2 -t0 testIO_modification_to_cuts -e .github/workflows/unittest.yml 
+            ./tests/test_manager.py test_v31_syntax_crash test_polarisation_nlo_regimes test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card test_wrapped_model_path test_wrapped_processes test_processes_after_last_import_model test_model_v4 test_default_model test_density_option_survives_every_wrap_position test_regression_layout test_last_output_options test_wrapped_modelname test_density_flag_split_by_the_wrap test_density_flag_on_one_line test_no_density test_write_keeps_long_lines_whole -t0
 
-
-  unittest_0:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card
+      # ---- unittest_2 ----
+      - name: "unittest_2"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_modification_to_cuts test_ungrouping_lepton test_all_permutation test_permutation_from_id test_v31_syntax_crash test_the_exit_from_child_cmd test_the_exit_from_child_cmd2 test_get_final_part test_InvalidCmd test_check_generate test_cleaning_history test_generate_polarised test_help_category test_output_default test_shell_and_continuation_line test_simple_generate test_card_type_recognition test_help_category test_autocompletion test_modif_ML_card test_modif_madweight_card test_modif_param_card test_modif_pythia8_card test_modif_run_card test_modif_shower_card test_modif_reweight_card -t0
+            ./tests/test_manager.py test_replace_indices test_representation test_simplify test_to_immutable test_representation test_setget_amplitude_correct test_setget_amplitude_exceptions test_values_for_prop test_decay_chain_pp_jj test_forbidden_s_channel_decay_chain test_representation test_setget_process_correct test_setget_process_exceptions test_unused_decays_in_decay_chain_pp_jj test_combine_legs_gluons test_combine_legs_uux_ddx test_combine_legs_uux_uuxuux test_coupling_orders_uux_ddxng test_decay_process_generation -t0
 
-
-
-  unittest_1:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_T_f_product test_Tr_product test_d_product test_f_d_product test_f_d_sum test_f_product test_gluons test_sextet_products test_three_f_chain test_K6_objects test_T6_simplify test_T_pair_simplify test_T_simplify test_Tr_pair_simplify test_Tr_simplify test_d_object test_delta3_pair_simplify test_delta6_simplify test_epsilon_object test_f_object test_standard test_color_string_canonical test_complex_conjugate test_from_immutable test_product
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_T_f_product test_Tr_product test_d_product test_f_d_product test_f_d_sum test_f_product test_gluons test_sextet_products test_three_f_chain test_K6_objects test_T6_simplify test_T_pair_simplify test_T_simplify test_Tr_pair_simplify test_Tr_simplify test_d_object test_delta3_pair_simplify test_delta6_simplify test_epsilon_object test_f_object test_standard test_color_string_canonical test_complex_conjugate test_from_immutable test_product -t0
-
-
-
-  unittest_2:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_replace_indices test_representation test_simplify test_to_immutable testIO_IOTestWrappedWithSetUP testIO_MyHandwrittenIOTest testIO_MyCustomNameIOTestWithPathRegExpr testIO_MyCustomNameIOTestWrapped testIO_MyCustomNameIOTestWrappedWithReturnPath testIO_MySimpleIOTestWrapped test_representation test_setget_amplitude_correct test_setget_amplitude_exceptions test_values_for_prop test_decay_chain_pp_jj test_forbidden_s_channel_decay_chain test_representation test_setget_process_correct test_setget_process_exceptions test_unused_decays_in_decay_chain_pp_jj test_combine_legs_gluons test_combine_legs_uux_ddx test_combine_legs_uux_uuxuux test_coupling_orders_uux_ddxng test_decay_process_generation
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_replace_indices test_representation test_simplify test_to_immutable testIO_IOTestWrappedWithSetUP testIO_MyHandwrittenIOTest testIO_MyCustomNameIOTestWithPathRegExpr testIO_MyCustomNameIOTestWrapped testIO_MyCustomNameIOTestWrappedWithReturnPath testIO_MySimpleIOTestWrapped test_representation test_setget_amplitude_correct test_setget_amplitude_exceptions test_values_for_prop test_decay_chain_pp_jj test_forbidden_s_channel_decay_chain test_representation test_setget_process_correct test_setget_process_exceptions test_unused_decays_in_decay_chain_pp_jj test_combine_legs_gluons test_combine_legs_uux_ddx test_combine_legs_uux_uuxuux test_coupling_orders_uux_ddxng test_decay_process_generation -t0
-
-
-
-  unittest_3:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_diagram_generation_diagrams_ddx_uuxg test_diagram_generation_electrons test_diagram_generation_gluons test_diagram_generation_identical_interactions test_diagram_generation_nodiag test_diagram_generation_photons test_diagram_generation_ue_dve test_diagram_generation_uux_ddxng test_diagram_generation_uux_gg test_diagram_generation_uux_uuxng test_expand_list test_expand_list_list test_forbidden_onshell_s_channel_uux_uuxng test_forbidden_particles_uux_uuxng test_forbidden_s_channel_uux_uuxng test_multiple_interaction_identical_particles test_required_s_channel_decay test_required_s_channel_uux_uuxng test_squared_orders_constraints_uux_ddxuux test_crossing_uux_gg test_find_optimal_order test_heft_multiparticle_pp_hnj test_multiparticle_mirror_pp_3j test_multiparticle_pp_nj test_multiparticle_pp_nj_with_required_s_channel
+      # ---- unittest_3 ----
+      - name: "unittest_3"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_diagram_generation_diagrams_ddx_uuxg test_diagram_generation_electrons test_diagram_generation_gluons test_diagram_generation_identical_interactions test_diagram_generation_nodiag test_diagram_generation_photons test_diagram_generation_ue_dve test_diagram_generation_uux_ddxng test_diagram_generation_uux_gg test_diagram_generation_uux_uuxng test_expand_list test_expand_list_list test_forbidden_onshell_s_channel_uux_uuxng test_forbidden_particles_uux_uuxng test_forbidden_s_channel_uux_uuxng test_multiple_interaction_identical_particles test_required_s_channel_decay test_required_s_channel_uux_uuxng test_squared_orders_constraints_uux_ddxuux test_crossing_uux_gg test_find_optimal_order test_heft_multiparticle_pp_hnj test_multiparticle_mirror_pp_3j test_multiparticle_pp_nj test_multiparticle_pp_nj_with_required_s_channel -t0
 
-
-
-  unittest_4:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_multiparticle_stop_decay test_representation test_setget_process_correct test_setget_process_exceptions test_wrong_multiparticle test_diagram_tag_gg_ggg test_diagram_tag_to_diagram_uux_nglue test_diagram_tag_uu_uug test_reorder_permutation test_creation_from_cmd test_dealing_with_last_line test_define_level test_diagram_equality test_fermion_flow test_find_initial_vertex_position test_find_t_channel_vertex test_find_vertex_at_level test_horizontal_mode test_line_ordering_in_load test_load_diagram test_no_cutting_line test_non_integer_external test_notion_of_egality test_one_initial_state_particle test_part_antipart_after_output
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_multiparticle_stop_decay test_representation test_setget_process_correct test_setget_process_exceptions test_wrong_multiparticle test_diagram_tag_gg_ggg test_diagram_tag_to_diagram_uux_nglue test_diagram_tag_uu_uug test_reorder_permutation test_creation_from_cmd test_dealing_with_last_line test_define_level test_diagram_equality test_fermion_flow test_find_initial_vertex_position test_find_t_channel_vertex test_find_vertex_at_level test_horizontal_mode test_line_ordering_in_load test_load_diagram test_no_cutting_line test_non_integer_external test_notion_of_egality test_one_initial_state_particle test_part_antipart_after_output -t0
-
-
-
-  unittest_5:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_phi4_vertex test_begin_end_wrong_input test_def_begin_end_point test_domain_intersection test_domain_intersection_failure test_domainintersection test_get_length test_get_type test_has_ordinate_failure test_hasintersection test_hasordinate test_hasordinate_wronginput test_inverse_part_antipart test_inverse_pid_for_type test_line_orientation test_add_line test_building test_def_level test_def_position test_fuse_vertex test_isexternal test_redef_position test_remove_line test_color_basis_uux_aggg test_color_flow_string
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_phi4_vertex test_begin_end_wrong_input test_def_begin_end_point test_domain_intersection test_domain_intersection_failure test_domainintersection test_get_length test_get_type test_has_ordinate_failure test_hasintersection test_hasordinate test_hasordinate_wronginput test_inverse_part_antipart test_inverse_pid_for_type test_line_orientation test_add_line test_building test_def_level test_def_position test_fuse_vertex test_isexternal test_redef_position test_remove_line test_color_basis_uux_aggg test_color_flow_string -t0
-
-
-
-  unittest_6:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_color_flow_string_epsilon test_colorize_funny_model test_colorize_uu_gg test_colorize_uux_ggg test_color_matrix_Nc_restrictions test_color_matrix_fixed_indices test_color_matrix_multi_gluons test_color_matrix_multi_quarks test_helper_lcm_functions test_get_s_and_t_ub_tdg test_diagram_list test_diagram_list_nice_string test_representation test_setget_diagram_correct test_setget_diagram_exceptions test_values_for_prop test_make_unique test_generating_dict_to_0 test_generating_dict_to_1 test_interaction_list test_representation test_setget_interaction_correct test_setget_interaction_exceptions test_values_for_prop test_leg_list
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_color_flow_string_epsilon test_colorize_funny_model test_colorize_uu_gg test_colorize_uux_ggg test_color_matrix_Nc_restrictions test_color_matrix_fixed_indices test_color_matrix_multi_gluons test_color_matrix_multi_quarks test_helper_lcm_functions test_get_s_and_t_ub_tdg test_diagram_list test_diagram_list_nice_string test_representation test_setget_diagram_correct test_setget_diagram_exceptions test_values_for_prop test_make_unique test_generating_dict_to_0 test_generating_dict_to_1 test_interaction_list test_representation test_setget_interaction_correct test_setget_interaction_exceptions test_values_for_prop test_leg_list -t0
-
-
-
-  unittest_7:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_representation test_setget_leg_correct test_setget_leg_exceptions test_values_for_prop test_check_majoranas test_dictionaries test_get_interaction test_get_max_WEIGHTED test_get_particle test_model_initialization test_pass_in_standard_name test_ref_dict_multiple_interactions test_setget_model_correct test_setget_model_error test_change_to_complex_mass_scheme test_get_running test_multi_leg_list test_representation test_setget_multi_leg_correct test_setget_multi_leg_exceptions test_values_for_prop test_get_anti_pdg_code test_get_helicity_states test_get_pdg_code test_particle_list
+      # ---- unittest_7 ----
+      - name: "unittest_7"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_representation test_setget_leg_correct test_setget_leg_exceptions test_values_for_prop test_check_majoranas test_dictionaries test_get_interaction test_get_max_WEIGHTED test_get_particle test_model_initialization test_pass_in_standard_name test_ref_dict_multiple_interactions test_setget_model_correct test_setget_model_error test_change_to_complex_mass_scheme test_get_running test_multi_leg_list test_representation test_setget_multi_leg_correct test_setget_multi_leg_exceptions test_values_for_prop test_get_anti_pdg_code test_get_helicity_states test_get_pdg_code test_particle_list -t0
 
-
-
-  unittest_8:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_representation test_setget_particle_correct test_setget_particle_exceptions test_values_for_prop test_check_polarization test_get_process_with_legs test_representation test_setget_process_definition_correct test_setget_process_definition_exceptions test_values_for_prop test_get_final_ids_after_decay test_input_string test_long_shell_string test_nice_string test_representation test_setget_process_correct test_setget_process_exceptions test_shell_string test_values_for_prop test_representation test_setget_vertex_correct test_setget_vertex_exceptions test_values_for_prop test_vertex_list test_setget_amplitude_exceptions
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_representation test_setget_particle_correct test_setget_particle_exceptions test_values_for_prop test_check_polarization test_get_process_with_legs test_representation test_setget_process_definition_correct test_setget_process_definition_exceptions test_values_for_prop test_get_final_ids_after_decay test_input_string test_long_shell_string test_nice_string test_representation test_setget_process_correct test_setget_process_exceptions test_shell_string test_values_for_prop test_representation test_setget_vertex_correct test_setget_vertex_exceptions test_values_for_prop test_vertex_list test_setget_amplitude_exceptions -t0
-
-
-
-  unittest_9:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_sign_flips_to_order test_values_for_prop test_helas_decay_chain_process test_helas_forbidden_s_channel_decay_chain test_setget_diagram_exceptions test_complicated_majorana_process test_fermionfactor_emep_emep test_fermionfactor_emep_emepa test_fermionfactor_emep_emepemep test_fermionfactor_epem_sepsemepem test_generate_helas_diagrams_4g test_generate_helas_diagrams_ae_ae test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_uux_gepem test_generate_helas_diagrams_uux_gepem_no_optimization test_get_base_amplitude test_get_conjugate_index test_get_conjugate_index_majoranas test_get_den_factor test_helas_forbidden_s_channel_uux_uuxng test_multi_amp_majorana_process test_process_init test_setget_matrix_element_exceptions test_sorted_mothers test_complete_decay_chain_process
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_sign_flips_to_order test_values_for_prop test_helas_decay_chain_process test_helas_forbidden_s_channel_decay_chain test_setget_diagram_exceptions test_complicated_majorana_process test_fermionfactor_emep_emep test_fermionfactor_emep_emepa test_fermionfactor_emep_emepemep test_fermionfactor_epem_sepsemepem test_generate_helas_diagrams_4g test_generate_helas_diagrams_ae_ae test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_uux_gepem test_generate_helas_diagrams_uux_gepem_no_optimization test_get_base_amplitude test_get_conjugate_index test_get_conjugate_index_majoranas test_get_den_factor test_helas_forbidden_s_channel_uux_uuxng test_multi_amp_majorana_process test_process_init test_setget_matrix_element_exceptions test_sorted_mothers test_complete_decay_chain_process -t0
-
-
-
-  unittest_10:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_decay_chain_different_order1 test_decay_chain_different_order2 test_decay_chain_different_order3 test_decay_chain_different_pdgs test_decay_chain_process_overall_orders test_decay_processes_different_is_particles test_equal_decay_chains test_helas_multi_process test_helas_multiprocess_pp_nj test_majorana_decay_chain_process test_multistage_decay_chain_process test_multistage_symmetryfactor test_non_combine_processes test_setget_wavefunction_exceptions test_values_for_prop test_identify_me_tag_qq_qqg test_non_identify_me_tag_qq_qqg test_identify_me_tag_qq_qg test_extract_info test_get_final_state_particle test_get_proc_with_decay_LO test_get_proc_with_decay_NLO test_madspin_event test_find_symmetry_uu_tt test_find_symmetry_uu_tt_with_subprocess_group
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_decay_chain_different_order1 test_decay_chain_different_order2 test_decay_chain_different_order3 test_decay_chain_different_pdgs test_decay_chain_process_overall_orders test_decay_processes_different_is_particles test_equal_decay_chains test_helas_multi_process test_helas_multiprocess_pp_nj test_majorana_decay_chain_process test_multistage_decay_chain_process test_multistage_symmetryfactor test_non_combine_processes test_setget_wavefunction_exceptions test_values_for_prop test_identify_me_tag_qq_qqg test_non_identify_me_tag_qq_qqg test_identify_me_tag_qq_qg test_extract_info test_get_final_state_particle test_get_proc_with_decay_LO test_get_proc_with_decay_NLO test_madspin_event test_find_symmetry_uu_tt test_find_symmetry_uu_tt_with_subprocess_group -t0
-
-
-
-  unittest_11:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_uu_to_tt_sch test_uu_to_ttg_sch test_uu_to_tt_tch test_uu_to_ttg_tch test_check_u_u_six_g test_sextet_color_flow_output test_uu_to_six_g test_check_u_t_antitrip_g test_triplet_color_flow_output test_ut_to_antitrip_g test_find_symmetry_decay_chain_with_subprocess_group test_find_symmetry_epem_aaa test_find_symmetry_gg_tt_fullylept test_find_symmetry_qq_qqg_with_subprocess_group test_rotate_momenta test_equal test_ordered_set test_set_parameters_and_couplings test_block_append_remove test_block_load_string test_block_str test_convert_to_mg5 test_mod_card test_mod_param test_paramcard_scan
+      # ---- unittest_11 ----
+      - name: "unittest_11"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_uu_to_tt_sch test_uu_to_ttg_sch test_uu_to_tt_tch test_uu_to_ttg_tch test_check_u_u_six_g test_sextet_color_flow_output test_uu_to_six_g test_check_u_t_antitrip_g test_triplet_color_flow_output test_ut_to_antitrip_g test_find_symmetry_decay_chain_with_subprocess_group test_find_symmetry_epem_aaa test_find_symmetry_gg_tt_fullylept test_find_symmetry_qq_qqg_with_subprocess_group test_rotate_momenta test_equal test_ordered_set test_set_parameters_and_couplings test_block_append_remove test_block_load_string test_block_str test_convert_to_mg5 test_mod_card test_mod_param test_paramcard_scan -t0
 
-
-
-  unittest_12:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_check_param test_load_with_restrict_model test_make_valid test_read test_read_write_param_card test_write test_model_name test_use_as_benchmark test_get_lepton_pdgs_sm test_get_lepton_pdgs_sm_nobmass test_get_lepton_pdgs_sm_nomasses test_get_quark_pdgs_sm test_get_quark_pdgs_sm_nobmass test_get_quark_pdgs_sm_nomasses test_coupling_hierarchy test_expansion_order test_ImportUFONoSideEffectLO test_ImportUFONoSideEffectNLO test_ImportUFOcheckgoldstone test_import_from_cmd test_get_nflav_sm test_get_nflav_sm_nobmass test_get_nflav_sm_nomasses test_get_nleps_sm test_get_nleps_sm_nobmass test_zz_goldstone_normalization
+      # ---- unittest_12 ----
+      - name: "unittest_12"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_check_param test_load_with_restrict_model test_make_valid test_read test_read_write_param_card test_write test_model_name test_use_as_benchmark test_get_lepton_pdgs_sm test_get_lepton_pdgs_sm_nobmass test_get_lepton_pdgs_sm_nomasses test_get_quark_pdgs_sm test_get_quark_pdgs_sm_nobmass test_get_quark_pdgs_sm_nomasses test_coupling_hierarchy test_expansion_order test_ImportUFONoSideEffectLO test_ImportUFONoSideEffectNLO test_ImportUFOcheckgoldstone test_import_from_cmd test_get_nflav_sm test_get_nflav_sm_nobmass test_get_nflav_sm_nomasses test_get_nleps_sm test_get_nleps_sm_nobmass test_zz_goldstone_normalization -t0
 
-
-
-  unittest_13:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_get_nleps_sm_nomasses test_detect_identical_parameters test_detect_special_parameters test_detect_zero_iden_couplings test_get_new_coupling_name test_locate_couplings test_merge_iden_couplings test_merge_identical_parameters test_put_parameters_to_zero test_remove_couplings test_remove_interactions test_restrict_from_a_param_card test_massivecase test_massless test_rambo_validity_check test_I test_O test_T test_V test_shower_card_edit test_shower_card_hw6 test_shower_card_hw6_analyse test_shower_card_hw7 test_shower_card_hw7_analyse test_shower_card_py6
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_get_nleps_sm_nomasses test_detect_identical_parameters test_detect_special_parameters test_detect_zero_iden_couplings test_get_new_coupling_name test_locate_couplings test_merge_iden_couplings test_merge_identical_parameters test_put_parameters_to_zero test_remove_couplings test_remove_interactions test_restrict_from_a_param_card test_massivecase test_massless test_rambo_validity_check test_I test_O test_T test_V test_shower_card_edit test_shower_card_hw6 test_shower_card_hw6_analyse test_shower_card_hw7 test_shower_card_hw7_analyse test_shower_card_py6 -t0
-
-
-
-  unittest_14:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_shower_card_py6_analyse test_shower_card_py8 test_shower_card_py8_analyse test_configuration_file test_install_update test_banner test_auto_handling test_config_iadd test_float_handling test_for_loop test_guess_type test_handling_dict_of_values test_handling_list_of_values test_integer_handling test_sum_object test_system_only test_MadAnalysis5Card test_initMadLoopParam test_modifparameter test_sum_object test_writeMLparam test_PY8Card_basic test_PY8Card_with_subruns test_add_definition test_add_unknown_entry
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_shower_card_py6_analyse test_shower_card_py8 test_shower_card_py8_analyse test_configuration_file test_install_update test_banner test_auto_handling test_config_iadd test_float_handling test_for_loop test_guess_type test_handling_dict_of_values test_handling_list_of_values test_integer_handling test_sum_object test_system_only test_MadAnalysis5Card test_initMadLoopParam test_modifparameter test_sum_object test_writeMLparam test_PY8Card_basic test_PY8Card_with_subruns test_add_definition test_add_unknown_entry -t0
-
-
-
-  unittest_15:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_autodef_nomissmatch test_basic test_check_valid_LO test_custom_fcts test_default test_fixed_fac_scale_block test_guess_entry_fromname test_negative_iseed test_pdlabel_block test_analyse_card_analyse test_analyse_card_default test_create_param_dict test_define_not_dep_param test_order_param test_write_block test_write_param test_write_qnumber test_define_not_dep_param test_full_write test_write_orders test_write_particles test_write_vertices test_add_external_parameters test_add_particle test_couplings test_identify_particle
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_autodef_nomissmatch test_basic test_check_valid_LO test_custom_fcts test_default test_fixed_fac_scale_block test_guess_entry_fromname test_negative_iseed test_pdlabel_block test_analyse_card_analyse test_analyse_card_default test_create_param_dict test_define_not_dep_param test_order_param test_write_block test_write_param test_write_qnumber test_define_not_dep_param test_full_write test_write_orders test_write_particles test_write_vertices test_add_external_parameters test_add_particle test_couplings test_identify_particle -t0
-
-
-
-  unittest_16:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_interaction test_parsing_lo_weight test_read_write_gzip test_read_write_lhe test_equiv_sequence test_event_property test_get_permutation test_add_ab_interaction test_add_ab_particle test_generate_ab_amplitudes test_get_interactions_type test_get_particles_type test_help_generate_ab_amplitude test_help_generate_ab_amplitude_2 test_setup_interactions test_setup_particles test_apx_decaywidth test_colormultiplicity test_findchannels test_get_initialfinal test_get_onshell test_helper_find_channels test_initial_setups test_add_std_diagram test_decaytable_string
+      # ---- unittest_16 ----
+      - name: "unittest_16"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_interaction test_parsing_lo_weight test_read_write_gzip test_read_write_lhe test_equiv_sequence test_event_property test_get_permutation test_add_ab_interaction test_add_ab_particle test_generate_ab_amplitudes test_get_interactions_type test_get_particles_type test_help_generate_ab_amplitude test_help_generate_ab_amplitude_2 test_setup_interactions test_setup_particles test_apx_decaywidth test_colormultiplicity test_findchannels test_get_initialfinal test_get_onshell test_helper_find_channels test_initial_setups test_add_std_diagram test_decaytable_string -t0
 
-
-
-  unittest_17:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_get_amplitude_givenfinal test_group_channels2amplitudes test_init_setget test_find_full_sm_decay_groups test_find_full_sm_decay_groups_advance test_find_mssm_decay_groups test_find_mssm_decay_groups_general test_find_mssm_decay_groups_modified_mssm test_find_mssm_decay_groups_modified_mssm_general test_find_vertexlist test_running_couplings test_setget test_particles_type test_read_param_card test_find_vertexlist test_get_max_level test_getsetvertexlist_correct test_getsetvertexlist_exceptions test_reset_decaywidth test_setget_channel test_setgetinit_correct test_setgetinit_exceptions test_values_for_prop test_convert test_collect_helascalls
+      # ---- unittest_17 ----
+      - name: "unittest_17"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_get_amplitude_givenfinal test_group_channels2amplitudes test_init_setget test_find_full_sm_decay_groups test_find_full_sm_decay_groups_advance test_find_mssm_decay_groups test_find_mssm_decay_groups_general test_find_mssm_decay_groups_modified_mssm test_find_mssm_decay_groups_modified_mssm_general test_find_vertexlist test_running_couplings test_setget test_particles_type test_read_param_card test_find_vertexlist test_get_max_level test_getsetvertexlist_correct test_getsetvertexlist_exceptions test_reset_decaywidth test_setget_channel test_setgetinit_correct test_setgetinit_exceptions test_values_for_prop test_convert test_collect_helascalls -t0
 
-
-
-  unittest_18_1:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_helas_comparison test_helas_helpers test_boost_momenta test_boost_momenta_gluino test_comparison_for_multiprocess test_comparison_for_process test_failed_process test_get_momenta test_histograms_operations test_output_reload testIO_test_pptt_fks_loonly
+      # ---- unittest_18_1 ----
+      - name: "unittest_18_1"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_helas_comparison test_helas_helpers test_boost_momenta test_boost_momenta_gluino test_comparison_for_multiprocess test_comparison_for_process test_failed_process test_get_momenta test_histograms_operations test_output_reload testIO_test_pptt_fks_loonly -t0
+            ./tests/test_manager.py test_helas_comparison test_helas_helpers test_boost_momenta test_boost_momenta_gluino test_comparison_for_multiprocess test_comparison_for_process test_failed_process test_get_momenta test_histograms_operations test_output_reload -t0
 
-  unittest_18_2:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen 
+      # ---- unittest_20 ----
+      - name: "unittest_20"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_test_pptt_fksreal testIO_test_pptt_fksrealew testIO_test_tdecay_fksreal testIO_test_wprod_fksew test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen -t0
+            ./tests/test_manager.py test_is_uptodate test_write_cplusplus_error test_write_cplusplus_line test_write_cplusplus_special_syntax test_multiple_if_statement test_single_if_statement test_remove_routine test_write_fortran_error test_write_fortran_line test_UFOExpressionParserPythonIF test_parse_fortran_IfElseStruct test_parse_fortran_IfElseStruct_MP test_parse_fortran_fct test_parse_fortran_fct_MP test_parse_special_fortran_fct test_error_interaction_save test_error_particle_save test_interaction_save test_particle_save test_fail_on_process_cc_file_uu_six test_write_match_go_process_cc_file -t0
 
-  unittest_18_3:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_z_nlo_gen_qcd test_z_nlo_gen_qed test_parse_info_str_correct test_parse_info_str_error test_generate_wavefunctions_and_amplitudes test_w_and_z_amplitudes
+      # ---- unittest_23 ----
+      - name: "unittest_23"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_z_nlo_gen_qcd test_z_nlo_gen_qed test_parse_info_str_correct test_parse_info_str_error test_generate_wavefunctions_and_amplitudes test_w_and_z_amplitudes -t0
+            ./tests/test_manager.py test_case_sensitive test_refactorize test_export_matrix_element_python_madevent_group test_python_export_functions test_run_python_matrix_element test_python_template_uses_decay_aware_broken_symmetry_metadata test_broken_symmetry_decomposes_each_decay_component test_broken_symmetry_distinguishes_identical_parent_with_different_decays test_get_fortran_str test_generate_virtuals_helas_matrix_element test_generate_virtuals_single_process test_fks_helas_multi_process_pptt test_fks_helas_multi_process_ppwj test_fks_helas_multi_process_ppz test_fks_helas_multi_process_ppz_loonly test_fks_helas_process_init test_fks_helas_real_process_init test_get_fks_info_list test_set_color_links test_FKSMultiProcess test_FKSMultiProcess_add test_FKSMultiProcess_no_fsr test_FKSMultiProcess_no_isr test_FKSProcess_aguux_qed -t0
 
-
-
-
-
-  unittest_19:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_set_wavefunctions test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob test_schedular
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_set_wavefunctions test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob -t0
-
-
-
-  unittest_20:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_is_uptodate test_write_cplusplus_error test_write_cplusplus_line test_write_cplusplus_special_syntax test_multiple_if_statement test_single_if_statement test_remove_routine test_write_fortran_error test_write_fortran_line test_UFOExpressionParserPythonIF test_parse_fortran_IfElseStruct test_parse_fortran_IfElseStruct_MP test_parse_fortran_fct test_parse_fortran_fct_MP test_parse_special_fortran_fct test_error_interaction_save test_error_particle_save test_interaction_save test_particle_save test_write_pythia8_parameter_files test_fail_on_process_cc_file_uu_six test_write_match_go_process_cc_file testIO_write_cpp_go_process_cc_file testIO_write_dec_multiprocess_files test_pythia8_export_functions
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_is_uptodate test_write_cplusplus_error test_write_cplusplus_line test_write_cplusplus_special_syntax test_multiple_if_statement test_single_if_statement test_remove_routine test_write_fortran_error test_write_fortran_line test_UFOExpressionParserPythonIF test_parse_fortran_IfElseStruct test_parse_fortran_IfElseStruct_MP test_parse_fortran_fct test_parse_fortran_fct_MP test_parse_special_fortran_fct test_error_interaction_save test_error_particle_save test_interaction_save test_particle_save test_write_pythia8_parameter_files test_fail_on_process_cc_file_uu_six test_write_match_go_process_cc_file testIO_write_cpp_go_process_cc_file testIO_write_dec_multiprocess_files test_pythia8_export_functions -t0
-
-
-
-  unittest_21:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_write_process_cc_file test_write_process_cc_file_uu_six test_write_process_h_file test_simple_import test_convert_number_to_cpp test_convert_number_to_fortran test_parse_to_cpp test_parse_to_fortran test_header test_coeff_string test_different_order_process_symmetry test_export_group_decay_chains test_export_group_multidiagram_decay_chains test_replace_make_opt_f_compiler testIO_sqso_uux_uuxuuxx test_configs_4f_decay test_configs_8fs test_configs_long_decay test_configs_ug_ttxz test_duplicate_lorentz_structures test_export_complicated_majorana_decay_chain test_export_majorana_decay_chain test_four_fermion_vertex_normal_fermion_flow test_four_fermion_vertex_strange_fermion_flow test_generate_helas_diagrams_WWWW
-        run: |
-            cd $GITHUB_WORKSPACE
-            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_write_process_cc_file test_write_process_cc_file_uu_six test_write_process_h_file test_simple_import test_convert_number_to_cpp test_convert_number_to_fortran test_parse_to_cpp test_parse_to_fortran test_header test_coeff_string test_different_order_process_symmetry test_export_group_decay_chains test_export_group_multidiagram_decay_chains test_replace_make_opt_f_compiler testIO_sqso_uux_uuxuuxx test_configs_4f_decay test_configs_8fs test_configs_long_decay test_configs_ug_ttxz test_duplicate_lorentz_structures test_export_complicated_majorana_decay_chain test_export_majorana_decay_chain test_four_fermion_vertex_normal_fermion_flow test_four_fermion_vertex_strange_fermion_flow test_generate_helas_diagrams_WWWW -t0
-
-
-
-  unittest_22:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_helas_diagrams_WWWWA test_generate_helas_diagrams_WWZA test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_enu_enu test_generate_helas_diagrams_epem_elpelmepem test_generate_helas_diagrams_gb_t1go_tttxn1x1m test_generate_helas_diagrams_gg_gg test_generate_helas_diagrams_gg_gogo test_generate_helas_diagrams_uu_susu test_generate_helas_diagrams_uu_susug test_generate_helas_diagrams_uux_gepem_no_optimization test_generate_helas_diagrams_uux_uuxuux test_generate_helas_diagrams_zz_n1n1 test_generate_ufo_helas_diagrams_gg_gogo test_get_color_pdg_antipdg test_helas_diagrams_gg_gogo_go_tt1x_t_wpb test_majorana_conjugate_process test_matrix_4g_decay_chain_process test_matrix_multistage_decay_chain_process test_multiple_lorentz_structures test_multiple_lorentz_structures_with_decay_chain test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow test_multiple_lorentz_structures_with_fermion_flow_clash test_vector_clash_majorana_process testIO_export_matrix_element_v4_madevent_group
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_generate_helas_diagrams_WWWWA test_generate_helas_diagrams_WWZA test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_enu_enu test_generate_helas_diagrams_epem_elpelmepem test_generate_helas_diagrams_gb_t1go_tttxn1x1m test_generate_helas_diagrams_gg_gg test_generate_helas_diagrams_gg_gogo test_generate_helas_diagrams_uu_susu test_generate_helas_diagrams_uu_susug test_generate_helas_diagrams_uux_gepem_no_optimization test_generate_helas_diagrams_uux_uuxuux test_generate_helas_diagrams_zz_n1n1 test_generate_ufo_helas_diagrams_gg_gogo test_get_color_pdg_antipdg test_helas_diagrams_gg_gogo_go_tt1x_t_wpb test_majorana_conjugate_process test_matrix_4g_decay_chain_process test_matrix_multistage_decay_chain_process test_multiple_lorentz_structures test_multiple_lorentz_structures_with_decay_chain test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow test_multiple_lorentz_structures_with_fermion_flow_clash test_vector_clash_majorana_process testIO_export_matrix_element_v4_madevent_group -t0
-
-
-
-  unittest_23:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test testIO_export_matrix_element_v4_madevent_nogroup testIO_export_matrix_element_v4_standalone test_case_sensitive test_refactorize test_export_matrix_element_python_madevent_group test_get_python_matrix_methods test_python_export_functions test_run_python_matrix_element testIO_DJR_histograms test_get_fortran_str test_generate_virtuals_helas_matrix_element test_generate_virtuals_single_process test_fks_helas_multi_process_pptt test_fks_helas_multi_process_ppwj test_fks_helas_multi_process_ppz test_fks_helas_multi_process_ppz_loonly test_fks_helas_process_init test_fks_helas_real_process_init test_get_fks_info_list test_set_color_links test_FKSMultiProcess test_FKSMultiProcess_add test_FKSMultiProcess_no_fsr test_FKSMultiProcess_no_isr test_FKSProcess_aguux_qed
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py testIO_export_matrix_element_v4_madevent_nogroup testIO_export_matrix_element_v4_standalone test_case_sensitive test_refactorize test_export_matrix_element_python_madevent_group test_get_python_matrix_methods test_python_export_functions test_run_python_matrix_element testIO_DJR_histograms test_get_fortran_str test_generate_virtuals_helas_matrix_element test_generate_virtuals_single_process test_fks_helas_multi_process_pptt test_fks_helas_multi_process_ppwj test_fks_helas_multi_process_ppz test_fks_helas_multi_process_ppz_loonly test_fks_helas_process_init test_fks_helas_real_process_init test_get_fks_info_list test_set_color_links test_FKSMultiProcess test_FKSMultiProcess_add test_FKSMultiProcess_no_fsr test_FKSMultiProcess_no_isr test_FKSProcess_aguux_qed -t0
-
-
-
-  unittest_24:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_FKSProcess_gggg test_FKSRealProcess_init test_find_fks_j_from_i test_find_reals test_fks_real_process_get_leg_i_j test_generate_reals_combine test_generate_reals_no_combine test_sort_fks_proc test_generate_fks_tagph test_invalid_syntax_tag test_combine_equal_processes_dijet_qcd_qed_virt test_combine_equal_processes_dy_qed_virt test_combine_equal_processes_qcd test_combine_equal_processes_qcd_qed test_generate_fks_2to1_no_finalstate_confs test_generate_fks_ew test_generate_fks_ew_dijet_qed0qcd2_qcd test_generate_fks_ew_dijet_qed0qcd2_qed test_generate_fks_ew_dijet_qed0qcd2_qedqcd test_generate_fks_ew_dijet_qed1qcd1_qed test_generate_fks_ew_dijet_qed1qcd1_qedqcd test_generate_fks_ew_dijet_qed1qcd2_qcd test_generate_fks_ew_dijet_qed1qcd2_qed test_generate_fks_ew_dijet_qed2qcd0_qed test_generate_fks_ew_dijet_qed2qcd0_qedqcd
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_FKSProcess_gggg test_FKSRealProcess_init test_find_fks_j_from_i test_find_reals test_fks_real_process_get_leg_i_j test_generate_reals_combine test_generate_reals_no_combine test_sort_fks_proc test_generate_fks_tagph test_invalid_syntax_tag test_combine_equal_processes_dijet_qcd_qed_virt test_combine_equal_processes_dy_qed_virt test_combine_equal_processes_qcd test_combine_equal_processes_qcd_qed test_generate_fks_2to1_no_finalstate_confs test_generate_fks_ew test_generate_fks_ew_dijet_qed0qcd2_qcd test_generate_fks_ew_dijet_qed0qcd2_qed test_generate_fks_ew_dijet_qed0qcd2_qedqcd test_generate_fks_ew_dijet_qed1qcd1_qed test_generate_fks_ew_dijet_qed1qcd1_qedqcd test_generate_fks_ew_dijet_qed1qcd2_qcd test_generate_fks_ew_dijet_qed1qcd2_qed test_generate_fks_ew_dijet_qed2qcd0_qed test_generate_fks_ew_dijet_qed2qcd0_qedqcd -t0
-
-
-
-  unittest_25:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_generate_fks_ew_dijet_qed2qcd1_qed test_generate_fks_ew_dijet_qed2qcd2_qcd test_generate_fks_ew_dijet_qed2qcd2_qed test_generate_fks_ew_dijet_qed2qcd2_qedqcd test_generate_fks_ew_extra_cnts_ttx_full test_generate_fks_ew_extra_cnts_ttx_qed2qcd1 test_generate_fks_ew_noorders test_include_lep_split test_ew_resonances_without_cms test_qcd_resonances_without_cms test_resonance_warning_from_generate test_combine_ij test_find_color_links test_find_orders test_find_particles_interactions_no_ghosts test_find_particles_interactions_no_goldstones test_find_pert_particles_interactions test_find_pert_particles_interactions_mssm test_find_splittings test_insert_color_links test_insert_legs test_legs_to_color_link_string test_sort_fksleglist test_split_leg test_to_fks_leg_s test_diagram_tag_gg_ggg test_diagram_tag_uu_uug test_reorder_permutation
+      # ---- unittest_25 ----
+      - name: "unittest_25"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_generate_fks_ew_dijet_qed2qcd1_qed test_generate_fks_ew_dijet_qed2qcd2_qcd test_generate_fks_ew_dijet_qed2qcd2_qed test_generate_fks_ew_dijet_qed2qcd2_qedqcd test_generate_fks_ew_extra_cnts_ttx_full test_generate_fks_ew_extra_cnts_ttx_qed2qcd1 test_generate_fks_ew_noorders test_include_lep_split test_ew_resonances_without_cms test_qcd_resonances_without_cms test_resonance_warning_from_generate test_combine_ij test_find_color_links test_find_orders test_find_particles_interactions_no_ghosts test_find_particles_interactions_no_goldstones test_find_pert_particles_interactions test_find_pert_particles_interactions_mssm test_find_splittings test_insert_color_links test_insert_legs test_legs_to_color_link_string test_sort_fksleglist test_split_leg test_to_fks_leg_s test_diagram_tag_gg_ggg test_diagram_tag_uu_uug test_reorder_permutation -t0
 
-
-
-  unittest_26:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v5
-
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_link_gghg_ggh test_link_gghgg_gghg test_sort_proc test_link_butdg_butd test_link_ddxwpduxgg_gdxwpuxgg test_link_duxhuduxux_guxhuuxux test_link_dxuhuuuxdx_guhuuux test_link_gutdb_butd test_link_udxwpg_udxwp test_link_uuddg_uudd test_link_uuddg_uugg test_link_uuuug_guug test_pptojj_2flav test_pptojj_2flav_helas test_qqtoqqQed test_qqtoqq_helas test_uuee_leptons test_gg_4gdldxl_penta_tag test_gg_5gglgl_bubble_tag test_CT_vertices_generation_ddx_ddx test_CT_vertices_generation_gg_gg test_NLOAmplitude test_diagram_generation_ddx_ddx test_diagram_generation_ddxuux_split_orders test_diagram_generation_epem_ddx
+      # ---- unittest_26 ----
+      - name: "unittest_26"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_link_gghg_ggh test_link_gghgg_gghg test_sort_proc test_link_butdg_butd test_link_ddxwpduxgg_gdxwpuxgg test_link_duxhuduxux_guxhuuxux test_link_dxuhuuuxdx_guhuuux test_link_gutdb_butd test_link_udxwpg_udxwp test_link_uuddg_uudd test_link_uuddg_uugg test_link_uuuug_guug test_pptojj_2flav test_pptojj_2flav_helas test_qqtoqqQed test_qqtoqq_helas test_uuee_leptons test_gg_4gdldxl_penta_tag test_gg_5gglgl_bubble_tag test_CT_vertices_generation_ddx_ddx test_CT_vertices_generation_gg_gg test_NLOAmplitude test_diagram_generation_ddx_ddx test_diagram_generation_ddxuux_split_orders test_diagram_generation_epem_ddx -t0
 
+      # ---- unittest_28 ----
+      - name: "unittest_28"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu test_startfromalpha0_attribute -t0
+
+      # ---- unittest_31 ----
+      # Uncovered unit tests in tests/unit_tests/various/test_process_checks.py
+      - name: "unittest_31: process_checks unit tests not previously covered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            # test_check_precision_v_epem_mupmum builds and runs FPTYPE=v (double precision momenta
+            # and denominators) against FPTYPE=d, on the widest SIMD backend of the runner and on scalar
+            ./tests/test_manager.py test_check_flavor_qqbar_to_tt test_check_flavor_qqbar_to_zg test_check_language_function_epem_aa test_check_language_gg_ttx_cpp_ps_point test_check_language_proclist_merged_expansion test_fd_python_value_matches_unitary_fixed_point test_output_flavor_summary test_parse_sa_output_flavor_selection test_python_vs_cpp_epem_aa test_python_vs_fortran_epem_aa test_check_precision_v_epem_mupmum -t0
+
+      # ---- unittest_32 ----
+      # Uncovered unit tests in tests/unit_tests/various/test_import_ufo.py
+      - name: "unittest_32: import_ufo unit tests not previously covered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_fd_gauge_import test_get_symmetric_color test_get_symmetric_lorentz test_merge_iden_couplings_with_minus test_remove_interactions2 test_remove_interactions3 test_reshape_FFV_coeff test_reshape_FFV_coeff_gamma5_and_vector test_reshape_FFV_coeff_unknown_structure_ignored test_read_feynman_diagram_count test_read_feynman_diagram_count_missing_file -t0
+
+      # ---- unittest_33 ----
+      # Uncovered unit tests in tests/unit_tests/fks/test_ewsudakov.py
+      - name: "unittest_33: ewsudakov unit tests not previously covered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz -t0
+
+      # ---- unittest_customize_model ----
+      # tests/unit_tests/various/test_customize_model.py: the options and the
+      # commands of the customize_model question, the restriction cards it
+      # writes, and the explain_restriction reports
+      - name: "unittest_customize_model: run the customize_model unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_customize_model -t0
+
+      # ---- unittest_madspace_install ----
+      # tests/unit_tests/various/test_madspace_install.py: how madspace/install.py
+      # resolves the source-build options (a command-line flag beats the saved
+      # settings under --yes); pip and cmake are stubbed, nothing is built
+      - name: "unittest_madspace_install: run the madspace installer unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madspace_install -t0
+
+      # ---- unittest_pyamplicol_install ----
+      # tests/unit_tests/various/test_pyamplicol_install.py: install.py (build
+      # stubbed), the version sync with VERSION and the source hash
+      - name: "unittest_pyamplicol_install: run the pyamplicol installer unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_pyamplicol_install -t0
+
+      # ---- unittest_hwu ----
+      # tests/unit_tests/various/test_mg7_hwu_output.py: the MADatLO.HwU an mg7
+      # run writes, read back and overlaid on an aMC@NLO MADatNLO.HwU by
+      # histograms.py; plus the histograms.py command line keeping aMC@NLO's
+      # own scale/PDF columns
+      - name: "unittest_hwu: run the HwU output unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_mg7_hwu_output test_cli_keeps_amcatnlo_scale_and_pdf_columns -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
 
 
-  unittest_27:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  unittest_bundle_2:
+    # former jobs, run one after the other: unittest_1 unittest_4 unittest_5
+    #   unittest_6 unittest_8 unittest_9 unittest_13 unittest_14 unittest_15
+    #   unittest_21 unittest_30 unittest_config_location
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
 
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_diagram_generation_gg_ng test_diagram_generation_uux_ddx test_diagram_generation_uux_ga test_diagram_generation_aa_ttx_EW test_diagram_generation_aa_wpwm_EW test_diagram_generation_epem_ttxa_EW test_diagram_generation_epem_ttxg_EW test_diagram_generation_gg_ggg_EW test_diagram_generation_gg_ttxg_EW test_diagram_generation_gg_ttxh_EW test_diagram_generation_hh_hh_EW test_diagram_generation_hh_hhh_EW test_diagram_generation_ttx_wpwm_EW test_diagram_generation_uux_epem_EW test_diagram_generation_uux_ga_EW test_fuse_line test_LO_draw_with_NLO_generation test_NLO_draw test_NLO_draw_all_gg_gg test_NLO_draw_all_reconstructed_dd_eemm test_NLO_draw_all_reconstructed_gg_gg test_NLO_draw_gg_ggg test_NLO_draw_uux_guux test_NLO_draw_uux_uuxddx test_flipping
+      # ---- unittest_1 ----
+      - name: "unittest_1"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_T_f_product test_Tr_product test_d_product test_f_d_product test_f_d_sum test_f_product test_gluons test_sextet_products test_three_f_chain test_K6_objects test_T6_simplify test_T_pair_simplify test_T_simplify test_Tr_pair_simplify test_Tr_simplify test_d_object test_delta3_pair_simplify test_delta6_simplify test_epsilon_object test_f_object test_standard test_color_string_canonical test_complex_conjugate test_from_immutable test_product -t0
+
+      # ---- unittest_4 ----
+      - name: "unittest_4"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_multiparticle_stop_decay test_representation test_setget_process_correct test_setget_process_exceptions test_wrong_multiparticle test_diagram_tag_gg_ggg test_diagram_tag_to_diagram_uux_nglue test_diagram_tag_uu_uug test_reorder_permutation test_creation_from_cmd test_dealing_with_last_line test_define_level test_diagram_equality test_fermion_flow test_find_initial_vertex_position test_find_t_channel_vertex test_find_vertex_at_level test_horizontal_mode test_line_ordering_in_load test_load_diagram test_no_cutting_line test_non_integer_external test_notion_of_egality test_one_initial_state_particle test_part_antipart_after_output -t0
+
+      # ---- unittest_5 ----
+      - name: "unittest_5"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_phi4_vertex test_begin_end_wrong_input test_def_begin_end_point test_domain_intersection test_domain_intersection_failure test_domainintersection test_get_length test_get_type test_has_ordinate_failure test_hasintersection test_hasordinate test_hasordinate_wronginput test_inverse_part_antipart test_inverse_pid_for_type test_line_orientation test_add_line test_building test_def_level test_def_position test_fuse_vertex test_isexternal test_redef_position test_remove_line test_color_basis_uux_aggg test_color_flow_string -t0
+
+      # ---- unittest_6 ----
+      - name: "unittest_6"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_color_flow_string_epsilon test_colorize_funny_model test_colorize_uu_gg test_colorize_uux_ggg test_color_matrix_Nc_restrictions test_color_matrix_fixed_indices test_color_matrix_multi_gluons test_color_matrix_multi_quarks test_helper_lcm_functions test_loop_Nc_power_survives_a_poisoned_memo test_memo_is_shared_across_loop_bases test_get_s_and_t_ub_tdg test_diagram_list test_diagram_list_nice_string test_representation test_setget_diagram_correct test_setget_diagram_exceptions test_values_for_prop test_make_unique test_generating_dict_to_0 test_generating_dict_to_1 test_interaction_list test_representation test_setget_interaction_correct test_setget_interaction_exceptions test_values_for_prop test_leg_list -t0
+
+      # ---- unittest_8 ----
+      - name: "unittest_8"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_representation test_setget_particle_correct test_setget_particle_exceptions test_values_for_prop test_check_polarization test_get_process_with_legs test_representation test_setget_process_definition_correct test_setget_process_definition_exceptions test_values_for_prop test_get_final_ids_after_decay test_input_string test_long_shell_string test_nice_string test_representation test_setget_process_correct test_setget_process_exceptions test_shell_string test_values_for_prop test_representation test_setget_vertex_correct test_setget_vertex_exceptions test_values_for_prop test_vertex_list test_setget_amplitude_exceptions -t0
+
+      # ---- unittest_9 ----
+      - name: "unittest_9"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_sign_flips_to_order test_values_for_prop test_helas_decay_chain_process test_helas_forbidden_s_channel_decay_chain test_setget_diagram_exceptions test_complicated_majorana_process test_fermionfactor_emep_emep test_fermionfactor_emep_emepa test_fermionfactor_emep_emepemep test_fermionfactor_epem_sepsemepem test_generate_helas_diagrams_4g test_generate_helas_diagrams_ae_ae test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_uux_gepem test_generate_helas_diagrams_uux_gepem_no_optimization test_get_base_amplitude test_get_conjugate_index test_get_conjugate_index_majoranas test_get_den_factor test_helas_forbidden_s_channel_uux_uuxng test_multi_amp_majorana_process test_process_init test_setget_matrix_element_exceptions test_sorted_mothers test_complete_decay_chain_process -t0
+
+      # ---- unittest_13 ----
+      - name: "unittest_13"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_get_nleps_sm_nomasses test_detect_identical_parameters test_detect_special_parameters test_detect_zero_iden_couplings test_get_new_coupling_name test_locate_couplings test_merge_iden_couplings test_merge_identical_parameters test_put_parameters_to_zero test_remove_couplings test_remove_interactions test_restrict_from_a_param_card test_massivecase test_massless test_rambo_validity_check test_I test_O test_T test_V test_shower_card_edit test_shower_card_hw6 test_shower_card_hw6_analyse test_shower_card_hw7 test_shower_card_hw7_analyse test_shower_card_py6 -t0
+
+      # ---- unittest_14 ----
+      - name: "unittest_14"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_shower_card_py6_analyse test_shower_card_py8 test_shower_card_py8_analyse test_configuration_file test_install_update test_banner test_auto_handling test_config_iadd test_float_handling test_for_loop test_guess_type test_handling_dict_of_values test_handling_list_of_values test_integer_handling test_sum_object test_system_only test_MadAnalysis5Card test_initMadLoopParam test_modifparameter test_sum_object test_writeMLparam test_PY8Card_basic test_PY8Card_with_subruns test_add_definition test_add_unknown_entry test_cite_writes_logfile test_cite_deduplicates test_cite_noop_without_env test_cite_follows_env_across_runs test_nlo_output_ships_citation_files test_collect_unions_and_keeps_contexts test_collect_empty_dir test_bibliography_parsing test_write_bibtex_reports_missing test_finalize_produces_two_files test_finalize_no_citation_returns_none test_write_log_and_collect_file test_generation_pairs_render_to_dir test_generation_log_seeds_a_run test_database_loads test_generation_pairs_keys_known test_optional_generation_pairs_keys_known test_every_cited_key_is_known -t0
+
+      # ---- unittest_15 ----
+      - name: "unittest_15"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_autodef_nomissmatch test_basic test_check_valid_LO test_custom_fcts test_default test_fixed_fac_scale_block test_guess_entry_fromname test_negative_iseed test_pdlabel_block test_analyse_card_analyse test_analyse_card_default test_create_param_dict test_define_not_dep_param test_order_param test_write_block test_write_param test_write_qnumber test_define_not_dep_param test_full_write test_write_orders test_write_particles test_write_vertices test_add_external_parameters test_add_particle test_couplings test_identify_particle -t0
+
+      # ---- unittest_21 ----
+      - name: "unittest_21"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
+            ./tests/test_manager.py test_simple_import test_convert_number_to_cpp test_convert_number_to_fortran test_parse_to_cpp test_parse_to_fortran test_header test_coeff_string test_different_order_process_symmetry test_export_group_decay_chains test_export_group_multidiagram_decay_chains test_replace_make_opt_f_compiler test_configs_4f_decay test_configs_8fs test_configs_long_decay test_configs_ug_ttxz test_duplicate_lorentz_structures test_export_complicated_majorana_decay_chain test_export_majorana_decay_chain test_four_fermion_vertex_normal_fermion_flow test_four_fermion_vertex_strange_fermion_flow test_generate_helas_diagrams_WWWW test_cpp_export_decay_chain_broken_symmetry_metadata -t0
+
+      # ---- unittest_30 ----
+      # Uncovered unit tests in tests/unit_tests/various/test_lhe_parser.py
+      - name: "unittest_30: lhe_parser unit tests not previously covered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_allow_reversed_initial_state test_boost_to_restframe test_get_helicity_accepts_merged_map_kwarg test_identity_mapping test_merged_map_remapping test_out1_out2_are_inverse test_parse_event_nlo test_reordered_final_state test_y_eta_massless -t0
+
+      # ---- unittest_config_location ----
+      # tests/unit_tests/various/test_lhapdf_resolve.py: where the configuration
+      # files live ($MADGRAPH_BASE, per-user, install) and how LHAPDF is resolved
+      - name: "unittest_config_location: run the configuration-location and lhapdf-resolve unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_xdg_config_home_wins test_home_fallback test_never_mg5 test_no_home test_no_base test_mg7_file_wins test_mg5_fallback test_neither_file test_absolute_lhapdf test_python_filter_is_not_part_of_the_path test_relative_value_roots_at_the_install test_bare_name_from_path test_missing_executable_does_not_raise test_no_lhapdf_at_all test_lhapdf5_pdfsets_path test_datadir_list_is_split test_env_data_path_comes_first test_env_config_wins_over_options test_lhapdf_py3_fallback test_none_and_auto_are_not_paths test_heptools_fallback_when_datadir_is_read_only test_create_makes_the_download_directory test_cvmfs_mirror_is_searched_last_and_never_downloaded_into test_with_data_path_promotes_a_directory -t0
+
+      # ---- unittest_ordering ----
+      # event-leg mapping (lhe_parser.get_mapping), me_frame boost of the
+      # reweighting and FourMomentum.boost at rest
+      - name: "unittest_ordering: test lhe_parser/reweight ordering and boost"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0
+
+      # ---- unittest_reweight_backend ----
+      # the reweighting backend choice (classic module or MadtRex) and the
+      # MadtRex reweight-card readers: pure Python, no madspace/madtrex. The
+      # tests needing an installed madtrex run in acceptancetest_mg7.yml
+      # (acceptancetest_mg7_madtrex).
+      - name: "unittest_reweight_backend: reweighting backend choice and MadtRex cards"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_reweight_backend NpyToLheNamedWeightsTest HelicityReweightingCardTest ClassicVocabularyTest GridpackSourceBuildTest -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
+
+  unittest_bundle_3:
+    # former jobs, run one after the other: unittest_10 unittest_density_29
+    #   unittest_madspin_sequential
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+      # tests.unit_tests.madspin.test_madspin imports numpy (the density
+      # primitives, the sequential accept/reject and the maxwgt decomposition
+      # all work on arrays), which is not on the runner by default.
+      - uses: ./.github/actions/restore-pip-cache
+
+      # ---- unittest_10 ----
+      - name: "unittest_10"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_decay_chain_different_order1 test_decay_chain_different_order2 test_decay_chain_different_order3 test_decay_chain_different_pdgs test_decay_chain_process_overall_orders test_decay_processes_different_is_particles test_equal_decay_chains test_helas_multi_process test_helas_multiprocess_pp_nj test_majorana_decay_chain_process test_multistage_decay_chain_process test_multistage_symmetryfactor test_non_combine_processes test_setget_wavefunction_exceptions test_values_for_prop test_identify_me_tag_qq_qqg test_non_identify_me_tag_qq_qqg test_identify_me_tag_qq_qg test_extract_info test_get_final_state_particle test_get_proc_with_decay_LO test_get_proc_with_decay_NLO test_madspin_event test_find_symmetry_uu_tt test_find_symmetry_uu_tt_with_subprocess_group test_trimmed_decay_keeps_external_leg_order test_gluino_decay_chain_leg_numbering test_tree_pass_matches_enumeration test_tree_pass_error_handling test_tree_pass_ttbar_nested_decays test_tree_pass_vbs_same_sign_ww -t0
+            ./tests/test_manager.py tests.unit_tests.madspin.test_madspin -t0
+            # madmatrix.density, the default density backend of MadSpin
+            ./tests/test_manager.py tests.unit_tests.iolibs.test_madmatrix_density -t0
+
+      # ---- unittest_density_29 ----
+      - name: "unittest_density_29"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            # no sudo/apt on the self-hosted runner: user install there
+            if command -v apt-get > /dev/null; then sudo pip install scipy; else python3 -m pip install --user scipy; fi
+            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_additional_steering test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_utilities test_density_selection_not_used test_density_selection_default_order test_density_selection_observable_order test_density_selection_observable_ranks test_density_selection_tie test_density_selection_wrong_inputs -t0
+
+      # ---- unittest_madspin_sequential ----
+      # MadSpin density primitives and decay/mass drawing (sequential accept/reject),
+      # plus the lhe_parser split/merge of the unweighted output. These modules were
+      # not covered by any workflow.
+      - name: "unittest_madspin_sequential: test the madspin and lhe_parser unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            # no sudo/apt on the self-hosted runner: user install there
+            if command -v apt-get > /dev/null; then sudo pip install numpy; else python3 -m pip install --user numpy; fi
+            ./tests/test_manager.py test_madspin test_lhe_parser -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
+
+  unittest_bundle_4:
+    # former jobs, run one after the other: unittest_18_2 unittest_24
+    #   unittest_uncovered
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+
+      # ---- unittest_18_2 ----
+      - name: "unittest_18_2"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_w_nlo_gen_gosam test_w_nlo_gen_qcd test_w_nlo_gen_qed test_wj_loonly_gen -t0
+
+      # ---- unittest_24 ----
+      - name: "unittest_24"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_FKSProcess_gggg test_FKSRealProcess_init test_find_fks_j_from_i test_find_reals test_fks_real_process_get_leg_i_j test_generate_reals_combine test_generate_reals_no_combine test_sort_fks_proc test_generate_fks_tagph test_invalid_syntax_tag test_combine_equal_processes_dijet_qcd_qed_virt test_combine_equal_processes_dy_qed_virt test_combine_equal_processes_qcd test_combine_equal_processes_qcd_qed test_generate_fks_2to1_no_finalstate_confs test_generate_fks_ew test_generate_fks_ew_dijet_qed0qcd2_qcd test_generate_fks_ew_dijet_qed0qcd2_qed test_generate_fks_ew_dijet_qed0qcd2_qedqcd test_generate_fks_ew_dijet_qed1qcd1_qed test_generate_fks_ew_dijet_qed1qcd1_qedqcd test_generate_fks_ew_dijet_qed1qcd2_qcd test_generate_fks_ew_dijet_qed1qcd2_qed test_generate_fks_ew_dijet_qed2qcd0_qed test_generate_fks_ew_dijet_qed2qcd0_qedqcd -t0
+
+      # ---- unittest_uncovered ----
+      # unit tests that were not listed in any workflow (CI coverage audit).
+      # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.
+      - name: "unittest_uncovered: run the previously untriggered unit tests"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
+
+      # ---- unittest_run_output (from mg5 3.8.2) ----
+      # combine_runs, histograms and the madevent run helpers (Delphes split
+      # fusion, LHAPDF info patching); collect_events, systematics, make_opts and
+      # transpole already run in unittest_bundle_7.
+      - name: "unittest_run_output: combine_runs, histograms and madevent interface"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_combine_runs test_histograms test_madevent -t0
+
+      # ---- unittest_tchannel_width (from mg5 3.8.2) ----
+      # t-channel widths of the reweighting and MadSpin matrix elements
+      - name: "unittest_tchannel_width: t-channel widths of the reweighting and MadSpin outputs"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_UFO_fortran_tchannel_width_standalone_rw test_UFO_fortran_tchannel_width_decay test_reweight_tchannel -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
+
+  unittest_bundle_5:
+    # former jobs, run one after the other: unittest_18_3 unittest_19
+    #   unittest_27
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+
+      # ---- unittest_18_3 ----
+      - name: "unittest_18_3"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_z_nlo_gen_qcd test_z_nlo_gen_qed test_parse_info_str_correct test_parse_info_str_error test_generate_wavefunctions_and_amplitudes test_w_and_z_amplitudes -t0
+
+      # ---- unittest_19 ----
+      - name: "unittest_19"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_setget_helas_model_correct test_setget_helas_model_error test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_UFO_CPP_helas_call_writer test_UFO_Python_helas_call_writer test_UFO_fortran_helas_call_writer test_even_more_special_group_decay_chain test_find_process_classes_and_mapping_diagrams test_group_decay_chains test_group_subprocs_and_get_diagram_maps test_single_decay_combinations test_special_group_decay_chain test_full_import test_read_interactions test_read_particles test_check_init test_line_creation test_option_6g test_option_6g_second test_option_multi_type test_blob -t0
+
+      # ---- unittest_27 ----
+      - name: "unittest_27"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_diagram_generation_gg_ng test_diagram_generation_uux_ddx test_diagram_generation_uux_ga test_diagram_generation_aa_ttx_EW test_diagram_generation_aa_wpwm_EW test_diagram_generation_epem_ttxa_EW test_diagram_generation_epem_ttxg_EW test_diagram_generation_gg_ggg_EW test_diagram_generation_gg_ttxg_EW test_diagram_generation_gg_ttxh_EW test_diagram_generation_hh_hh_EW test_diagram_generation_hh_hhh_EW test_diagram_generation_ttx_wpwm_EW test_diagram_generation_uux_epem_EW test_diagram_generation_uux_ga_EW test_fuse_line test_LO_draw_with_NLO_generation test_NLO_draw test_NLO_draw_all_gg_gg test_NLO_draw_all_reconstructed_dd_eemm test_NLO_draw_all_reconstructed_gg_gg test_NLO_draw_gg_ggg test_NLO_draw_uux_guux test_NLO_draw_uux_uuxddx test_flipping -t0
 
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
 
 
-  unittest_28:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  unittest_bundle_6:
+    # former jobs, run one after the other: unittest_22 unittest_29
+    # Each keeps its own steps, run even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+      - uses: ./.github/actions/restore_ufomodel
 
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu  test_startfromalpha0_attribute
+      # ---- unittest_22 ----
+      - name: "unittest_22"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_generate_helas_diagrams_WWWWA test_generate_helas_diagrams_WWZA test_generate_helas_diagrams_ea_ae test_generate_helas_diagrams_enu_enu test_generate_helas_diagrams_epem_elpelmepem test_generate_helas_diagrams_gb_t1go_tttxn1x1m test_generate_helas_diagrams_gg_gg test_generate_helas_diagrams_gg_gogo test_generate_helas_diagrams_uu_susu test_generate_helas_diagrams_uu_susug test_generate_helas_diagrams_uux_gepem_no_optimization test_generate_helas_diagrams_uux_uuxuux test_generate_helas_diagrams_zz_n1n1 test_generate_ufo_helas_diagrams_gg_gogo test_get_color_pdg_antipdg test_helas_diagrams_gg_gogo_go_tt1x_t_wpb test_majorana_conjugate_process test_matrix_4g_decay_chain_process test_matrix_multistage_decay_chain_process test_multiple_lorentz_structures test_multiple_lorentz_structures_with_decay_chain test_multiple_lorentz_structures_with_decay_chain_and_fermion_flow test_multiple_lorentz_structures_with_fermion_flow_clash test_vector_clash_majorana_process test_madevent_template_uses_decay_aware_broken_symmetry_metadata -t0
+
+      # ---- unittest_29 ----
+      # Tests in tests/unit_tests not previously bound to any CI job:
+      # color algebra, base/diagram object merging, miscellaneous I/O and drawing
+      # Includes test_fks_ppzz_in_RS using the restored RS UFO model cache.
+      # Also the polarisation unit tests added with the NLO me_frame feature:
+      # they guard the IdentifyMETag polarisation tag, carry_polarization /
+      # split_leg, the P-directory name-collision check and the separation of
+      # differently-polarised subprocess groups, and that a HelasWavefunction
+      # carries its polarisation into its identity.
+      # And the colour-matrix encoding gate: the compressed matrix may only be
+      # written for the templates that rebuild CF with INIT_CF, otherwise CF is
+      # left at zero and the matrix element with it (it silently zeroed the FKS
+      # real emissions of g g > t t~ g g g).
+      - name: "unittest_29: misc unit tests not previously covered"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
             cp Template/LO/Source/.make_opts Template/LO/Source/make_opts
-            ./tests/test_manager.py test_level_with_flipping_triangle test_loop_convert_diagram testIO_UnitProcOutputIOTests test_loadingLoopToyModel test_get_aloha_input test_get_analytic_info test_helas_diagrams_ddx_uux test_helas_diagrams_dxd_gz test_helas_diagrams_gd_gd test_helas_diagrams_gd_ggd test_helas_diagrams_gg_gg test_helas_diagrams_gg_ggg test_helas_diagrams_gg_wpwmttx test_helas_diagrams_ud_ggdu  test_startfromalpha0_attribute -t0
+            ./tests/test_manager.py test_cf_computation test_CF_simple test_merge_flavor test_diagram_generation_merged_charge_tuple test_check_import_model test_schedular test_create_get_color test_dummy_fcts test_fks_ppzz_in_RS test_helas_comparison_unmerged test_popen_with_closed_sys_stdout_and_stderr_stdout test_shower_card_write test_get_process_keeps_polarization test_shell_string_polarization_injective test_shell_string_polarization_in_dirname test_identify_me_tag_polarization test_real_keeps_born_polarization test_split_leg_polarization_transfer test_fks_helas_multi_process_polarizations_not_combined test_group_polarizations_not_combined test_polarisation_no_duplicate_helicity test_born_dir_collision_is_explicit test_born_dir_no_collision test_eq_distinguishes_polarization test_standalone_compresses test_fks_writes_the_entries_out test_split_orders_and_madspin_write_the_entries_out test_madevent_compresses_and_madweight_does_not test_whitelist_matches_the_templates -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
 
 
-
-  unittest_29:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+  unittest_bundle_7:
+    # Unit tests that no workflow selected (audit of 2026-10-24): a test runs in
+    # CI only when some ./tests/test_manager.py line names it, its class, its
+    # module or its directory. Whole modules and classes are named where
+    # possible, so the tests added to them later run too.
+    # The ones needing a compiled madspace (test_mg7_interference_helicity,
+    # test_mg7_discrete_flavor, TestOneImplementation, TestRealRunNumbers) run
+    # in the unittest_mg7_launch job of acceptancetest_mg7.yml.
+    # Each step runs even when an earlier one failed.
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/restore-pip-cache
+      - uses: ./.github/actions/clean_tmp
+      # a skipped test fails the step (test_manager exits 1): test_mg7_plots
+      # renders with matplotlib, test_mg7_gridpack_compression compares with pigz.
+      # No sudo/apt on the self-hosted runner, which has pigz installed: user
+      # install of matplotlib there.
+      - name: install matplotlib and pigz
+        run: |
+            if command -v apt-get > /dev/null; then
+              sudo apt-get update -q && sudo apt-get install -y --no-install-recommends python3-matplotlib pigz
+            else
+              python3 -c 'import matplotlib' 2> /dev/null || python3 -m pip install --user matplotlib
+            fi
 
-      # Runs a set of commands using the runners shell
-      - name: test one of the test test_utilities test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33
+      - name: "unittest_core_uncovered"
+        if: ${{ !cancelled() }}
         run: |
             cd $GITHUB_WORKSPACE
-            sudo pip install scipy
-            ./tests/test_manager.py test_DensityMatrixObservables test_DensityMatrixObservables22 test_DensityMatrixObservables23 test_DensityMatrixObservables33 test_utilities -t0
+            ./tests/test_manager.py test_plugin_diagram_filter test_tree_interference DDMColorBasisTest TestQuarticUnrolling TestSeedRule TestAsymmetricFlavorRestriction TestDiagramFlavorCheck TestDiagramFlavorCheckQQG TestDiagramFlavorCheckQQbarG TestExternalFlavorsQGTTXQG TestFlavorStore TestFlavorStoreDecayChain TestFlavorStoreNoMerged test_depends_on_scale test_get_running_blocks test_rge_parameters_used test_running_coupling_indexed_by_event test_nice_string_offshell_and_polarization test_nice_string_offshell_last_leg test_color_basis_symmetry test_color_basis_symmetry_no_symmetry test_color_factor_simplify_merges_like_strings test_color_matrix_matches_direct_computation test_permute_immutable test_relabel_canonical test_spanning_generators test_spanning_tree_rebuilds_color_matrix test_born_basis_link_matrices -t0
 
+      - name: "unittest_interface_uncovered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_default_switch test_history_recording test_interference_syntax test_mg7_systematics_summary test_reweight_card_input test_tutorials TestNoFileOutsideOutputDir CheckDisplayWithoutProcessTest DisplayInertCouplingOrderTest NeglectedMassAdviceTest RequiredSChannelErrorTest TestHepToolsInstallTarget TestDelphesFusion TestLhapdfInfoPatch TestSharedPdfsetsDir test_generate_propagator_only_polarisation test_propagator_polarisation_round_trip test_dynamical_scale_choice_ht -e TestOneImplementation -e TestRealRunNumbers -t0
+
+      - name: "unittest_iolibs_uncovered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_madmatrix_writer test_mg7_gridpack_compression test_mg7_launcher_script AlohaModelPathTest DDMColorFlowMG7Test IOExportPythia8Test TestBornGscale F2PYSplitterFlavorOrderTest OptimiseJampTest AxialGaugeReferenceTest CombineNameHashTest test_flavor_mask_placeholders_present_in_nonstandalone_templates test_splitorders_entry_points_agree_with_their_callers test_standalone_files_next_to_matrix_file test_UFO_cpp_flavor_mask_prefix_uses_index_bits test_UFO_fortran_flavor_mask_prefix_uses_index_bits -t0
+
+      - name: "unittest_loop_madevent_uncovered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_loop_induced_output test_loop_induced_x_tree test_hel_recycle test_transpole test_copy_events_no_blank_line test_combine_grid test_gen_ximprove_resubmit -t0
+
+      - name: "unittest_various_uncovered"
+        if: ${{ !cancelled() }}
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_cluster test_collect_events test_make_opts test_mg7_plots test_systematics test_test_finder TestHistogramRegressions TestLorentzStructureCanonicalisation TestRestrictionDoesNotLeakIntoTheUFO TEST_pythia8_main164 TestPrecisionCheck test_write_inc_file_running_scale test_scan_summary_json test_collapse_duplicate_lorentz test_goldstone_mass_mismatches test_goldstone_merge_is_atomic test_goldstone_merge_keeps_coupling_orders_apart test_goldstone_phase_detects_a_rotated_convention test_goldstone_phase_of_the_sm_is_trivial test_lorentz_info_cache_refresh test_optimise_iden_coup_lorentz_added_after_cache test_optimise_iden_coup_unknown_lorentz_is_skipped test_parse_fermion_structure test_rotate_coupling test_fd_gauge_interaction_ids_stay_unique test_configure_gzip_resets_pigz_threads test_external_gzip_failure_removes_partial_archive test_external_gzip_keep_passes_thread_limit test_gzip_failure_keeps_source_and_leaves_no_archive test_gzip_keep_preserves_plain_source test_interrupted_gzip_removes_partial_archive -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
 
 
   unittest_new_coverage:
     # New unit tests added in 3.7.1: q_polynomial and hepmc_parser
-    runs-on: ubuntu-latest
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
 
       - name: test q_polynomial and hepmc_parser modules
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_q_polynomial test_hepmc_parser -t0
 
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
 
 
-
-  unittest_madspin_sequential:
-    # MadSpin density primitives and decay/mass drawing (sequential accept/reject),
-    # plus the lhe_parser split/merge of the unweighted output. These modules were
-    # not covered by any workflow.
-    runs-on: ubuntu-latest
+  unittest_real_channels:
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/restore-pip-cache
 
-      - name: test the madspin and lhe_parser unit tests
+      - name: test fixed-order real channels and channel sampling
         run: |
             cd $GITHUB_WORKSPACE
-            sudo pip install numpy
-            ./tests/test_manager.py test_madspin test_lhe_parser -t0
+            gfortran --version
+            ./tests/test_manager.py TestRealChannelExport TestBornGscale test_amcatnlo_real_channels test_real_channels_weights test_real_channels_phase_space test_mint_channels test_real_channels_auto -t0
+
+
+  unittest_write_model:
+    # runs alone: excluded from the shared unittest jobs due to side effects
+    # Runs on the self-hosted alma10 runners (cern1, ...) to spare the hosted queue;
+    # fork PRs stay on ubuntu-24.04 so outside code never runs on our machines.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-24.04' || fromJSON('["self-hosted", "alma10"]') }}
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/clean_tmp
+
+      - name: run test_write_model (usermod)
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_write_model -t0
+
+      # Leave /tmp empty for the next job on this self-hosted machine.
+      - if: always()
+        uses: ./.github/actions/clean_tmp
+
 
 
   unittest_native_born:
@@ -670,7 +672,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Check shared Born providers and native subtraction
         run: |
-          ./tests/test_manager.py test_born_support test_real_helicity_filter test_mcatnlo_delta_scales test_herwig7_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 test_pythia8_matching test_qed_mc_kernels test_pythia8_qed_dipoles test_qed_shower_scales test_pythia8_qed_support -t0
+          ./tests/test_manager.py test_born_support test_real_helicity_filter test_native_frame_masks test_mcatnlo_delta_scales test_herwig7_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 test_pythia8_matching test_qed_mc_kernels test_pythia8_qed_dipoles test_qed_shower_scales test_pythia8_qed_support -t0
+
 
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
@@ -686,32 +689,3 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_gmu_dependencies_do_not_leak_between_models test_loop_scale_dependencies_do_not_leak_between_models -t0
             ./tests/test_manager.py test_CF_simple test_cf_computation test_generate_ewsud_ttbar test_generate_ewsud_ww test_generate_ewsud_zz testIO_test_pptt_ewsudakovSA testIO_test_ppzz_ewsudakov testIO_test_ppw_fksall testIO_Loop_sqso_uux_ddx test_check_import_model test_schedular test_dummy_fcts test_UFO_Python_helas_call_writer_fd test_get_symmetric_color test_get_symmetric_lorentz test_remove_interactions2 test_remove_interactions3 test_fd_python_value_matches_unitary_fixed_point test_shower_card_write -t0
-
-
-  unittest_write_model:
-    # runs alone: excluded from the shared unittest jobs due to side effects
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: run test_write_model (usermod)
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_write_model -t0
-
-
-  unittest_ordering:
-    # event-leg mapping (lhe_parser.get_mapping), me_frame boost of the
-    # reweighting and FourMomentum.boost at rest
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: test lhe_parser/reweight ordering and boost
-        run: |
-            cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_lhe_ordering test_reweight_ordering test_boost_by_a_momentum_at_rest test_nested_identical_children -t0

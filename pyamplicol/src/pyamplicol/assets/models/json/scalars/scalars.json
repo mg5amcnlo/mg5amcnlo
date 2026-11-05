@@ -1,0 +1,6972 @@
+{
+  "couplings": [
+    {
+      "expression": "1𝑖*UFO::{}::lam",
+      "name": "SCALAR_COUPLING",
+      "orders": [
+        [
+          "QCD",
+          1
+        ]
+      ],
+      "value": [
+        0.0,
+        1.0
+      ]
+    }
+  ],
+  "form_factors": [],
+  "functions": [
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "complexconjugate"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "re"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "im"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "sec"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "asec"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "csc"
+    },
+    {
+      "arguments": [
+        "z"
+      ],
+      "expression": null,
+      "name": "acsc"
+    }
+  ],
+  "lorentz_structures": [
+    {
+      "name": "SCALAR_3_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_4_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_5_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_6_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_7_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_8_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_9_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    },
+    {
+      "name": "SCALAR_10_LORENTZ_STRUCTURE",
+      "spins": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "structure": "1"
+    }
+  ],
+  "name": "scalars",
+  "orders": [
+    {
+      "expansion_order": 99,
+      "hierarchy": 1,
+      "name": "QCD"
+    },
+    {
+      "expansion_order": 99,
+      "hierarchy": 2,
+      "name": "QED"
+    }
+  ],
+  "parameters": [
+    {
+      "expression": null,
+      "lhablock": "SCALARS",
+      "lhacode": [
+        1337
+      ],
+      "name": "lam",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SCALARS",
+      "lhacode": [
+        2002
+      ],
+      "name": "mass_scalar_1",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        1.0,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SCALARS",
+      "lhacode": [
+        3002
+      ],
+      "name": "width_scalar_1",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SCALARS",
+      "lhacode": [
+        2003
+      ],
+      "name": "mass_scalar_2",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        2.0,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SCALARS",
+      "lhacode": [
+        3003
+      ],
+      "name": "width_scalar_2",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SMINPUTS",
+      "lhacode": [
+        1
+      ],
+      "name": "aEWM1",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        132.50698,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SMINPUTS",
+      "lhacode": [
+        2
+      ],
+      "name": "Gf",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        1.16639e-05,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": "SMINPUTS",
+      "lhacode": [
+        3
+      ],
+      "name": "aS",
+      "nature": "external",
+      "parameter_type": "real",
+      "value": [
+        0.118,
+        0.0
+      ]
+    },
+    {
+      "expression": null,
+      "lhablock": null,
+      "lhacode": null,
+      "name": "ZERO",
+      "nature": "internal",
+      "parameter_type": "real",
+      "value": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "expression": "UFO::{}::aEWM1^(-1)",
+      "lhablock": null,
+      "lhacode": null,
+      "name": "aEW",
+      "nature": "internal",
+      "parameter_type": "real",
+      "value": [
+        0.00754677225305414,
+        0.0
+      ]
+    },
+    {
+      "expression": "2*UFO::{}::aS^(1/2)*𝜋^(1/2)",
+      "lhablock": null,
+      "lhacode": null,
+      "name": "G",
+      "nature": "internal",
+      "parameter_type": "real",
+      "value": [
+        1.2177157847767195,
+        0.0
+      ]
+    },
+    {
+      "expression": "2*UFO::{}::aEW^(1/2)*𝜋^(1/2)",
+      "lhablock": null,
+      "lhacode": null,
+      "name": "ee",
+      "nature": "internal",
+      "parameter_type": "real",
+      "value": [
+        0.3079537904849374,
+        0.0
+      ]
+    }
+  ],
+  "particles": [
+    {
+      "antiname": "scalar_0",
+      "antitexname": "\\phi_0",
+      "charge": 0.0,
+      "color": 1,
+      "ghost_number": 0,
+      "goldstoneboson": false,
+      "lepton_number": 0,
+      "mass": "ZERO",
+      "name": "scalar_0",
+      "pdg_code": 1000,
+      "propagating": true,
+      "propagator": "scalar_0_propFeynman",
+      "spin": 1,
+      "texname": "\\phi_0",
+      "width": "ZERO",
+      "y_charge": 0
+    },
+    {
+      "antiname": "scalar_1",
+      "antitexname": "\\phi_1",
+      "charge": 0.0,
+      "color": 1,
+      "ghost_number": 0,
+      "goldstoneboson": false,
+      "lepton_number": 0,
+      "mass": "mass_scalar_1",
+      "name": "scalar_1",
+      "pdg_code": 1001,
+      "propagating": true,
+      "propagator": "scalar_1_propFeynman",
+      "spin": 1,
+      "texname": "\\phi_1",
+      "width": "width_scalar_1",
+      "y_charge": 0
+    },
+    {
+      "antiname": "scalar_2",
+      "antitexname": "\\phi_2",
+      "charge": 0.0,
+      "color": 1,
+      "ghost_number": 0,
+      "goldstoneboson": false,
+      "lepton_number": 0,
+      "mass": "mass_scalar_2",
+      "name": "scalar_2",
+      "pdg_code": 1002,
+      "propagating": true,
+      "propagator": "scalar_2_propFeynman",
+      "spin": 1,
+      "texname": "\\phi_2",
+      "width": "width_scalar_2",
+      "y_charge": 0
+    }
+  ],
+  "propagators": [
+    {
+      "denominator": "(UFO::{}::P(1))^2",
+      "name": "scalar_0_propFeynman",
+      "numerator": "1𝑖",
+      "particle": "scalar_0"
+    },
+    {
+      "denominator": "(UFO::{}::P(1))^2+-1*UFO::{}::mass_scalar_1^2",
+      "name": "scalar_1_propFeynman",
+      "numerator": "1𝑖",
+      "particle": "scalar_1"
+    },
+    {
+      "denominator": "(UFO::{}::P(1))^2+-1*UFO::{}::mass_scalar_2^2",
+      "name": "scalar_2_propFeynman",
+      "numerator": "1𝑖",
+      "particle": "scalar_2"
+    }
+  ],
+  "restriction": null,
+  "vertex_rules": [
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_011",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_012",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_022",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_122",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_3_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_3_SCALAR_222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_0222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_1111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_1112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_1122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_1222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_4_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_4_SCALAR_2222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_00222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_01111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_01112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_01122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_01222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_02222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_11111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_11112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_11122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_11222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_12222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_5_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_5_SCALAR_22222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_000222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_001111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_001112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_001122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_001222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_002222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_011111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_011112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_011122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_011222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_012222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_022222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_111111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_111112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_111122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_111222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_112222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_122222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_6_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_6_SCALAR_222222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0000222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0001111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0001112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0001122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0001222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0002222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0011111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0011112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0011122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0011222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0012222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0022222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0111111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0111112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0111122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0111222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0112222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0122222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_0222222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1111111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1111112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1111122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1111222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1112222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1122222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_1222222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_7_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_7_SCALAR_2222222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00000222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00001111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00001112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00001122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00001222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00002222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00011111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00011112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00011122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00011222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00012222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00022222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_00222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01111111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01111112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01111122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01111222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01112222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01122222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_01222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_02222222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11111111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11111112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11111122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11111222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11112222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11122222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_11222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_12222222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_8_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_8_SCALAR_22222222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000000222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000001111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000001112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000001122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000001222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000002222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000011111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000011112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000011122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000011222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000012222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000022222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_000222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_001222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_002222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011111111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011111112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011111122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011111222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011112222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011122222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_011222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_012222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_022222222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111111111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111111112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111111122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111111222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111112222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111122222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_111222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_112222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_122222222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_9_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_9_SCALAR_222222222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000000",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000001",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000002",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000011",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000012",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000022",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000000222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000001111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000001112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000001122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000001222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000002222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000011111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000011112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000011122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000011222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000012222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000022222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0000222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0001222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0002222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011111111",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011111112",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011111122",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011111222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011112222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011122222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0011222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0012222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0022222222",
+      "particles": [
+        "scalar_0",
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111111111",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111111112",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111111122",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111111222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111112222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111122222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0111222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0112222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0122222222",
+      "particles": [
+        "scalar_0",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_0222222222",
+      "particles": [
+        "scalar_0",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111111111",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111111112",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111111122",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111111222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111112222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111122222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1111222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1112222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1122222222",
+      "particles": [
+        "scalar_1",
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_1222222222",
+      "particles": [
+        "scalar_1",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    },
+    {
+      "color_structures": [
+        "1"
+      ],
+      "couplings": [
+        [
+          "SCALAR_COUPLING"
+        ]
+      ],
+      "lorentz_structures": [
+        "SCALAR_10_LORENTZ_STRUCTURE"
+      ],
+      "name": "V_10_SCALAR_2222222222",
+      "particles": [
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2",
+        "scalar_2"
+      ]
+    }
+  ]
+}

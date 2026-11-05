@@ -162,6 +162,9 @@ if '__main__' == __name__:
     logging.getLogger('madgraph').setLevel(logging.INFO)
     logging.getLogger('cmdprint').setLevel(logging.INFO)
     logging.getLogger('tutorial').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_aMCatNLO').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_MadLoop').setLevel(logging.ERROR)
+    logging.getLogger('tutorial_plugin').setLevel(logging.ERROR)
         
     logging.basicConfig(level=logging.INFO)
     

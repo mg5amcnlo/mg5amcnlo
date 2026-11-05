@@ -2,7 +2,7 @@ C###############################################################################
 C
 C Copyright (c) 2010 The ALOHA Development team and Contributors
 C
-C This file is a part of the MadGraph5_aMC@NLO project, an application which
+C This file is a part of the MadGraph7 project, an application which
 C automatically generates Feynman diagrams and matrix elements for arbitrary
 C high-energy processes in the Standard Model and beyond.
 C
@@ -11,8 +11,27 @@ C distribution.
 C
 C###############################################################################
 
-      subroutine ixxxxx(p,fmass,nhel,nsf,fi)
+      module ALOHA_OBJECT
+c     Same layout as the plain HELAS library (aloha_functions.f), with the
+c     momentum and the wavefunction components promoted to dual numbers:
+c     their extra components carry the derivatives with respect to the
+c     relative momentum of the P-wave bound states.
       use dual_variables
+      implicit none
+         TYPE ALOHA
+            type(Dual) :: W(4)
+            type(Dual) :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA
+         TYPE ALOHA2D
+            type(Dual) :: W(16)
+            type(Dual) :: P(0:3)
+            integer :: flv_index
+         END TYPE ALOHA2D
+      end module ALOHA_OBJECT
+
+      subroutine ixxxxx(p,fmass,nhel,nsf,flavor,fi)
+      use ALOHA_OBJECT
 c
 c This subroutine computes a fermion wavefunction derivative with the flowing-IN
 c fermion number.
@@ -24,10 +43,12 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fi(8)         : fermion wavefunction derivative      eps_L^alpha . d|fi>/dq^alpha
+c       complex fi%W(4)         : fermion wavefunction derivative      eps_L^alpha . d|fi>/dq^alpha
 c
       implicit none
-      type(Dual)::fi(8),chi(2)
+      type(aloha) fi
+      integer flavor
+      type(Dual)::chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
       double precision sf(2),fmass,sqm(0:1),oHsqm(0:1)
@@ -40,13 +61,14 @@ c
       parameter( ci = dcmplx(0.0d0,1.0d0) )
 
 c     Convention for dual computations (same as loop)
-      fi(1) = p(0)*(-nsf)
-      fi(2) = p(1)*(-nsf)
-      fi(3) = p(2)*(-nsf)
-      fi(4) = p(3)*(-nsf)
-      do i = 5,8
-         CALL fi(i)%initZERO()
+      fi%P(0) = p(0)*(-nsf)
+      fi%P(1) = p(1)*(-nsf)
+      fi%P(2) = p(2)*(-nsf)
+      fi%P(3) = p(3)*(-nsf)
+      do i = 1,4
+         CALL fi%W(i)%initZERO()
       enddo
+      fi%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -63,24 +85,24 @@ c     Convention for dual computations (same as loop)
             oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
             oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
-            fi(5)%comp(0) = ip     * sqm(ip)
-            fi(6)%comp(0) = im*nsf * sqm(ip)
-            fi(7)%comp(0) = ip*nsf * sqm(im)
-            fi(8)%comp(0) = im     * sqm(im)    
+            fi%W(1)%comp(0) = ip     * sqm(ip)
+            fi%W(2)%comp(0) = im*nsf * sqm(ip)
+            fi%W(3)%comp(0) = ip*nsf * sqm(im)
+            fi%W(4)%comp(0) = im     * sqm(im)    
             do i = 1, size(p(0))
-               fi(5)%comp(i) = oHsqm(ip)*
+               fi%W(1)%comp(i) = oHsqm(ip)*
      &            (+ip*    (p(0)%comp(i) -    p(3)%comp(i))
      &             -im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))) 
 
-               fi(6)%comp(i) = oHsqm(ip)*
+               fi%W(2)%comp(i) = oHsqm(ip)*
      &            (-ip*    (p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*nsf*(p(0)%comp(i) +    p(3)%comp(i)))
 
-               fi(7)%comp(i) = oHsqm(im)*
+               fi%W(3)%comp(i) = oHsqm(im)*
      &            (+ip*nsf*(p(0)%comp(i) +    p(3)%comp(i))
      &             +im*    (p(1)%comp(i) - ci*p(2)%comp(i))) 
 
-               fi(8)%comp(i) = oHsqm(im)*
+               fi%W(4)%comp(i) = oHsqm(im)*
      &            (+ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))
      &             +im*    (p(0)%comp(i) -    p(3)%comp(i)))
             enddo
@@ -110,13 +132,13 @@ c     Convention for dual computations (same as loop)
                chi(2) = (dble(nh)*p(1) + ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            fi(5) = sfomeg(1)*chi(im) 
+            fi%W(1) = sfomeg(1)*chi(im) 
      &            + (p(1) - nh*ci*p(2))*oHsqm(0)*chi(ip)
-            fi(6) = sfomeg(1)*chi(ip) 
+            fi%W(2) = sfomeg(1)*chi(ip) 
      &            - (p(1) - nh*ci*p(2))*oHsqm(0)*chi(im)
-            fi(7) = sfomeg(2)*chi(im) 
+            fi%W(3) = sfomeg(2)*chi(im) 
      &            + (p(1) - nh*ci*p(2))*oHsqm(1)*chi(ip)
-            fi(8) = sfomeg(2)*chi(ip) 
+            fi%W(4) = sfomeg(2)*chi(ip) 
      &            - (p(1) - nh*ci*p(2))*oHsqm(1)*chi(im)
          endif
 
@@ -134,11 +156,11 @@ c     Convention for dual computations (same as loop)
             chi(2) = (nh*p(1) + ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            fi(7) = chi(1)
-            fi(8) = chi(2)
+            fi%W(3) = chi(1)
+            fi%W(4) = chi(2)
          else
-            fi(5) = chi(2)
-            fi(6) = chi(1)
+            fi%W(1) = chi(2)
+            fi%W(2) = chi(1)
          endif
       endif
 c
@@ -281,8 +303,8 @@ c
 
 
 
-      subroutine oxxxxx(p,fmass,nhel,nsf,fo)
-      use dual_variables
+      subroutine oxxxxx(p,fmass,nhel,nsf,flavor,fo)
+      use ALOHA_OBJECT
 c
 c This subroutine computes a fermion wavefunction derivative with the flowing-OUT
 c fermion number.
@@ -294,10 +316,12 @@ c       integer nhel = -1 or 1 : helicity      of fermion
 c       integer nsf  = -1 or 1 : +1 for particle, -1 for anti-particle
 c
 c output:
-c       complex fo(8)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
+c       complex fo%W(4)         : fermion wavefunction derivative       eps_L^alpha . d<fo|/dq^alpha
 c
       implicit none
-      type(Dual)::fo(8),chi(2)
+      type(aloha) fo
+      integer flavor
+      type(Dual)::chi(2)
       type(Dual)::p(0:3),omega(2),sfomeg(2),
      &            pp,pp3,sqp0p3
       type(Dual)::p3_tmp
@@ -311,13 +335,14 @@ c
       parameter( ci = dcmplx(0.0d0,1.0d0) )
 
 c     Convention for dual computations (same as loop)
-      fo(1) = p(0)*(nsf)
-      fo(2) = p(1)*(nsf)
-      fo(3) = p(2)*(nsf)
-      fo(4) = p(3)*(nsf)
-      do i = 5,8
-         CALL fo(i)%initZERO()
+      fo%P(0) = p(0)*(nsf)
+      fo%P(1) = p(1)*(nsf)
+      fo%P(2) = p(2)*(nsf)
+      fo%P(3) = p(3)*(nsf)
+      do i = 1,4
+         CALL fo%W(i)%initZERO()
       enddo
+      fo%flv_index = flavor
 
       nh = nhel*nsf
 
@@ -334,24 +359,24 @@ c     Convention for dual computations (same as loop)
             oHsqm(0) = rHalf/sqm(0)     ! normalization for the derivative part
             oHsqm(1) = rHalf/sqm(1)     ! normalization for the derivative part
 
-            fo(5)%comp(0) = im     * sqm(abs(ip))
-            fo(6)%comp(0) = ip*nsf * sqm(abs(ip))
-            fo(7)%comp(0) = im*nsf * sqm(abs(im))
-            fo(8)%comp(0) = ip     * sqm(abs(im))    
+            fo%W(1)%comp(0) = im     * sqm(abs(ip))
+            fo%W(2)%comp(0) = ip*nsf * sqm(abs(ip))
+            fo%W(3)%comp(0) = im*nsf * sqm(abs(im))
+            fo%W(4)%comp(0) = ip     * sqm(abs(im))    
             do i = 1, size(p(0))
-               fo(5)%comp(i) = oHsqm(abs(ip))*
+               fo%W(1)%comp(i) = oHsqm(abs(ip))*
      &            (+im*    (p(0)%comp(i) +    p(3)%comp(i))
      &             +ip*nsf*(p(1)%comp(i) + ci*p(2)%comp(i))) 
 
-               fo(6)%comp(i) = oHsqm(abs(ip))*
+               fo%W(2)%comp(i) = oHsqm(abs(ip))*
      &            (+im*    (p(1)%comp(i) - ci*p(2)%comp(i))
      &             +ip*nsf*(p(0)%comp(i) -    p(3)%comp(i)))
 
-               fo(7)%comp(i) = oHsqm(abs(im))*
+               fo%W(3)%comp(i) = oHsqm(abs(im))*
      &            (+im*nsf*(p(0)%comp(i) -    p(3)%comp(i))
      &             -ip*    (p(1)%comp(i) + ci*p(2)%comp(i))) 
 
-               fo(8)%comp(i) = oHsqm(abs(im))*
+               fo%W(4)%comp(i) = oHsqm(abs(im))*
      &            (-im*nsf*(p(1)%comp(i) - ci*p(2)%comp(i))
      &             +ip*    (p(0)%comp(i) +    p(3)%comp(i)))
             enddo     
@@ -380,13 +405,13 @@ c     Convention for dual computations (same as loop)
                chi(2) = (dble(nh)*p(1) - ci*p(2))/(sqrt(rTwo*pp*pp3))
             endif
 
-            fo(5) = sfomeg(2)*chi(im)
+            fo%W(1) = sfomeg(2)*chi(im)
      &            + (p(1) + nh*ci*p(2))*oHsqm(1)*chi(ip)
-            fo(6) = sfomeg(2)*chi(ip)
+            fo%W(2) = sfomeg(2)*chi(ip)
      &            - (p(1) + nh*ci*p(2))*oHsqm(1)*chi(im)
-            fo(7) = sfomeg(1)*chi(im)
+            fo%W(3) = sfomeg(1)*chi(im)
      &            + (p(1) + nh*ci*p(2))*oHsqm(0)*chi(ip)
-            fo(8) = sfomeg(1)*chi(ip)
+            fo%W(4) = sfomeg(1)*chi(ip)
      &            - (p(1) + nh*ci*p(2))*oHsqm(0)*chi(im)
          endif
 
@@ -405,11 +430,11 @@ c     Convention for dual computations (same as loop)
             chi(2) = (nh*p(1) - ci*p(2))/sqp0p3
          endif
          if (nh.eq.1) then
-            fo(5) = chi(1)
-            fo(6) = chi(2)
+            fo%W(1) = chi(1)
+            fo%W(2) = chi(2)
          else
-            fo(7) = chi(2)
-            fo(8) = chi(1)
+            fo%W(3) = chi(2)
+            fo%W(4) = chi(1)
          endif
 
       endif
@@ -549,21 +574,21 @@ c
 
 
       subroutine vxxxxx(p,vmass,nhel,nsv,vc)
-      use dual_variables
+      use ALOHA_OBJECT
 c
 c This subroutine computes a VECTOR wavefunction.
 c
 c input:
 c       complex p(0:3)         : four-momentum of vector boson
 c       real    fmass          : mass          of vector boson
-c       integer nhel = -1, 0, 1: helicity      of bector boson
+c       integer nhel = -1, 0, 1: helicity      of vector boson
 c       integer nsv  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex vc(8)          : vector wavefunction       epsilon^mu(p)
+c       complex vc%W(4)          : vector wavefunction       epsilon^mu(p)
 c
       implicit none
-      type(Dual)::vc(8)
+      type(aloha) vc
       type(Dual)::p(0:3),pp,pt,pt2,pzpt,emp
       double precision vmass,hel,hel0,sqh
       integer nhel,nsv,nsvahl
@@ -591,37 +616,38 @@ c
       pt%comp(0) = min(pp%comp(0)%re,pt%comp(0)%re)
 
 c     Convention for dual computations (same as loop)
-      vc(1) = p(0)*nsv
-      vc(2) = p(1)*nsv
-      vc(3) = p(2)*nsv
-      vc(4) = p(3)*nsv
-      do i = 5,8
-         CALL vc(i)%initZERO()
+      vc%P(0) = p(0)*nsv
+      vc%P(1) = p(1)*nsv
+      vc%P(2) = p(2)*nsv
+      vc%P(3) = p(3)*nsv
+      do i = 1,4
+         CALL vc%W(i)%initZERO()
       enddo
+      vc%flv_index = 0
 
       if (vmass.ne.rZero) then
 
          hel0 = rOne-dabs(hel)
 
          if ( pp%comp(0)%re.eq.rZero ) then
-            vc(5)%comp(0) = dcmplx( rZero )
-            vc(6)%comp(0) = dcmplx(-hel*sqh )
-            vc(7)%comp(0) = dcmplx( rZero , nsvahl*sqh )
-            vc(8)%comp(0) = dcmplx( hel0 )
+            vc%W(1)%comp(0) = dcmplx( rZero )
+            vc%W(2)%comp(0) = dcmplx(-hel*sqh )
+            vc%W(3)%comp(0) = dcmplx( rZero , nsvahl*sqh )
+            vc%W(4)%comp(0) = dcmplx( hel0 )
 
          else
             emp = p(0)/(vmass*pp)
-            vc(5) = hel0*pp/vmass
-            vc(8) = hel0*p(3)*emp+hel*pt/pp*sqh
+            vc%W(1) = hel0*pp/vmass
+            vc%W(4) = hel0*p(3)*emp+hel*pt/pp*sqh
             if ( pt%comp(0)%re.ne.rZero ) then
                pzpt = p(3)/(pp*pt)*sqh*hel
-               vc(6) = hel0*p(1)*emp-p(1)*pzpt
+               vc%W(2) = hel0*p(1)*emp-p(1)*pzpt
      &                   -ci*nsvahl*p(2)/pt*sqh
-               vc(7) = hel0*p(2)*emp-p(2)*pzpt
+               vc%W(3) = hel0*p(2)*emp-p(2)*pzpt
      &                   +ci*nsvahl*p(1)/pt*sqh
             else
-               vc(6)%comp(0) = dcmplx( -hel*sqh )
-               vc(7)%comp(0) = dcmplx( rZero , 
+               vc%W(2)%comp(0) = dcmplx( -hel*sqh )
+               vc%W(3)%comp(0) = dcmplx( rZero , 
      &                   nsvahl*sign(sqh,p(3)%comp(0)%re) )
             endif
 
@@ -629,15 +655,15 @@ c     Convention for dual computations (same as loop)
 
       else
          pp = p(0)
-         CALL vc(5)%initZERO()
-         vc(8) = hel*pt/pp*sqh
+         CALL vc%W(1)%initZERO()
+         vc%W(4) = hel*pt/pp*sqh
          if ( pt%comp(0)%re.ne.rZero ) then
             pzpt = p(3)/(pp*pt)*sqh*hel
-            vc(6) = -p(1)*pzpt-ci*nsv*p(2)/pt*sqh
-            vc(7) = -p(2)*pzpt+ci*nsv*p(1)/pt*sqh
+            vc%W(2) = -p(1)*pzpt-ci*nsv*p(2)/pt*sqh
+            vc%W(3) = -p(2)*pzpt+ci*nsv*p(1)/pt*sqh
         else
-            vc(6)%comp(0) = dcmplx( -hel*sqh )
-            vc(7)%comp(0) = dcmplx( rZero , 
+            vc%W(2)%comp(0) = dcmplx( -hel*sqh )
+            vc%W(3)%comp(0) = dcmplx( rZero , 
      &                   nsv*sign(sqh,p(3)%comp(0)%re) )
          endif
 
@@ -649,7 +675,7 @@ c
 
 
       subroutine sxxxxx(p,nss,sc)
-      use dual_variables
+      use ALOHA_OBJECT
 c
 c This subroutine computes a complex SCALAR wavefunction.
 c
@@ -658,10 +684,11 @@ c       complex    p(0:3)      : four-momentum of scalar boson
 c       integer nss  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex sc(5)          : scalar wavefunction                   s
+c       complex sc%W(1)          : scalar wavefunction                   s
 c
       implicit none
-      type(Dual)::sc(5),p(0:3)
+      type(aloha) sc
+      type(Dual)::p(0:3)
       integer nss
       integer i
 
@@ -669,13 +696,14 @@ c
       parameter( rOne = 1.0d0 )
 
 c     Convention for dual computations (same as loop)
-      sc(1) = p(0)*nss
-      sc(2) = p(1)*nss
-      sc(3) = p(2)*nss
-      sc(4) = p(3)*nss
-      CALL sc(5)%initZERO()
+      sc%P(0) = p(0)*nss
+      sc%P(1) = p(1)*nss
+      sc%P(2) = p(2)*nss
+      sc%P(3) = p(3)*nss
+      CALL sc%W(1)%initZERO()
+      sc%flv_index = 0
 
-      sc(5)%comp(0) = dcmplx( rOne )
+      sc%W(1)%comp(0) = dcmplx( rOne )
 
 c
       return
@@ -685,14 +713,14 @@ c
 
       subroutine pxxxxx(p,tmass,nhel,nst,tc)
          print*, "The pxxxxx subroutine for PSEUDOR is not (yet) "//
-     1           "implementated in dual computation"
+     1           "implemented in dual computation"
          stop
       end
 
 
 
       subroutine txxxxx(p,tmass,nhel,nst,tc)
-      use dual_variables
+      use ALOHA_OBJECT
 c
 c This subroutine computes a TENSOR wavefunction.
 c
@@ -704,10 +732,11 @@ c                = -2,-1,0,1,2 : (0 is forbidden if tmass=0.0)
 c       integer nst  = -1 or 1 : +1 for final, -1 for initial
 c
 c output:
-c       complex tc(20)         : tensor wavefunction    epsilon^mu^nu(t)
+c       complex tc%W(16)         : tensor wavefunction    epsilon^mu^nu(t)
 c
       implicit none
-      type(Dual)::tc(20),p(0:3)
+      type(aloha2d) tc
+      type(Dual)::p(0:3)
       double precision  tmass
       integer nhel, nst
 
@@ -727,9 +756,10 @@ c
       integer stdo
       parameter( stdo = 6 )
 
-      do j = 1, 20
-         CALL tc(j)%initZERO()
+      do j = 1, 16
+         CALL tc%W(j)%initZERO()
       enddo
+      tc%flv_index = 0
       
       sqh = sqrt(rHalf)
       sqs = sqrt(rHalf/3.d0)
@@ -856,27 +886,27 @@ c construct eps0
         end if
       end if
 
-      tc(5) = ft(1,1)
-      tc(6) = ft(1,2)
-      tc(7) = ft(1,3)
-      tc(8) = ft(1,4)
-      tc(9) = ft(2,1)
-      tc(10) = ft(2,2)
-      tc(11) = ft(2,3)
-      tc(12) = ft(2,4)
-      tc(13) = ft(3,1)
-      tc(14) = ft(3,2)
-      tc(15) = ft(3,3)
-      tc(16) = ft(3,4)
-      tc(17) = ft(4,1)
-      tc(18) = ft(4,2)
-      tc(19) = ft(4,3)
-      tc(20) = ft(4,4)
+      tc%W(1) = ft(1,1)
+      tc%W(2) = ft(1,2)
+      tc%W(3) = ft(1,3)
+      tc%W(4) = ft(1,4)
+      tc%W(5) = ft(2,1)
+      tc%W(6) = ft(2,2)
+      tc%W(7) = ft(2,3)
+      tc%W(8) = ft(2,4)
+      tc%W(9) = ft(3,1)
+      tc%W(10) = ft(3,2)
+      tc%W(11) = ft(3,3)
+      tc%W(12) = ft(3,4)
+      tc%W(13) = ft(4,1)
+      tc%W(14) = ft(4,2)
+      tc%W(15) = ft(4,3)
+      tc%W(16) = ft(4,4)
 
-      tc(1) = ft(5,1)
-      tc(2) = ft(6,1)
-      tc(3) = ft(7,1)
-      tc(4) = ft(8,1)
+      tc%P(0) = ft(5,1)
+      tc%P(1) = ft(6,1)
+      tc%P(2) = ft(7,1)
+      tc%P(3) = ft(8,1)
 
       return
       end subroutine txxxxx
@@ -965,13 +995,13 @@ c
 
       subroutine onia_proj_dual(fq, fqb, masses, p, m, sz, spin
      &, proj)
-      use dual_variables
+      use ALOHA_OBJECT
 c
 c This subroutine computes the spin projector for an onium states.
 c
 c input:
-c       dual    fq(1:8)        : spinor of first consituent (particle)
-c       dual    fqb(1:8)       : spinor of second consituent (anti-particle)
+c       dual    fq(1:8)        : spinor of first constituent (particle)
+c       dual    fqb(1:8)       : spinor of second constituent (anti-particle)
 c       real    p(0:3)         : four-momentum of bound state
 c       real    m(0:3)         : mass          of bound state
 c       integer sz             : z component of the spin
@@ -981,7 +1011,8 @@ c output:
 c       dual    proj           : value of the projector
 c
       implicit none
-      type(Dual)::fq(1:8),fqb(1:8),vc(1:8),p(0:3),tmp
+      type(aloha) fq,fqb,vc
+      type(Dual)::p(0:3),tmp
       double precision masses(1:2),m
       integer sz,spin
       type(Dual)::proj
@@ -992,15 +1023,15 @@ c
       if (spin.eq.0) then
 c     spin singlet    
 
-         tmp = -fq(5)*fqb(5)-fq(6)*fqb(6)+fq(7)*fqb(7)+fq(8)*fqb(8)
+         tmp = -fq%W(1)*fqb%W(1)-fq%W(2)*fqb%W(2)+fq%W(3)*fqb%W(3)+fq%W(4)*fqb%W(4)
 
       elseif (spin.eq.1) then
 c     spin triplet
          call vxxxxx(p,m,sz,+1,vc)
-         tmp = (fq(5)*fqb(8)-fq(7)*fqb(6))*(vc(6)+ci*vc(7))+
-     &         (fq(6)*fqb(7)-fq(8)*fqb(5))*(vc(6)-ci*vc(7))+
-     &         (fq(5)*fqb(7)+fq(8)*fqb(6))*(vc(5)+vc(8))+
-     &         (fq(6)*fqb(8)+fq(7)*fqb(5))*(vc(5)-vc(8))
+         tmp = (fq%W(1)*fqb%W(4)-fq%W(3)*fqb%W(2))*(vc%W(2)+ci*vc%W(3))+
+     &         (fq%W(2)*fqb%W(3)-fq%W(4)*fqb%W(1))*(vc%W(2)-ci*vc%W(3))+
+     &         (fq%W(1)*fqb%W(3)+fq%W(4)*fqb%W(2))*(vc%W(1)+vc%W(4))+
+     &         (fq%W(2)*fqb%W(4)+fq%W(3)*fqb%W(1))*(vc%W(1)-vc%W(4))
       else
          print *,"spin projector not yet implemented"
          stop
@@ -1270,5 +1301,41 @@ c
       p2(2) = -p1(2)
       p2(3) = -p1(3)
 c
+      return
+      end
+
+
+      subroutine sumw_1(w1, w2, wout)
+c
+c     Sum two currents standing for the same off shell line (see the
+c     plain HELAS library): only the wavefunction is added, the momentum
+c     and the flavour are the ones of the first current.
+c
+      use ALOHA_OBJECT
+      implicit none
+      type(aloha) w1
+      type(aloha) w2
+      type(aloha) wout
+
+      wout = w1
+      wout%W(:) = w1%W(:) + w2%W(:)
+
+      return
+      end
+
+
+      subroutine subw_1(w1, w2, wout)
+c
+c     As sumw_1, for the contributions which enter with a minus sign.
+c
+      use ALOHA_OBJECT
+      implicit none
+      type(aloha) w1
+      type(aloha) w2
+      type(aloha) wout
+
+      wout = w1
+      wout%W(:) = w1%W(:) - w2%W(:)
+
       return
       end

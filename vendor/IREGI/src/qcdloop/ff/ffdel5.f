@@ -103,7 +103,7 @@
 *	Contract;
 *	print +s;
 *	.end
-*	plus the substituion //p#@1\./p#@2/=/pDp(j@1,j@2)/
+*	plus the substitution //p#@1\./p#@2/=/pDp(j@1,j@2)/
 *
 *  #[ terms:
 	s(1)=+  xpi(j1)*xpi(j2)*xpi(j3)*xpi(j4)*xpi(j5)
@@ -299,7 +299,7 @@
 *  #] check input:
 *  #[ calculations:
 *
-*	for the time being we just try the (60) diagonal elemnts.
+*	for the time being we just try the (60) diagonal elements.
 *
 	xmax = 0
 	do 100 i=1,60

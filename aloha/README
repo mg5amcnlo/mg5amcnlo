@@ -22,10 +22,10 @@ user can choose to use either fortran, python or C++ to run aloha, and the
 second option stands for obtaining the output in a specific directory chosen 
 by the user.
 
-II. To run ALOHA inside MadGraph5_aMC@NLO:
+II. To run ALOHA inside MadGraph7:
 ---------------------------------------------------
 The only prerequisite for this option is to have the UFO model copied inside
-the madgraph5/models folder. MadGraph5_aMC@NLO will automatically use ALOHA 
+the madgraph5/models folder. MadGraph7 will automatically use ALOHA 
 to generate the helicity routines required in each process.
 
 

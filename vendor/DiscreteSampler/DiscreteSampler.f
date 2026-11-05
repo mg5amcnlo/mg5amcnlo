@@ -43,13 +43,13 @@
 !       ::  default sequential labeling
 !    
 !     DS_remove_bin(dimension_name, (binID|integerID))
-!       ::  Remove a bin in a dimension by either specfiying its index
+!       ::  Remove a bin in a dimension by either specifying its index
 !       ::  in this dimension or its binID (remember you can create a
 !       ::  binID on the flight from an integer using the function
 !       ::  DS_binID )
 !
 !     DS_add_entry(dimension_name, (binID|integerID), weight, (reset|void))
-!       ::  Add a new weight to a certan bin (characterized by either
+!       ::  Add a new weight to a certain bin (characterized by either
 !       ::  its binID or the integer of the binID). If the dimension or
 !       ::  the binID do not exist at the time of adding them, they will
 !       ::  be registered on the flight. By setting the option 'reset'
@@ -75,7 +75,7 @@
 !       :: dimension or all of them if called without dim_name.
 !       :: The data is loaded in the running grid only (which is
 !       :: re-initialized before this), so you have to call 
-!       :: 'DS_update_grid' if you want it pased to the ref_grid.
+!       :: 'DS_update_grid' if you want it passed to the ref_grid.
 !
 !     DS_get_point(dim_name, random_variable, 
 !       (binIDPicked|integerIDPicked), jacobian_weight, (mode|void),
@@ -395,7 +395,7 @@
 
 !       ---------------------------------------------------------------
 !       This subroutine takes care of registering a new dimension in
-!       the DSampler module by characterizin it by its name and number
+!       the DSampler module by characterizing it by its name and number
 !       of bins.
 !       ---------------------------------------------------------------
         subroutine DS_register_dimension(dim_name,n_bins,all_grids)
@@ -819,7 +819,7 @@
 
 !         Limit arbitrarily at 50% because anything above that really
 !         breaks the assumption of a small grid deformation not 
-!         significantly affecting the averaged contribution taked as
+!         significantly affecting the averaged contribution taken as
 !         a threshold.
           if (in_small_contrib.lt.0.0d0.or.
      &                                  in_small_contrib.gt.0.5d0) then
@@ -1066,7 +1066,7 @@
 
 
 !       ---------------------------------------------------------------
-!       Add a new weight to a certan bin (characterized by either its 
+!       Add a new weight to a certain bin (characterized by either its
 !       binID or index)
 !       ---------------------------------------------------------------
         subroutine DS_add_entry_with_BinID(dim_name, mBinID, weight,
@@ -1186,7 +1186,7 @@
         end subroutine DS_add_entry_with_BinIntID
 
 !       ---------------------------------------------------------------
-!       Prints out all informations for dimension of index d_index, or
+!       Prints out all information for dimension of index d_index, or
 !       name d_name.
 !       ---------------------------------------------------------------
         subroutine DS_print_dim_global_info_from_void()
@@ -1270,7 +1270,7 @@
         end subroutine DS_print_dim_global_info_from_name
 
 !       ---------------------------------------------------------------
-!       Print all informations related to a specific sampled dimension
+!       Print all information related to a specific sampled dimension
 !       in a given grid
 !       ---------------------------------------------------------------
         subroutine DS_print_dim_info(d_dim)
@@ -1908,7 +1908,7 @@
 !
 !       Local variables
 !
-!       chose_mode = 1 : Sampling accoridng to variance
+!       chose_mode = 1 : Sampling according to variance
 !       chose_mode = 2 : Sampling according to norm
 !       chose_mode = 3 : Uniform sampling
         integer                 :: chosen_mode
@@ -2154,7 +2154,7 @@
           endif
           write(*,*) "DiscreteSampler:: One norm is zero, no sampling"//
      &     " can be done in these conditions. Set 'tolerate_zero_norm"//
-     &     "' to .True. when initializating the module to proceed wi"//
+     &     "' to .True. when initializing the module to proceed wi"//
      &     "th a uniform distribution for the grids of zero norm."
           stop 1
         endif

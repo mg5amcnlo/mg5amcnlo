@@ -1,6 +1,6 @@
 c     This function defines the reweighting of the cross section to
 c     include a muR-dependent pre-factor. Multiply by the muR-dependent
-c     factor and devide by the muR-independent one.
+c     factor and divide by the muR-independent one.
 c Note: This is implemented below for the Bottom Yukawa in the SM.
 c       Change it to the factor you need to reweight.
       Double precision function rwgt_muR_dep_fac(scale,central

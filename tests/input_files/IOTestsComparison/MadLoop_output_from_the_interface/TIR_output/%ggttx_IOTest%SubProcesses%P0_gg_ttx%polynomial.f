@@ -156,7 +156,7 @@ C
 
       SUBROUTINE ML5_0_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
 C     Just a handy subroutine to modify the coefficients for the
-C     tranformation q_loop -> -q_loop
+C     transformation q_loop -> -q_loop
 C     It is only used for the NINJA interface
       USE ML5_0_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
@@ -277,7 +277,7 @@ C
       SUBROUTINE MP_ML5_0_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS
      $ ,POLYNOMIAL)
 C     Just a handy subroutine to modify the coefficients for the
-C     tranformation q_loop -> -q_loop
+C     transformation q_loop -> -q_loop
 C     It is only used for the NINJA interface
       USE ML5_0_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE

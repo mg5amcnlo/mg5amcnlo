@@ -1,0 +1,168 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+python := env_var_or_default("PYTHON", "python3")
+dev_python := env_var_or_default("PYAMPLICOL_DEV_PYTHON", ".venv/bin/python")
+build_mode := env_var_or_default("PYAMPLICOL_BUILD_MODE", "release")
+eager_builtin_pack := env_var_or_default("PYAMPLICOL_EAGER_BUILTIN_PACK", ".artifacts/eager-models/builtin-sm-jit-o3.pyamplicol-model")
+eager_ufo_pack := env_var_or_default("PYAMPLICOL_EAGER_UFO_SM_PACK", ".artifacts/eager-models/ufo-sm-jit-o3.pyamplicol-model")
+eager_ufo_source := env_var_or_default("PYAMPLICOL_EAGER_UFO_SM_SOURCE", "src/pyamplicol/assets/models/json/sm/sm.json")
+dev_cache := ".artifacts/dev-install"
+
+default:
+    @just --list
+
+_source-checkout:
+    @if ! git ls-files --error-unmatch pyproject.toml >/dev/null 2>&1 || [[ ! -f dependencies/contributor-lock.toml || ! -f dependencies/install_dependencies.py ]]; then \
+        printf '%s\n' "error: this command requires a full pyAmpliCol Git source checkout; contributor commands are unavailable from a release source distribution" >&2; \
+        exit 1; \
+    fi
+
+build:
+    PYAMPLICOL_BUILD_MODE={{build_mode}} {{python}} -m build --wheel
+
+typing:
+    PYTHONPATH="$PWD/src" {{python}} -m ruff check tools/typing tests/typing
+    PYTHONPATH="$PWD/src" {{python}} tools/typing/check_public_typing.py
+    PYTHONPATH="$PWD/src" {{python}} -m pytest tests/typing/test_typing_gate.py -q
+
+dependency-gate:
+    @if [ "{{build_mode}}" = candidate ]; then \
+        {{python}} tools/release/check_dependencies.py --candidate; \
+    else \
+        {{python}} tools/release/check_dependencies.py; \
+    fi
+
+python-unit:
+    PYTHONPATH="$PWD/src" {{python}} -m pytest tests/unit -q
+
+python-release:
+    PYTHONPATH="$PWD/src" {{python}} -m pytest tests/release -q
+
+python-integration:
+    # The restricted child needs a parent that has not imported Symbolica.
+    PYTHONPATH="$PWD/src" PYAMPLICOL_REQUIRE_NATIVE_TESTS=1 {{python}} -m pytest tests/integration/test_spenso_restricted_mode.py -q
+    PYTHONPATH="$PWD/src" PYAMPLICOL_REQUIRE_NATIVE_TESTS=1 {{python}} -m pytest tests/integration --ignore=tests/integration/test_spenso_restricted_mode.py -q
+
+# Focused compiler regressions only; no pyAmpliCol/Symbolica build is required.
+# Defaults to the release-lock SymJIT version; select a checkout with
+# PYAMPLICOL_SYMJIT_SOURCE=/absolute/path/to/symjit.
+symjit-regressions:
+    PYAMPLICOL_RUN_SYMJIT_REGRESSIONS=1 {{python}} -m pytest tests/integration/test_symjit_upstream_regressions.py -q
+
+python-physics:
+    PYTHONPATH="$PWD/src" PYAMPLICOL_REQUIRE_NATIVE_TESTS=1 {{python}} -m pytest tests/integration/test_schema_v3_generation_runtime.py tests/unit/test_reference_fixture_v2.py tests/unit/test_tracked_reference_fixture_v2.py tests/unit/test_color_contraction_safety.py -q
+
+# Reuse a current staged runtime, or build through the real backend and stage
+# ignored native runtime/SDK resources for source-tree tests.
+source-runtime:
+    PYAMPLICOL_BUILD_MODE={{build_mode}} {{python}} tools/developer/prepare_source_runtime.py --reuse-current
+
+# Developer-only independent Fortran oracle. Prepare its checkout with
+# `just dev-install --with-legacy-amplicol` first.
+legacy-physics: _source-checkout
+    {{python}} tools/developer/legacy_amplicol.py --jobs 5
+
+legacy-physics-verify: _source-checkout
+    {{python}} tools/developer/legacy_amplicol.py --fixture tests/fixtures/reference/physics-v2.json --jobs 5 --check-output tests/fixtures/reference/legacy-fortran-v2.json
+
+# Release-facing numerical comparison against the pinned independent Fortran
+# implementation. The CI job additionally applies a 30 GiB process limit.
+independent-physics-oracle: _source-checkout
+    {{python}} tools/developer/legacy_amplicol.py --prepare-checkout --fixture tests/fixtures/reference/physics-v2.json --jobs 2 >/dev/null
+
+installed-smoke:
+    PYTHONPATH="$PWD/src" {{python}} -m pyamplicol.selftest
+    PYTHONPATH="$PWD/src" {{python}} -m pyamplicol self-test --json
+    PYTHONPATH="$PWD/src" {{python}} -m pyamplicol examples list --json
+    PYTHONPATH="$PWD/src" PYAMPLICOL_EXAMPLE_CACHE="$PWD/.artifacts/source-gate-example" {{python}} -m pyamplicol examples run builtin_sm_lc --set generation.mode=replace --json
+
+rust-check:
+    {{python}} tools/release/run_cargo.py --mode {{build_mode}} -- fmt --all --check
+    {{python}} tools/release/run_cargo.py --mode {{build_mode}} -- clippy --workspace --all-targets --locked
+
+rust-test:
+    {{python}} tools/release/run_cargo.py --mode {{build_mode}} -- test --workspace --locked
+    {{python}} tools/release/run_cargo.py --mode {{build_mode}} -- test --locked -p rusticol-core --no-default-features --features f64-compiled native_role_exports_load_and_remain_callable_while_owners_move
+
+# Complete source gate used before any release artifact is retained.
+source-gate:
+    just dependency-gate
+    just source-runtime
+    just typing
+    just python-unit
+    just python-release
+    just python-integration
+    just python-physics
+    just rust-check
+    just rust-test
+    just installed-smoke
+
+check:
+    just typing
+    just dependency-gate
+    just python-unit
+    just rust-check
+
+test:
+    PYTHONPATH="$PWD/src" {{python}} -m pytest tests/integration/test_spenso_restricted_mode.py -q
+    PYTHONPATH="$PWD/src" {{python}} -m pytest --ignore=tests/integration/test_spenso_restricted_mode.py
+    just rust-test
+
+sdist:
+    PYAMPLICOL_BUILD_MODE={{build_mode}} {{python}} -m build --sdist
+
+wheel:
+    PYAMPLICOL_BUILD_MODE={{build_mode}} {{python}} -m build --wheel
+
+wheel-from-sdist:
+    {{python}} tools/release/build_from_sdist.py
+
+install-wheel PYTHON_ARG="":
+    @selected="{{PYTHON_ARG}}"; \
+    if [[ "$selected" == PYTHON=* ]]; then \
+        selected="$(printf '%s' "$selected" | cut -d= -f2-)"; \
+    fi; \
+    if [[ -z "$selected" ]]; then selected="{{python}}"; fi; \
+    {{python}} tools/release/install_wheel.py --python "$selected"
+
+# Install published dependencies and a release-mode source runtime. Historical
+# source candidates require --candidate; profiling references remain opt-in.
+dev-install *INSTALLER_ARGS: _source-checkout
+    mkdir -p {{dev_cache}}/tmp {{dev_cache}}/cargo-home {{dev_cache}}/cargo-target {{dev_cache}}/pip-cache {{dev_cache}}/xdg-cache {{dev_cache}}/python-cache
+    TMPDIR="$PWD/{{dev_cache}}/tmp" CARGO_HOME="$PWD/{{dev_cache}}/cargo-home" CARGO_TARGET_DIR="$PWD/{{dev_cache}}/cargo-target" PIP_CACHE_DIR="$PWD/{{dev_cache}}/pip-cache" XDG_CACHE_HOME="$PWD/{{dev_cache}}/xdg-cache" PYTHONPYCACHEPREFIX="$PWD/{{dev_cache}}/python-cache" PYAMPLICOL_CANDIDATE_CACHE_ROOT="$PWD/{{dev_cache}}" {{python}} dependencies/install_dependencies.py {{INSTALLER_ARGS}}
+
+dev-build: _source-checkout
+    just dev-install
+    {{dev_python}} -c 'import pyamplicol; import pyamplicol.api'
+
+dev-test: _source-checkout
+    PYTHON={{dev_python}} PYAMPLICOL_BUILD_MODE={{build_mode}} just source-gate
+    @if [ "{{build_mode}}" = candidate ]; then \
+        PYTHON={{dev_python}} PYAMPLICOL_BUILD_MODE=candidate just test-deployment-candidate; \
+    else \
+        PYTHON={{dev_python}} PYAMPLICOL_BUILD_MODE=release just test-deployment; \
+    fi
+
+# Bounded built-in-SM eager gate under the 30 GiB memory guard.
+eager-smoke: _source-checkout
+    {{dev_python}} tools/ci/memory_watchdog.py --limit-gib 30 -- {{dev_python}} tools/developer/eager_benchmark_matrix.py --suite smoke --models built-in --builtin-pack {{eager_builtin_pack}} --output-root .artifacts/eager-benchmark/smoke
+
+# Full built-in/UFO-SM eager milestone gate under the 30 GiB memory guard.
+eager-milestone: _source-checkout
+    {{dev_python}} tools/ci/memory_watchdog.py --limit-gib 30 -- {{dev_python}} tools/developer/eager_benchmark_matrix.py --suite milestone --models built-in,ufo-sm --builtin-pack {{eager_builtin_pack}} --ufo-source {{eager_ufo_source}} --ufo-pack {{eager_ufo_pack}} --output-root .artifacts/eager-benchmark/milestone
+
+test-deployment-candidate: _source-checkout
+    PYAMPLICOL_BUILD_MODE=candidate {{python}} tools/release/test_deployment.py --candidate
+
+test-deployment:
+    PYAMPLICOL_BUILD_MODE=release {{python}} tools/release/test_deployment.py
+
+release-artifacts: _source-checkout
+    PYAMPLICOL_BUILD_MODE=release just source-gate
+    just independent-physics-oracle
+    PYAMPLICOL_BUILD_MODE=release {{python}} tools/release/build_release_artifacts.py
+
+publish-dry-run: _source-checkout
+    PYAMPLICOL_BUILD_MODE=release just source-gate
+    just independent-physics-oracle
+    PYAMPLICOL_BUILD_MODE=release {{python}} tools/release/publish_dry_run.py

@@ -577,10 +577,10 @@ c      write(6,*) 'MESSAGE from avh_oni_c0m1: you are calling me'
 *  * Set threshold to consider internal masses identical zero and
 *  * external squared momenta identical zero or equal to internal
 *  * masses, if this leads to an IR divergent case. For example,
-*  * if  |p1-m1|<thrs , and  p1=m1  consitutes an IR-divergent
+*  * if  |p1-m1|<thrs , and  p1=m1  constitutes an IR-divergent
 *  * case, then the loop integral is considered to be IR-divergent.
 *  * Here  thrs  is the input for this routine.
-*  * If this routine is not called,  thrs  will essentially be considerd
+*  * If this routine is not called,  thrs  will essentially be considered
 *  * identically zero, but warnings will be given when an IR-divergent
 *  * case is approached. If this routine is called with thrs=0d0 , then
 *  * these warnings will not appear anymore.

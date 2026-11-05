@@ -84,6 +84,19 @@ parameters do not invalidate a certified tree-level mask. The generated
 `Source/BornSupport/helicity_signature.json` records the selected mode and
 the input indices and coupling powers used by its comparison.
 
+The Born zero-mask key also includes `BornRequest%helicity_frame`, a pair
+identifying the native context and mapped reference-leg mask. Its default
+`[0,0]` denotes the raw partonic basis. Generated frame wrappers set this key
+for their evaluation and restore the previous scope afterwards; both local
+and foreign native-provider requests carry it into the private library.
+A change of basis relearns the zero mask without invalidating an exact
+momentum/model amplitude-cache hit or reinstalling the model. This matters
+for polarized massive states: a helicity that vanishes in the partonic frame
+can contribute in a particle rest frame. Physical flow, recoil and channel
+probes therefore use the same frame wrappers as the subtraction calculation.
+Direct library callers using more than one basis must supply distinct,
+stable frame keys for those bases.
+
 Mask learning checks every squared-order component, avoiding both accidental
 cancellation between orders and extra-counterterm masks based only on their
 first order. Relative coupling changes and zero crossings still trigger

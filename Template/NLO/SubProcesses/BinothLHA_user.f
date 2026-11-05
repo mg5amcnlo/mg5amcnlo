@@ -76,7 +76,7 @@ c      virt_wgt=virt_wgt+conversion*born_wgt*ao2pi
 c======================================================================
 
 c======================================================================
-c example for checking the cancelation of the poles
+c example for checking the cancellation of the poles
 c      if (firsttime) then
 c          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
 c          if (dabs(single - madfks_single).lt.tolerance .and.

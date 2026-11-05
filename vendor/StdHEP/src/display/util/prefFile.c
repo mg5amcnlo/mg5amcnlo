@@ -144,7 +144,7 @@ XrmDatabase CreatePreferencesDatabase(char *fileName, char *appName,
 ** RestorePreferences
 **
 ** Fill in preferences data from two X databases, values in prefDB taking
-** precidence over those in appDB.
+** precedence over those in appDB.
 */	 
 void RestorePreferences(XrmDatabase prefDB, XrmDatabase appDB,
 	char *appName, char *appClass, PrefDescripRec *rsrcDescrip, int nRsrc)

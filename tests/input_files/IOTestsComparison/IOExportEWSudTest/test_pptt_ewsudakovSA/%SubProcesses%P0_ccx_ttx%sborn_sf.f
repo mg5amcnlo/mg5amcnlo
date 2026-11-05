@@ -38,28 +38,28 @@ C      term here
       IF (NEED_COLOR_LINKS) THEN
 C       link partons 1 and 2 
         IF ((M.EQ.1 .AND. N.EQ.2).OR.(M.EQ.2 .AND. N.EQ.1)) THEN
-          CALL SB_SF_001(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,1,WGT_COL)
 C         link partons 1 and 3 
         ELSEIF ((M.EQ.1 .AND. N.EQ.3).OR.(M.EQ.3 .AND. N.EQ.1)) THEN
-          CALL SB_SF_002(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,2,WGT_COL)
 C         link partons 1 and 4 
         ELSEIF ((M.EQ.1 .AND. N.EQ.4).OR.(M.EQ.4 .AND. N.EQ.1)) THEN
-          CALL SB_SF_003(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,3,WGT_COL)
 C         link partons 2 and 3 
         ELSEIF ((M.EQ.2 .AND. N.EQ.3).OR.(M.EQ.3 .AND. N.EQ.2)) THEN
-          CALL SB_SF_004(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,4,WGT_COL)
 C         link partons 2 and 4 
         ELSEIF ((M.EQ.2 .AND. N.EQ.4).OR.(M.EQ.4 .AND. N.EQ.2)) THEN
-          CALL SB_SF_005(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,5,WGT_COL)
 C         link partons 3 and 3 
         ELSEIF (M.EQ.3 .AND. N.EQ.3) THEN
-          CALL SB_SF_006(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,6,WGT_COL)
 C         link partons 3 and 4 
         ELSEIF ((M.EQ.3 .AND. N.EQ.4).OR.(M.EQ.4 .AND. N.EQ.3)) THEN
-          CALL SB_SF_007(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,7,WGT_COL)
 C         link partons 4 and 4 
         ELSEIF (M.EQ.4 .AND. N.EQ.4) THEN
-          CALL SB_SF_008(P_BORN,WGT_COL)
+          CALL SB_SF_LINK(P_BORN,8,WGT_COL)
         ENDIF
 
         WGT = WGT_COL * G**2

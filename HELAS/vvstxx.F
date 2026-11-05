@@ -4,7 +4,7 @@ c- by RF - Feb. 2006
 c
 c This subroutine computes the portion of the amplitude of the four-point 
 c coupling of 2 massless color octet gauge bosons (gluons) 
-C with an effective color octect antisymmetric tensor.
+C with an effective color octet antisymmetric tensor.
 c                                                                       
 c input:
 c     complex ga(6)                       : first vector  (gluon)

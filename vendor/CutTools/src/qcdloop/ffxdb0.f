@@ -2,7 +2,7 @@
 	subroutine ffxdb0(cdb0,cdb0p,xp,xma,xmb,ier)
 ***#[*comment:***********************************************************
 *									*
-*	Calculates the the derivative of the two-point function with	*
+*	Calculates the derivative of the two-point function with	*
 *	respect to p2 and the same times p2 (one is always well-defined)*
 *									*
 *	Input:	xp	(real)	  k2, in B&D metric			*

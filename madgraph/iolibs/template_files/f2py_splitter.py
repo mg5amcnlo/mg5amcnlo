@@ -1,6 +1,8 @@
 C this is a f2py wrapper for reweight mode at tree level
 
   subroutine %(f2py_prefix)sf77_smatrixhel(pdgs, procid, npdg, p, ALPHAS, SCALE2, nhel, ANS)
+  use model_object
+  use aloha_object
   IMPLICIT NONE
 C ALPHAS is given at scale2 (SHOULD be different of 0 for loop induced, ignore for LO)  
 
@@ -15,6 +17,8 @@ CF2PY double precision, intent(in) :: SCALE2
   integer npdg, nhel, procid
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
+  integer flavor(%(maxpart)i),lpdgs(%(maxpart)i),I
+%(flavor_index_decl)s
   include 'coupl.inc'
   
   
@@ -25,6 +29,8 @@ CF2PY double precision, intent(in) :: SCALE2
   else
        CALL UPDATE_AS_PARAM2(scale2, ALPHAS)
   endif
+
+%(flavormapping)s
 
 %(smatrixhel)s
 
@@ -55,17 +61,21 @@ C
   INTEGER POS(n_changing)
   INTEGER ALLOW_HEL(n_changing*n_comb)
   DOUBLE COMPLEX INTER(n_comb*(n_comb+1)/2)
+  integer flavor(%(maxpart)i),lpdgs(%(maxpart)i),I
+%(flavor_index_decl)s
 C     Update is done insider the direct density call functions
+
+%(flavormapping)s
 
 %(density_splitter)s
 
-            return 
+            return
             end
 
-  subroutine %(f2py_prefix)sf77_get_all_inter(pdgs, procid, npdg, P, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
+  subroutine %(f2py_prefix)sf77_get_all_inter(pdgs, procid, npdg, P, NHEL, POS, N_CHANGING, ALLOW_HEL, N_COMB, INTER)
   IMPLICIT NONE
 C     P momenta
-C     NHEL base of helicity that are not changing
+C     NHEL(NPDG) helicity of the legs not in POS (POS entries ignored)
 C     POS(N_CHNGING): position of the changing helicity
 C     n_changing: number of changing helicity
 C     ALLOW_HEL(NCOMB, N_CHANGING): combination of helicity to
@@ -74,20 +84,32 @@ C     INTER((NCOMB*NCOMB+1)/2: all interference term (not the
 C      symmetric one)
 
   integer pdgs(*)
-  integer npdg, nhel, procid, n_changing
+  integer npdg, procid, n_changing
+  integer nhel(*), lnhel(%(maxpart)i)
   integer n_comb
   double precision p(*)
   double precision ANS,  PI,SCALE2
   INTEGER POS(*)
   INTEGER ALLOW_HEL(*)
   DOUBLE COMPLEX INTER(*)
+  integer flavor(%(maxpart)i),lpdgs(%(maxpart)i),I
+%(flavor_index_decl)s
 C     Update is done insider the direct density call functions
 
 C     Update is done insider the direct density call functions
+
+%(flavormapping)s
+
+C     The per-process GET_ALL_INTER writes the POS entries of its NHEL:
+C     hand it a copy, f2py passes a numpy array straight through.
+  lnhel(:) = 0
+  do i = 1, min(npdg, %(maxpart)i)
+     lnhel(i) = nhel(i)
+  enddo
 
 %(inter_splitter)s
 
-            return 
+            return
             end
 
       SUBROUTINE %(f2py_prefix)sf77_INITIALISE(PATH)
@@ -142,6 +164,8 @@ C     read.
       
       
       subroutine %(f2py_prefix)sf77_CHANGE_PARA(name, value)
+      use model_object
+      use aloha_object
       implicit none
 CF2PY intent(in) :: name
 CF2PY intent(in) :: value
@@ -170,6 +194,7 @@ CF2PY intent(in) :: value
      call coup()
     return 
     end
+      
       
 
     subroutine %(f2py_prefix)sf77_get_pdg_order(PDG, ALLPROC)
@@ -285,3 +310,5 @@ CF2PY integer, intent(in) :: new_value
     
 
     %(nhel)s
+
+%(flavor_repair_function)s

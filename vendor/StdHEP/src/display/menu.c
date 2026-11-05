@@ -525,7 +525,7 @@ static void openXCB(Widget w, PhaseWindow *window, caddr_t callData)
        return;
     }
     
-/* Set the maximum number of events "check through STDHEP i/o to xx, aribtrary
+/* Set the maximum number of events "check through STDHEP i/o to xx, arbitrary
    at this point.. To set by a preference pull down menu */
    
     window->nMaxEvts = 100;

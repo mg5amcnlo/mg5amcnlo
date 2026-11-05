@@ -111,7 +111,7 @@ main(int argc, char **argv)
 }
 /*
 ** A bunch of dummy function that are never called from this program, 
-** but neede to complete the link of the executable (one panel beeing 
+** but needed to complete the link of the executable (one panel being
 ** shared between the Browser and the Builder modules. )
 */
 void mcfioC_ShowBrowserOneDHist()

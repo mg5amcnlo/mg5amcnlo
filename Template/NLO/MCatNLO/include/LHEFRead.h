@@ -77,7 +77,7 @@ class MyReader {
       std::stringstream ss;
       int i,j;
   
-      // Read aMCatNLO extra informations
+      // Read aMCatNLO extra information
       ss << reader.eventComments;
       for (i=0; i<=15; i++) ss >> svec[i];
       std::string ch1 = svec[0];

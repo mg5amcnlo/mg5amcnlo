@@ -14,7 +14,7 @@
         contains
 
 !       This removes all blank character at the head of the size 100
-!       charachter array and places them at the end.
+!       character array and places them at the end.
         function trim_ahead(input)
           character(max_length)      :: input
           character(max_length)      :: trim_ahead

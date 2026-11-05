@@ -2,6 +2,7 @@
 C**************************************************************************
 C     SET THE CUTS 
 C**************************************************************************
+      use model_object
       IMPLICIT NONE
 c
 c     INCLUDE
@@ -209,7 +210,7 @@ c
          is_a_nu(i)=.false.
 
 
-c-do not apply cuts to these. CAREFULL: PDG_CUT do not consider do_cuts (they simply check the cut_decays)
+c-do not apply cuts to these. CAREFUL: PDG_CUT do not consider do_cuts (they simply check the cut_decays)
          if (pmass(i).gt.20d0)     do_cuts(i)=.false.  ! no cuts on top,W,Z,H
          if (abs(idup(i,1,iproc)).eq.12) do_cuts(i)=.false.  ! no cuts on ve ve~
          if (abs(idup(i,1,iproc)).eq.14) do_cuts(i)=.false.  ! no cuts on vm vm~
@@ -223,8 +224,10 @@ c              write(*,*)'jet:ithe pdg is ',abs(idup(i,1,iproc)),' maxflavor=',m
 c              write(*,*)'bjet:the pdg is ',abs(idup(i,1,iproc)),' maxflavor=',maxjetflavor
          endif
 
+         if (abs(idup(i,1,iproc)).eq.81)  is_a_j(i)=.true. ! gluon is a jet
          if (abs(idup(i,1,iproc)).eq.21)  is_a_j(i)=.true. ! gluon is a jet
 c-charged-leptons
+         if (abs(idup(i,1,iproc)).eq.82) is_a_l(i)=.true.
          if (abs(idup(i,1,iproc)).eq.11)  is_a_l(i)=.true. ! e+  e-
          if (abs(idup(i,1,iproc)).eq.13)  is_a_l(i)=.true. ! mu+ mu-
          if (abs(idup(i,1,iproc)).eq.15)  is_a_l(i)=.true. ! ta+ ta-
@@ -947,8 +950,8 @@ c**************************************************
                   foundpartner=.true.
                   if(iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
      $                 idup(iforest(2,k,j),1,1).eq.21.or.
-     $                 iabs(idup(iforest(2,k,j),1,1)).le.maxjetflavor.or.
-     $                 idup(iforest(2,k,j),1,1).eq.21)then
+     $                 iabs(idup(iforest(1,k,j),1,1)).le.maxjetflavor.or.
+     $                 idup(iforest(1,k,j),1,1).eq.21)then
                      if (do_cuts(iforest(2,k,j)).and. do_cuts(iforest(1,k,j)))then
                         xqcutij(iforest(2,k,j),iforest(1,k,j))=xqcut
                         xqcutij(iforest(1,k,j),iforest(2,k,j))=xqcut

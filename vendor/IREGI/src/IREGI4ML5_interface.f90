@@ -47,7 +47,7 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
 ! CTMODE=5 ---> ROTATE THE LOOP PROPAGATOR DIRECTION IN QUADRUPLE PRECISION (NOT DONE)
 ! IMODE=0, IBP reduction
 ! IMODE=1, PaVe reduction
-! IMODE=2, PaVe reduction with stablility improved by IBP reduction 
+! IMODE=2, PaVe reduction with stability improved by IBP reduction
   USE funlib
   USE ti_reduce
   USE cti_reduce
@@ -125,7 +125,7 @@ SUBROUTINE IMLOOP(CTMODE,IMODE,NLOOPLINE,NLOOPCOEFS,RANK,PDEN,M2L,MUR,TIRCOEFS,S
   ! IMODE,NLOOPLINE,MAXRANK,NCOEFS,PDEN,M2L,MU,TICOEFS,TSTABLE
   ! IMODE=0, IBP reduction
   ! IMODE=1, PaVe reduction
-  ! IMODE=2, PaVe reduction with stablility improved by IBP reduction
+  ! IMODE=2, PaVe reduction with stability improved by IBP reduction
   ! I HARD-CODED IMODE=2 HERE
   !IMODE=2
   IF(.NOT.comp_mass_scheme)THEN

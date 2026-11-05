@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2011 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2011 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access MadGraph5_aMC@NLO features.
+"""A user friendly command line interface to access MadGraph7 features.
    Uses the cmd package for command interpretation and tab completion.
 """
 from __future__ import division
@@ -57,7 +57,7 @@ sys.path.insert(0, os.path.join(root_path,'bin'))
 
 __maxint__ = 2**31 - 1
 
-# usefull shortcut
+# useful shortcut
 pjoin = os.path.join
 # Special logger for the Cmd Interface
 logger = logging.getLogger('madgraph.stdout') # -> stdout
@@ -139,7 +139,7 @@ def check_pythia8_fxfx_plugin(pythia8_path, reference_header):
 
 
 def compile_dir(*arguments):
-    """compile the direcory p_dir
+    """compile the directory p_dir
     arguments is the tuple (me_dir, p_dir, mode, options, tests, exe, run_mode)
     this function needs not to be a class method in order to do
     the compilation on multicore"""
@@ -181,12 +181,24 @@ def compile_dir(*arguments):
                 tf.close()
             
         if not options['reweightonly']:
+            # Publish the compiled setting only after both binaries and their
+            # channel catalogues are ready. A failed rebuild must not permit
+            # --nocompile to reuse an executable with stale channel metadata.
+            has_real_channels = os.path.exists(pjoin(this_dir, 'real_channels.inc'))
+            marker = pjoin(this_dir, 'real_channels_x0.dat')
+            executable_marker = pjoin(this_dir, exe + '.real_channels_x0.dat')
+            if has_real_channels:
+                for path in (marker, executable_marker):
+                    with open(path, 'w') as stream:
+                        stream.write('compilation incomplete\n')
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
+            #compile madevent_mintMC/mintFO
+            misc.compile([exe], cwd=this_dir, job_specs = False)
             misc.call(['./gensym', mode],cwd= this_dir,
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
-            #compile madevent_mintMC/mintFO
-            misc.compile([exe], cwd=this_dir, job_specs = False)
+            if has_real_channels:
+                shutil.copyfile(marker, executable_marker)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             misc.compile(['reweight_xsec_events'], cwd=this_dir, job_specs = False)
 
@@ -200,7 +212,7 @@ def check_compiler(options, block=False):
     """check that the current fortran compiler is gfortran 4.6 or later.
     If block, stops the execution, otherwise just print a warning"""
 
-    msg = 'In order to be able to run MadGraph5_aMC@NLO at NLO, you need to have ' + \
+    msg = 'In order to be able to run MadGraph7 at NLO, you need to have ' + \
             'gfortran 4.6 or later installed.\n%s has been detected.\n'+\
             'Note that you can still run MadEvent (at LO) without any problem!'
     #first check that gfortran is installed
@@ -252,7 +264,7 @@ class CmdExtended(common_run.CommonRunCmd):
 
 
     keyboard_stop_msg = """stopping all operation
-            in order to quit MadGraph5_aMC@NLO please enter exit"""
+            in order to quit MadGraph7 please enter exit"""
     
     # Define the Error
     InvalidCmd = InvalidCmd
@@ -285,18 +297,26 @@ class CmdExtended(common_run.CommonRunCmd):
         # Remember to fill in time at writeout time!
         self.history_header = \
         '#************************************************************\n' + \
-        '#*                    MadGraph5_aMC@NLO                     *\n' + \
+        '#*                        MadGraph7                         *\n' + \
         '#*                                                          *\n' + \
-        "#*                *                       *                 *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                    * * * * 5 * * * *                     *\n" + \
-        "#*                  *        * *        *                   *\n" + \
-        "#*                *                       *                 *\n" + \
+        "#*                        ..........                        *\n" + \
+        "#*                      @          ....                     *\n" + \
+        "#*                    @               ...                   *\n" + \
+        "#*                  @    M         M    .                   *\n" + \
+        "#*                 @     MM       MM    ..                  *\n" + \
+        "#*                 .     M  M   M  M  ..                    *\n" + \
+        "#*                 ..    M   M M   M ..                     *\n" + \
+        "#*                  .    M    M    M.                       *\n" + \
+        "#*                  ...                   7777777           *\n" + \
+        "#*                    ....                     7            *\n" + \
+        "#*                       .................... 7             *\n" + \
+        "#*                                           7              *\n" + \
+        "#*                                          7               *\n" + \
         "#*                                                          *\n" + \
         "#*                                                          *\n" + \
         info_line + \
         "#*                                                          *\n" + \
-        "#*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "#*       The MadGraph7 Development Team - Find us at        *\n" + \
         "#*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
         "#*                           and                            *\n" + \
         "#*                http://amcatnlo.cern.ch                   *\n" + \
@@ -315,18 +335,26 @@ class CmdExtended(common_run.CommonRunCmd):
         logger.info(\
         "************************************************************\n" + \
         "*                                                          *\n" + \
-        "*           W E L C O M E  to  M A D G R A P H 5           *\n" + \
+        "*           W E L C O M E  to  M A D G R A P H 7           *\n" + \
         "*                       a M C @ N L O                      *\n" + \
         "*                                                          *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                     * * * * 5 * * * *                    *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                 *                       *                *\n" + \
+        "*                        ..........                        *\n" + \
+        "*                      @          ....                     *\n" + \
+        "*                    @               ...                   *\n" + \
+        "*                  @    M         M    .                   *\n" + \
+        "*                 @     MM       MM    ..                  *\n" + \
+        "*                 .     M  M   M  M  ..                    *\n" + \
+        "*                 ..    M   M M   M ..                     *\n" + \
+        "*                  .    M    M    M.                       *\n" + \
+        "*                  ...                   7777777           *\n" + \
+        "*                    ....                     7            *\n" + \
+        "*                       .................... 7             *\n" + \
+        "*                                           7              *\n" + \
+        "*                                          7               *\n" + \
         "*                                                          *\n" + \
         info_line + \
         "*                                                          *\n" + \
-        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "*       The MadGraph7 Development Team - Find us at        *\n" + \
         "*                 http://amcatnlo.cern.ch                  *\n" + \
         "*                                                          *\n" + \
         "*               Type 'help' for in-line help.              *\n" + \
@@ -340,7 +368,7 @@ class CmdExtended(common_run.CommonRunCmd):
         return self.history_header % misc.get_time_info()
     
     def stop_on_keyboard_stop(self):
-        """action to perform to close nicely on a keyboard interupt"""
+        """action to perform to close nicely on a keyboard interrupt"""
         try:
             if hasattr(self, 'cluster'):
                 logger.info('rm jobs on queue')
@@ -419,7 +447,7 @@ class HelpToCmd(object):
         _compile_parser.print_help()
 
     def help_generate_events(self):
-        """help for generate_events commandi
+        """help for generate_events command
         just call help_launch"""
         _generate_events_parser.print_help()
 
@@ -470,59 +498,11 @@ class CheckValidForCmd(object):
             self.help_shower()
             raise self.InvalidCmd('Invalid syntax, please specify the run name')
         if not os.path.isdir(pjoin(self.me_dir, 'Events', args[0])):
-            raise self.InvalidCmd('Directory %s does not exists' % \
+            raise self.InvalidCmd('Directory %s does not exist' % \
                             pjoin(os.getcwd(), 'Events',  args[0]))
 
         self.set_run_name(args[0], level= 'shower')
         args[0] = pjoin(self.me_dir, 'Events', args[0])
-    
-    def check_plot(self, args):
-        """Check the argument for the plot command
-        plot run_name modes"""
-
-
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']
-        
-        if not madir or not td:
-            logger.info('Retry to read configuration file to find madanalysis/td')
-            self.set_configuration()
-
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']        
-        
-        if not madir:
-            error_msg = 'No valid Madanalysis path set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)  
-        if not  td:
-            error_msg = 'No valid path to your topdrawer directory set.'
-            error_msg += 'Please use the set command to define the path and retry.'
-            error_msg += 'You can also define it in the configuration file.'
-            raise self.InvalidCmd(error_msg)  
-                     
-        if len(args) == 0:
-            if not hasattr(self, 'run_name') or not self.run_name:
-                self.help_plot()
-                raise self.InvalidCmd('No run name defined. Please add this information.')             
-            args.append('all')
-            return
-
-        
-        if args[0] not in self._plot_mode:
-            self.set_run_name(args[0], level='plot')
-            del args[0]
-            if len(args) == 0:
-                args.append('all')
-        elif not self.run_name:
-            self.help_plot()
-            raise self.InvalidCmd('No run name defined. Please add this information.')                             
-        
-        for arg in args:
-            if arg not in self._plot_mode and arg != self.run_name:
-                 self.help_plot()
-                 raise self.InvalidCmd('unknown options %s' % arg)        
     
     def check_pgs(self, arg):
         """Check the argument for pythia command
@@ -900,7 +880,7 @@ class CompleteForCmd(CheckValidForCmd):
 
     def complete_generate_events(self, text, line, begidx, endidx):
         """auto-completion for generate_events command
-        call the compeltion for launch"""
+        call the completion for launch"""
         self.complete_launch(text, line, begidx, endidx)
 
 
@@ -1024,7 +1004,7 @@ class AskRunNLO(cmd.ControlSwitch):
         if os.path.exists(os.path.realpath(pjoin(MCatNLO_libdir, 'libstdhep.a'))):
             self.available_module.add('StdHEP')
 #
-#   shorcut
+#   shortcut
 #
     def ans_lo(self, value):
         """ function called if the user type lo=value. or lo (then value is None)"""
@@ -1323,7 +1303,7 @@ class AskRunNLO(cmd.ControlSwitch):
         return None
     
     def get_cardcmd_for_shower(self, value):
-        """ adpat run_card according to this setup. return list of cmd to run"""
+        """ adapt run_card according to this setup. return list of cmd to run"""
         
         if value != 'OFF':
             return  ['set parton_shower %s' % self.switch['shower']]
@@ -1434,7 +1414,7 @@ class AskRunNLO(cmd.ControlSwitch):
             self.switch['reweight'] = 'Not Avail'      
             
     def get_cardcmd_for_reweight(self, value):
-        """ adpat run_card according to this setup. return list of cmd to run"""
+        """ adapt run_card according to this setup. return list of cmd to run"""
         
         if value == 'LO':
             return ["edit reweight_card --replace_line='change mode' --before_line='launch' change mode LO"]
@@ -1545,7 +1525,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.load_results_db()
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
-        proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
+        # joined by ProcCard: cards from older versions are wrapped at 70
+        # characters, which can fall inside '[real=QCD]'
+        proc_card = '\n'.join(banner_mod.ProcCard(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')))
 
         if not '[real=QCD]' in proc_card:
             check_compiler(self.options, block=True)
@@ -1565,114 +1547,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.run_mcatnlo(evt_file, options)
 
         self.update_status('', level='all', update_results=True)
-
-    ################################################################################
-    def do_plot(self, line):
-        """Create the plot for a given run"""
-
-        # Since in principle, all plot are already done automaticaly
-        args = self.split_arg(line)
-        # Check argument's validity
-        self.check_plot(args)
-        logger.info('plot for run %s' % self.run_name)
-        
-        if not self.force:
-            self.ask_edit_cards([], args, plot=True)
-                
-        if any([arg in ['parton'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe')
-            if os.path.exists(filename+'.gz'):
-                misc.gunzip(filename)
-            if  os.path.exists(filename):
-                logger.info('Found events.lhe file for run %s' % self.run_name) 
-                shutil.move(filename, pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'))
-                self.create_plot('parton')
-                shutil.move(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe'), filename)
-                misc.gzip(filename)
-                
-        if any([arg in ['all','parton'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events', self.run_name, 'MADatNLO.top')
-            if  os.path.exists(filename):
-                logger.info('Found MADatNLO.top file for run %s' % \
-                             self.run_name) 
-                output = pjoin(self.me_dir, 'HTML',self.run_name, 'plots_parton.html')
-                plot_dir = pjoin(self.me_dir, 'HTML', self.run_name, 'plots_parton')
-                
-                if not os.path.isdir(plot_dir):
-                    os.makedirs(plot_dir) 
-                top_file = pjoin(plot_dir, 'plots.top')
-                files.cp(filename, top_file)
-                madir = self.options['madanalysis_path']
-                tag = self.run_card['run_tag']  
-                td = self.options['td_path']
-                misc.call(['%s/plot' % self.dirbin, madir, td],
-                                stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
-                                stderr = subprocess.STDOUT,
-                                cwd=plot_dir)
-
-                misc.call(['%s/plot_page-pl' % self.dirbin, 
-                                    os.path.basename(plot_dir),
-                                    'parton'],
-                                stdout = open(pjoin(plot_dir, 'plot.log'),'a'),
-                                stderr = subprocess.STDOUT,
-                                cwd=pjoin(self.me_dir, 'HTML', self.run_name))
-                shutil.move(pjoin(self.me_dir, 'HTML',self.run_name ,'plots.html'),
-                                                                             output)
-
-                os.remove(pjoin(self.me_dir, 'Events', 'plots.top'))
-                
-        if any([arg in ['all','shower'] for arg in args]):
-            filenames = misc.glob('events_*.lhe.gz', pjoin(self.me_dir, 'Events', self.run_name))
-            if len(filenames) != 1:
-                filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
-                if len(filenames) != 1:
-                    logger.info('No shower-level event file found for run %s' % \
-                                self.run_name)
-                    return
-                filename = filenames[0]
-                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
-                
-                if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia_card.dat')):
-                    if aMCatNLO and not self.options['mg5_path']:
-                        raise Exception("plotting NLO HEP files requires MG5 utilities.")
-                    
-                    files.cp(pjoin(self.options['mg5_path'], 'Template','LO', 'Cards', 'pythia_card_default.dat'),
-                             pjoin(self.me_dir, 'Cards', 'pythia_card.dat'))
-                self.run_hep2lhe()
-            else:
-                filename = filenames[0]
-                misc.gunzip(filename, keep=True, stdout=pjoin(self.me_dir, 'Events','pythia_events.hep'))
-
-            self.create_plot('shower')
-            lhe_file_name = filename.replace('.hep.gz', '.lhe')
-            shutil.move(pjoin(self.me_dir, 'Events','pythia_events.lhe'), 
-                        lhe_file_name)
-            misc.gzip(lhe_file_name)
-                    
-        if any([arg in ['all','pgs'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events', self.run_name, 
-                                            '%s_pgs_events.lhco' % self.run_tag)
-            if os.path.exists(filename+'.gz'):
-                misc.gunzip(filename)
-            if  os.path.exists(filename):
-                self.create_plot('PGS')
-                misc.gzip(filename)                
-            else:
-                logger.info('No valid files to make PGS plots')
-                
-        if any([arg in ['all','delphes'] for arg in args]):
-            filename = pjoin(self.me_dir, 'Events', self.run_name, 
-                                        '%s_delphes_events.lhco' % self.run_tag)
-            if os.path.exists(filename+'.gz'):
-                misc.gunzip(filename)
-            if  os.path.exists(filename):
-                #shutil.move(filename, pjoin(self.me_dir, 'Events','delphes_events.lhco'))
-                self.create_plot('Delphes')
-                #shutil.move(pjoin(self.me_dir, 'Events','delphes_events.lhco'), filename)
-                misc.gzip(filename)                
-            else:
-                logger.info('No valid files to make Delphes plots')
-
 
     ############################################################################      
     def do_calculate_xsect(self, line):
@@ -1753,6 +1627,26 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             if name in FO_card:
                 self.run_card.set(name, FO_card[name], user=False)
 
+        # me_frame needs the process: what [1,2] means, and which legs may not
+        # enter a frame once real emission is computed (see
+        # RunCardNLO.get_me_frame_legs, which raises for a frame that is not
+        # infrared safe). A run being compiled hands it over here, with the
+        # mode. A bare 'treatcards run' (the reweighting compiles its rw_me
+        # Source that way) has no run_card loaded: the parent reads the card,
+        # and RunCardNLO.write_include_file finds the process on disk.
+        if isinstance(getattr(self, 'run_card', None), banner_mod.RunCardNLO):
+            proc_charac = getattr(self, 'proc_characteristics', None) or \
+                          self.get_characteristics()
+            self.run_card.set_me_frame_process(proc_charac,
+                real_emission=mode not in ['LO', 'aMC@LO', 'noshowerLO'])
+            legs = self.run_card.get_me_frame_legs()
+            if legs != (self.run_card['me_frame'] if 'me_frame' in
+                        self.run_card.user_set else []):
+                logger.info('me_frame: the matrix elements are evaluated in '
+                            'the rest frame of legs %s, which is the partonic '
+                            'c.m. of the Born and stays infrared safe for the '
+                            'real emission.' % legs)
+
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1766,7 +1660,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         """Main commands: launch the full chain 
         options and args are relevant if the function is called from other 
         functions, such as generate_events or calculate_xsect
-        mode gives the list of switch needed for the computation (usefull for banner_run)
+        mode gives the list of switch needed for the computation (useful for banner_run)
         """
 
         if not argss and not options:
@@ -1817,18 +1711,30 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
 
+        self.setup_citation_tracking()
+        if common_run.citation is not None:
+            common_run.citation.cite('Alwall:2014hca',
+                'core matrix-element generation (MadGraph7)')
+            self.cite_nlo_run_options(mode)
+            try:
+                self.run_card.add_citation(common_run.citation.cite)
+            except Exception:
+                pass
+
         self.run_generate_events(mode, options, argss, switch)
- 
+
+        self.finalize_citation_tracking()
+
         #check if the param_card defines a scan.
         if False:# self.param_card_iterator:
             cpath = pjoin(self.me_dir,'Cards','param_card.dat')
             param_card_iterator = self.param_card_iterator
-            self.param_card_iterator = [] #avoid to next generate go trough here
+            self.param_card_iterator = [] #avoid to next generate go through here
             param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
                                             error=self.results.current['error'],
                                             param_card_path=cpath)
             orig_name = self.run_name
-            #go trough the scan
+            #go through the scan
             with misc.TMP_variable(self, 'allow_notification_center', False):
                 for i,card in enumerate(param_card_iterator):
                     card.write(cpath)
@@ -1853,12 +1759,49 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             logger.info("write all cross-section results in %s" % path, '$MG:BOLD')
             param_card_iterator.write_summary(path)
             
-        if self.allow_notification_center:    
-            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir), 
-                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+        if self.allow_notification_center:
+            misc.system_notify('Run %s finished' % os.path.basename(self.me_dir),
+                              '%s: %s +- %s ' % (self.results.current['run_name'],
                                                  self.results.current['cross'],
                                                  self.results.current['error']))
-    
+
+    def cite_nlo_run_options(self, mode):
+        """Record the references implied by the NLO run configuration: the
+        general NLO (FKS) formalism, FxFx merging, the parton-shower matching
+        paper for the chosen shower, and MC@NLO-delta/folding."""
+        cite = common_run.citation
+        if cite is None:
+            return
+        rc = self.run_card
+        loop_induced = self.proc_characteristics['loop_induced']
+
+        # general NLO QCD formalism (FKS subtraction), for any NLO computation
+        # on a [QCD] output that is not loop-induced
+        if mode in ['NLO', 'aMC@NLO', 'noshower'] and not loop_induced:
+            cite.cite('Frixione:1997np', 'NLO QCD computation (FKS subtraction)')
+
+        # the following only apply to showered NLO (aMC@NLO)
+        if mode == 'aMC@NLO':
+            try:
+                if int(rc['ickkw']) == 3:
+                    cite.cite('Frederix:2012ps', 'FxFx NLO+PS merging')
+            except (KeyError, ValueError, TypeError):
+                pass
+            shower = str(rc['parton_shower']).upper()
+            if shower == 'HERWIG6':
+                cite.cite('Frixione:2002ik', 'MC@NLO matching to HERWIG6')
+            elif shower.startswith('PYTHIA6'):
+                cite.cite('Torrielli:2010aw', 'MC@NLO matching to PYTHIA6')
+            delta = bool(rc['mcatnlo_delta']) if 'mcatnlo_delta' in rc else False
+            try:
+                folding = list(rc['folding']) if 'folding' in rc else [1, 1, 1]
+            except (KeyError, TypeError):
+                folding = [1, 1, 1]
+            if delta or folding != [1, 1, 1]:
+                cite.cite('Frederix:2020trv',
+                    'MC@NLO-delta / folding (negative-weight reduction)')
+
+
     # this decorator handle the loop related to scan.
     @common_run.scanparamcardhandling(run_card_scan=True)
     def run_generate_events(self, mode, options, args, switch): 
@@ -2090,7 +2033,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     def write_orders_tag_info(self):
-        """Collects the informations on the orders_tag variable from the 
+        """Collects the information on the orders_tag variable from the
         different channels and writes a file, linked to the P0 dirs
         """
         log = pjoin(self.me_dir, 'Events', self.run_name, 'alllogs_0.html')
@@ -2101,7 +2044,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             tag = int(l.split()[1])
             if not tag in orderstags:
                 orderstags.append(tag)
-        # now write a fortran include file with all the informations
+        # now write a fortran include file with all the information
         content = '%d\n' % len(orderstags)
         content+= '%s\n' % ' '.join(['%d' % v for v in orderstags])
         outfile = open(pjoin(self.me_dir, 'SubProcesses', 'orderstags_glob.dat'), 'w')
@@ -2120,10 +2063,85 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         return
 
 
+    @staticmethod
+    def effective_real_channels_x0(value):
+        """Use a single value for all settings that disable real channels."""
+        return value if 0.0 < value < 1.0 else -1.0
+
+    def check_real_channels_mode(self,mode):
+        """Real-diagram channels are supported only for ordinary fixed-order NLO.
+        The run_card of a process can enable them by default (chosen at output),
+        so they are switched off, not refused, for the other modes."""
+        value = self.run_card['real_channels_x0'] if 'real_channels_x0' in self.run_card else -1.0
+        x0 = self.effective_real_channels_x0(value)
+        if x0 > 0 and (mode != 'NLO' or self.run_card['ickkw'] != 0):
+            logger.info('real_channels_x0 = %s ignored: the real-emission integration '
+                        'channels are only used for fixed-order NLO with ickkw=0.' % value)
+            # before the run_card.inc is written: the executable and the
+            # channel lists of this run are built without them
+            self.run_card['real_channels_x0'] = -1.0
+            x0 = -1.0
+        return x0
+
+    def check_real_channels_restart(self,jobs,x0):
+        """Do not reuse adaptive grids made for a different real-emission split."""
+        for job in jobs:
+            saved = self.effective_real_channels_x0(job.get('real_channels_x0', -1.0))
+            kind = job.get('channel_type', 0)
+            if saved != x0:
+                raise aMCatNLOError('Cannot restart with a different real_channels_x0 '
+                                    'setting. Start a fresh integration to rebuild the grids.')
+            if kind not in (0, 1) or (kind == 1 and saved < 0):
+                raise aMCatNLOError('Invalid real-channel metadata in saved job status.')
+            job['channel_type'] = kind
+            job['real_channels_x0'] = saved
+
+    def check_real_channels_nocompile(self,p_dirs,exe='madevent_mintFO'):
+        """Keep job construction consistent with the setting in existing binaries."""
+        requested_x0 = self.run_card['real_channels_x0'] if 'real_channels_x0' in self.run_card else -1.0
+        requested_x0 = self.effective_real_channels_x0(requested_x0)
+        for p_dir in p_dirs:
+            # The catalogue and selected executable can come from different
+            # builds when switching between fixed order and MC@NLO.
+            for filename in ('real_channels_x0.dat', exe + '.real_channels_x0.dat'):
+                path = pjoin(self.me_dir, 'SubProcesses', p_dir, filename)
+                compiled_x0 = -1.0
+                try:
+                    with open(path) as stream:
+                        compiled_x0 = float(stream.read().strip().lower().replace('d', 'e'))
+                    if not math.isfinite(compiled_x0):
+                        raise ValueError('Non-finite compiled setting')
+                except FileNotFoundError:
+                    # Processes generated before this feature have no markers
+                    # and can only be reused with real channels disabled.
+                    pass
+                except (OSError, ValueError):
+                    raise self.InvalidCmd('Cannot determine the compiled real_channels_x0 '
+                                          'setting in %s. Rerun without --nocompile.' % p_dir)
+                if self.effective_real_channels_x0(compiled_x0) != requested_x0:
+                    raise self.InvalidCmd('real_channels_x0 differs from the compiled setting '
+                                          'in %s. Rerun without --nocompile to update the '
+                                          'executable and integration channels.' % p_dir)
+
+    @staticmethod
+    def fixed_order_job_identity(job):
+        """A split job belongs to one subprocess, channel group and channel kind."""
+        return job['p_dir'], job['channel'], job.get('channel_type', 0)
+
+    def check_fixed_order_job_group(self,jobs):
+        """Check channel identities before summing jobs or touching their grids."""
+        identities = {(self.fixed_order_job_identity(job), job.get('configs'),
+                       self.effective_real_channels_x0(job.get('real_channels_x0', -1.0)))
+                      for job in jobs}
+        if len(identities) != 1:
+            raise aMCatNLOError('Cannot combine fixed-order jobs with different channels, '
+                                'channel types or real_channels_x0 settings.')
+
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
         """Creates a list of dictionaries with all the jobs to be run"""
         jobs_to_run=[]
+        real_channels_x0 = self.check_real_channels_mode(mode)
         if not options['only_generation']:
             # Fresh, new run. Check all the P*/channels.txt files
             # (created by the 'gensym' executable) to set-up all the
@@ -2138,18 +2156,37 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                     logger.warning('No integration channels found for contribution %s (too large masses/low energy?)' % p_dir)
                     continue
                 if fixed_order:
-                    lch=len(channels)
+                    channel_groups = [(0, channels)]
+                    if real_channels_x0 > 0 and run_mode[:4] not in ('born', 'bovi', 'bosk') \
+                            and not run_mode.startswith('vi'):
+                        hard_file = pjoin(self.me_dir,'SubProcesses',p_dir,'channels_hard.txt')
+                        try:
+                            with open(hard_file) as chan_file:
+                                hard_channels = chan_file.read().split()
+                        except IOError:
+                            raise aMCatNLOError('Missing hard real-emission channel list %s. '
+                                                'Recompile this process before running.' % hard_file)
+                        channel_groups.append((1, hard_channels))
                     maxchannels=20    # combine up to 20 channels in a single job
-                    njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
-                           else int(lch/maxchannels))
-                    for nj in range(1,njobs+1):
+                    grouped_channels=[]
+                    for kind, pool in channel_groups:
+                        lch=len(pool)
+                        njobs=(lch+maxchannels-1)//maxchannels
+                        for nj in range(1,njobs+1):
+                            nchans=lch//njobs + (1 if nj <= lch%njobs else 0)
+                            grouped_channels.append((kind, pool[:nchans]))
+                            del pool[:nchans]
+                        if pool:
+                            raise aMCatNLOError('"channels" is not empty %s' % pool)
+                    for nj, (kind, configs) in enumerate(grouped_channels, 1):
                         job={}
                         job['p_dir']=p_dir
                         job['p_label']=p_dir[1:].split('_')[0]
                         job['channel']=str(nj)
-                        job['nchans']=(int(lch/njobs)+1 if nj <= lch%njobs else int(lch/njobs))
-                        job['configs']=' '.join(channels[:job['nchans']])
-                        del channels[:job['nchans']]
+                        job['nchans']=len(configs)
+                        job['configs']=' '.join(configs)
+                        job['channel_type']=kind
+                        job['real_channels_x0']=real_channels_x0
                         job['split']=0
                         if req_acc == -1:
                             job['accuracy']=0
@@ -2167,8 +2204,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                         job['wgt_frac']=1.0
                         job['wgt_mult']=1.0
                         jobs_to_run.append(job)
-                    if channels:
-                        raise aMCatNLOError('"channels" is not empty %s' % channels)
                 else:
                     for channel in channels:
                         job={}
@@ -2195,6 +2230,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             except:
                 raise aMCatNLOError('Cannot reconstruct jobs from saved job status in %s' % \
                                     pjoin(self.me_dir,'SubProcesses','job_status.pkl'))
+            self.check_real_channels_restart(jobs_to_collect,real_channels_x0)
             # Update cross sections and determine which jobs to run next
             if fixed_order:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
@@ -2265,6 +2301,8 @@ RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
 """ \
               % job
+            if job.get('channel_type', 0) == 1:
+                content = content.replace('\nCHANNEL =', '\nCHANNEL_TYPE = 1\nCHANNEL =')
         else:
             if job['mint_mode'] == 0:
                 job['fold_string']='1 1 1'
@@ -2439,8 +2477,8 @@ RESTART = %(mint_mode)s
                 job['combined']=1
                 jobs_to_run_new.append(job) # this jobs wasn't split
             elif job['split'] == 1:
-                jobgroups_to_combine.append([j for j in jobs_to_run if j['p_dir'] == job['p_dir'] and \
-                                            j['channel'] == job['channel']])
+                jobgroups_to_combine.append([j for j in jobs_to_run if \
+                    self.fixed_order_job_identity(j) == self.fixed_order_job_identity(job)])
             else:
                 continue
         for job_group in jobgroups_to_combine:
@@ -2451,6 +2489,7 @@ RESTART = %(mint_mode)s
 
     def combine_split_order_jobs(self,job_group):
         """combine the jobs in job_group and return a single summed job"""
+        self.check_fixed_order_job_group(job_group)
         # first copy one of the jobs in 'jobs'
         sum_job=copy.copy(job_group[0])
         # update the information to have a 'non-split' job:
@@ -2485,6 +2524,7 @@ RESTART = %(mint_mode)s
         """Combines the mint_grids and MC-integer grids from the split order
         jobs (fixed order only).
         """
+        self.check_fixed_order_job_group(job_group)
         files_mint_grids=[]
         files_MC_integer=[]
         location=None
@@ -2516,7 +2556,13 @@ RESTART = %(mint_mode)s
             for rowgrp in zip(*linesoffiles):
                 action=misc.make_unique([row.strip().split()[0] for row in rowgrp]) 
                 floatsbyfile = [[float(a) for a in row.strip().split()[1:]] for row in rowgrp]
-                if any(len(values) != len(floatsbyfile[0]) for values in floatsbyfile[1:]):
+                # A legacy SPE record has three fields; new records append
+                # the conditional sampling moment and its count. If a split
+                # lacks those fields, combine only the shared legacy part.
+                compatible_sampling = (action == ['SPE'] and
+                                       all(len(values) in (3, 5) for values in floatsbyfile))
+                if (any(len(values) != len(floatsbyfile[0]) for values in floatsbyfile[1:])
+                        and not compatible_sampling):
                     raise aMCatNLOError('Split grid rows have different numbers of values.')
                 floatgrps = list(zip(*floatsbyfile))
                 if len(action) != 1:
@@ -2542,15 +2588,24 @@ RESTART = %(mint_mode)s
                     # Any fixed surrogate is exact; keep the first job's fit.
                     write_string = rowgrp[0].strip().split()[1:]
                 elif 'SPE' in action:
-                    # special: average first; sum second; average third (ALL INTEGERS)
+                    # Average points/iteration and grid hits; sum iterations.
                     write_string=[]
-                    for i,floatgrp in enumerate(floatgrps):
+                    for i,floatgrp in enumerate(floatgrps[:3]):
                         if i==0: # average number of PS points per iterations
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
-                        elif i==1: # sum te number of iterations
+                        elif i==1: # sum the number of iterations
                             write_string.append(int(sum(floatgrp)))
                         elif i==2: # average the nhits_in_grids
                             write_string.append(int(sum(floatgrp)/len(floatgrp)))
+                    if len(floatgrps) >= 5:
+                        # New MINT grids also store the conditional second
+                        # moment and its sample count. These weights exclude
+                        # wgt_mult: pool samples rather than summing moments
+                        # as for the split contributions to the integral.
+                        moment_calls = sum(floatgrps[4])
+                        moment = (sum(row[3]*row[4] for row in floatsbyfile)/moment_calls
+                                  if moment_calls else sum(floatgrps[3])/len(floatgrps[3]))
+                        write_string.extend([moment, int(moment_calls)])
                 else:
                     raise aMCatNLOError('Unknown action for combining grids: %s' % action[0])
                 combined_row = action[0] + " " + (" ".join(str(ws) for ws in write_string)) + "\n"
@@ -2620,8 +2675,8 @@ RESTART = %(mint_mode)s
             # remove current job from jobs_to_collect. Make sure
             # to remove all the split ones in case the original
             # job had been a split one (before it was re-combined)
-            for j in [j for j in jobs_to_collect_new if j['p_dir'] == job['p_dir'] and \
-                                j['channel'] == job['channel']]:
+            for j in [j for j in jobs_to_collect_new if \
+                    self.fixed_order_job_identity(j) == self.fixed_order_job_identity(job)]:
                 jobs_to_collect_new.remove(j)
             time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
                            (job['niters_done']*job['npoints_done'])
@@ -2728,7 +2783,7 @@ RESTART = %(mint_mode)s
                     raise aMCatNLOError('Cannot determine number of iterations and PS points '+
                                         'for integration step %i' % step )
             elif ( req_acc > 0 and err/abs(tot) > req_acc*1.2 ) or step <= 0:
-                req_accABS=req_acc*abs(tot)/totABS # overal relative required accuracy on ABS Xsec.
+                req_accABS=req_acc*abs(tot)/totABS # overall relative required accuracy on ABS Xsec.
                 for job in jobs:
                     # skip jobs with 0 xsec
                     if job['resultABS'] == 0.:
@@ -3318,7 +3373,8 @@ RESTART = %(mint_mode)s
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
         # find process name
-        proc_card_lines = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read().split('\n')
+        # ProcCard joins the lines older versions wrapped at 70 characters
+        proc_card_lines = banner_mod.ProcCard(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat'))
         process = ''
         for line in proc_card_lines:
             if line.startswith('generate') or line.startswith('add process'):
@@ -3453,7 +3509,7 @@ RESTART = %(mint_mode)s
             debug_msg = 'Advanced statistics collection failed with error "%s"\n'%str(e)
             err_string = io.StringIO()
             traceback.print_exc(limit=4, file=err_string)
-            debug_msg += 'Please report this backtrace to a MG5_aMC developer:\n%s'\
+            debug_msg += 'Please report this backtrace to a MadGraph7 developer:\n%s'\
                                                           %err_string.getvalue()
 
         logger.debug(debug_msg+'\n')
@@ -3517,7 +3573,7 @@ RESTART = %(mint_mode)s
         # Recuperate the fraction of unstable PS points found in the runs for
         # the virtuals
         UPS_stat_finder = re.compile(
-             r"Satistics from MadLoop:.*"+\
+             r"(?:Statistics|Satistics) from MadLoop:.*"+\
              r"Total points tried\:\s+(?P<ntot>\d+).*"+\
              r"Stability unknown\:\s+(?P<nsun>\d+).*"+\
              r"Stable PS point\:\s+(?P<nsps>\d+).*"+\
@@ -3701,7 +3757,7 @@ RESTART = %(mint_mode)s
             except KeyError:
                     relevant_log_GV_files.append(log_file)
         
-        # Now we want to use the latest occurence of accumulated result in the log file
+        # Now we want to use the latest occurrence of accumulated result in the log file
         for gv_log in relevant_log_GV_files:
             logfile=open(gv_log,'r')
             log = logfile.read()
@@ -3780,7 +3836,7 @@ RESTART = %(mint_mode)s
             tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
                                   %tuple(stats['virt_stats']['v_ratio_err_max'])
             debug_msg += tmpStr
-            # After all it was decided that it is better not to alarm the user unecessarily
+            # After all it was decided that it is better not to alarm the user unnecessarily
             # with such printout of the statistics.
 #            if stats['virt_stats']['v_ratio_err_max'][0]>100.0 or \
 #                                stats['virt_stats']['v_ratio_err_max'][0]>100.0:
@@ -3878,11 +3934,11 @@ RESTART = %(mint_mode)s
                                              (TimeList[0][0],TimeList[0][1])
 
         # =============================     
-        # == log file eror detection ==
+        # == log file error detection ==
         # =============================
         
         # Find the number of potential errors found in all log files
-        # This re is a simple match on a case-insensitve 'error' but there is 
+        # This re is a simple match on a case-insensitive 'error' but there is
         # also some veto added for excluding the sentence 
         #  "See Section 6 of paper for error calculation."
         # which appear in the header of lhapdf in the logs.
@@ -3992,6 +4048,43 @@ RESTART = %(mint_mode)s
             files.ln(combined, rundir, 'mcatnlo_run.log')
         return archived
 
+
+    def get_pythia8_hepmc_setup(self):
+        """The HepMC version (2 or 3) the Pythia8 shower driver uses, following
+        'hepmc_format' in the shower_card, and the flags linking it to HepMC.
+        With an analysis (ANALYSE) no HepMC file is written: the HepMC3 driver
+        then fills HEPEVT directly from the Pythia8 event record and needs no
+        HepMC library. 'auto' keeps HepMC2 there, whose HEPEVT has another
+        particle ordering (seen by analyses taking the last particle of a kind)."""
+
+        hepmc_format = str(self.shower_card['hepmc_format']).lower()
+        analysis = bool(self.shower_card['analyse'])
+        pythia8_path = self.options['pythia8_path']
+        version = misc.get_pythia8_version(pythia8_path)
+        pythia83 = version is not None and float(version) >= 8.3
+
+        if hepmc_format != 'auto':
+            versions = [int(hepmc_format[-1])]
+        elif not pythia83:
+            versions = [2]
+        elif analysis:
+            versions = [2, 3]
+        else:
+            versions = [self.get_auto_hepmc_version()]
+            versions.append(5 - versions[0])
+        for i, hepmc_version in enumerate(versions):
+            if hepmc_version == 3 and analysis:
+                return 3, ''
+            try:
+                return hepmc_version, misc.get_pythia8_hepmc_flags(pythia8_path,
+                                  hepmc_version, self.get_hepmc_paths(hepmc_version))
+            except MadGraph5Error as error:
+                if i + 1 == len(versions):
+                    raise aMCatNLOError('The Pythia8 shower cannot use HepMC%d: %s'
+                                        % (hepmc_version, error))
+                logger.warning('%s The Pythia8 shower uses HepMC%d instead.'
+                               % (error, versions[i + 1]))
+
     def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
@@ -4087,10 +4180,12 @@ RESTART = %(mint_mode)s
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
             self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
-        # add the HEPMC path of the pythia8 installation
+        # the HepMC version and library the Pythia8 driver is compiled with,
+        # passed to the shower script through banner.dat
         if shower == 'PYTHIA8':
-            hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
-                         stdout = subprocess.PIPE).stdout.read().decode(errors='ignore').strip()
+            hepmc_version, hepmc = self.get_pythia8_hepmc_setup()
+            with open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'a') as fsock:
+                fsock.write('HEPMCVERSION=%d\nHEPMCINCLIB="%s"\n' % (hepmc_version, hepmc))
             #this gives all the flags, i.e.
             #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
             # we just need the path to the HepMC libraries
@@ -4243,9 +4338,11 @@ RESTART = %(mint_mode)s
                 ld_library_path = 'DYLD_LIBRARY_PATH'
             else:
                 ld_library_path = 'LD_LIBRARY_PATH'
+            local_pdfsets = pjoin(self.me_dir, 'lib', 'PDFsets')
             fsock.write(template.read() \
                 % {'ld_library_path': ld_library_path,
-                   'extralibs': ':'.join(extrapaths)})
+                   'extralibs': ':'.join(extrapaths),
+                   'local_pdfsets': local_pdfsets if os.path.isdir(local_pdfsets) else ''})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
         if event_files:
@@ -4306,14 +4403,6 @@ RESTART = %(mint_mode)s
             except OSError as IOError:
                 raise aMCatNLOError('No file has been generated, an error occurred.'+\
              ' More information in %s' % ', '.join(shower_logs))
-
-            # run the plot creation in a secure way
-            if hep_format == 'StdHEP':
-                try:
-                    self.do_plot('%s -f' % self.run_name)
-                except Exception as error:
-                    logger.info("Fail to make the plot. Continue...")
-                    pass
 
         elif out_id == 'TOP' or out_id == 'HWU':
             #copy the topdrawer or HwU file(s) back in events
@@ -4553,8 +4642,7 @@ RESTART = %(mint_mode)s
         upgrade_tag = {'parton': ['parton','delphes','shower','madanalysis5_hadron'],
                        'shower': ['shower','delphes','madanalysis5_hadron'],
                        'delphes':['delphes'],
-                       'madanalysis5_hadron':['madanalysis5_hadron'],
-                       'plot':[]}
+                       'madanalysis5_hadron':['madanalysis5_hadron']}
         
         if name == self.run_name:        
             if reload_card:
@@ -4634,7 +4722,7 @@ RESTART = %(mint_mode)s
         self.run_tag = self.run_card['run_tag']
 
         # Return the tag of the previous run having the required data for this
-        # tag/run to working wel.
+        # tag/run to working well.
         if level == 'parton':
             return
         elif level == 'pythia':
@@ -4765,7 +4853,7 @@ RESTART = %(mint_mode)s
         except KeyError:
             mod = self.get_model()
             if not hasattr(mod, 'parameter_dict'):
-                from models import model_reader
+                from madgraph.models import model_reader
                 mod = model_reader.ModelReader(mod)
                 if "set EWscheme MZ_MW_alpha" in self.banner.get_detail('proc_card'):
                     mod.change_electroweak_mode("MZ_MW_alpha")
@@ -4860,7 +4948,7 @@ RESTART = %(mint_mode)s
             # as was used for the event generation. However, for the
             # event generation, LHAPDF was not used, so non-trivial to
             # see if if LHAPDF is available with the corresponding PDF
-            # set. If not found, give a warning and use build-in PDF
+            # set. If not found, give a warning and use built-in PDF
             # set instead.
             try:
                 lhapdfpath = subprocess.Popen([self.options['lhapdf'], '--prefix'], 
@@ -4876,7 +4964,7 @@ RESTART = %(mint_mode)s
                                    ' of the events using LHAPDF. However, no valid LHAPDF installation found with the'+\
                                    ' needed PDF set. Will use default internal PDF for the shower instead. To use the'+\
                                    ' same set as was used in the event generation install LHAPDF and set the path using'+\
-                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph5_aMC@NLO python shell')
+                                   ' "set /path_to_lhapdf/bin/lhapdf-config" from the MadGraph7 python shell')
                 content += 'LHAPDFPATH=\n' 
                 content += 'PDFCODE=0\n'
         else:
@@ -4907,11 +4995,11 @@ RESTART = %(mint_mode)s
 
     def run_reweight(self, only):
         """runs the reweight_xsec_events executables on each sub-event file generated
-        to compute on the fly scale and/or PDF uncertainities"""
+        to compute on the fly scale and/or PDF uncertainties"""
         logger.info('   Doing reweight')
         with open(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted')) as file:
             lines = file.read().split('\n')
-        # loop over lines (all but the last one whith is empty) and check that the
+        # loop over lines (all but the last one with is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
         evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
@@ -5132,7 +5220,7 @@ RESTART = %(mint_mode)s
             execpath = exe
         else:
             raise aMCatNLOError('Cannot find executable %s in %s' \
-                % (exe, os.getcwd()))
+                % (exe, cwd or os.getcwd()))
         # check that the executable has exec permissions
         if self.cluster_mode == 1 and not os.access(execpath, os.X_OK):
             subprocess.call(['chmod', '+x', exe], cwd=cwd)
@@ -5154,7 +5242,7 @@ RESTART = %(mint_mode)s
             # Find the correct PDF input file
             input_files, output_files = [], []
             pdfinput = self.get_pdf_input_filename()
-            if os.path.exists(pdfinput):
+            if pdfinput.strip() and os.path.exists(pdfinput):
                 input_files.append(pdfinput)
             input_files.append(pjoin(os.path.dirname(exe), os.path.pardir, 'reweight_xsec_events'))
             input_files.append(pjoin(cwd, os.path.pardir, 'leshouche_info.dat'))
@@ -5162,15 +5250,14 @@ RESTART = %(mint_mode)s
             input_files.append(args[0])
             input_files.extend(sorted(glob.glob(pjoin(self.me_dir, 'lib',
                                                       'libmc_born_support.*'))))
-            open('%s.rwgt' % os.path.basename(args[0]), "a").close()
-            open('reweight_xsec_events.output', "a").close()
-            open('scale_pdf_dependence.dat', "a").close()
-            input_files.append('%s.rwgt' % os.path.basename(args[0]))
-            input_files.append('reweight_xsec_events.output')
-            input_files.append('scale_pdf_dependence.dat')
-            output_files.append('%s.rwgt' % os.path.basename(args[0]))
-            output_files.append('reweight_xsec_events.output')
-            output_files.append('scale_pdf_dependence.dat')
+            # Cluster paths are relative to cwd; truncate stale outputs.
+            rwgt_files = ['%s.rwgt' % os.path.basename(args[0]),
+                          'reweight_xsec_events.output',
+                          'scale_pdf_dependence.dat']
+            for name in rwgt_files:
+                open(pjoin(cwd, name), 'w').close()
+            input_files.extend(rwgt_files)
+            output_files.extend(rwgt_files)
 
             return self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
@@ -5186,7 +5273,7 @@ RESTART = %(mint_mode)s
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
 
-#                # keep track of folders and arguments for splitted evt gen
+#                # keep track of folders and arguments for split evt gen
 #                subfolder=output_files[-1].split('/')[0]
 #                if len(args) == 4 and '_' in subfolder:
 #                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
@@ -5344,7 +5431,7 @@ RESTART = %(mint_mode)s
 
         #Find the correct PDF input file
         pdfinput = self.get_pdf_input_filename()
-        if os.path.exists(pdfinput):
+        if pdfinput.strip() and os.path.exists(pdfinput):
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
 
@@ -5353,6 +5440,9 @@ RESTART = %(mint_mode)s
         pdlabel is in the form epdf:setname
         """
         logger.info('Using eMELA for leptonic densities')
+        if common_run.citation is not None:
+            common_run.citation.cite('Bertone:2022ktl',
+                                     'leptonic PDFs at NLO-QED accuracy (eMELA)')
 
         epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
                  stdout = subprocess.PIPE).stdout.read().decode().strip()
@@ -5416,78 +5506,17 @@ RESTART = %(mint_mode)s
             files.cp(os.path.join(lep_d_path, filename), pdf_path)
 
 
-    def link_and_copy_epdf(self, pdlabel, lhaid, libdir):
-        """links and copies the libraries/PDFs from ePDF/eMELA
-        pdlabel is in the form epdf:setname
-        """
-        logger.info('Using eMELA for leptonic densities')
-
-        epdflibdir = subprocess.Popen([self.options['eMELA'], '--libdir'],
-                 stdout = subprocess.PIPE).stdout.read().decode().strip()
-
-        epdfdatadir = subprocess.Popen([self.options['eMELA'], '--data'],
-                 stdout = subprocess.PIPE).stdout.read().decode().strip()
-
-        # update the LHAPDF data path
-
-        if 'LHAPDF_DATA_PATH' in os.environ and os.environ['LHAPDF_DATA_PATH']:
-            os.environ['LHAPDF_DATA_PATH'] = '%s:%s' % (epdfdatadir, os.environ['LHAPDF_DATA_PATH'])
-        else:
-            os.environ['LHAPDF_DATA_PATH'] = epdfdatadir
-
-        pdfsets = self.get_lhapdf_pdfsets_list_static(epdfdatadir, '6.2')
-        pdfsetname = [pdfsets[i]['filename'] for i in lhaid]
-
-        # link the static library in lib
-        lib = 'libeMELA.a'
-
-        if os.path.exists(pjoin(libdir, lib)):
-            files.rm(pjoin(libdir, lib))
-        files.ln(pjoin(epdflibdir, lib), libdir)
-
-        # create the PDFsets dir
-        if not os.path.isdir(pjoin(libdir, 'PDFsets')):
-            os.mkdir(pjoin(libdir, 'PDFsets'))
-
-        #clean previous set of pdf used
-        for name in os.listdir(pjoin(libdir, 'PDFsets')):
-            if name not in pdfsetname:
-                try:
-                    if os.path.isdir(pjoin(libdir, 'PDFsets', name)):
-                        shutil.rmtree(pjoin(libdir, 'PDFsets', name))
-                    else:
-                        os.remove(pjoin(libdir, 'PDFsets', name))
-                except Exception as error:
-                    logger.debug('%s', error)
-
-        # copy the ePDF set in the PDFsets dir
-        for setname in pdfsetname:
-            shutil.copytree(os.path.join(epdfdatadir, setname), os.path.join(libdir, 'PDFsets', setname))
-
-        # finally return the parsed info file
-        return banner_mod.eMELA_info(os.path.join(libdir, 'PDFsets', setname, setname + '.info'), self.me_dir)
 
 
-    def copy_lep_densities(self, name, sourcedir):
-        """copies the leptonic densities so that they are correctly compiled
-        """
-        lep_d_path = os.path.join(sourcedir, 'PDF', 'lep_densities', name)
-        pdf_path = os.path.join(sourcedir, 'PDF')
-        # check that the name is correct, ie that the path exists
-        if not os.path.isdir(lep_d_path):
-            raise aMCatNLOError(('Invalid name for the dressed-lepton PDFs: %s\n' % (name)) + \
-                    'The corresponding directory cannot be found in \n' + \
-                    'Source/PDF/lep_densities')
-
-        # now copy the files
-        for filename in ['eepdf.f', 'gridpdfaux.f']:
-            files.cp(os.path.join(lep_d_path, filename), pdf_path)
 
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-        os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
+        # the run directory may already exist (e.g. created by
+        # setup_citation_tracking for Events/<run>/citations)
+        if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
+            os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
@@ -5537,6 +5566,7 @@ RESTART = %(mint_mode)s
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
                 for p_dir in p_dirs]) and options['nocompile']:
+            self.check_real_channels_nocompile(p_dirs,exe)
             return
 
         # rm links to lhapdflib/ PDFsets if exist
@@ -5562,7 +5592,7 @@ RESTART = %(mint_mode)s
                 raise aMCatNLOError('Usage of LHAPDF with dressed-lepton collisions not possible')
 
             elif self.run_card['pdlabel'].startswith('emela'):
-                logger.warning('For informations on the simulation of leptonic collisions at NLO accuracy')
+                logger.warning('For information on the simulation of leptonic collisions at NLO accuracy')
                 logger.warning('please refer to arXiv:2207.03265 and to the FAQ')
                 logger.warning('https://answers.launchpad.net/mg5amcnlo/+faq/3324')
 
@@ -5621,7 +5651,7 @@ RESTART = %(mint_mode)s
                 except OSError:
                     raise aMCatNLOError(('No valid %s installation found. \n' + \
                        'Please set the path to %s-config by using \n' + \
-                       'MG5_aMC> set <absolute-path-to-%s>/bin/%s \n') % (code,code,code,code))
+                       'MadGraph7> set <absolute-path-to-%s>/bin/%s \n') % (code,code,code,code))
         else:
             self.make_opts_var['pineappl'] = ""
 
@@ -5687,7 +5717,7 @@ RESTART = %(mint_mode)s
             else:
                 logger.warning('Could not compile StdHEP because its'+\
                    ' source directory could not be found in the SOURCE folder.\n'+\
-                             " Check the MG5_aMC option 'output_dependencies'.\n"+\
+                             " Check the MadGraph7 option 'output_dependencies'.\n"+\
                    " This will prevent the use of HERWIG6/Pythia6 shower.")
 
         # make CutTools (only necessary with MG option output_dependencies='internal')
@@ -5700,7 +5730,7 @@ RESTART = %(mint_mode)s
             else:
                 raise aMCatNLOError('Could not compile CutTools because its'+\
                    ' source directory could not be found in the SOURCE folder.\n'+\
-                             " Check the MG5_aMC option 'output_dependencies.'")
+                             " Check the MadGraph7 option 'output_dependencies.'")
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libcts.a'))) or \
             not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
             raise aMCatNLOError('CutTools compilation failed.')            
@@ -5723,7 +5753,8 @@ RESTART = %(mint_mode)s
                     raise aMCatNLOError("CutTools installation in %s"\
                                  %os.path.realpath(pjoin(libdir, 'libcts.a'))+\
                  " seems to have been compiled with a different compiler than"+\
-                    " the one specified in MG5_aMC. Please recompile CutTools.")
+                    " the one specified in MadGraph7. Please recompile it by typing"+\
+                    " 'install cuttools_iregi' in the MadGraph7 interface.")
 
         # make IREGI (only necessary with MG option output_dependencies='internal')
         if not os.path.exists(os.path.realpath(pjoin(libdir, 'libiregi.a'))) \
@@ -5751,7 +5782,8 @@ RESTART = %(mint_mode)s
                         raise aMCatNLOError("IREGI installation in %s"\
                                 %os.path.realpath(pjoin(libdir, 'libiregi.a'))+\
                  " seems to have been compiled with a different compiler than"+\
-                    " the one specified in MG5_aMC. Please recompile IREGI.")
+                    " the one specified in MadGraph7. Please recompile it by typing"+\
+                    " 'install cuttools_iregi' in the MadGraph7 interface.")
 
         # check if MadLoop virtuals have been generated
         if self.proc_characteristics['has_loops'] and \
@@ -5983,7 +6015,7 @@ RESTART = %(mint_mode)s
         first_cmd = cmd_switch.get_cardcmd()
                 
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd, switch=switch)
+            self.ask_edit_cards(cards, first_cmd=first_cmd, switch=switch)
 
         self.banner = banner_mod.Banner()
 
@@ -5996,6 +6028,7 @@ RESTART = %(mint_mode)s
 
         if not mode =='onlyshower':
             self.run_card = self.banner.charge_card('run_card')
+            self.check_real_channels_mode(mode)
             self.run_tag = self.run_card['run_tag']
             #this is if the user did not provide a name for the current run
             if not hasattr(self, 'run_name') or not self.run_name:
@@ -6156,8 +6189,8 @@ if '__main__' == __name__:
     # This can ONLY run a single command !!
     import sys
 
-    if sys.version_info < (3, 7):
-        sys.exit('MadGraph5_aMc@NLO works only with python 3.7 and later.\n'+\
+    if sys.version_info < (3, 12):
+        sys.exit('MadGraph7 works only with python 3.12 and later.\n'+\
                'Please upgrade your version of python or specify a compatible version.')
 
     import os
@@ -6242,9 +6275,18 @@ if '__main__' == __name__:
                     print('and %s  can not be interpreted as a valid command.' % args[0])
                 else:
                     print('ERROR: %s  not a valid command. Please retry' % args[0])
+                sys.exit(1)
             else:
                 cmd_line.use_rawinput = False
-                cmd_line.run_cmd(' '.join(args))
+                # Whoever started this process (e.g. a reweighting split over
+                # several cores) only sees its exit status: a failed command
+                # must not end with 0.
+                line = ' '.join(args)
+                try:
+                    cmd_line.exec_cmd(line, precmd=True)
+                except (Exception, KeyboardInterrupt) as error:
+                    cmd_line.error_handling(error, line)
+                    sys.exit(1)
                 cmd_line.run_cmd('quit')
 
     except KeyboardInterrupt:

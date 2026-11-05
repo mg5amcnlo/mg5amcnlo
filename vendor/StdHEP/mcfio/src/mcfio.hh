@@ -9,7 +9,7 @@
 /*
 ** 	This file is a summary of various other .h files, assembled for 
 ** 	the ease of use of the yet undocumented C API for MCFIO. 
-** 	Please refer to detailed documentation from the the F77 API.
+** 	Please refer to detailed documentation from the F77 API.
 **
 **	Rule : mcfio_*   ==> F77 API
 **	       mcfioC_*  ==> C API

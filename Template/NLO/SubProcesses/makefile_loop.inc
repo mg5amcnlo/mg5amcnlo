@@ -34,7 +34,7 @@ PROCESS= $(patsubst %(dotf)s,%(doto)s,$(wildcard polynomial.f)) \
 	$(FC) $(patsubst -O%%,, $(subst -fbounds-check,,$(FFLAGS))) $(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) -c $< -o $@ $(LOOP_INCLUDE)
 
 %(doto)s : %(dotf)s
-	$(FC) $(FFLAGS) -c $< %(tir_include)s
+	$(FC) $(FFLAGS) -c -I$(LIBDIR) $< %(tir_include)s
 
 all: cleanlib $(LOOPLIB) 
 

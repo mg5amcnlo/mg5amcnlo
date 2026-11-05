@@ -511,7 +511,7 @@ c
 	    elseif ( iclas1 .eq. 2 ) then
 *--#[		transform 1-x:
 *
-*		we tranformed to 1-x for both dilogs
+*		we transformed to 1-x for both dilogs
 *
 		if ( absc(cc1p) .lt. xloss ) then
 		    clog1 = zfflo1(cc1p,ier)

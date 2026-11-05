@@ -39,6 +39,8 @@ C
       REAL*8 MATELEM, MATELEMS(0:NSPLITORDERS)
       REAL*8 PIN(0:3), POUT(0:3)
       CHARACTER*120 BUFF(NEXTERNAL)
+      INTEGER FLAVOR(NEXTERNAL)
+      DATA FLAVOR /4*1/
 
       INTEGER NCHOSEN
       CHARACTER*20 CHOSEN_SO_INDICES(NSPLITORDERS)
@@ -78,7 +80,7 @@ C     in Source/MODEL/couplings.f. The values are stored in common
 C      blocks that are listed
 C     in coupl.inc .
 
-      CALL SETPARA('param_card.dat')  !first call to setup the paramaters
+      CALL SETPARA('param_card.dat')  !first call to set up the parameters
       INCLUDE 'pmass.inc'  !set up masses
 
       TOTALMASS = 0.0D0
@@ -123,7 +125,7 @@ C
 C     
 C     Now we can call the matrix element!
 C     
-      CALL ML5_0_SMATRIX_SPLITORDERS(P,MATELEMS)
+      CALL ML5_0_SMATRIX_SPLITORDERS(P,FLAVOR,MATELEMS)
       MATELEM=MATELEMS(0)
       WRITE(*,*) '1) Matrix element for (QCD=4) = ',MATELEMS(1)
 C     

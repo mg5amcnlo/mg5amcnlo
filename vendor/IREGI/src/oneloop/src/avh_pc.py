@@ -60,7 +60,7 @@ def case(option,value,lines):
 def dich(option,value,lines):
     """
     If value='yes', replace lines starting with  ![option  with the same lines
-    with  ![option  removed, and  !]option  appendend.
+    with  ![option  removed, and  !]option  appended.
     If value='no', replace lines containing  !]option  with the same lines
     with  !]option  removed, and  ![option  prependend.
     """

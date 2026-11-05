@@ -17,7 +17,7 @@ except ImportError:
 ##                                -------                                ##
 ##                                                                       ##
 ##    + update_cuts_status                                               ##
-##         activate/desactivate the cuts in ME/MW                        ##
+##         activate/deactivate the cuts in ME/MW                        ##
 ##     + cut_is_active (send cut status)                                 ##
 ##     + check_Subprocesses_update (check if Subprocces/(MW_?)P files    ##
 ##         follows the last version of the file -protection against cp-) ##
@@ -97,7 +97,7 @@ def update_cuts_status(MW_param):
 def cut_is_active(filename):
     """ check is the cut is active or not """
 
-# Pierre: pass the fucntion 
+# Pierre: pass the function
     pass
 
 #    for line in file('./SubProcesses/'+filename):
@@ -142,7 +142,7 @@ class check_Subprocesses_update:
  
     def __init__(self,filelist,listdir,modifrule='',warning=1,run=1):
         
-        #chek type input:
+        #check type input:
         if type(filelist)==str:
             self.filelist=[filelist]
         else:
@@ -224,7 +224,7 @@ class check_Subprocesses_update:
         mod_file.mod_file(file,rule)
 
 ###########################################################################
-#########          ACTIVATE/DESACTIVATE ACCEPTANCE TERM         ###########
+#########          ACTIVATE/DEACTIVATE ACCEPTANCE TERM         ###########
 ###########################################################################
 class AcceptanceError(Exception): pass
 

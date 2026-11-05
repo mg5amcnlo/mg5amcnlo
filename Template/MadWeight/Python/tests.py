@@ -37,7 +37,7 @@ import write_MadWeight as MW_write
 #########################################################################################################
 
 class TestMod_file(unittest.TestCase):
-    """ Test the the mod routines works correctly on MadWeight """
+    """ Test the mod routines works correctly on MadWeight """
 
     def setUp(self):
         """ create a copy of the original file """
@@ -50,7 +50,7 @@ class TestMod_file(unittest.TestCase):
 
 
     def test_cuts(self):
-        """ test if we can activate/desactivate the cuts """
+        """ test if we can activate/deactivate the cuts """
 
         self.assertEqual(create_run.cut_is_active('cuts.bk'), 1)
         self.assertEqual(create_run.bw_cut_is_active('cuts.bk'),1)
@@ -173,7 +173,7 @@ class TestMod_file(unittest.TestCase):
         self.assertEqual(create_run.bw_cut_is_active('cuts.mod'), 0)
         self.assertFalse('\n$B$' in open('./SubProcesses/cuts.mod').read())
 
-        # Next one will Fail but is not supose to be called whitout check of the second 
+        # Next one will Fail but is not supposed to be called without checking the second
         #rule='./Source/MadWeight/mod_file/suppress_cuts_MG'
         #mod_file.mod_file(file_to_mod,rule,opt={'nowarning':"""['PASSCUTS','MW_NEW_DEF','DESACTIVATE_BW_CUT']"""}, write='./SubProcesses/cuts.mod')
         #self.assertEqual(create_run.cut_is_active('cuts.mod'), 0)

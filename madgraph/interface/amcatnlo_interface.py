@@ -1,18 +1,18 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A user friendly command line interface to access all MadGraph5_aMC@NLO features.
+"""A user friendly command line interface to access all MadGraph7 features.
    Uses the cmd package for command interpretation and tab completion.
 """
 
@@ -52,14 +52,15 @@ import madgraph.iolibs.export_fks as export_fks
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.loop.loop_base_objects as loop_base_objects
+import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
 
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
-import models.model_reader as model_reader
-#usefull shortcut
+import madgraph.models.model_reader as model_reader
+#useful shortcut
 pjoin = os.path.join
 
 
@@ -147,21 +148,53 @@ class CheckFKS(mg_interface.CheckValidForCmd):
     def check_tutorial(self, args):
         """check the validity of the line"""
         if len(args) == 0:
-            #this means mg5 tutorial
-            args.append('aMCatNLO')
-        else:
-            return mg_interface.CheckValidForCmd.check_tutorial(self,args)
+            # a bare 'tutorial' still opens the menu, but from the aMC@NLO
+            # interface the NLO tutorial is the natural default
+            args.append(self.ask_tutorial(default='nlo'))
+        return mg_interface.CheckValidForCmd.check_tutorial(self, args)
 
     def check_output(self, args):
         """ check the validity of the line"""
-                  
+
+        # '--fks' requests the FKS counter-term standalone output: a lightweight
+        # directory exposing the Born building blocks (Born, color-/charge-linked
+        # Born, spin-correlated Born) for a single phase-space point.
+        self._fks_standalone = '--fks' in args
+        if self._fks_standalone:
+            args.remove('--fks')
+        # '--limits' additionally keeps the real-emission code so that 'launch'
+        # can also run the soft/collinear limit test (test_soft_col_limits)
+        self._fks_limits = '--limits' in args
+        if self._fks_limits:
+            args.remove('--limits')
+            if not self._fks_standalone:
+                raise self.InvalidCmd('"--limits" is only available for the FKS '
+                    'standalone output: "output standalone_fortran --fks --limits".')
+
         if args and args[0] == 'ewsudakovsa':
             self._export_format = 'ewsudsa'
             args.pop(0)
+        elif self._fks_standalone:
+            # accept the optional 'standalone_fortran' keyword
+            # (output standalone_fortran --fks). 'standalone' names the
+            # MadMatrix export, so it is refused rather than taken as a path.
+            if args and args[0] == 'standalone':
+                raise self.InvalidCmd('The FKS Born building-block output is a '
+                    'Fortran output: use "output standalone_fortran --fks".')
+            if args and args[0] == 'standalone_fortran':
+                args.pop(0)
+            self._export_format = 'NLO_SA'
         else:
             self._export_format = 'NLO'
 
-        forbidden_formats = ['madevent', 'standalone']
+        # Elsewhere `standalone` names the MadMatrix (C++/CUDA) export. Here it
+        # is accepted as an alias for `standalone_fortran`, so that it is
+        # reported as a forbidden *format* below rather than being silently
+        # taken as the output path.
+        if args and args[0] == 'standalone':
+            args[0] = 'standalone_fortran'
+
+        forbidden_formats = ['madevent', 'standalone_fortran']
         
 
         if not hasattr(self, '_fks_multi_proc') or not self._fks_multi_proc:
@@ -176,6 +209,8 @@ class CheckFKS(mg_interface.CheckValidForCmd):
             if args[0] in forbidden_formats:
                 text = 'You generated a NLO process, which cannot be exported in %s mode.\n' % args[0]
                 text+= 'Please use the command "output DIR_NAME".\n'
+                if args[0] == 'standalone_fortran':
+                    text+= 'For the FKS Born building blocks, use "output standalone_fortran --fks".\n'
                 raise self.InvalidCmd(text)
 
             # This is a path
@@ -601,6 +636,16 @@ generating the process (see arXiv:1804.10017).""" % (corr, ', '.join(resonances)
                         args.remove(a)
                         break
 
+            if any(a.startswith('--diagram_filter') for a in args):
+                raise self.InvalidCmd("--diagram_filter is not supported for "
+                    "NLO (FKS) generation: use --tree_diagram_filter (Born "
+                    "and real emission diagrams) and/or --loop_diagram_filter "
+                    "(loop diagrams).")
+            tree_diagram_filter = self.extract_diagram_filter(args,
+                                                       '--tree_diagram_filter')
+            loop_diagram_filter = self.extract_diagram_filter(args,
+                                                       '--loop_diagram_filter')
+
             line = ' '.join(args[1:])
 
         # convert the single $ to $$ automatically
@@ -666,7 +711,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             for o in myprocdef['model'].get_coupling_orders():
                 if o not in list(myprocdef['orders'].keys()):
                     myprocdef['orders'][o] = self.options['default_unset_couplings']
-                    logger.warning(('%s order is missing in the process definition. It will be set to "default unser couplings": %s\n' + \
+                    logger.warning(('%s order is missing in the process definition. It will be set to "default user couplings": %s\n' + \
                                    'If this is not what you need, please regenerate with the correct orders.') % (o,myprocdef['orders'][o]))
 
         # raise a warning if squared-orders constraints are not of the '<=' kind
@@ -675,9 +720,10 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # this is in case no orders have been passed
         if not myprocdef['squared_orders'] and not myprocdef['orders']:
-            # find the minimum weighted order, then extract the values for the varius
+            # find the minimum weighted order, then extract the values for the various
             # couplings in the model
-            weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
+            weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef,
+                                                           tree_diagram_filter)
             if not weighted:
                 raise MadGraph5Error('\nProcess orders cannot be determined automatically. \n' + \
                                       'Please specify them from the command line.')
@@ -745,7 +791,10 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         # check that all the couplings of the model have been constrained
         # in the squared orders, otherwise set the others to zero
-        for o in myprocdef['model'].get('coupling_orders'):
+        # (not the hidden order an interference process adds to the model)
+        model_orders = base_objects.visible_orders(
+                                     myprocdef['model'].get('coupling_orders'))
+        for o in model_orders:
             if o not in myprocdef['squared_orders'].keys():
                 logger.warning('No squared order constraint for order %s. Setting to 0' % o)
                 myprocdef['squared_orders'][o] = 0 
@@ -754,7 +803,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # split all orders in the model, for the moment it's the simplest solution
         # mz02/2014
         #if proc_type[1] != 'only':
-        myprocdef['split_orders'] += [o for o in myprocdef['model'].get('coupling_orders') \
+        myprocdef['split_orders'] += [o for o in model_orders \
                 if o not in myprocdef['split_orders']]
 
         # now set the squared orders
@@ -797,12 +846,12 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     ord in myprocdef['perturbation_couplings']])
         # if [orders] have not been specified, 
         # finally set perturbation_couplings to **all** the coupling orders 
-        # avaliable in the model.
+        # available in the model.
         # This is necessary because when doing EW corrections one only specifies
         # squared-orders constraints. In that case, all kind of splittings/loop-particles
         # must be included
         if not myprocdef['orders'] and self.options['nlo_mixed_expansion']:
-            myprocdef['perturbation_couplings'] = list(myprocdef['model']['coupling_orders'])
+            myprocdef['perturbation_couplings'] = list(model_orders)
 
         self._curr_proc_defs.append(myprocdef)
 
@@ -837,7 +886,9 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                        'ncores_for_proc_gen': self.ncores_for_proc_gen,
                        'ewsudakov': self.ewsudakov,
                        'nlo_mixed_expansion': self.options['nlo_mixed_expansion'],
-                       'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None}
+                       'loop_filter':self._fks_multi_proc['loop_filter'] if hasattr(self, '_fks_multi_proc') else None,
+                       'diagram_filter': tree_diagram_filter,
+                       'loop_diagram_filter': loop_diagram_filter}
 
         fksproc =fks_base.FKSMultiProcess(myprocdef,fks_options)
         try:
@@ -892,17 +943,18 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
         # For NLO, the group_subprocesses is automatically set to false
         group_processes = False
         # initialize the writer
-        if self._export_format in ['NLO','ewsudsa']:
-            output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa'}
-            self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+        if self._export_format in ['NLO','ewsudsa','NLO_SA']:
+            output_type_dict = {'NLO': 'amcatnlo', 'ewsudsa': 'ewsudsa',
+                                'NLO_SA': 'amcatnlo_sa'}
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean,
                       output_type=output_type_dict[self._export_format],
                       group_subprocesses=group_processes)
-            
+
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
-               and self._export_format in ['NLO', 'ewsudsa']:
+               and self._export_format in ['NLO', 'ewsudsa', 'NLO_SA']:
             # Don't ask if user already specified force or noclean
             logger.info('INFO: directory %s already exists.' % self._export_dir)
             logger.info('If you continue this directory will be deleted and replaced.')
@@ -917,7 +969,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
             shutil.rmtree(self._export_dir)
 
         # Make a Template Copy
-        if self._export_format in ['NLO', 'ewsudsa']:
+        if self._export_format in ['NLO', 'ewsudsa', 'NLO_SA']:
             self._curr_exporter.copy_fkstemplate(self._curr_model)
 
         # Reset _done_export, since we have new directory
@@ -1024,7 +1076,7 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
 
         path = self._export_dir
 
-        if self._export_format in ['NLO', 'ewsudsa']:
+        if self._export_format in ['NLO', 'ewsudsa', 'NLO_SA']:
             path = os.path.join(path, 'SubProcesses')
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
@@ -1078,7 +1130,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                     # the very large timeout passed to get is to be able to catch
                     # KeyboardInterrupts
                     diroutputmap = pool.map_async(generate_directories_fks_async,
-                                                  list(range(len(glob_directories_map)))).get(9999999)
+                                                  list(range(len(glob_directories_map))),
+                                                  chunksize=misc.pool_chunksize(pool, len(glob_directories_map))).get(9999999)
                 except KeyboardInterrupt:
                     pool.terminate()
                     raise KeyboardInterrupt 
@@ -1175,7 +1228,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
                 ME.pass_in_web_mode()
             # transfer interactive configuration
-            config_line = [l for l in self.history if l.strip().startswith('set')]
+            config_line = [l for l in self.history if l.strip().startswith('set')
+                           and not extended_cmd.is_question_answer(l)]
             for line in config_line:
                 ME.exec_cmd(line)
             stop = self.define_child_cmd_interface(ME)                
@@ -1185,9 +1239,8 @@ Please also cite ref. 'arXiv:1804.10017' when using results from this code.
                                                   shell = isinstance(self, extended_cmd.CmdShell),
                                                   **options)
         ext_program.run()
-        
-                    
-   
+
+
 class aMCatNLOInterfaceWeb(mg_interface.CheckValidForCmdWeb, aMCatNLOInterface):
     pass
 
@@ -1210,7 +1263,7 @@ _launch_parser.add_option("-f", "--force", default=False, action='store_true',
 _launch_parser.add_option("-c", "--cluster", default=False, action='store_true',
                             help="Submit the jobs on the cluster")
 _launch_parser.add_option("-i", "--interactive", default=False, action='store_true',
-                            help="Use interactive consol")
+                            help="Use the interactive console")
 _launch_parser.add_option("-m", "--multicore", default=False, action='store_true',
                             help="Submit the jobs on multicore mode")
 _launch_parser.add_option("-x", "--nocompile", default=False, action='store_true',
@@ -1232,6 +1285,5 @@ _launch_parser.add_option("-R", "--reweight", default=False, action='store_true'
                             help="Run the reweight module (reweighting by different model parameter")
 _launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
                             help="Run the madspin package")
-
 
 

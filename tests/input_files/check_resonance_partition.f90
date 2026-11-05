@@ -107,7 +107,7 @@ subroutine sborn_native(p,ans)
   if(active_context.ne.local_context)amp2=-1d0
 end subroutine
 
-subroutine sborn(p,ans)
+subroutine sborn_frame(p,ans)
   implicit none
   double precision :: p(0:3,*),ans
   call sborn_native(p,ans)

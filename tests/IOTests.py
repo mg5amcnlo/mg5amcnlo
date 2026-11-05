@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -26,7 +26,9 @@ import unittest
 import subprocess
 import pydoc
 import tempfile
-from functools import wraps 
+from contextlib import contextmanager
+from functools import wraps
+from string import Template
 
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -141,7 +143,7 @@ class IOTest(object):
         self.procdef = procdef
         self.helasModel = helasModel
         self.exporter_name = exporter
-        # Security mesure
+        # Security measure
         if not str(path.dirname(_file_path)) in str(outputPath) and \
                                         not str(outputPath).startswith('/tmp/'):
             raise MadGraph5Error("OutputPath must be within MG directory or"+\
@@ -185,7 +187,7 @@ class IOTest(object):
                 
     @staticmethod
     def remove_f77_function_from_file(path, function=[]):
-        """remove a subroutine/function of a file. (usefull to restric the IOTest)"""
+        """remove a subroutine/function of a file. (useful to restric the IOTest)"""
         
         if not isinstance(function, list):
             function= [function.lower()]
@@ -219,6 +221,25 @@ class IOTest(object):
 # to be compared against reference ones. It should return a base_path from where
 # the relative path of the list of files to be compared points. See the
 # example in <MG_root>/tests/unit_tests/test_IOTest_example.py for more details
+@contextmanager
+def force_ninja_quad_prec_support():
+    """Generate as if the local Ninja provided quadruple precision.
+
+    MadLoop writes the answer of 'ninja-config -quadsupport' into
+    loop_matrix.f (QP_NLOOPLIB and LOOPLIBS_QPAVAILABLE), but that answer is a
+    property of the machine, not of the code: the installer configures Ninja
+    with --disable-quadninja on MacOS and --enable-quadninja elsewhere. The
+    reference files can only record one of the two, so pin the answer here
+    instead of letting the comparison depend on where the test runs.
+    """
+
+    original = misc.get_ninja_quad_prec_support
+    misc.get_ninja_quad_prec_support = lambda *args, **opts: True
+    try:
+        yield
+    finally:
+        misc.get_ninja_quad_prec_support = original
+
 def createIOTest(groupName=None, testName=None):
 
     def createIOTest_decorator(GenerateFilefunc):
@@ -399,16 +420,12 @@ class IOTestManager(unittest.TestCase):
             try:
                 self.assertEqual(a,b)
             except AssertionError:
-                if "PARAMETER (QP_NLOOPLIB=" in a: # avoid issue that mac has one QP and linux 2.
-                    continue
-                elif ",.TRUE.,.TRUE." in a:
+                if ",.TRUE.,.TRUE." in a:
                     continue
                 elif ",.FALSE.,.TRUE." in a:
                     continue
                 elif ",.FALSE.,.FALSE." in a:
                     continue
-                elif 'The Ninja version installed does not support quadruple precision' in a:
-                    return
                 elif a.startswith('C'):
                     continue
                 else:
@@ -487,7 +504,7 @@ class IOTestManager(unittest.TestCase):
         return '\n'.join(kept)
 
 #    def test_IOTests(self):
-#        """ A test function in the mother so that all childs automatically run
+#        """ A test function in the mother so that all children automatically run
 #        their tests when scanned with the test_manager. """
 #        
 #        # Set it to True if you want info during the regular test_manager.py runs
@@ -586,10 +603,9 @@ class IOTestManager(unittest.TestCase):
             if verbose: print("Processing %s in %s"%(
                                 colored%(32,test_name),colored%(34,folder_name)))
             
-            files_path = iotest.run(iotestManager)
             try:
-                pass
-#                files_path = iotest.run(iotestManager)
+                with force_ninja_quad_prec_support():
+                    files_path = iotest.run(iotestManager)
             except Exception as e: 
                 iotest.clean_output()
                 if not verbose:
@@ -738,7 +754,7 @@ class IOTestManager(unittest.TestCase):
                             print(colored%(34,'Consider creating it with '+
                                             './test_manager.py -U %s'%test_name))
                             exit(0)
-                    goal = open(comparison_path).read()%misc.get_pkg_info()
+                    goal = misc.apply_template(open(comparison_path).read(), misc.get_pkg_info())
                     if not verbose:
                         self.assertFileContains(open(file_path), goal)
                     else:
@@ -784,15 +800,18 @@ class IOTestManager(unittest.TestCase):
                     # Transform the package information to make it a template
                     file = open(file_path,'r')
                     target=file.read()
-                    # So that if % appear, we cast them to %% which are not formatted.
-                    target = target.replace('%','%%')
+                    # apply_template only consumes %(name)<spec> placeholders,
+                    # so bare '%' characters (e.g., Fortran type accessors like
+                    # W(I)%P) are left alone — no need to escape them as '%%'.
                     # So that the version and date is automatically updated
-                    target = target.replace('MadGraph5_aMC@NLO v. %(version)s, %(date)s'\
-                                                           %misc.get_pkg_info(),
-                                          'MadGraph5_aMC@NLO v. %(version)s, %(date)s')
-                    target = target.replace('v%(version)s (%(date)s)'\
-                                                           %misc.get_pkg_info(),
-                                                      'v%(version)s (%(date)s)')
+                    target = target.replace(
+                        misc.apply_template('MadGraph7 v. %(version)s, %(date)s',
+                                            misc.get_pkg_info()),
+                        'MadGraph7 v. %(version)s, %(date)s')
+                    target = target.replace(
+                        misc.apply_template('v%(version)s (%(date)s)',
+                                            misc.get_pkg_info()),
+                        'v%(version)s (%(date)s)')
                     file.close()
                     if os.path.isfile(comparison_path):
                         file = open(comparison_path,'r')

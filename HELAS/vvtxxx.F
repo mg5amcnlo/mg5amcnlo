@@ -136,7 +136,7 @@ c     new
 
 C      vertex = F*TVV + V1V2*TKK - K2V1*TK1V2 - K1V2*TK2V1
 
-c     new, additonal gauge fixing term in Feyman gauge
+c     new, additional gauge fixing term in Feyman gauge
       if ( vmass.eq.rZero ) then
          vertex = vertex 
      &+(ft(1,1)-ft(2,2)-ft(3,3)-ft(4,4))*(K1V1*K1V2+K2V1*K2V2+K1V1*K2V2)

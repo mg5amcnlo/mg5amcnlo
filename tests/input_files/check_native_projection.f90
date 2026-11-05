@@ -146,7 +146,7 @@ subroutine check_native_projection()
        tau => tau_ev,ycm => ycm_ev,tauc => tau_cnt,ycmc => ycm_cnt,sqrts_ev => sqrtshat_ev, &
        s_ev => shat_ev,sqrts_cnt => sqrtshat_cnt,s_cnt => shat_cnt,xmax => xiimax_ev,xmaxc => xiimax_cnt, &
        xnorm => xinorm_ev,xnormc => xinorm_cnt,kn => veckn_ev,knbar => veckbarn_ev,kn0 => xp0jfks, &
-       spin => xij_aor
+       spin => xij_aor,spin_transverse => xij_kperp
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
   use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta, &
@@ -255,6 +255,7 @@ subroutine check_native_projection()
           pc=777d0
           jc=777d0
           spin=(99d0,99d0)
+          spin_transverse=99d0
           pi_cnt=999d0
           config=999
           call generate_native_momenta(lab,out,outlab,cms,jnew,pass)
@@ -332,9 +333,9 @@ contains
     integer,intent(out) :: n
     integer :: k
     v=0d0
-    v(1:20)=[xi,y,pi_ev,xih,xb,tau,ycm,sqrts_ev,s_ev,xmax,xnorm, &
-         real(spin,kind=8),aimag(spin),kn,knbar,kn0]
-    n=20
+    v(1:24)=[xi,y,pi_ev,xih,xb,tau,ycm,sqrts_ev,s_ev,xmax,xnorm, &
+         real(spin,kind=8),aimag(spin),spin_transverse,kn,knbar,kn0]
+    n=24
     do k=-2,2
       if(jc(k).le.0d0)cycle
       v(n+1:n+14)=[pi_cnt(:,k),xi_cnt(k),xih_cnt(k),xbc(:,k),tauc(k),ycmc(k), &

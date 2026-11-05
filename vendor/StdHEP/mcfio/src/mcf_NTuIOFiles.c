@@ -159,7 +159,7 @@ int mcfioC_DeclareNtuple(int uid, char *title, char *category,
      
 int mcfioC_EndDeclNTuples(int stream)
 /*
-** Routine to end theNtuple delcaration and rewrite the beginning of the 
+** Routine to end theNtuple declaration and rewrite the beginning of the
 ** file.
 */
 {
@@ -170,7 +170,7 @@ int mcfioC_EndDeclNTuples(int stream)
    
   if (McfStreamPtrList == NULL) { 
      fprintf(stderr,
-  " mcfio_EndDeclNtuple: No stream open, No inialization.\n"); 
+  " mcfio_EndDeclNtuple: No stream open, No initialization.\n");
      return -1;
   }
   jstr = stream-1;
@@ -265,7 +265,7 @@ nTuDDL *mcf_GetFileNTuDDL(char*filename)
     if ((line_title_c_.n_obj_line_title < 1)  ||
         (header_c_.n_obj_header != 1)) {
         fprintf(stderr, 
-                " This file was not created by the ntuBuild aplication!");
+                " This file was not created by the ntuBuild application!");
         return NULL;
     }
     if (strcmp(line_title_c_.line_title[0].line,
@@ -755,7 +755,7 @@ void    mcf_ComposeDoth(descrGenNtuple *dNTu, char *filename)
         fprintf(Ffp, "typedef struct _%s_struct {\n", nameCom);
         /*
         ** The first 64 bits contain the version token, as a char[8] string
-        ** floowed by the multiplicty variable, followed by an integer pad
+        ** floowed by the multiplicity variable, followed by an integer pad
         */ 
         fprintf(Ffp,"    char version[8]; /* Version token */\n");
         fprintf(Ffp,

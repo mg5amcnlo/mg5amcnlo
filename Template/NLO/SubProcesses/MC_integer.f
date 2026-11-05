@@ -126,7 +126,7 @@ c No random choice or importance weight is needed for an explicit sum.
          vol=1d0
          return
       endif
-c Take a fresh random number and find the correponding 'iint'
+c Take a fresh random number and find the corresponding 'iint'
       rnd=ran2()
       iint=0
       do while (rnd .gt. grid(iint,this_dim))

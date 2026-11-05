@@ -306,6 +306,7 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
             'use mc_native_context, only: shared_real_active,shared_real_epoch,shared_real_point,active_history,history_permutations',
             'use mc_born_types, only: BornModelState,born_model_state_equal',
             'implicit none',"include 'nexternal.inc'", "include 'orders.inc'",
+            "include 'real_matrix_weights.inc'",
             # A small bounded cache needs no allocation on the hot path. Its
             # model vectors keep their allocated storage between real points.
             'integer,parameter::cache_size=16',
@@ -313,6 +314,8 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
             (len(keys),','.join('.true.' if allowed else '.false.' for allowed in share_frame)),
             'type RealCacheEntry', 'integer::evaluator=0',
             'real(8) momenta(0:3,nexternal),weight,amplitudes(amp_split_size)',
+            'real(8) diagram_weights(size(real_amp2))',
+            'logical::has_diagram_weights=.false.',
             'type(BornModelState) model', 'end type',
             'type(RealCacheEntry),save::cache(cache_size)',
             'type(BornModelState),save::state',
@@ -368,7 +371,9 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
              'if(cache(j)%evaluator.ne.evaluator)cycle',
              'if(any(cache(j)%momenta.ne.q))cycle',
              'if(.not.born_model_state_equal(cache(j)%model,state))cycle',
+             'if(get_real_diagram_weights.and..not.cache(j)%has_diagram_weights)cycle',
              'wgt=cache(j)%weight','amp_split=cache(j)%amplitudes',
+             'if(get_real_diagram_weights)real_amp2=cache(j)%diagram_weights',
              'wgt_me_real=wgt','return','enddo','endif',
              'select case(evaluator)']
     for evaluator in sorted({s['real'] for s in outer['sectors']}):
@@ -380,6 +385,8 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
              'cache(j)%model%complex_values=state%complex_values',
              'cache(j)%weight=wgt',
              'cache(j)%amplitudes=amp_split',
+             'cache(j)%has_diagram_weights=get_real_diagram_weights',
+             'if(get_real_diagram_weights)cache(j)%diagram_weights=real_amp2',
              'next_entry=mod(next_entry,cache_size)+1','endif','end']
     lumi += ['case default','stop "Invalid native PDF sector"','end select','call mc_filter_native_lum(dlum)','end']
     write(directory/'real_me_chooser.f',real)

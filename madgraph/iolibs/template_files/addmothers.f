@@ -1,6 +1,7 @@
       subroutine addmothers(ip,jpart,pb,isym,jsym,rscale,aqcd,aqed,buff,
      $                      npart,numproc,flip, icol, ivec)
 
+      use model_object
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -727,7 +728,7 @@ c                             |(0,508)
                write(*,*) icolmp(1,1), icolmp(2,1), icolmp(1,2), icolmp(2,2)
                call write_error(1001,0,0) 
             endif
-c           now maxcol=509 and mincol=503 so replace all occurence of 509-> 503
+c           now maxcol=509 and mincol=503 so replace all occurrence of 509-> 503
 c            print *,'Replaced ',maxcol,' by ',mincol
             do i=ires+1,nexternal
                do j=1,2
@@ -739,7 +740,7 @@ c            print *,'Replaced ',maxcol,' by ',mincol
             enddo
          else
 c        standard case
-c     First check that mincol is not a going trough index. If it is it 
+c     First check that mincol is not a going through index. If it is it
 C     should not be assign to one of the temporary index
             count=0
             do i=1,nexternal
@@ -1054,7 +1055,7 @@ c
       integer k,l
       integer potential_index(2)
       integer epsilon_index(4)
-      integer epsilon_type ! 1 anti-color and 2 color (correspond to the colummn in lhef)
+      integer epsilon_type ! 1 anti-color and 2 color (correspond to the column in lhef)
       integer mothers(2*nexternal-3)
       logical to_change
 
@@ -1117,7 +1118,7 @@ C        Remove the duplication index if any
 c        check the mother of mothers1 and change the color index
 c        epsilon_index(3) -> maxcolor+1, epsilon_index(4) -> maxcolor+2          
 c        then add info on mothers to recursively change
-c        Firs check if we have to change  
+c        First check if we have to change
          to_change = .false.
          do i=3,4
             do j=1,2

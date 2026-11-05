@@ -124,7 +124,7 @@ c
       call print_fks_isr_mapping(nlo_ps,shower_mc)
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
-      call printout              !Prints out a summary of paramaters
+      call printout              !Prints out a summary of parameters
       call run_printout          !Prints out a summary of the run settings
       call fill_configurations_common
       call check_amp_split 
@@ -323,7 +323,7 @@ c Randomly pick the contribution that will be written in the event file
       endif
 
       if (ntot.ne.0) then
-         write(*,*) "Satistics from MadLoop:"
+         write(*,*) "Statistics from MadLoop:"
          write(*,*)
      &        "  Total points tried:                              ",ntot
          write(*,*)
@@ -876,7 +876,7 @@ c 1/proc_map(0,0)*vol1)
      $              ifold_counter,fksfather)
             endif
          elseif (ifl.eq.0) then
-            call sborn_native(p_born,wgt1)
+            call sborn_frame(p_born,wgt1)
             call get_born_flow(born_flow_picked,born_flow_factor)
             if(born_flow_picked.eq.0)goto 900
 ! A second massive solution has no soft endpoint, but another sector
@@ -1376,7 +1376,7 @@ c Use the final, finite PDF/bias weights of the complete point for the fit.
 ! would require a flow map and support at a different Born point.
 ! q_b,c=p_b,c here; no additional outer 1/q_a,c belongs on this term.
             call set_alphaS(p1_cnt(0,1,0))
-            call sborn_native(p_born,born_weight)
+            call sborn_frame(p_born,born_weight)
             call get_born_flow(born_flow_picked,flow_factor_native)
             if(born_flow_picked.eq.0)then
                weights_valid=.false.
@@ -1677,7 +1677,7 @@ c Use the final, finite PDF/bias weights of the complete point for the fit.
          endif
       endif
       call set_alphaS(p1_cnt(0,1,0))
-      call sborn_native(p_born,born_weight)
+      call sborn_frame(p_born,born_weight)
       call get_born_flow_weights(flow_weights,sumborn)
       if (sumborn.le.0d0) then
          weights_valid=.false.

@@ -345,7 +345,7 @@ to a valid FORTRAN name, please change title", "Acknowledged");
     
         /*
         ** The first 64 bits contain the version token, as a char[8] string
-        ** and the multiplicty variable.
+        ** and the multiplicity variable.
         */
         fprintf(Ffp,"      character*8 version_%s \n", nameEffCom);
         /*           123456 */
@@ -711,8 +711,8 @@ to a valid structure name, please change title", "Acknowledged");
         /*
         ** The first 64 bits contain the version token, as a char[8] string
         ** Then a padding word (integer)
-        ** Unfortunatly, this can not put in a dbin template. 
-        ** Cheat for now, place it as a integer... (Not real good!)
+        ** Unfortunately, this can not put in a dbin template.
+        ** Cheat for now, place it as an integer... (Not real good!)
         */ 
         fprintf(Ffp,"    int iversion(2) !Version token \n");
         text = XmTextGetString(window->nameIndexW);

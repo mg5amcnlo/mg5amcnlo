@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2009 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2009 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which 
+# This file is a part of the MadGraph7 project, an application which 
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this 
+# It is subject to the MadGraph7 license which should accompany this 
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -43,7 +43,7 @@ import madgraph.loop.loop_exporters as loop_exporters
 import madgraph.iolibs.export_v4 as export_v4
 import madgraph.iolibs.save_load_object as save_load_object
 import madgraph.iolibs.helas_call_writers as helas_call_writers
-import models.import_ufo as import_ufo
+import madgraph.models.import_ufo as import_ufo
 import madgraph.various.misc as misc
 import tests.IOTests as IOTests
 import tests.unit_tests.loop.test_loop_exporters as test_loop_exporters

@@ -1,12 +1,12 @@
 ################################################################################
 #
-# Copyright (c) 2024 The MadGraph5_aMC@NLO Development team and Contributors
+# Copyright (c) 2024 The MadGraph7 Development team and Contributors
 #
-# This file is a part of the MadGraph5_aMC@NLO project, an application which
+# This file is a part of the MadGraph7 project, an application which
 # automatically generates Feynman diagrams and matrix elements for arbitrary
 # high-energy processes in the Standard Model and beyond.
 #
-# It is subject to the MadGraph5_aMC@NLO license which should accompany this
+# It is subject to the MadGraph7 license which should accompany this
 # distribution.
 #
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
@@ -79,13 +79,18 @@ class TestReadOnlyGridpack(unittest.TestCase):
             fp.write('\n'.join([
                 'set automatic_html_opening False --no_save',
                 'generate %s' % self.process,
-                'output %s' % medir,
+                # explicitly the Fortran madevent exporter: gridpacks are a
+                # madevent feature (bin/generate_events, run_01_gridpack.tar.gz,
+                # madevent/, restore_data) and MG5's default output mode is
+                # 'mg7' in MadGraph7, which writes a run_card.toml and no
+                # Cards/run_card.dat for the gridpack switch below.
+                'output madevent %s' % medir,
             ]) + '\n')
 
         mlog = pjoin(self.tmpdir, 'mg5.log')
         with open(mlog, 'w') as logf:
             ret = subprocess.call(
-                [sys.executable, pjoin(MG5DIR, 'bin', 'mg5_aMC'), '-f', script],
+                [sys.executable, pjoin(MG5DIR, 'bin', 'madgraph'), '-f', script],
                 stdout=logf, stderr=subprocess.STDOUT)
         self.assertEqual(ret, 0, 'mg5_aMC output failed (see %s)' % mlog)
         self.assertTrue(os.path.isdir(medir), 'process directory not created')

@@ -109,7 +109,7 @@ class MG_diagram(diagram_class.MG_diagram):
         return num_sol
 
     def create_permutation_weight_functions_caller(self):
-        """Define the function to associate a initial weight to each permutation.
+        """Define the function to associate an initial weight to each permutation.
         Those weight can be use both to remove permutation and/or to initialize the grid
         on the permutation."""
 
@@ -250,7 +250,7 @@ class MG_diagram(diagram_class.MG_diagram):
         """
 
         def write_call_for_peak(obj,peak):
-            """ return the text on how to return the weight associted to this peak """
+            """ return the text on how to return the weight associated to this peak """
             
             if isinstance(peak, str):
                 text = 'tf_E_for_part(%s)' % ( peak )
@@ -379,7 +379,7 @@ class MG_diagram(diagram_class.MG_diagram):
         #
         step=0
         for blob_sol in  blob_sol_list:
-            #supress entry for external particle blob
+            #suppress entry for external particle blob
             if len(blob_sol.step) == 1:
                 if blob_sol.step[0].chgt_var == '0':
                     continue
@@ -415,7 +415,7 @@ class MG_diagram(diagram_class.MG_diagram):
                             line += str(self.num_fuse) + ','
                             self.fuse_dict[particle.MG]=self.num_fuse
                             self.num_fuse += 1
-                line=line[:-1] + ')\n' #supress last , and add )
+                line=line[:-1] + ')\n' #suppress last , and add )
                 line=put_in_fortran_format(line)
                 write_text += line
                 if(block.chgt_var not in ['1', '2', '3']):
@@ -428,7 +428,7 @@ class MG_diagram(diagram_class.MG_diagram):
         #   ECS 
         #
 #        write_text+='\n$B$ S-COMMENT_C $B$\n'
-#        write_text+=' ENLARGED CONTRAINT SECTOR \t CLASS '+str(ECS.chgt_var.upper())
+#        write_text+=' ENLARGED CONSTRAINT SECTOR \t CLASS '+str(ECS.chgt_var.upper())
 #        write_text+='\n$E$ S-COMMENT_C $E$\n'         
         for block in ECS.step:
             step += 1           
@@ -453,7 +453,7 @@ class MG_diagram(diagram_class.MG_diagram):
                         self.fuse_dict[particle.MG]=self.num_fuse
                         self.num_fuse += 1
                             
-            line=line[:-1] + ')\n' #supress last , and add )
+            line=line[:-1] + ')\n' #suppress last , and add )
             line=put_in_fortran_format(line)
             write_text += line
             if block.chgt_var not in ['1','2']:
@@ -657,7 +657,7 @@ class MG_diagram(diagram_class.MG_diagram):
 
     def is_new_sol(self, code):
         """ check if this code is new or already defined """
-        #Step 1: supress identical solution
+        #Step 1: suppress identical solution
         for i in range(0, len(self.code)):
             if self.code[i][0] == code[0]:
                 if self.code[i][1] == code[1]:
@@ -762,7 +762,7 @@ C+-----------------------------------------------------------------------+
             tag1, tag2 = tag2, tag1  #this ensure convention order 
             
         tag3 = listpart[2].MG  #tag for the invariant mass
-        if tag1 < 0: #tag2 is larger than tag1, so he cann't be negative 
+        if tag1 < 0: #tag2 is larger than tag1, so it can't be negative
             return '%s, %s, %s' % (tag2, tag1, tag3)
 
         
@@ -805,7 +805,7 @@ C+-----------------------------------------------------------------------+
         permutations = get_perms_from_id(pid_list, self.MWparam['mw_perm']['bjet_is_jet'])
 
 
-        # sanity check ensure that no identical permutation are presnt
+        # sanity check ensure that no identical permutation are present
         check = set([tuple(i) for i in permutations])
         assert len(check) == len(permutations)
         if not self.MWparam['mw_perm']['permutation']:
@@ -1034,7 +1034,7 @@ c       choose the permutation (point by point in the ps)
         mod_file.mod_text(self.D_f_text, template.dico, self.directory + '/d_choices.f')       
      
     def collect_generated_propa(self, ECS, blob_sol_list):
-        """ return all the propagator that must be generated following BW distibution """
+        """ return all the propagator that must be generated following BW distribution """
 
         def id_from_plist(plist):
             return [particle.MG for particle in plist]
@@ -1156,7 +1156,7 @@ c       choose the permutation (point by point in the ps)
             
     def return_propa_generation(self, list, pos, num_sol):
         """return the line for the definition of how to generate the mass
-           typical output are:
+           typical outputs are:
            data (propa_???($,label),label=1,$) /$,$,$,$,$,0/ 
         """
 
@@ -1206,7 +1206,7 @@ c       choose the permutation (point by point in the ps)
             
         
     def already_generated_in_decay(self, particle, generated_propa):
-        """give (recurently) all the first particle already generated in the branchs of desintegration"""
+        """give (recurrently) all the first particle already generated in the branches of disintegration"""
 
         if particle.external:
             return [particle.MG]
