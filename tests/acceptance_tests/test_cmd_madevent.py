@@ -2167,6 +2167,62 @@ class TestMECmdShell(unittest.TestCase):
             self.assertGreater(checked[3], 0, checked)
             self.assertGreater(checked[4], 0, checked)
 
+    def test_mlm_top_is_not_a_jet(self):
+        """With MLM (ickkw=1) a top is never a jet: its pt_clust (the
+        <scales> tag) must be sqrt(s). cluster() mapped every quark leg up
+        to pdg 6 to the coupling class of the event, which is 1 on a leg
+        that is not merged: the tops were clustered as d quarks and got a
+        finite pt_clust in ~20% of the p p > t t~ + 0,1j events (sigma of
+        t t~ + 0,1,2j 6.7% low, 2-jet MLM acceptance 14.4% instead of
+        12.1%)."""
+
+        import gzip
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
+        mg_cmd.exec_cmd('import model sm')
+        mg_cmd.exec_cmd('generate p p > t t~ @0')
+        mg_cmd.exec_cmd('add process p p > t t~ j @1')
+        mg_cmd.exec_cmd('output madevent %s' % self.run_dir)
+
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        run_card.set('nevents', 500, user=True)
+        run_card.set('iseed', 31337, user=True)
+        run_card.set('ickkw', 1, user=True)
+        run_card.set('xqcut', 20.0, user=True)
+        run_card.set('use_syst', False, user=True)
+        run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.do('generate_events -f')
+
+        sqrts = run_card['ebeam1'] + run_card['ebeam2']
+        path = pjoin(self.run_dir, 'Events', 'run_01', 'unweighted_events.lhe.gz')
+        text = gzip.open(path, 'rt').read()
+        ntops, njets, clustered_tops = 0, 0, []
+        for event in re.findall(r'<event[^>]*>(.*?)</event>', text, re.S):
+            lines = event.split('<')[0].strip().splitlines()[1:]
+            pdgs = [int(l.split()[0]) for l in lines]
+            scales = dict((int(i), float(v)) for i, v in
+                          re.findall(r'pt_clust_(\d+)="([^"]+)"', event))
+            self.assertEqual(sorted(scales), list(range(3, len(pdgs) + 1)), event)
+            for i, ptclust in scales.items():
+                if abs(pdgs[i-1]) == 6:
+                    ntops += 1
+                    if abs(ptclust - sqrts) > 1e-3 * sqrts:
+                        clustered_tops.append(event)
+                elif ptclust < sqrts:
+                    njets += 1
+        # the tops of every event, and some clustered jets
+        self.assertGreater(ntops, 900)
+        self.assertGreater(njets, 50)
+        self.assertEqual(len(clustered_tops), 0,
+            '%d tops (of %d) have a finite pt_clust, e.g.:\n%s'
+            % (len(clustered_tops), ntops,
+               clustered_tops[0] if clustered_tops else ''))
+
     def test_t_channel_survey_grid(self):
         """check that refining on the survey grid is not biased for
         u q > z u q (all channels pure t-channel chains). With the grid
