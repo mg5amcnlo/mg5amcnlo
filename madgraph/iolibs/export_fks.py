@@ -313,6 +313,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('various','shower_card.py'),
           pjoin('various','FO_analyse_card.py'),
           pjoin('various','histograms.py'),      
+          pjoin('various','moments.py'),
           pjoin('various','banner.py'),          
           pjoin('various','cluster.py'),
           pjoin('various','systematics.py'),          

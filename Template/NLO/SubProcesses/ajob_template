@@ -70,6 +70,9 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     if  [[ -e MADatNLO.HwU ]] ; then
 	rm -f MADatNLO.HwU
     fi
+    if  [[ -e MADatNLO.Moments ]] ; then
+	rm -f MADatNLO.Moments
+    fi
     if  [[ -e MADatNLO.root ]] ; then
 	rm -f MADatNLO.root
     fi

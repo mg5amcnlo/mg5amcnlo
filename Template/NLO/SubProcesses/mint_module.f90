@@ -270,7 +270,12 @@ contains
     call combine_final_three_iterations
     if (fixed_order) then
        call accum(.true.)
-       call HwU_accum_iter(.true.,ntotcalls(1),HwU_values)
+       ! The first adaptive warmup loop samples each channel separately,
+       ! with its own sample count. The pooled plotting interface cannot
+       ! normalize that loop using the last channel's ntotcalls. Discard
+       ! its plots; production (imode=-1) uses ordinary mixture sampling.
+       call HwU_accum_iter(.not.(imode.eq.0.and.nit.eq.1.and.double_events), &
+            ntotcalls(1),HwU_values)
     endif
     if (imode.eq.0) then
        call update_virtual_fraction
@@ -774,8 +779,11 @@ contains
 ! Add the PS point to the result of this iteration
     vtot(1:nintegrals,ichan)=vtot(1:nintegrals,ichan)+f(1:nintegrals)
     etot(1:nintegrals,ichan)=etot(1:nintegrals,ichan)+f(1:nintegrals)**2
-! Accumulate the points in the HwU histograms    
-    if (f(1).ne.0d0) call HwU_add_points
+! End each correlated fixed-order group, including groups whose signed
+! total cancels exactly: their differential moments can still be nonzero.
+! Flushing them here also keeps their covariance separate from the next
+! group. The non-fixed-order path retains its existing behaviour.
+    if (fixed_order.or.f(1).ne.0d0) call HwU_add_points
   end subroutine accumulate_the_point
 
   

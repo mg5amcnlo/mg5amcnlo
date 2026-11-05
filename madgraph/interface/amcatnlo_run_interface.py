@@ -2947,8 +2947,17 @@ RESTART = %(mint_mode)s
                      pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-        elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
+        elif self.analyse_card['fo_analysis_format'].lower() in ['hwu', 'moments']:
             out=pjoin(self.me_dir,'Events',self.run_name,'MADatNLO')
+            if self.analyse_card['fo_analysis_format'].lower() == 'moments':
+                if aMCatNLO:
+                    from internal.moments import combine_job_moments
+                else:
+                    from madgraph.various.moments import combine_job_moments
+                # Job weights already include the fixed-order split-job
+                # normalization (WGT_MULT). Sum native coefficients and
+                # independent-job covariances without applying it again.
+                combine_job_moments(jobs,out)
             self.combine_plots_HwU(jobs,out)
             try:
                 common_run.render_HwU_plot(out, stdout=devnull, stderr=devnull)
@@ -2956,6 +2965,8 @@ RESTART = %(mint_mode)s
                 pass
             logger.info('The results of this run and the HwU data with GnuPlot, Matplotlib, and HTML plotting output' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+            if self.analyse_card['fo_analysis_format'].lower() == 'moments':
+                logger.info('The native moment coefficients and covariance have been saved in %s.Moments' % out)
         elif self.analyse_card['fo_analysis_format'].lower() == 'root':
             rootfiles = []
             for job in jobs:

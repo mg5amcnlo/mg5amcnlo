@@ -87,3 +87,30 @@ FO_ANALYSE=analysis_fixed_order.o dummy1.o dummy2.o
             self.assertEqual(a,b)
         self.assertEqual(text, goal)
 
+    def test_moments_analysis_format(self):
+        """The moments backend replaces HwU without changing user fills."""
+        content = """FO_ANALYSIS_FORMAT = MoMeNtS
+FO_EXTRALIBS =
+FO_EXTRAPATHS =
+FO_INCLUDEPATHS =
+FO_ANALYSE = analysis_Moments_pp_lplm.o
+"""
+        card = FO_analyse_card.FOAnalyseCard(content, testing=True)
+        output = card.write_card('')
+        self.assertIn('FO_ANALYSE=analysis_Moments_pp_lplm.o '
+                      'Moments.o open_output_files_dummy.o', output)
+        self.assertNotIn('HwU.o', output)
+        self.assertEqual(card['fo_analysis_format'], 'MoMeNtS')
+
+    def test_hwu_analysis_format_unchanged(self):
+        """Existing HwU cards continue to select the histogram library."""
+        content = """FO_ANALYSIS_FORMAT = HwU
+FO_EXTRALIBS =
+FO_EXTRAPATHS =
+FO_INCLUDEPATHS =
+FO_ANALYSE = analysis_HwU_template.o
+"""
+        card = FO_analyse_card.FOAnalyseCard(content, testing=True)
+        self.assertIn('FO_ANALYSE=analysis_HwU_template.o '
+                      'HwU.o open_output_files_dummy.o', card.write_card(''))
+

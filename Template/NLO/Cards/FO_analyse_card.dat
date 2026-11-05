@@ -10,13 +10,21 @@
 #######################################################################
 #
 # Analysis format.
-# Can either be 'topdrawer', 'root', 'HwU', 'LHE' or 'none'.
+# Can either be 'topdrawer', 'root', 'HwU', 'moments', 'LHE' or 'none'.
 # When choosing HwU, it comes with a GnuPlot wrapper. When choosing
 # topdrawer, the histogramming package 'dbook.f' is included in the
 # code, while when choosing root the 'rbook_fe8.f' and 'rbook_be8.cc'
 # are included. If 'none' is chosen, all the other entries below have
 # to be set empty.
 FO_ANALYSIS_FORMAT = HwU
+# With 'moments', ordinary HwU_book calls still book histograms. Replace
+# selected continuous-observable bookings with
+# Moments_book(label,title,nbins,xmin,xmax,nmodes) to accumulate Legendre
+# moments with their full central-weight covariance. HwU_fill and the
+# analysis entry points are unchanged. Both a projected HwU file and a
+# native .Moments file are saved; the latter retains the coefficients.
+# An example is analysis_moments_template.o in FixedOrderAnalysis/.
+#FO_ANALYSIS_FORMAT = moments
 #
 #
 # Needed extra-libraries (FastJet is already linked):
@@ -34,6 +42,7 @@ FO_INCLUDEPATHS =
 # directory). Please use .o as extension and white spaces to separate
 # files.
 FO_ANALYSE = analysis_HwU_template.o
+#FO_ANALYSE = analysis_moments_template.o
 #
 #
 ## When linking with root, the following settings are a working
