@@ -135,6 +135,8 @@ C
       INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
       REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
       SAVE T_SAVE,T_IDENT
+      REAL*8 PLT(0:3,NEXTERNAL),T_LT(0:NSQAMPSO)
+      REAL*8 CA,SA,CB,SB,BZ,GZ,PX,PY,PZ
       INTEGER NHEL(NEXTERNAL,NCOMB)
       DATA (NHEL(I,   1),I=1,5) /-1, 1,-1, 1,-1/
       DATA (NHEL(I,   2),I=1,5) /-1, 1,-1, 1, 1/
@@ -222,6 +224,41 @@ C         add to the sum of helicities
           ENDIF
         ENDIF
       ENDDO
+C     Two helicities tied on the first point are identical everywhere
+C     only if a symmetry relates them. A symmetry holds in any frame:
+C     check each tie again at a Lorentz transform of that point (a
+C     rotation tilting the z axis, then a boost along z) and drop it if
+C     it does not hold there. The momenta of the real emission come in
+C     the partonic c.m. frame of the real for some FKS sectors and in
+C     that of the Born (a boost along z) for the initial-state ones.
+C     Two helicities can agree in the first frame and not in the
+C     second: helicities of massive particles change under the boost.
+C     E.g. u d~ > w+ g g: (W0,g-,g-) and (W0,g+,g+).
+      IF (NTRY.LT.2 .AND. ANY(T_IDENT(:).GT.0)) THEN
+        CA=COS(1D0)
+        SA=SIN(1D0)
+        CB=COS(0.5D0)
+        SB=SIN(0.5D0)
+        BZ=0.5D0
+        GZ=1D0/SQRT(1D0-BZ**2)
+        DO I=1,NEXTERNAL
+          PX=P(1,I)
+          PY=CA*P(2,I)-SA*P(3,I)
+          PZ=SA*P(2,I)+CA*P(3,I)
+          PLT(0,I)=GZ*(P(0,I)+BZ*PZ)
+          PLT(1,I)=CB*PX-SB*PY
+          PLT(2,I)=SB*PX+CB*PY
+          PLT(3,I)=GZ*(PZ+BZ*P(0,I))
+        ENDDO
+        DO IHEL=1,NCOMB
+          IF (T_IDENT(IHEL).LE.0) CYCLE
+          CALL MATRIX_5(PLT,NHEL(1,IHEL),T)
+          CALL MATRIX_5(PLT,NHEL(1,T_IDENT(IHEL)),T_LT)
+          DO J=0,NSQAMPSO
+            IF (ABS(T(J)/T_LT(J)-1D0) .GT. 1D-10) T_IDENT(IHEL)=-1
+          ENDDO
+        ENDDO
+      ENDIF
       DO I=1,NSQAMPSO
         ANS(I)=ANS(I)/DBLE(IDEN)
         ANS(0)=ANS(0)+ANS(I)

@@ -246,6 +246,27 @@ ANNOUNCEMENT:
       OM+JK+KM+KH+YJZ: implementation of the FD gauge via "set gauge FD" [2203.10440, 2405.01256]
 
 
+3.5.18 (06/11/26):
+  OM: LO: the lower bound on shat used for the phase-space integration (smin) could be too high,
+      never generating part of the allowed phase space (cross-section too low):
+      - ihtmin (inclusive Ht, jets+b) was attributed to the b-quarks alone, on top of the jet cuts
+        (e.g. p p > b b~ j with ptj=150, ihtmin=300: -2.8%);
+      - jets/leptons/photons from decays (cut_decays=F) together with ptjNmin/ptlNmin/xptj/xptl/xpta
+        (e.g. p p > w+ j j, w+ > j j with ptj=150, ptj1min=160: -2.2%);
+      - cutuse=1 (only one of the ptjNmin has to be satisfied);
+      - mmll for non same-flavour opposite-sign leptons, ptllmin without a pair to apply it to,
+        mmnl for more than two leptons/neutrinos.
+  OM: NLO: the real emission reused the matrix element of one helicity for another whenever the two agreed
+      on the first few  phase-space point. Some only agree when the momenta come in the c.m. frame of the real
+       p p > w+ j [QCD] (fixed order) came outc+0.6% to +4.5% too high (u d~ > w+ g up to +25%), 
+       p p > z j [QCD] is affected the same way.
+  OM: MadLoop: the helicity filter is now disabled for all 2>1 and 1>2 processes (it was for spin-2 only),
+      as for the tree-level standalone output.
+  OM: scalefact not applied to beam 2’s μF (#454, reweight.f). This happens with fixed_fac_scale1=T,     
+      fixed_fac_scale2=F and a dynamical scale.
+  OM: ktdurham/ptlund merging cut applied to decay b quarks (#455, cuts.f) even when the b was massive
+  OM: LHAPDF issue on mac when using homebrew (an homebrew bug) is now handle via a dedicated work-around.
+
 3.5.17 (9/10/26):
   RF: Fixed a bug in FxFx merging: MG side used inclusive-kT measure, PY side used exclusive.  This mismatch resulted in an
       underrepresentation of events in DRjj<1.0, particularly visibile in boosted configurations. Thanks, Sihyun Jeon.
