@@ -45,6 +45,10 @@ ANNOUNCEMENT:
        estimate. Retain the existing central-value and histogram weights;
        accuracy-driven runs can need more iterations with the corrected error.
        Handle zero signed estimates and zero-error channels in these updates.
+   RF: Use scalar virtual fits only with one Born normalizer matching the fit.
+       Other order combinations retain the per-order grid/polynomial, avoiding
+       excessive virtual sampling with mixed QCD/EW corrections. Protect the
+       virtual-to-Born diagnostic when the Born contribution is zero.
    RF: Add massive/QED subtraction and shower-support checks. Experimental NLO
        QED shower launches require --allow_qed_ps; QED Delta/FxFx matching and
        shower channels excluded by the support checks remain unsupported.

@@ -5,6 +5,7 @@ module virt_surrogate
   integer, parameter :: vs_maxfeat=94, vs_maxchan=20, vs_minpts=50
   public :: vs_begin_point,vs_clear_links,vs_add_link,vs_features,vs_select
   public :: vs_reset,vs_value,vs_accumulate,vs_solve,vs_write_grids,vs_read_grids
+  public :: vs_single_born_order
   public :: vs_maxfeat
 
 ! Current-point data shared by the matrix-element and weighted-integrand stages.
@@ -46,6 +47,19 @@ contains
     vs_residual_reference=0d0
     call vs_clear_links
   end subroutine vs_begin_point
+
+  logical function vs_single_born_order(born_weights,born) result(allowed)
+! The scalar fit predicts one approximation A to the summed virtual. Its
+! ratio A/B must therefore multiply exactly one virtual Born normalizer B.
+! Broadcasting it to several orders would subtract several copies of A,
+! while selection still compared V-A. A different Born normalizer also
+! changes the applied approximation. Retain the per-order grid/polynomial
+! in either case until the fit can validate those actual residual orders.
+    double precision, intent(in) :: born_weights(:),born
+    allowed=count(born_weights.ne.0d0).eq.1
+    if (allowed) allowed=sum(born_weights).eq.born
+    if (.not.allowed) call vs_begin_point
+  end function vs_single_born_order
 
   subroutine vs_clear_links
     have_links=.false.

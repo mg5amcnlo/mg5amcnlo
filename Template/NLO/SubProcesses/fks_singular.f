@@ -6655,7 +6655,7 @@ c
       use mint_module
       use virt_surrogate, only: vs_clear_links,vs_add_link,vs_features,
      $     vs_select,vs_born,vs_fvirt,vs_virt,
-     $     vs_residual_order,vs_residual_reference
+     $     vs_residual_order,vs_residual_reference,vs_single_born_order
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -7044,6 +7044,12 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          endif
       enddo
 
+c The scalar fit is valid only for one virtual Born order normalized by
+c the same Born used to build its features. Otherwise retain the native
+c per-order grid/polynomial and clear any current-point fit state.
+      use_surrogate=use_surrogate.and.
+     $     vs_single_born_order(amp_split_born_for_virt,born_wgt)
+
 c Choose the fitted surrogate at the first fold, retaining the grid or
 c polynomial when the channel's fit has not been selected.
       if (fold.eq.0) then
@@ -7080,12 +7086,10 @@ c polynomial when the channel's fit has not been selected.
             if (use_surrogate) then
                vs_vcomp=.true.
                vs_virt=virt_wgt
-               virtual_over_born=0d0
-               if (born_wgt.ne.0d0)
-     $              virtual_over_born=virt_wgt/born_wgt
-            else
-               virtual_over_born=virt_wgt/born_wgt
             endif
+            virtual_over_born=0d0
+            if (born_wgt.ne.0d0)
+     $           virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
                virt_wgt = 0d0
                do iamp=1,amp_split_size
