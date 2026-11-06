@@ -1390,6 +1390,23 @@ jobs:
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_calculate_xsect_nlo -pA -t0 -l INFO
 
+  acceptancetest_82_ties:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-22.04
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore_all
+
+      # Runs a set of commands using the runners shell
+      - name: Test real-emission helicity ties and MadLoop filters across frames
+        run: |
+            cd $GITHUB_WORKSPACE
+            ./tests/test_manager.py test_real_helicity_ties_survive_a_boost test_ML_loop_filter_survives_a_boost -pA -t0 -l INFO
+
 
 
   acceptancetest_83:
