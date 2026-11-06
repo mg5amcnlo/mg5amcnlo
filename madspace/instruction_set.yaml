@@ -1546,6 +1546,32 @@ t_inv_value_and_min_max:
       desc: "upper limit of the momentum transfer"
   desc: "Momentum transfer and its kinematic limits for a given final state. Building block of @ref TwoToTwoParticleScattering."
 
+t_inv_value:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc: "first incoming momentum"
+    - name: pb
+      type: [float, 4]
+      desc: "second incoming momentum"
+    - name: p1
+      type: [float, 4]
+      desc: "first outgoing momentum"
+    - name: p2
+      type: [float, 4]
+      desc: "second outgoing momentum"
+    - name: m1
+      type: [float]
+      desc: "mass of the first outgoing particle"
+    - name: m2
+      type: [float]
+      desc: "mass of the second outgoing particle"
+  outputs:
+    - name: t_abs
+      type: [float]
+      desc: "absolute value of the momentum transfer"
+  desc: "Momentum transfer |t| = |(pa - p1)^2| = |(pb - p2)^2| of a given final state with the masses of the outgoing particles given, from the light-cone components of the pair of an incoming and an outgoing momentum with the smaller masses, so that nothing of order E^2 cancels near the collinear limit. Building block of @ref TwoToTwoParticleScattering."
+
 t_inv_min_max_cut:
   inputs:
     - name: pa

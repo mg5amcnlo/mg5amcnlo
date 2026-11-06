@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 
 #include "madspace/phasespace/base.hpp"
 #include "madspace/phasespace/invariants.hpp"
@@ -174,6 +175,32 @@ public:
         double beam_sign = 1.
     );
 
+    /**
+     * The inverse map with the masses of the outgoing momenta given, as the
+     * forward map takes them. The range of @f$|t|@f$ then follows from these
+     * masses, as in the forward map, rather than from the squares of the
+     * momenta, whose rounding (of order the machine epsilon times the squared
+     * energy, also for massless momenta) moves the lower end of the range,
+     * by up to @f$(s - m_b^2) / s@f$ times as much for an incoming
+     * @f$p_b@f$ of mass @f$m_b@f$, as the last steps of a t-channel chain
+     * have (@ref TPropagatorMapping). The outputs `mass1` and `mass2` are
+     * still those of the momenta.
+     *
+     * @param inputs      `momentum1` and `momentum2`, as for the positional
+     *                    build_inverse().
+     * @param conditions  The conditions, in the order of condition_types().
+     * @param m1          Mass of `momentum1`, `float`, shape `(batch,)`.
+     * @param m2          Mass of `momentum2`, `float`, shape `(batch,)`.
+     * @return            The outputs of build_inverse().
+     */
+    NamedVector<Value> build_inverse_with_masses(
+        FunctionBuilder& fb,
+        const ValueVec& inputs,
+        const ValueVec& conditions,
+        Value m1,
+        Value m2
+    ) const;
+
 private:
     Result build_forward_impl(
         FunctionBuilder& fb,
@@ -185,6 +212,12 @@ private:
         const NamedVector<Value>& inputs,
         const NamedVector<Value>& conditions
     ) const override;
+    Result inverse(
+        FunctionBuilder& fb,
+        const NamedVector<Value>& inputs,
+        const NamedVector<Value>& conditions,
+        const std::optional<std::array<Value, 2>>& masses
+    ) const;
 
     std::array<Value, 2> rapidity_clamp(
         FunctionBuilder& fb,

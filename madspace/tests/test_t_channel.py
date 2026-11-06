@@ -211,6 +211,49 @@ def test_t_channel_inverse(masses, rng, mode):
 
 
 @pytest.mark.parametrize(
+    "masses,energy",
+    [
+        ([0.0, 0.0, 0.0, 0.0], 300.0),
+        ([0.0, 0.0, 0.0, 91.0], 300.0),
+        ([0.0, 0.0, 173.0, 173.0], 1000.0),
+    ],
+    ids=["massless", "massless and Z", "t tbar"],
+)
+def test_two_to_two_inverse_precision(masses, energy):
+    """The inverse of a 2 -> 2 scattering gives back its random numbers to
+    their rounding. The squares of the momenta are off by about eps E^2, also
+    for massless particles, so the range of |t| comes from the masses and is
+    computed without cancellations of order s, and |t| from light-cone
+    components, without cancellations of order E^2 in the forward direction
+    (a lower end of the range from the squared momenta moved r by up to
+    7e-12)."""
+    mapping = ms.PhaseSpaceMapping(
+        masses, energy, leptonic=True, mode=ms.PhaseSpaceMapping.propagator
+    )
+    r = rand((20000, mapping.random_dim()), generator=generator(5))
+    p_ext, x1, x2, _ = mapping.map_forward([r])
+    r_inv = mapping.map_inverse((p_ext, x1, x2))[0]
+    assert torch.max(torch.abs(r_inv - r)) < 2e-15
+
+
+def test_t_channel_chain_inverse_precision():
+    """In a chain of t-channel scatterings the last one starts from a
+    spacelike momentum, whose range of |t| depends on the masses of the
+    outgoing particles in proportion to (s - m_b^2) / s. The inverse takes the
+    masses of the forward map, so that it gives back the random number of
+    |t| of the last scattering, the last random number, to near its rounding
+    (with the squared momenta up to 2e-10 for a light pair of particles 2 and
+    3)."""
+    mapping = ms.PhaseSpaceMapping(
+        [0.0] * 5, 300.0, leptonic=True, mode=ms.PhaseSpaceMapping.propagator
+    )
+    r = rand((20000, mapping.random_dim()), generator=generator(5))
+    p_ext, x1, x2, _ = mapping.map_forward([r])
+    r_inv = mapping.map_inverse((p_ext, x1, x2))[0]
+    assert torch.max(torch.abs(r_inv[:, -1] - r[:, -1])) < 2e-13
+
+
+@pytest.mark.parametrize(
     "particle_count",
     [2, 3, 4, 5],
     ids=["2 particles", "3 particles", "4 particles", "5 particles"],

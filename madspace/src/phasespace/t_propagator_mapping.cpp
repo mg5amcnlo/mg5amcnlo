@@ -242,6 +242,9 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
     std::size_t n_out = _integration_order.size() + 1;
     ValueVec random_out;
     ValueVec dets;
+    // the masses of the recoil systems of the steps, which the forward map
+    // samples (the last one an outgoing particle)
+    ValueVec recoil_masses;
 
     // compute s-invariants from momenta
     if (_integration_order.size() > 1) {
@@ -283,8 +286,10 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
             random_out.push_back(result["random"]);
             dets.push_back(result["det"]);
             max_mass = fb.sqrt(mass2);
+            recoil_masses.push_back(max_mass);
         }
     }
+    recoil_masses.push_back(m_out.at(_integration_order.back()));
 
     // ETmin per particle, as in the forward map; only used with cuts
     auto etmin_particle = [&](std::size_t j) {
@@ -302,7 +307,8 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
     Value k_rest = fb.add(inputs.at(0), inputs.at(1));
     Value p1_rest = inputs.at(0), p2_rest = inputs.at(1);
     bool first = true;
-    for (auto [index, side] : zip(_integration_order, _sample_sides)) {
+    for (auto [index, side, recoil_mass] :
+         zip(_integration_order, _sample_sides, recoil_masses)) {
         auto& scattering = first ? _com_scattering : _lab_scattering;
         first = false;
         std::size_t sampled_index = index + side;
@@ -320,7 +326,11 @@ Mapping::Result TPropagatorMapping::build_inverse_impl(
             cond.push_back(conditions.at(conditions.size() - 2)); // x1
             cond.push_back(conditions.at(conditions.size() - 1)); // x2
         }
-        auto rs = scattering.build_inverse(fb, {k_rest, k}, cond);
+        // with the masses of the forward map, which fix the range of |t|
+        // (those of the momenta are rounded)
+        auto rs = scattering.build_inverse_with_masses(
+            fb, {k_rest, k}, cond, recoil_mass, mass
+        );
         random_out.push_back(rs.at(0));
         random_out.push_back(rs.at(1));
         dets.push_back(rs["det"]);

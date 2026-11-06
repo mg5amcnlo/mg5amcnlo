@@ -211,18 +211,56 @@ Mapping::Result TwoToTwoParticleScattering::build_inverse_impl(
     const NamedVector<Value>& inputs,
     const NamedVector<Value>& conditions
 ) const {
+    return inverse(fb, inputs, conditions, std::nullopt);
+}
+
+NamedVector<Value> TwoToTwoParticleScattering::build_inverse_with_masses(
+    FunctionBuilder& fb,
+    const ValueVec& inputs,
+    const ValueVec& conditions,
+    Value m1,
+    Value m2
+) const {
+    auto [outputs, det] = inverse(
+        fb,
+        {output_types().keys(), inputs},
+        {condition_types().keys(), conditions},
+        std::array<Value, 2>{m1, m2}
+    );
+    outputs.push_back("det", det);
+    return outputs;
+}
+
+Mapping::Result TwoToTwoParticleScattering::inverse(
+    FunctionBuilder& fb,
+    const NamedVector<Value>& inputs,
+    const NamedVector<Value>& conditions,
+    const std::optional<std::array<Value, 2>>& masses
+) const {
     auto p1 = inputs.at(0), p2 = inputs.at(1);
     auto p_in1 = conditions.at(0), p_in2 = conditions.at(1);
-    auto [t_abs, t_min_kin, t_max_kin] = _has_cut
+    auto t_values = _has_cut
         ? fb.t_inv_value_and_min_max_cut(
               p_in1, p_in2, p1, p2, conditions.at(2), conditions.at(3)
           )
         : fb.t_inv_value_and_min_max(p_in1, p_in2, p1, p2);
+    Value t_abs = t_values.at(0);
+    std::array<Value, 2> t_kin{t_values.at(1), t_values.at(2)};
+    auto [mass1, mass2] =
+        masses ? *masses : std::array<Value, 2>{fb.obs_mass(p1), fb.obs_mass(p2)};
+    if (masses) {
+        // |t| without cancellations of order E^2, and the range of the forward
+        // map, from the masses
+        t_abs = fb.t_inv_value(p_in1, p_in2, p1, p2, mass1, mass2);
+        t_kin = _has_cut
+            ? fb.t_inv_min_max_cut(
+                  p_in1, p_in2, mass1, mass2, conditions.at(2), conditions.at(3)
+              )
+            : fb.t_inv_min_max(p_in1, p_in2, mass1, mass2);
+    }
     auto [t_min, t_max] = _rapidity_window
-        ? rapidity_clamp(
-              fb, conditions, t_min_kin, t_max_kin, fb.obs_mass(p1), fb.obs_mass(p2)
-          )
-        : std::array<Value, 2>{t_min_kin, t_max_kin};
+        ? rapidity_clamp(fb, conditions, t_kin.at(0), t_kin.at(1), mass1, mass2)
+        : t_kin;
     auto t_result = _invariant.build_inverse(fb, {t_abs}, {t_min, t_max});
     auto [r_phi, m1, m2, det_scatter] = _com
         ? fb.two_to_two_particle_scattering_com_inverse(p1, p2, p_in1, p_in2)

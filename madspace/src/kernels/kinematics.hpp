@@ -92,15 +92,28 @@ KERNELSPEC FVal<T> kaellen(FVal<T> x, FVal<T> y, FVal<T> z) {
 template <typename T>
 KERNELSPEC Pair<FVal<T>, FVal<T>>
 t_inv_min_max(FVal<T> s, FVal<T> ma_2, FVal<T> mb_2, FVal<T> m1_2, FVal<T> m2_2) {
+    // |t| at cos(theta) = 1 and -1 in the rest frame of pa + pb is
+    // (prod -+ yr) / (2 s) - ma^2 - m1^2, with prod = A B, A = s + ma^2 - mb^2,
+    // B = s + m1^2 - m2^2 and yr = sqrt(lambda_a lambda_1). At the lower end
+    // prod and yr cancel up to terms of order m^2, so for prod > 0 their
+    // difference comes from prod^2 - yr^2 = 4 s (ma^2 B^2 + m1^2 A^2 -
+    // 4 s ma^2 m1^2): rounding errors of order eps s, and squared masses of that
+    // size that momenta give for massless particles, then do not shift t_min.
+    auto a = s + ma_2 - mb_2;
+    auto b = s + m1_2 - m2_2;
     auto ysqr = kaellen<T>(s, ma_2, mb_2) * kaellen<T>(s, m1_2, m2_2);
     auto yr = where(ysqr > EPS, sqrt(ysqr), EPS);
     auto m_sum = ma_2 + m1_2;
-    auto prod = (s + ma_2 - mb_2) * (s + m1_2 - m2_2);
-    auto s_eps = s + EPS;
-    auto y1 = m_sum - 0.5 * (prod - yr) / s_eps;
-    auto y2 = m_sum - 0.5 * (prod + yr) / s_eps;
-    auto t_min_tmp = -max(y2, y1);
-    auto t_max_tmp = -min(y1, y2);
+    auto prod = a * b;
+    auto s_pos = max(s, FVal<T>(EPS));
+    auto t_lo = where(
+        prod > 0.,
+        2. * (ma_2 * b * b + m1_2 * a * a - 4. * s * ma_2 * m1_2) / (prod + yr) - m_sum,
+        0.5 * (prod - yr) / s_pos - m_sum
+    );
+    auto t_hi = 0.5 * (prod + yr) / s_pos - m_sum;
+    auto t_min_tmp = min(t_lo, t_hi);
+    auto t_max_tmp = max(t_lo, t_hi);
     auto t_min = max(t_min_tmp, 0.);
     // an empty range gets a width of at least 1e-14 |t_min|, since EPS can be below one
     // ulp of t
@@ -755,6 +768,51 @@ KERNELSPEC void kernel_t_inv_value_and_min_max(
     t_min = t_min_max.first;
     t_max = t_min_max.second;
     t_abs = -t_temp;
+}
+
+// t = (q - p)^2 for an incoming q and an outgoing p with the squared masses
+// mq2 and mp2, from their light-cone components along their own directions,
+// q_+ = E + |q| and q_- = mq2 / q_+:
+//   t = (p_+ - q_+) (mp2 / p_+ - mq2 / q_+) - 2 X,  X = |q| |p| - q.p,
+// with X = |q x p|^2 / (|q| |p| + q.p) where the angle between them is below
+// pi / 2. Near the collinear limit no terms of order E^2 cancel, so that t has
+// the relative precision of the momenta where both masses vanish.
+template <typename T>
+KERNELSPEC FVal<T> t_light_cone(FourMom<T> q, FourMom<T> p, FVal<T> mq2, FVal<T> mp2) {
+    auto q_mag = sqrt(esquare<T>(q)), p_mag = sqrt(esquare<T>(p));
+    auto q_plus = q[0] + q_mag, p_plus = p[0] + p_mag;
+    auto dot = q[1] * p[1] + q[2] * p[2] + q[3] * p[3];
+    auto c1 = q[2] * p[3] - q[3] * p[2];
+    auto c2 = q[3] * p[1] - q[1] * p[3];
+    auto c3 = q[1] * p[2] - q[2] * p[1];
+    auto qp = q_mag * p_mag;
+    auto x =
+        where(dot > 0., (c1 * c1 + c2 * c2 + c3 * c3) / max(qp + dot, EPS2), qp - dot);
+    auto valid = (q_plus > 0.) & (p_plus > 0.);
+    auto safe_q = where(valid, q_plus, 1.), safe_p = where(valid, p_plus, 1.);
+    auto light_cone = (safe_p - safe_q) * (mp2 / safe_p - mq2 / safe_q) - 2. * x;
+    auto direct = mq2 + mp2 - 2. * (q[0] * p[0] - dot);
+    return where(valid, light_cone, direct);
+}
+
+template <typename T>
+KERNELSPEC void kernel_t_inv_value(
+    FIn<T, 1> pa,
+    FIn<T, 1> pb,
+    FIn<T, 1> p1,
+    FIn<T, 1> p2,
+    FIn<T, 0> m1,
+    FIn<T, 0> m2,
+    FOut<T, 0> t_abs
+) {
+    // t = (pa - p1)^2 = (pb - p2)^2, from the pair with the smaller masses, with
+    // those of the outgoing particles given
+    auto a = load_mom<T>(pa), b = load_mom<T>(pb);
+    auto ma_2 = lsquare<T>(a), mb_2 = lsquare<T>(b);
+    FVal<T> m1_2 = m1 * m1, m2_2 = m2 * m2;
+    auto t_a = t_light_cone<T>(a, load_mom<T>(p1), ma_2, m1_2);
+    auto t_b = t_light_cone<T>(b, load_mom<T>(p2), mb_2, m2_2);
+    t_abs = -where(fabs(ma_2) + m1_2 <= fabs(mb_2) + m2_2, t_a, t_b);
 }
 
 // Cut-derived |t| interval from the AmpliCol/gen23 ETmin construction
