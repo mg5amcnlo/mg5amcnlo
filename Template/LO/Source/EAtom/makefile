@@ -4,7 +4,7 @@ LIBRARY = libeatom.$(libext)
 LIBRARY_SHARED  = libdeatom.$(dylibext)
 LIBDIR  = ../../lib/
 
-OBJ=interpolation.o spherical_harmonic.o C12_gftilde.o W186_gftilde.o Pb208_gftilde.o atomic_electron_wavefunctions.o eatom_external.o eatom_ps.o
+OBJ=interpolation.o spherical_harmonic.o C12_gftilde.o W186_gftilde.o Pb208_gftilde.o U238_gftilde.o atomic_electron_wavefunctions.o eatom_external.o eatom_ps.o
 
 all: $(LIBDIR)$(LIBRARY)
 
@@ -22,7 +22,7 @@ shared: $(LIBDIR)$(LIBRARY_SHARED)
 %.o: %.f90
 	$(FC) $(FFLAGS) -c $<
 
-atomic_electron_wavefunctions.o: interpolation.o spherical_harmonic.o C12_gftilde.o W186_gftilde.o Pb208_gftilde.o
+atomic_electron_wavefunctions.o: interpolation.o spherical_harmonic.o C12_gftilde.o W186_gftilde.o Pb208_gftilde.o U238_gftilde.o
 eatom_external.o: atomic_electron_wavefunctions.o
 eatom_ps.o: atomic_electron_wavefunctions.o eatom_external.o
 

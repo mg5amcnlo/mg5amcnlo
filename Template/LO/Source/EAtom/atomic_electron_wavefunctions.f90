@@ -130,6 +130,7 @@ CONTAINS
     USE C12_gftilde
     USE Pb208_gftilde
     USE W186_gftilde
+    USE U238_gftilde
     USE interpolation
     IMPLICIT NONE
     INTEGER,INTENT(IN)::nuclearA,nuclearZ
@@ -152,6 +153,9 @@ CONTAINS
     ELSEIF(nuclearA.EQ.208.AND.nuclearZ.EQ.82)THEN
        eatom_NP=Pb208_NP
        eatom_NSHELL=Pb208_NSHELL
+    ELSEIF(nuclearA.EQ.238.AND.nuclearZ.EQ.92)THEN
+       eatom_NP=U238_NP
+       eatom_NSHELL=U238_NSHELL
     ELSE
        WRITE(*,*)"ERROR: Do not known (A,Z)=",nuclearA,nuclearZ
        STOP
@@ -181,7 +185,7 @@ CONTAINS
        i_high_p=W186_i_high_p
        eatom_pgrid=W186_P_grid
        eatom_grid=W186_gftilde_grid
-    ELSE
+    ELSEIF(nuclearA.EQ.208.AND.nuclearZ.EQ.82)THEN
        eatom_shells=Pb208_all_shells
        eatom_nume=Pb208_nume_shells
        eatom_lowp=Pb208_low_p
@@ -190,6 +194,15 @@ CONTAINS
        i_high_p=Pb208_i_high_p
        eatom_pgrid=Pb208_P_grid
        eatom_grid=Pb208_gftilde_grid
+    ELSE
+       eatom_shells=U238_all_shells
+       eatom_nume=U238_nume_shells
+       eatom_lowp=U238_low_p
+       i_low_p=U238_i_low_p
+       eatom_highp=U238_high_p
+       i_high_p=U238_i_high_p
+       eatom_pgrid=U238_P_grid
+       eatom_grid=U238_gftilde_grid
     ENDIF
     ! high p: gtilde~ftilde~p**(-2-sqrt(1-Z**2*alpha**2))
     IF(1d0-alphaEW**2*nuclearZ**2.GE.0d0)THEN

@@ -58,3 +58,19 @@ e_in_Pb208 = Boundstate(pdg_code = 1008220811,
                         ldme = 1.0,
                         texname = 'e_{Pb^{208}}')
 
+# e in U238
+e_in_U238  = Boundstate(pdg_code = 1009223811,
+                        name = 'e_in_U238',
+                        particles = ['e-'],
+                        shells = [-101, -201, 201, -202, -301, 301, -302, 302, -303, -401, 401,
+                                  -402, 402, -403, 403, -404, -501, 501, -502, 502, -503, 503,
+                                  -504, -601, 601, -602, 602, -603, -701],
+                        mass = Param.Me,
+                        principal = 1,
+                        spin = 2,
+                        orbital = 0,
+                        J = 0,
+                        color = 1,
+                        charge = -1,
+                        ldme = 1.0,
+                        texname = 'e_{U^{238}}')

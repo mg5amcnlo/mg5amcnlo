@@ -135,3 +135,26 @@ class TestEatomMadEvent(unittest.TestCase):
         target = 1.468803e14   # quadrature (EAtom_PS/scripts/ref_2to1.py)
         self.assertLess(abs(val - target) / err, 4.,
                         'cross section %s +- %s, expected %s' % (val, err, target))
+
+    def test_eatom_u238_resonance_2to1(self):
+        """e+ eU238 > z with M_Z = 10 MeV at E1 = E0: U238 tables (29 shells)
+        against the 1-D quadrature of the standalone matrix element"""
+        self.generate('e+ eU238 > z')
+        card = banner_mod.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        self.assertEqual(card['eatom_a'], 238)
+        self.assertEqual(card['eatom_z'], 92)
+        self.assertEqual(card.get_banner_init_information()['idbmup2'], 1000922380)
+        path = pjoin(self.run_dir, 'Cards', 'param_card.dat')
+        card = param_card_mod.ParamCard(path)
+        card['mass'].get(23).value = 0.01
+        card['sminputs'].get(2).value = 736.1099
+        card['decay'].get(23).value = 0.0
+        card.write(path)
+        e0 = (0.01**2 - 2 * ME**2) / (2 * ME)
+        self.set_run(nevents=500, ebeam1=e0, iseed=33)
+        self.cmd_line.run_cmd('generate_events -f')
+        val = self.cmd_line.results.current['cross']
+        err = self.cmd_line.results.current['error']
+        target = 7.267296e14   # quadrature (EAtom_PS/scripts/ref_2to1.py)
+        self.assertLess(abs(val - target) / err, 4.,
+                        'cross section %s +- %s, expected %s' % (val, err, target))

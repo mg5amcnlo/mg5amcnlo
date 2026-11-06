@@ -21,3 +21,4 @@
 eC12 = e_in_C12
 eW186 = e_in_W186
 ePb208 = e_in_Pb208
+eU238 = e_in_U238
