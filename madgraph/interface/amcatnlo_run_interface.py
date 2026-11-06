@@ -5516,17 +5516,12 @@ PYTHIA8LINKLIBS=%(pythia8_prefix)s/lib/libpythia8.a -lz -ldl"""%{'pythia8_prefix
             if self.run_card['lpp1'] == 1 == self.run_card['lpp2']:
                 logger.info('Using built-in libraries for PDFs')
 
-            elif self.run_card['lpp1'] == 2 == self.run_card['lpp2']:
-                upclabels=['edff','chff','edpf','edmf','chpf','chmf']
-                # for forward neutron tagging
-                for nerr in ['f','p','m']:
-                    for y in ['i','x','0','1','2','3','4']:
-                        for z in ['i','x','0','1','2','3','4']:
-                            upclabels.append('ed'+nerr+y+'n'+z+'n')
-                            upclabels.append('ch'+nerr+y+'n'+z+'n')
-                if self.run_card['pdlabel'] in upclabels:
+            elif abs(self.run_card['lpp1']) == 2 == abs(self.run_card['lpp2']):
+                if banner_mod.is_upc_label(self.run_card['pdlabel']):
                     logger.info('Using '+self.run_card['pdlabel'].upper()+' in gamma-UPC')
                     self.make_opts_var['pdlabel'] = self.run_card['pdlabel']
+                    # also in RunCard.check_validity (only a warning on some read paths): stop before compiling
+                    banner_mod.check_upc_neutron_tagging(self.run_card, self.run_card['pdlabel'])
 
             self.make_opts_var['lhapdf'] = ""
 

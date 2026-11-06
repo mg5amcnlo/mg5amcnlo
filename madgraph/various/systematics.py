@@ -168,15 +168,10 @@ class Systematics(object):
                 raise SystematicsError('EVA only works with e/mu beams, not lpp* = %s' % self.b2)
             #self.b1 = beam1//2212
             isEVAxDIS=True
-        # none, chff, edff and their neutron tagging options
-        nosystlabels=['none','chff','edff','chpf','chmf','edpf','edmf']
-        for nerr in ['f','p','m']:
-            for y in ['i','x','0','1','2','3','4']:
-                for z in ['i','x','0','1','2','3','4']:
-                    nosystlabels.append('ed'+nerr+y+'n'+z+'n')
-                    nosystlabels.append('ch'+nerr+y+'n'+z+'n')
-        if(self.banner.run_card['pdlabel'] in nosystlabels):
-            raise SystematicsError('Systematics not supported for pdlabel=none,chff,edff,chpf,chmf,edpf,edmf,chf<y>n<z>n,edf<y>n<z>n,chp<y>n<z>n,chm<y>n<z>n,edp<y>n<z>n,edm<y>n<z>n')
+        # none, and gamma-UPC (edff, chff, ... with neutron tagging)
+        pdlabel = self.banner.run_card['pdlabel']
+        if pdlabel == 'none' or banner_mod.is_upc_label(pdlabel):
+            raise SystematicsError('Systematics not supported for pdlabel=%s (none and gamma-UPC labels)' % pdlabel)
 
         self.orig_ion_pdf = False
         self.ion_scaling = ion_scaling

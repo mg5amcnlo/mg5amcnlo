@@ -131,168 +131,8 @@ c     saved. 'pdflast' is filled below.
       xlast(2,ireuse)=xx2
       pdlabellast(ireuse)=pdlabel
 
-      neutron_tagging(1:2)=-2
-      neutron_xsigma=0d0
-      if(pdlabel(1:2).eq.'ed') then
-         USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
-c        for neutron tagging uncertainty
-         if(pdlabel(3:3).eq.'f')then
-c           central value of neutron xs
-            neutron_xsigma=0d0
-         elseif(pdlabel(3:3).eq.'p')then
-c     upper value of neutron xs
-            neutron_xsigma=1d0
-         elseif(pdlabel(3:3).eq.'m')then
-c     lower value of neutron xs
-            neutron_xsigma=-1d0
-         else
-            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-            STOP -1
-         endif
-         if(pdlabel(4:4).ne.'f')then
-c     forward neutron tagging
-            if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 3
-            endif
-            if(pdlabel(4:4).eq.'i')then
-c 0n+Xn
-               neutron_tagging(1)=-2
-            elseif(pdlabel(4:4).eq.'x')then
-c Xn
-               neutron_tagging(1)=-1
-            elseif(pdlabel(4:4).eq.'0')then
-c 0n
-               neutron_tagging(1)=0
-            elseif(pdlabel(4:4).eq.'1')then
-c 1n
-               neutron_tagging(1)=1
-            elseif(pdlabel(4:4).eq.'2')then
-c 2n
-               neutron_tagging(1)=2
-            elseif(pdlabel(4:4).eq.'3')then
-c 3n
-               neutron_tagging(1)=3
-            elseif(pdlabel(4:4).eq.'4')then
-c 4n
-               neutron_tagging(1)=4
-            else
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 4
-            endif
-            if(pdlabel(6:6).eq.'i')then
-c 0n+Xn
-               neutron_tagging(2)=-2
-            elseif(pdlabel(6:6).eq.'x')then
-c Xn
-               neutron_tagging(2)=-1
-            elseif(pdlabel(6:6).eq.'0')then
-c 0n
-               neutron_tagging(2)=0
-            elseif(pdlabel(6:6).eq.'1')then
-c 1n
-               neutron_tagging(2)=1
-            elseif(pdlabel(6:6).eq.'2')then
-c 2n
-               neutron_tagging(2)=2
-            elseif(pdlabel(6:6).eq.'3')then
-c 3n
-               neutron_tagging(2)=3
-            elseif(pdlabel(6:6).eq.'4')then
-c 4n
-               neutron_tagging(2)=4
-            else
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 5
-            endif
-         else
-            if(pdlabel(5:7).ne.'   ')then
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 9
-            endif
-         endif
-      elseif(pdlabel(1:2).eq.'ch') then
-         USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
-c     for neutron tagging uncertainty
-         if(pdlabel(3:3).eq.'f')then
-c     central value of neutron xs
-            neutron_xsigma=0d0
-         elseif(pdlabel(3:3).eq.'p')then
-c     upper value of neutron xs
-            neutron_xsigma=1d0
-         elseif(pdlabel(3:3).eq.'m')then
-c     lower value of neutron xs
-            neutron_xsigma=-1d0
-         else
-            WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-            STOP -2
-         endif
-         if(pdlabel(4:4).ne.'f')then
-c     forward neutron tagging
-            if(pdlabel(5:5).ne.'n'.or.pdlabel(7:7).ne.'n')then
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 6
-            endif
-            if(pdlabel(4:4).eq.'i')then
-c 0n+Xn
-               neutron_tagging(1)=-2
-            elseif(pdlabel(4:4).eq.'x')then
-c Xn
-               neutron_tagging(1)=-1
-            elseif(pdlabel(4:4).eq.'0')then
-c 0n
-               neutron_tagging(1)=0
-            elseif(pdlabel(4:4).eq.'1')then
-c 1n
-               neutron_tagging(1)=1
-            elseif(pdlabel(4:4).eq.'2')then
-c 2n
-               neutron_tagging(1)=2
-            elseif(pdlabel(4:4).eq.'3')then
-c 3n
-               neutron_tagging(1)=3
-            elseif(pdlabel(4:4).eq.'4')then
-c 4n
-               neutron_tagging(1)=4
-            else
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 7
-            endif
-            if(pdlabel(6:6).eq.'i')then
-c 0n+Xn
-               neutron_tagging(2)=-2
-            elseif(pdlabel(6:6).eq.'x')then
-c Xn
-               neutron_tagging(2)=-1
-            elseif(pdlabel(6:6).eq.'0')then
-c 0n
-               neutron_tagging(2)=0
-            elseif(pdlabel(6:6).eq.'1')then
-c 1n
-               neutron_tagging(2)=1
-            elseif(pdlabel(6:6).eq.'2')then
-c 2n
-               neutron_tagging(2)=2
-            elseif(pdlabel(6:6).eq.'3')then
-c 3n
-               neutron_tagging(2)=3
-            elseif(pdlabel(6:6).eq.'4')then
-c 4n
-               neutron_tagging(2)=4
-            else
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 8
-            endif
-         else
-            if(pdlabel(5:7).ne.'   ')then
-               WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-               STOP 10
-            endif
-         endif
-      else
-         WRITE(*,*)"Error: do not know pdlabel = ",pdlabel
-         STOP 2
-      endif
+c     gamma-UPC options from the pdlabel (EDFF/ChFF, neutron tagging)
+      call set_gammaUPC_label(pdlabel)
 
 c     write(*,*) 'running gamma-UPC'
 
@@ -340,4 +180,69 @@ c     write(*,*) 'running gamma-UPC'
       CALL GetNuclearInfo(nucleus_name,Aval,Zval,RRR,AAA,WWW)
       RAI=RRR/GeVm12fm1
       return
+      end
+
+
+      subroutine set_gammaUPC_label(label)
+c     Set the gamma-UPC options from a pdlabel made of
+c       'ed' (EDFF) or 'ch' (ChFF),
+c       'f', 'p' or 'm': central, upper or lower neutron-emission
+c                        cross section,
+c       'f' (no tagging) or '<y>n<z>n' with <y>,<z> the neutron tags
+c                        of beam 1 and beam 2 (see neutron_tag_code).
+      USE ElasticPhotonPhotonFlux
+      implicit none
+      character*7 label
+      integer neutron_tag_code
+      external neutron_tag_code
+
+      if(label(1:2).eq.'ed') then
+         USE_CHARGEFORMFACTOR4PHOTON=.FALSE.
+      elseif(label(1:2).eq.'ch') then
+         USE_CHARGEFORMFACTOR4PHOTON=.TRUE.
+      else
+         call gammaUPC_label_error(label)
+      endif
+
+      if(label(3:3).eq.'f') then
+         neutron_xsigma=0d0
+      elseif(label(3:3).eq.'p') then
+         neutron_xsigma=1d0
+      elseif(label(3:3).eq.'m') then
+         neutron_xsigma=-1d0
+      else
+         call gammaUPC_label_error(label)
+      endif
+
+      if(label(4:7).eq.'f   ') then
+         neutron_tagging(1:2)=-2
+      elseif(label(5:5).eq.'n'.and.label(7:7).eq.'n') then
+         neutron_tagging(1)=neutron_tag_code(label(4:4),label)
+         neutron_tagging(2)=neutron_tag_code(label(6:6),label)
+      else
+         call gammaUPC_label_error(label)
+      endif
+      return
+      end
+
+
+      integer function neutron_tag_code(c,label)
+c     neutron tag character -> gamma-UPC neutron_tagging code
+c     i: -2 (0n+Xn), x: -1 (Xn, X>=1), 0,1,2,3,4: exactly that many
+      implicit none
+      character*1 c
+      character*7 label
+      integer i
+      i=index('ix01234',c)
+      if(i.eq.0) call gammaUPC_label_error(label)
+      neutron_tag_code=i-3
+      return
+      end
+
+
+      subroutine gammaUPC_label_error(label)
+      implicit none
+      character*7 label
+      write(*,*) 'Error: unknown gamma-UPC pdlabel = ',label
+      stop 2
       end

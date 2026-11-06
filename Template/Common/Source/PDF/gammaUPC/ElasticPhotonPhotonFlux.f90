@@ -6049,7 +6049,7 @@ CONTAINS
        WRITE(*,*)"ERROR: only the following options for in1: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
        STOP
     ENDIF
-    IF(in2.LT.-1.OR.in2.GT.4)THEN
+    IF(in2.LT.-2.OR.in2.GT.4)THEN
        WRITE(*,*)"ERROR: only the following options for in2: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
        STOP
     ENDIF
@@ -6356,7 +6356,7 @@ CONTAINS
     REAL(KIND(1d0))::PXn_LO_proj1,P1n_LO_proj1,P2n_LO_proj1,P3n_LO_proj1,P4n_LO_proj1
     REAL(KIND(1d0))::PXn_proj1,P0n_proj1,P1n_proj1,P2n_proj1,P3n_proj1,P4n_proj1
 
-    IF(in2.LT.-1.OR.in2.GT.4)THEN
+    IF(in2.LT.-2.OR.in2.GT.4)THEN
        WRITE(*,*)"ERROR: only the following options for in2: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
        STOP
     ENDIF

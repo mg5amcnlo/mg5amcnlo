@@ -278,14 +278,9 @@ C-------------------------------------------------
         endif
       enddo
 
-      if(pdfin(1:3).eq.'edf'.or.pdfin(1:3).eq.'edp'
-     $     .or.pdfin(1:3).eq.'edm')then
-         mpdf=numspdf(4)
-      endif
-      if(pdfin(1:3).eq.'chf'.or.pdfin(1:3).eq.'chp'
-     $     .or.pdfin(1:3).eq.'chm')then
-         mpdf=numspdf(5)
-      endif
+c     gamma-UPC labels (edff, chff, edf1n2n, ...): same as edff/chff
+      if(pdfin(1:2).eq.'ed') mpdf=numspdf(4)
+      if(pdfin(1:2).eq.'ch') mpdf=numspdf(5)
 
       if(mpdf.eq.-1) then
         write(*,*)'pdf ',pdfin,' not implemented in get_pdfup.'

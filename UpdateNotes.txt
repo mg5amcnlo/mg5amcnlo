@@ -4,6 +4,17 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.2 (XX/XX/XX):
+    NC+DdE+LM+HS+LS: gamma-UPC 1.8 with forward neutron tagging in ultraperipheral
+        collisions, at LO and NLO.
+        - new pdlabel edf<y>n<z>n / chf<y>n<z>n: EDFF / ChFF with the neutron tags <y>, <z>
+          of beam 1 and beam 2 among i (0n+Xn), x (Xn), 0, 1, 2, 3, 4. Pb208, Au197 and O16
+          (up to 2n) are supported. The tag of a proton beam is ignored.
+        - edp/edm (chp/chm) in place of edf (chf) give the upper/lower neutron-emission
+          cross sections, for the uncertainty estimate.
+        - new photoabsorption and 1n-4n emission cross sections for Pb208, Au197, O16 (and U238,
+          not enabled yet), and a new interpolation of the photon-photon luminosity grid.
+
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)
         - Arbitrary decay, support for loop-induced processes, interference, Pole Approximation mode, polarization weights, ...
