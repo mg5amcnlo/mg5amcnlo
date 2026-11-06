@@ -2,7 +2,9 @@
 """Replay fixed Born ensembles with recovered historical SudGen settings.
 
 Usage: singlet_matched_showers.py ORIGINAL_WORK NEW_WORK PYTHIA_INSTALL OUTPUT
+       --settings-audit /path/to/settings_audit.json
 Run PDF13 (historical default) and PDF15 controls, all fixed/damped samples.
+The external audit supplies the expected shared settings and ISR cutoff metadata.
 The original driver, Born files and old results are never modified.
 """
 import argparse
@@ -51,10 +53,18 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('original', type=Path); p.add_argument('work', type=Path)
     p.add_argument('pythia', type=Path); p.add_argument('output', type=Path)
+    p.add_argument('--settings-audit', type=Path, required=True,
+                   help='JSON audit with rerun_expected_shared_settings and internal_ISR_cutoff')
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--pdf', type=int, nargs='+', choices=[13,15], default=[13,15])
     p.add_argument('--reuse', action='store_true')
     args = p.parse_args()
+    settings_audit = args.settings_audit.resolve()
+    if not settings_audit.is_file():
+        p.error('--settings-audit file does not exist: '+str(settings_audit))
+    audited_settings = json.loads(settings_audit.read_text())
+    audited_expected = audited_settings['rerun_expected_shared_settings']
+    internal_ISR_cutoff = audited_settings['internal_ISR_cutoff']
     original, work, install, out = [x.resolve() for x in [args.original,args.work,args.pythia,args.output]]
     work.mkdir(parents=True, exist_ok=True); out.mkdir(parents=True, exist_ok=True)
     source_template = ROOT/'tests/validation/delta_noemission/singlet_shower_probe.cc'
@@ -63,8 +73,6 @@ def main():
     assert sha(source_template)==prior['source_sha256']
     template = source_template.read_text()
     source_copy = work/'singlet_shower_probe_original.cc'; source_copy.write_text(template)
-    settings_audit = ROOT/'docs/audits/delta_noemission/singlet_matched/settings_audit.json'
-    audited_expected = json.loads(settings_audit.read_text())['rerun_expected_shared_settings']
     started = time.monotonic()
     jobs, builds, pilots = [], {}, []
     for pdf in args.pdf:
@@ -194,6 +202,7 @@ def main():
     result=dict(pythia_version='8.313',samples=samples,jobs=jobs,pilots=pilots,builds=builds,
         definition='Replay existing 1000 Born states per process, fixed/damped starts, 300 repetitions; recovered historical settings; PDF13 primary and PDF15 control.',
         historical_settings=HISTORICAL,forced_settings={'SpaceShower:pT0Ref':0.},particle_masses=MASSES,
+        settings_audit=str(settings_audit),
         intentional_differences=['Physical backward pdfMode=0 versus forward archive mode',
             'External Born process and per-event starts retained; pTmaxMatch=1 enforces them',
             'Beams production-scale flags stay on to read identical commonQ starts; historical dummy generator uses internal starts',
@@ -205,7 +214,7 @@ def main():
         pdf_grid_sha256={str(pdf):sha(install/'share/Pythia8/pdfdata'/grid) for pdf,grid in
             [(13,'NNPDF23_lo_as_0130_qed_0000.dat'),(15,'NNPDF23_nlo_as_0119_qed_0000.dat')]},
         elapsed_seconds=time.monotonic()-started,reused_existing_shards=args.reuse,
-        internal_ISR_cutoff=json.loads(settings_audit.read_text())['internal_ISR_cutoff'],
+        internal_ISR_cutoff=internal_ISR_cutoff,
         pdf15_error_qualification='Logged xPDF=0 errors are retained and counted, never silently discarded. '
             'The source invokes this heavy-threshold routine only below sqrt(2)*mQ, bounded by6.7883GeV '
             'for bottom and1.6971GeV for charm in this setup. Values atlowercuts remainqualified; '

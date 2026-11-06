@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Re-run the comparison from an existing NLO export and extracted S-event LHE.
-# See docs/audits/delta_noemission/report.txt for event generation/cards.
 set -euo pipefail
 if [ "$#" -ne 4 ]; then
   echo "usage: $0 PYTHIA_INSTALL TT_EXPORT S_EVENTS_LHE OUTPUT_DIR" >&2

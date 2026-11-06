@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the independent fixed-order runs from resonance_recoil.md.
+"""Compare independent fixed-order runs using their HwU histograms.
 
 Usage: compare_resonance_recoil.py --baseline old.HwU --local new.HwU
        --cutcheck varied.HwU --output comparison

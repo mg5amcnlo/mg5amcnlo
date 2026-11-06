@@ -83,13 +83,11 @@ veto or by itself validate matched samples.
 
 Validation against the actual shower
 
-From the MG5 source root, with an unmodified PYTHIA 8.318 shared-library
-build and g++ available, run:
-  python3 docs/audits/check_pythia8_qed_global.py /path/to/pythia8318
-The script verifies the reference source hash, patches a temporary copy,
-and compiles tests/input_files/check_pythia8_qed_global.cc. Only the test
-executable overrides the stock SimpleTimeShower definitions; all temporary
-files are removed and the installed source and library remain unchanged.
+The C++ shower fixture is tests/input_files/check_pythia8_qed_global.cc.
+The recorded validation patched a temporary copy of PYTHIA 8.318 and
+compiled that fixture against its shared library. Only the test executable
+overrode the stock SimpleTimeShower definitions; the installed source and
+library were left unchanged.
 
 The fixture showers 500 e+ e- -> mu+ mu- tau+ tau- S events and 500 H events
 with an extra photon, with massless stable leptons and ISR disabled. A
@@ -174,14 +172,12 @@ for arbitrary PDFs with sharp features; check envelope stability for
 the chosen PDF and kinematics. The validation below compares headrooms
 2 and 4 against the same independent emission law.
 
-Run the actual-shower validation from the MG5 source root:
-  python3 docs/audits/check_pythia8_hadron_gamma.py /path/to/pythia8318
-An optional --report /path/to/results.json saves the numerical results.
-The script checks the three source hashes and applies the patch without
-fuzz in a temporary tree. It compiles the C++ fixture both with the stock
-library and with patched SimpleSpaceShower definitions overriding the
-stock shared-library definitions in that executable. The installed
-source, headers, data and library are never modified.
+The recorded actual-shower validation checked the three source hashes and
+applied the patch without fuzz in a temporary tree. The C++ fixture was
+compiled both with the stock library and with patched SimpleSpaceShower
+definitions overriding the stock shared-library definitions in that
+executable. The installed source, headers, data and library were left
+unchanged.
 
 The tests compare first-emission probabilities, eight pT bins and the
 first z moment with an independently integrated two-leg Sudakov, with
@@ -233,9 +229,9 @@ preserves local finiteness but does not repair PYTHIA's soft radiation;
 it leaves the usual soft-region G dependence for infrared-safe observables
 (see arXiv:1405.0301, eq. 2.117; that paper uses the complementary G).
 
-Run the reproducible massive-radiator shower probe with:
-  python3 docs/audits/check_pythia8_massive_radiators.py /path/to/pythia8318
-It uses the same isolated-source procedure, with MECs off and global
+The massive-radiator C++ fixture is
+tests/input_files/check_pythia8_massive_radiators.cc. The recorded
+validation used the same isolated-source procedure, with MECs off and global
 recoil on (mode 0 for W pairs, mode 2 for coloured pairs). At seed 734612,
 all 1500 events passed: W radiation gave 475 checked QED trials and 382
 accepted emissions; squarks gave 4929 QCD trials/635 emissions and 130

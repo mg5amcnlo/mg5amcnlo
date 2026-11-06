@@ -1,6 +1,5 @@
 module virt_surrogate
 ! Per-channel fits of the finite virtual, frozen within each iteration.
-! See docs/nlo_virt_trick_surrogate.md for the basis and fallback criteria.
   implicit none
   private
   integer, parameter :: vs_maxfeat=94, vs_maxchan=20, vs_minpts=50

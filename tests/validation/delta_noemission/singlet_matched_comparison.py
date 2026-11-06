@@ -2,9 +2,12 @@
 """Compare original and historical-settings-matched DY/ggH shower references.
 
 Usage: singlet_matched_comparison.py ORIGINAL_STUDY MATCHED_STUDY OUTPUT
+       [--original-provenance-dir DIRECTORY]
 Run singlet_matched_analysis.py separately for all four samples in MATCHED_STUDY/pdf13
 and MATCHED_STUDY/pdf15 first. The Delta values are recalculated there; this
 driver checks they agree bitwise with the earlier calculation where available.
+Original provenance is read beside the original arrays in analysis_pdf13/ and
+analysis/, or in the same subdirectories of --original-provenance-dir.
 """
 import argparse
 import csv
@@ -41,16 +44,23 @@ def main():
     parser.add_argument('original', type=Path)
     parser.add_argument('matched', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--original-provenance-dir', type=Path,
+                        help='directory containing analysis_pdf13/ and analysis/ provenance '
+                             '(default: ORIGINAL_STUDY)')
     args = parser.parse_args()
     original, matched, out = [p.resolve() for p in
                               [args.original, args.matched, args.output]]
+    original_provenance_dir = (args.original_provenance_dir.resolve()
+                               if args.original_provenance_dir else original)
+    for folder in ('analysis_pdf13', 'analysis'):
+        provenance_path = original_provenance_dir/folder/'analysis_provenance.json'
+        if not provenance_path.is_file():
+            parser.error('original analysis provenance does not exist: '+str(provenance_path))
     out.mkdir(parents=True, exist_ok=True)
     rows, checks, inputs = [], [], {}
     for pdf in ['13', '15']:
         folder = 'analysis_pdf13' if pdf == '13' else 'analysis'
-        old_provenance_path = ROOT/'docs/audits/delta_noemission/singlet_validation'
-        if pdf == '13': old_provenance_path /= 'pdf13_control'
-        old_provenance_path /= 'analysis_provenance.json'
+        old_provenance_path = original_provenance_dir/folder/'analysis_provenance.json'
         new_provenance_path = out/('pdf'+pdf)/'analysis_provenance.json'
         old_provenance = json.loads(old_provenance_path.read_text())
         new_provenance = json.loads(new_provenance_path.read_text())
