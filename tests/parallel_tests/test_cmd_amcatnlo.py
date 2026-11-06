@@ -563,8 +563,12 @@ class MECmdShell(IOTests.IOTestManager):
         self.generate('e+ e- > t t~ [real=QCD]', 'sm')
         #change to py6
         self.set_parton_shower('PYTHIA6PT')
-        #self.do('generate_events -f')        
-        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'generate_events -f')
+        self.assertTrue(self.cmd_line.proc_characteristics['has_fsr'])
+        with self.assertRaisesRegex(NLOCmd.aMCatNLOError,
+                                    'PYTHIA6PT does not support processes with FSR'):
+            self.do('generate_events -f')
+        self.assertFalse(os.path.exists(pjoin(self.path, 'SubProcesses',
+                                             'P0_epem_ttx', 'madevent_mintMC')))
 
         
     def test_short_generate_events_nlo_hw6_stdhep(self):

@@ -485,6 +485,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 nparticles_list.append(meout[2])
             self['max_particles'] = max(nparticles_list)        
 
+        if fksmulti['ncores_for_proc_gen']:
+            # Only the real amplitudes with diagrams survived the workers.
+            # Do not report radiation from an empty/restricted amplitude.
+            for born in born_procs:
+                born.update_radiation_flags([
+                    real for real in born.real_amps
+                    if fks_common.external_process_identity(real.process)
+                    in real_keys])
+            fksmulti['has_isr'] = any(born.isr for born in born_procs)
+            fksmulti['has_fsr'] = any(born.fsr for born in born_procs)
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
         self['ewsudakov'] = fksmulti['ewsudakov']

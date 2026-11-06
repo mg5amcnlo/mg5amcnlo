@@ -1,20 +1,24 @@
       program test_born_gscale
-c Regression driver for the gscale path of the FKS Born (SBORN with
-c check_born_amps): at fixed momenta, the Born at a strong coupling g2
+c Regression driver for native FKS Born rescaling: at fixed momenta,
+c the Born at a strong coupling g2
 c obtained by rescaling the amplitudes cached at g1 must agree with a
 c fresh evaluation at g2, for every split-order piece (amp_split), the
 c counterterm pieces (ans_cnt, amp_split_cnt: Born tilde), AMP2/JAMP2
 c and every colour link. Four modes, per FKS configuration and point:
-c   0 fast path : the result cache is valid, it is rescaled as well
-c   1 loop path : the cache belongs to another FKS configuration, so
+c   0 same sector: rescale the cached amplitudes and contract them
+c   1 new sector: the cache belongs to another FKS configuration, so
 c                 the colour loop runs on the rescaled amplitudes
-c   2 loop path : a single-helicity call invalidated the result cache
+c   2 one helicity: a single-helicity query precedes the coupling change
 c   3 refusal   : a coupling of QCD order 0 (QED_COUPLING) changed
 c                 together with g, the cache must be discarded
-c The test inserts the counter NGSCALE_TEST at the born_gscale call of
-c born.f, so that a silent fallback to a fresh evaluation is caught.
-c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
+c Test-only private-provider instrumentation counts rescalings and HELAS
+c calls, and provides a one-shot cache reset for truly fresh references.
+c Placeholders: QED_COUPLING, NLINKS_VALUE, LINK_M_VALUES, LINK_N_VALUES.
       use mint_module
+      use fks_phase_space, only: generate_momenta
+      use fks_phase_space_data, only: p_born
+      use mc_born_types, only: born_test_fresh,born_test_scaled,
+     &                        born_test_helas
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
@@ -26,19 +30,12 @@ c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
       include 'born_conf.inc'
       include 'orders.inc'
       integer jj,ntry,ipt,npts,mode,ifks,nfks_save,nval,nexp
-      integer ncount(0:3)
+      integer ncount(0:3),nhelas(0:3)
       double precision x(99),p(0:3,nexternal),wgt,g1,g2,wb
+      double precision p_lab(0:3,nexternal),p_cms(0:3,nexternal)
       double precision ref(5000),tst(5000),rf3(5000),worst(0:3)
       double precision shift3
       double complex coup_save
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-      logical check_born_amps, born_checks_amps
-      common/c_born_amps_check/check_born_amps,born_checks_amps
-      integer ngscale_test
-      common/c_gscale_test/ngscale_test
-      double precision p_born(0:3,nexternal-1)
-      common /pborn/   p_born
       double precision pb(0:3,nexternal-1)
       integer         nndim
       common/tosigint/nndim
@@ -46,9 +43,6 @@ c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
       common/c_nFKSprocess/nFKSprocess
       double precision ran2
       external         ran2
-      include 'pythia8_control.inc'
-      include 'pythia8_control_setup.inc'
-
       call setrun
       call setpara('param_card.dat')
       call fill_configurations_common
@@ -58,6 +52,7 @@ c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
       nexp=0
       worst(:)=0d0
       ncount(:)=0
+      nhelas(:)=0
       shift3=1d99
       do ifks=1,fks_configs
        nFKSprocess=ifks
@@ -84,7 +79,7 @@ c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
           enddo
           new_point=.true.
           wgt=1d0
-          call generate_momenta(ndim,iconfig,wgt,x,p)
+          call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
           ntry=ntry+1
         enddo
         if (ntry.ge.1000) stop 'no phase-space point'
@@ -92,8 +87,10 @@ c Placeholders filled by the test: QED_COUPLING, NLINKS_VALUE.
         nexp=nexp+1
 c reference: fresh evaluation at g2
         call set_g(g2)
-        calculatedBorn=.false.
+        born_test_fresh=.true.
+        born_test_helas=0
         call collect(pb,ref,nval)
+        if(born_test_helas.le.0)error stop 11
         do mode=0,3
 c fresh evaluation at g1: the cache then holds the g1 amplitudes
           call set_g(g1)
@@ -103,7 +100,7 @@ c fresh evaluation at g1: the cache then holds the g1 amplitudes
             call fks_inc_chooser()
             call leshouche_inc_chooser()
           endif
-          calculatedBorn=.false.
+          born_test_fresh=.true.
           call sborn(pb,wb)
           if (mode.eq.1) then
             nFKSprocess=nfks_save
@@ -116,15 +113,17 @@ c fresh evaluation at g1: the cache then holds the g1 amplitudes
             coup_save=QED_COUPLING
             QED_COUPLING=QED_COUPLING*1.1d0
           endif
-c same momenta, other couplings: request the check (as set_alphaS
-c and the fold reset of driver_mintMC do)
-          check_born_amps=.true.
-          ngscale_test=0
+c Native requests compare the explicit model state on every call.
+          born_test_scaled=0
+          born_test_helas=0
           call collect(pb,tst,nval)
-          ncount(mode)=ncount(mode)+ngscale_test
+          ncount(mode)=ncount(mode)+born_test_scaled
+          nhelas(mode)=nhelas(mode)+born_test_helas
           if (mode.eq.3) then
-            calculatedBorn=.false.
+            born_test_fresh=.true.
+            born_test_helas=0
             call collect(pb,rf3,nval)
+            if(born_test_helas.le.0)error stop 12
             call compare(rf3,tst,nval,worst(mode))
             shift3=min(shift3,abs(rf3(1)-ref(1))/abs(ref(1)))
             QED_COUPLING=coup_save
@@ -137,8 +136,8 @@ c and the fold reset of driver_mintMC do)
       write(*,'(a,i8)') ' GSCALE NPOINTS ',nexp
       write(*,'(a,i8)') ' GSCALE NVALUES ',nval
       do mode=0,3
-        write(*,'(a,i2,e12.4,i8)') ' GSCALE MODE ',mode,worst(mode),
-     &       ncount(mode)
+        write(*,'(a,i2,e12.4,2i8)') ' GSCALE MODE ',mode,worst(mode),
+     &       ncount(mode),nhelas(mode)
       enddo
       write(*,'(a,e12.4)') ' GSCALE REFUSAL_SHIFT ',shift3
       end
@@ -154,8 +153,7 @@ c and the fold reset of driver_mintMC do)
 
 
       subroutine touch_onehel(pb)
-c a single-helicity Born call (as for the EW Sudakov): it invalidates
-c the result cache of SBORN but keeps the cached amplitudes
+c A single-helicity Born query, as for the EW Sudakov.
       implicit none
       include 'nexternal.inc'
       double precision pb(0:3,nexternal-1),w
@@ -176,6 +174,13 @@ c and the colour links, in one flat array
       include 'born_maxamps.inc'
       double precision pb(0:3,nexternal-1),v(*),wb,w
       integer n,i,j,k,m
+      integer link_m(NLINKS_VALUE),link_n(NLINKS_VALUE)
+      data link_m/LINK_M_VALUES/
+      data link_n/LINK_N_VALUES/
+      logical need_color_links,need_charge_links
+      common/c_need_links/need_color_links,need_charge_links
+      double precision amp_split_soft(amp_split_size)
+      common/to_amp_split_soft/amp_split_soft
       double precision amp2(maxamps),jamp2(0:maxflow)
       common/to_amps/  amp2,       jamp2
       complex*16 ans_cnt(2,nsplitorders)
@@ -210,9 +215,15 @@ c and the colour links, in one flat array
         v(n)=jamp2(i)
       enddo
       do m=1,NLINKS_VALUE
-        call sb_sf_link(pb,m,w)
+        need_color_links=.true.
+        need_charge_links=.false.
+        call sborn_sf(pb,link_m(m),link_n(m),w)
         n=n+1
         v(n)=w
+        do i=1,amp_split_size
+          n=n+1
+          v(n)=amp_split_soft(i)
+        enddo
       enddo
       end
 

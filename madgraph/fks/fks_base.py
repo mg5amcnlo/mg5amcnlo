@@ -683,13 +683,10 @@ class FKSProcess(object):
                     'Not valid start_proc in FKSProcess')
             self.born_amp['process'].set('legs_with_decays', MG.LegList())
 
-            # special treatment of photon is needed !
-            #MZ to be fixed
-            ###self.isr = set([leg.get(color) for leg in self.leglist if not leg.get('state')]) != set([zero])
-            ###self.fsr = set([leg.get(color) for leg in self.leglist if leg.get('state')]) != set([zero])
+            # Radiation flags are filled from the accepted FKS sectors after
+            # generating the real amplitudes, including splitting restrictions.
             self.isr = False
             self.fsr = False
-            #######
             self.nincoming = len([l for l in self.born_amp['process']['legs'] \
                                   if not l['state']])
                 
@@ -910,6 +907,16 @@ class FKSProcess(object):
         if not self.ncores_for_proc_gen:
             self.generate_real_amplitudes(pdg_list, real_amp_list)
             self.link_born_reals()
+        self.update_radiation_flags()
+
+    def update_radiation_flags(self, real_amps=None):
+        """Record radiation represented by the retained real FKS sectors."""
+        if real_amps is None:
+            real_amps = self.real_amps
+        self.isr = any(info['j'] <= self.nincoming
+                       for real in real_amps for info in real.fks_infos)
+        self.fsr = any(info['j'] > self.nincoming
+                       for real in real_amps for info in real.fks_infos)
 
 
     def link_born_reals(self):

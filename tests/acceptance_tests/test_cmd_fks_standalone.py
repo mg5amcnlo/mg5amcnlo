@@ -25,7 +25,9 @@ same process.
 from __future__ import division
 from __future__ import absolute_import
 import glob
+import json
 import os
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -33,6 +35,7 @@ import tempfile
 import unittest
 
 import madgraph.interface.master_interface as MGCmd
+from madgraph.iolibs import born_support
 import madgraph.various.misc as misc
 
 pjoin = os.path.join
@@ -359,66 +362,97 @@ class TestFKSStandalone(unittest.TestCase):
         self.assertTrue(any(n.startswith('P0_uux') for n in names), names)
 
     def test_fks_born_gscale_mixed_orders(self):
-        """gscale (rescaling the cached Born amplitudes when only alpha_S
-        changed) agrees with a fresh evaluation for a mixed-order Born.
+        """Native cached Born amplitudes retain every mixed QCD/QED order.
 
-        u u~ > t t~ with QCD^2<=4 QED^2<=4 has two amplitude split orders
-        (the gluon diagram of QCD order 2, the photon and Z ones of order
-        0) and three squared ones (QCD 4, 2, 0), each rescaled with its
-        own power. The driver (tests/input_files/fks_born_gscale_driver.f)
-        alternates g at fixed momenta for every FKS configuration and
-        compares every split-order piece, the Born tilde, AMP2/JAMP2 and
-        the colour links with a fresh evaluation, through the fast path
-        (result cache rescaled) and the two loop paths (colour sums
-        redone on the rescaled amplitudes). A QED coupling changed
-        together with g must make SBORN discard the cache. A counter put
-        at the born_gscale call makes sure the rescaling really ran."""
+        Compare rescaling with fresh HELAS evaluations in every sector,
+        including a sector switch, a preceding single-helicity query and a
+        QED change that must reject strong-coupling-only reuse. Counters in
+        the temporary private provider distinguish rescaling from fallback.
+        """
         path = pjoin(self.tmpdir, 'uux_ttx_mixed')
         # --limits: full run setup (built-in PDF, dummy analysis), the
         # driver links the same objects as test_soft_col_limits
         self._output_fks_sa('u u~ > t t~ QCD^2<=4 QED^2<=4 [real=QCD]',
                             'loop_sm', path, limits=True)
         born_dir = pjoin(path, 'SubProcesses', 'P0_uux_ttx')
-        born_f = pjoin(born_dir, 'born.f')
-        text = open(born_f).read()
-        # the Born really is mixed: two amplitude split orders
-        self.assertIn('PARAMETER (NAMPSO=2, NSQAMPSO=3)', text)
-        self.assertIn('DATA (SQSOQCD(I),I=1,3) /4,2,0/', text)
-        # the QED coupling changed in the refusal mode must be one the
-        # Born checks, otherwise the refusal would be vacuous
+        support = Path(path)/'Source/BornSupport'
+        registry = json.loads((support/'registry.json').read_text())
+        record = next(r for r in registry['contexts']
+                      if r['directory'] == os.path.basename(born_dir))
+        # The exported Born has two amplitude orders and all three squared
+        # orders. The native provider certifies the actual diagram powers.
+        self.assertEqual((record['namps'], record['nsqamps']), (2, 3))
+        qcd = record['orders'].index('QCD')
+        self.assertEqual([o[qcd] for o in record['amp_orders'][:record['nsqamps']]],
+                         [4, 2, 0])
+        self.assertEqual(record['helicity_matrices'][0]['amplitude_degrees'],
+                         [2, 0, 0])
+        signature = json.loads((support/'helicity_signature.json').read_text())
+        self.assertEqual(signature['mode'], 'homogeneous_G')
+        # Refusal must change an input included in the native scaling guard.
         qed_coupling = 'GC_2'
-        self.assertIn('SAVED_COUP(1)=%s\n' % qed_coupling, text)
-        nlinks = int(re.search(r'PARAMETER \(NLINKS=(\d+)\)', text).group(1))
+        model = born_support.expand(Path(path)/'Source/MODEL/coupl.inc')
+        model += born_support.expand(Path(path)/'Source/MODEL/input.inc')
+        members, _ = born_support.common_members(model)
+        _, kind, index = next(m for m in members if m[0] == qed_coupling.lower())
+        self.assertIn([kind, int(index), 0], signature['signature']['couplings'])
 
-        # count the rescalings (test-only instrumentation; the Fortran
-        # writer upper-cases and re-indents the template lines)
-        for old, new in (
-                (r'^( *)SAVE SAVED_G\n',
-                 r'\g<0>\1INTEGER NGSCALE_TEST\n'
-                 r'\1COMMON /C_GSCALE_TEST/ NGSCALE_TEST\n'),
-                (r'^( *)CALL BORN_GSCALE\(RPOW, *BORN_CACHE_ANS\)\n',
-                 r'\g<0>\1NGSCALE_TEST=NGSCALE_TEST+1\n')):
-            text, count = re.subn(old, new, text,
-                                  flags=re.IGNORECASE | re.MULTILINE)
-            self.assertEqual(count, 1, old)
-        open(born_f, 'w').write(text)
+        # Instrument only this generated DSO. CALCULATEDBORN belongs to the
+        # legacy API and cannot invalidate the native point cache. A one-shot
+        # reset supplies genuinely fresh references using the same matrix.
+        types = support/'mc_born_types.f90'
+        text, count = re.subn(r'(?m)^  implicit none$',
+            '  implicit none\n  logical,save :: born_test_fresh=.false.\n'
+            '  integer,save :: born_test_scaled=0,born_test_helas=0',
+            types.read_text())
+        self.assertEqual(count, 1)
+        types.write_text(text)
+        provider = support/('p%d' % record['provider'])
+        adapter = []
+        resets = scales = 0
+        for line in born_support.statements((provider/'adapter.f').read_text()):
+            if line.lower().startswith('model_changed='):
+                adapter += ['if(born_test_fresh)then', 'points%valid=.false.',
+                            'points%age=0', 'active_slot=0',
+                            'born_test_fresh=.false.', 'endif']
+                resets += 1
+            if line.lower() == 'saveamp(:,i)=saveamp(:,i)*factors':
+                adapter.append('if(i.eq.1)born_test_scaled=born_test_scaled+1')
+                scales += 1
+            adapter.append(line)
+        self.assertEqual((resets, scales), (1, 1))
+        born_support.write_fortran(provider/'adapter.f', adapter)
+        matrix = []
+        helas_calls = 0
+        for line in born_support.statements((provider/'matrix.f').read_text()):
+            if re.match(r'(?i)\s*call\s+(?!mcb\d+_)\w+\s*\(', line):
+                matrix.append('born_test_helas=born_test_helas+1')
+                helas_calls += 1
+            matrix.append(line)
+            if re.match(r'(?i)\s*(?:[\w*]+\s+)*?'
+                        r'(?:subroutine|function)\s+\w+', line):
+                matrix.append('use mc_born_types,only:born_test_helas')
+        self.assertGreater(helas_calls, 0)
+        born_support.write_fortran(provider/'matrix.f', matrix)
+        misc.compile(cwd=str(support))
 
-        driver = open(pjoin(os.path.dirname(os.path.dirname(
-            os.path.realpath(__file__))), 'input_files',
-            'fks_born_gscale_driver.f')).read()
+        driver = (Path(__file__).resolve().parents[1]/'input_files'/
+                  'fks_born_gscale_driver.f').read_text()
         driver = driver.replace('QED_COUPLING', qed_coupling).replace(
-            'NLINKS_VALUE', str(nlinks))
-        open(pjoin(born_dir, 'test_born_gscale.f'), 'w').write(driver)
-        makefile = open(pjoin(born_dir, 'makefile')).read()
+            'NLINKS_VALUE', str(len(record['links']))).replace(
+            'LINK_M_VALUES', ','.join(str(m) for m, n in record['links'])).replace(
+            'LINK_N_VALUES', ','.join(str(n) for m, n in record['links']))
+        (Path(born_dir)/'test_born_gscale.f').write_text(driver)
+        makefile = (Path(born_dir)/'makefile').read_text()
         makefile += (
-            '\nGSCALETEST= $(RUN) test_born_gscale.o BinothLHADummy.o '
-            'pythia8_fortran_dummy.o write_event.o handling_lhe_events.o\n'
+            '\nGSCALETEST= $(filter-out test_soft_col_limits.o,$(TEST)) '
+            'test_born_gscale.o\n'
             'test_born_gscale: $(GSCALETEST) mint_module.o\n'
             '\t$(FC) $(LDFLAGS) -o test_born_gscale $(GSCALETEST) '
             '$(APPLLIBS) $(LINKLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) '
             '$(FJLIBS)\n'
-            'test_born_gscale.o: mint_module.o\n')
-        open(pjoin(born_dir, 'makefile_gscale'), 'w').write(makefile)
+            'test_born_gscale.o: mint_module.o genps_fks.o\n')
+        (Path(born_dir)/'makefile_gscale').write_text(makefile)
         misc.compile(['-f', 'makefile_gscale', 'test_born_gscale'],
                      cwd=born_dir)
         out = subprocess.check_output(
@@ -427,21 +461,29 @@ class TestFKSStandalone(unittest.TestCase):
 
         npoints = int(re.search(r'GSCALE NPOINTS\s+(\d+)', out).group(1))
         self.assertGreater(npoints, 1, out)
+        self.assertEqual(npoints, 2*len(record['sectors']), out)
+        nvalues = int(re.search(r'GSCALE NVALUES\s+(\d+)', out).group(1))
+        norders = len(record['amp_orders'])
+        self.assertEqual(nvalues, 1+norders+4*len(record['orders'])*(1+norders)
+                         +record['ngraphs']+record['ncolor']
+                         +len(record['links'])*(1+norders), out)
         modes = {}
-        for mode, worst, count in re.findall(
-                r'GSCALE MODE\s+(\d)\s+(\S+)\s+(\d+)', out):
-            modes[int(mode)] = (float(worst), int(count))
+        for mode, worst, count, helas in re.findall(
+                r'GSCALE MODE\s+(\d)\s+(\S+)\s+(\d+)\s+(\d+)', out):
+            modes[int(mode)] = (float(worst), int(count), int(helas))
         self.assertEqual(sorted(modes), [0, 1, 2, 3], out)
         for mode in (0, 1, 2):
-            worst, count = modes[mode]
+            worst, count, helas = modes[mode]
             # every point went through the rescaling ...
             self.assertEqual(count, npoints, 'mode %d: %s' % (mode, out))
+            self.assertEqual(helas, 0, 'mode %d recomputed HELAS: %s' % (mode, out))
             # ... and agrees with the fresh evaluation
             self.assertLess(worst, 1e-12, 'mode %d: %s' % (mode, out))
-        worst, count = modes[3]
+        worst, count, helas = modes[3]
         # refusal: never rescaled, identical to a fresh evaluation with
         # the changed coupling, which does change the Born
         self.assertEqual(count, 0, out)
+        self.assertGreater(helas, 0, out)
         self.assertEqual(worst, 0., out)
         shift = float(re.search(r'GSCALE REFUSAL_SHIFT\s+(\S+)',
                                 out).group(1))

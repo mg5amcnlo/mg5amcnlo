@@ -666,23 +666,27 @@ jobs:
 
 
   unittest_native_born:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
       - name: Check shared Born providers and native subtraction
         run: |
-          ./tests/test_manager.py test_born_support test_real_helicity_filter test_native_frame_masks test_mcatnlo_delta_scales test_herwig7_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 test_pythia8_matching test_qed_mc_kernels test_pythia8_qed_dipoles test_qed_shower_scales test_pythia8_qed_support -t0
+          ./tests/test_manager.py test_born_support test_real_helicity_filter test_native_frame_masks test_amcatnlo_shower_preflight test_mcatnlo_delta_scales test_herwig7_scales test_soft_col_limits test_momentum_maps test_mc_dead_zones test_mc_kernels test_mc_event_colours test_mc_history_weights test_pdf_luminosity_cache test_cluster test_pythia8 test_pythia8_matching test_qed_mc_kernels test_pythia8_qed_dipoles test_qed_shower_scales test_pythia8_qed_support -t0
 
 
   unittest_uncovered:
     # unit tests that were not listed in any workflow (CI coverage audit).
     # test_fks_ppzz_in_RS is left out: the RS UFO model is still python2 only.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
 
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
 
       - name: run the previously untriggered unit tests
         run: |

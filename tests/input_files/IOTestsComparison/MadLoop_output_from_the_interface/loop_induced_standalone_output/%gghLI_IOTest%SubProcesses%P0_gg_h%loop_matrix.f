@@ -302,8 +302,8 @@ C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
      $ ,.FALSE.,.FALSE.,.TRUE.,.FALSE./
-C     PS CAN POSSIBLY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
-C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
+C     PS CAN POSSIBLY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED
+C      FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
 C      USED ANYWHERE ELSE
       REAL*8 PS(0:3,NEXTERNAL)
@@ -613,12 +613,18 @@ C       Setup the file paths
 
         CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
 
-C       Make sure that the loop filter is disabled when there is
-C        spin-2 particles for 2>1 or 1>2 processes
-        IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.(NEXTERNAL.LE.3.AND.HELI
-     $CITYFILTERLEVEL.NE.0)) THEN
-          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1'
-     $     //' processes involving spin 2 particles.'
+C       Disable the helicity filter for 2>1 and 1>2 processes.
+C       In the c.m. frame one particle is then at rest (the
+C       final state of a 2>1, the decaying one of a 1>2), and
+C       which helicities vanish depends on the frame: at rest
+C       the helicity is defined along z, a boost changes it.
+C       A filter learned in one frame silently drops part of
+C       the result in another (u d~ > w+: virtual = 0 with the
+C       W along -z) and the stability test cannot see it.
+C       The tree-level standalone output does the same.
+        IF(NEXTERNAL.LE.3.AND.HELICITYFILTERLEVEL.NE.0) THEN
+          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1 and'
+     $     //' 1>2 processes.'
           HELICITYFILTERLEVEL = 0
 C         We write a dummy filter for structural reasons here
           OPEN(1, FILE=HELFILTERFN, ERR=6116, STATUS='NEW'
@@ -1247,8 +1253,8 @@ C                filtering.
 C               The if statement below is not strictly necessary but
 C                makes it clear when it is executed.
               ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-C               Make sure that no polarization constraint filters
-C                out this helicity
+C               Make sure that no polarization constraint filters out
+C                this helicity
                 IF (POLARIZATIONS(0,0).EQ.
      $           -1.OR.ML5_0_IS_HEL_SELECTED(H)) THEN
 C                 If both computational method is used, then we must
@@ -1262,8 +1268,8 @@ C                  just update RES_FROM_JAMP
                 ENDIF
               ENDIF
               IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-C               Make sure that no polarization constraint filters
-C                out this helicity
+C               Make sure that no polarization constraint filters out
+C                this helicity
                 IF (POLARIZATIONS(0,0).EQ.
      $           -1.OR.ML5_0_IS_HEL_SELECTED(H)) THEN
                   CALL
@@ -1351,8 +1357,8 @@ C     Make sure that no NaN is present in the result
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
         IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
-C         Make sure that no polarization constraint filters out
-C          this helicity
+C         Make sure that no polarization constraint filters out this
+C          helicity
           IF (POLARIZATIONS(0,0).EQ.
      $     -1.OR.ML5_0_IS_HEL_SELECTED(HELPICKED)) THEN
 C           TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
@@ -1587,7 +1593,7 @@ C        after this stage if BYPASS_CHECK was set to true at some
 C        point using SLOOPMATRIX_THRES).
 C       It is possible to simply remove the if statement below to have
 C        a running reference scale which always depends on the
-C        MAXNREF_EVALS *last* evaluations. 
+C        MAXNREF_EVALS *last* evaluations.
         IF (NPSPOINTS.LE.MAXNREF_EVALS) THEN
           TMPR = ABS(ANS(1,0)) + ABS(ANS(2,0)) + ABS(ANS(3,0))
           IF (TMPR.NE.0.0D0) THEN

@@ -10146,7 +10146,7 @@ class AlohaFortranWriterTest(unittest.TestCase):
         """ test the header of a file """
         
         with misc.TMP_variable(sys, 'path', sys.path+[pjoin(MG5DIR,'models','sm')]):
-            from madgraph.models.sm.object_library import Lorentz
+            from models.sm.object_library import Lorentz
         import aloha.create_aloha as create_aloha
         
         FFV1 = Lorentz(name = 'FFV1',

@@ -1892,6 +1892,15 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         randinit.close()
             
         
+    def check_shower_compatibility(self, mode, options=None):
+        """Reject unsupported matching before compiling or submitting jobs."""
+        if options and options.get('reweightonly'):
+            return
+        if mode.split('+', 1)[0] in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            if self.run_card['parton_shower'].upper() == 'PYTHIA6PT' and \
+                    self.proc_characteristics['has_fsr']:
+                raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
+
     def run(self, mode, options):
         """runs aMC@NLO. Returns the name of the event file created"""
         logger.info('Starting run')
@@ -1900,6 +1909,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options['only_generation'] = False
 
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
+        self.check_shower_compatibility(mode, options)
         self.setup_cluster_or_multicore()
         self.update_random_seed()
         #find and keep track of all the jobs
@@ -1978,10 +1988,6 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 raise aMCatNLOError('%s is not a valid parton shower. '\
                                     'Please use one of the following: %s' \
                                     % (shower, ', '.join(shower_list)))
-
-# check that PYTHIA6PT is not used for processes with FSR
-            if shower == 'PYTHIA6PT' and self.proc_characteristics['has_fsr']:
-                raise aMCatNLOError('PYTHIA6PT does not support processes with FSR')
 
             if mode in ['aMC@NLO', 'aMC@LO']:
                 logger.info('Doing %s matched to parton shower' % mode[4:])
@@ -5513,6 +5519,9 @@ RESTART = %(mint_mode)s
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
+        self.get_characteristics(pjoin(self.me_dir,
+                                      'SubProcesses', 'proc_characteristics'))
+        self.check_shower_compatibility(mode, options)
         # the run directory may already exist (e.g. created by
         # setup_citation_tracking for Events/<run>/citations)
         if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
@@ -5520,9 +5529,6 @@ RESTART = %(mint_mode)s
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
                           '%s_%s_banner.txt' % (self.run_name, self.run_tag)))
-
-        self.get_characteristics(pjoin(self.me_dir, 
-                                        'SubProcesses', 'proc_characteristics'))
 
         #define a bunch of log files
         amcatnlo_log = pjoin(self.me_dir, 'compile_amcatnlo.log')
