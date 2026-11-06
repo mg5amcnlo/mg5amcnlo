@@ -382,6 +382,7 @@ def write_dispatchers(directory,outer,by_id,keys,sources):
              'if(shared_real_active)then', 'j=next_entry',
              'cache(j)%evaluator=evaluator','cache(j)%momenta=q',
              'cache(j)%model%real_values=state%real_values',
+             'cache(j)%model%configuration_epoch=state%configuration_epoch',
              'cache(j)%model%complex_values=state%complex_values',
              'cache(j)%weight=wgt',
              'cache(j)%amplitudes=amp_split',

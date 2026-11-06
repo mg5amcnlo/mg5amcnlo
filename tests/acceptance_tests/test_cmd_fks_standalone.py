@@ -389,13 +389,14 @@ class TestFKSStandalone(unittest.TestCase):
                          [2, 0, 0])
         signature = json.loads((support/'helicity_signature.json').read_text())
         self.assertEqual(signature['mode'], 'homogeneous_G')
-        # Refusal must change an input included in the native scaling guard.
+        # The QED input belongs to the cold configuration. Changing it must
+        # select a new configuration before any strong-coupling-only reuse.
         qed_coupling = 'GC_2'
-        model = born_support.expand(Path(path)/'Source/MODEL/coupl.inc')
-        model += born_support.expand(Path(path)/'Source/MODEL/input.inc')
-        members, _ = born_support.common_members(model)
-        _, kind, index = next(m for m in members if m[0] == qed_coupling.lower())
-        self.assertIn([kind, int(index), 0], signature['signature']['couplings'])
+        layout = json.loads((support/'model_state_layout.json').read_text())
+        self.assertIn(qed_coupling.lower(),
+                      [name for name, _, _ in layout['fixed_members']])
+        self.assertNotIn(qed_coupling.lower(),
+                         [name for name, _, _ in layout['dynamic_members']])
 
         # Instrument only this generated DSO. CALCULATEDBORN belongs to the
         # legacy API and cannot invalidate the native point cache. A one-shot

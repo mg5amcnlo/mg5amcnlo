@@ -5,14 +5,23 @@ module mc_born_types
   integer, parameter :: BORN_OK=0, BORN_UNKNOWN_CONTEXT=1, BORN_BAD_SECTOR=2
   integer, parameter :: BORN_INVALID_REQUEST=3, BORN_MISSING_CORRELATION=4
   integer, parameter :: BORN_INCOMPLETE_HISTORY=5
+  integer, parameter :: BORN_INVALID_CONFIGURATION=6
   ! Provider model COMMONs share one installation inside the Born library.
   integer, save :: born_installed_provider=0
+  integer(8), save :: born_active_configuration_epoch=0
   ! Scoped caller basis for the learned zero mask; numerical cache keys keep
   ! their exact momentum/model semantics. Raw callers retain the zero key.
   integer, save :: born_active_helicity_frame(2)=0
+  ! A configured fixed snapshot is immutable; configure again after editing.
+  type BornModelConfiguration
+    real(8), allocatable :: real_values(:)
+    complex(8), allocatable :: complex_values(:)
+    integer(8) :: epoch=0
+  end type
   type BornModelState
     real(8), allocatable :: real_values(:)
     complex(8), allocatable :: complex_values(:)
+    integer(8) :: configuration_epoch=0
   end type
   type BornHistory
     integer :: owner_sector=0, provider=0, context=0, sector=0, i=0, j=0, extra=0
@@ -83,6 +92,7 @@ contains
   logical function born_model_state_equal(a,b)
     type(BornModelState),intent(in) :: a,b
     born_model_state_equal=.false.
+    if (a%configuration_epoch.ne.b%configuration_epoch) return
     if (.not.allocated(a%real_values).or..not.allocated(b%real_values)) return
     if (.not.allocated(a%complex_values).or..not.allocated(b%complex_values)) return
     if (size(a%real_values).ne.size(b%real_values)) return

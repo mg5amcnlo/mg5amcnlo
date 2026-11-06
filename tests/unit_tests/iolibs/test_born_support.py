@@ -16,6 +16,7 @@ from madgraph import MadGraph5Error
 from madgraph.iolibs import born_support as support
 from madgraph.interface.common_run_interface import CommonRunCmd
 from tests.unit_tests.fks.test_momentum_maps import mc_counterterm_test_module
+from tests.unit_tests.iolibs import model_state_checks
 
 
 def physical(ids, tags=None):
@@ -523,8 +524,9 @@ class TestBornLibrary(unittest.TestCase):
         model_lines = support.expand(output/'Source/MODEL/coupl.inc')
         model_lines += support.expand(output/'Source/MODEL/input.inc')
         members,sizes = support.common_members(model_lines)
+        layout = model_state_checks.load_layout(output)
         signature = json.loads((output/'Source/BornSupport/helicity_signature.json').read_text())
-        self.assertEqual(signature['mode'], 'homogeneous_G')
+        self.assertIn(signature['mode'], ('homogeneous_G', 'exact_compact_state'))
         for record in registry['contexts']:
             with self.subTest(process=output.name, provider=record['provider']):
                 source = output/'reference'/record['directory']
@@ -538,7 +540,7 @@ class TestBornLibrary(unittest.TestCase):
                 helicity_data = [line for line in support.statements((source/'born.f').read_text())
                                  if re.match(r'(?i)data\s*\(nhel\(', line)]
                 support.write_fortran(source/'check.f',self.driver(record,members,sizes,model_lines,
-                    registry['contexts'], helicity_data, signature['signature']))
+                    registry['contexts'], helicity_data, signature['signature'], layout))
                 paths = [source/n for n in ('born.f','born_hel.f','sborn_sf.f',
                                            'extra_cnt_wrapper.f','helpers.f','check.f')]
                 paths += sorted(source.glob('b_sf_*.f'))+sorted(source.glob('born_cnt_*.f'))
@@ -569,11 +571,14 @@ class TestBornLibrary(unittest.TestCase):
                 self.assertIn('PASS Born provider',self.run_command(['./check'],scratch))
 
     @staticmethod
-    def driver(r, members, sizes, model_lines, contexts, helicity_data=(), signature=None):
+    def driver(r, members, sizes, model_lines, contexts, helicity_data=(), signature=None,
+               layout=None):
         # This driver links the original Born sources captured before provider
         # finalization. Its calculatedBorn resets belong to that independent
         # reference evaluator, which still needs them to invalidate SAVEAMP.
         n,ng,nc,nh,ns = r['nexternal']-1,r['ngraphs'],r['ncolor'],r['nhelicity'],r['nsqamps']
+        if layout:
+            signature = model_state_checks.full_signature(signature, members, layout)
         lines = ['program check', 'use mc_born_support', 'use mc_born_types', 'implicit none']
         lines += ["include 'orders.inc'"]+model_lines+[
             'type(BornModelState) state,alternate', 'type(BornRequest) request',
@@ -766,9 +771,8 @@ class TestBornLibrary(unittest.TestCase):
                 'if(status.ne.0)stop 38', 'call close_real(result%born,other%born)',
                 'if(born_test_helas_calls(%d).ne.calls_before)stop 39' % r['provider']]
         if signature:
-            # Loop-only state changes must install the new full model state
-            # without recomputing identical tree amplitudes. Restore it too:
-            # the cached full-state snapshot must follow both transitions.
+            # A reference-model entry outside every evaluator's read set must
+            # not enter the compact state or invalidate a cached amplitude.
             for kind in ('real', 'complex'):
                 used = set(signature[kind]) | {index for k,index,_ in signature['couplings'] if k == kind}
                 if kind == 'real':
@@ -780,7 +784,7 @@ class TestBornLibrary(unittest.TestCase):
                 lines += ['alternate=state',
                     'alternate%%%s_values(%d)=alternate%%%s_values(%d)+0.125d0' %
                     (kind,unused[0],kind,unused[0]),
-                    'if(born_model_state_equal(state,alternate))stop 53',
+                    'if(.not.born_model_state_equal(state,alternate))stop 53',
                     'if(.not.born_amplitude_state_equal(state,alternate))stop 54',
                     'calls_before=born_test_helas_calls(%d)' % r['provider'],
                     'call born_evaluate(%d,%d,p,alternate,request,other,status)' % (r['provider'],r['context']),
@@ -830,7 +834,8 @@ class TestBornLibrary(unittest.TestCase):
             'if(abs(a-b).gt.1d-12*max(1d-50,abs(a),abs(b)))then',
             "write(*,*)'Mismatch',a,b",'error stop 22','endif','end',
             'double precision function ran2()', 'stop 23', 'end']
-        return lines
+        return (model_state_checks.adapt_wide_driver(lines, members, sizes, layout)
+                if layout else lines)
 
     def test_dy(self):
         self.compare(self.outputs['dy'])
@@ -877,6 +882,7 @@ class TestBornLibrary(unittest.TestCase):
             model = support.expand(output/'Source/MODEL/coupl.inc')
             model += support.expand(output/'Source/MODEL/input.inc')
             members, sizes = support.common_members(model)
+            layout = model_state_checks.load_layout(output)
             for record in records:
                 directory = output/'SubProcesses'/record['directory']
                 lines = ['program check_native','use mc_native_context',
@@ -909,6 +915,7 @@ class TestBornLibrary(unittest.TestCase):
                     'do iteration=1,3','state%complex_values=state%complex_values*(0.9d0,0.1d0)',
                     'p(1:2,:)=-p(1:2,:)']
                 lines += ['%s=state%%%s_values(%s)' % v for v in members]
+                lines += ['call mc_born_model_changed()']
                 lines += ['do nfksprocess=1,size(native_sector_ids)',
                     'call activate_native_context(nfksprocess)',
                     'c=active_context', 'request%sector=active_sector',
@@ -943,7 +950,10 @@ class TestBornLibrary(unittest.TestCase):
                     "write(*,*)'PASS native contexts'",'end']
                 checks = self.driver(record,members,sizes,model,records)
                 lines += checks[checks.index('subroutine close_complex(a,b)'):]
+                lines = model_state_checks.adapt_wide_driver(lines, members, sizes, layout)
                 support.write_fortran(directory/'check_native.f',lines)
+                support.write_fortran(directory/'model_revision.f',
+                                      model_state_checks.revision_helpers(output))
                 # Keep pure order helpers only, as in the standalone comparison.
                 support.write_fortran(directory/'native_helpers.f',sum((support.routine(
                     (directory/'splitorders_stuff.f').read_text(),n) for n in
@@ -959,7 +969,7 @@ class TestBornLibrary(unittest.TestCase):
                          'fks_phase_space_data.f','mc_native_context.f90',
                          'mc_native_runtime.f','mc_native_props.f',
                          'born_support.f','born.f','sborn_sf.f','extra_cnt_wrapper.f',
-                         'native_helpers.f','native_flows.f','check_native.f']
+                         'native_helpers.f','native_flows.f','model_revision.f','check_native.f']
                 self.run_command(['gfortran','-O0','-g','-fcheck=all',
                     '-ffixed-line-length-none','-ffree-line-length-none','-ffunction-sections',
                     '-I'+str(output/'lib'),str(output/'Source/timing.f'),*paths,

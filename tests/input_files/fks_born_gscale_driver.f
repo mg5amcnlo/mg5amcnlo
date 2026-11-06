@@ -112,8 +112,9 @@ c fresh evaluation at g1: the cache then holds the g1 amplitudes
           if (mode.eq.3) then
             coup_save=QED_COUPLING
             QED_COUPLING=QED_COUPLING*1.1d0
+            call mc_born_model_changed()
           endif
-c Native requests compare the explicit model state on every call.
+c Native requests compare the configuration ID and dynamic values.
           born_test_scaled=0
           born_test_helas=0
           call collect(pb,tst,nval)
@@ -127,6 +128,7 @@ c Native requests compare the explicit model state on every call.
             call compare(rf3,tst,nval,worst(mode))
             shift3=min(shift3,abs(rf3(1)-ref(1))/abs(ref(1)))
             QED_COUPLING=coup_save
+            call mc_born_model_changed()
           else
             call compare(ref,tst,nval,worst(mode))
           endif

@@ -604,7 +604,7 @@ def explicit_helas_dependencies(root):
     return True
 
 
-def helicity_state_signature(root, records, model, members):
+def helicity_state_signature(root, records, model, members, fixed_members=()):
     """Certify tree inputs for masks, exact amplitude keys and G rescaling."""
     matrices = [matrix for record in records for matrix in record.get('helicity_matrices', [])]
     if not matrices or not all(matrix['homogeneous'] for matrix in matrices):
@@ -623,10 +623,15 @@ def helicity_state_signature(root, records, model, members):
                            [('sminputs', (3,)), ('loop', (1,))])}
     used = {name: degree for matrix in matrices for name, degree in matrix['couplings'].items()}
     by_name = {name: (kind, index) for name, kind, index in members}
+    fixed_names = {name for name, _, _ in fixed_members}
     if 'g' not in by_name or by_name['g'][0] != 'real' or ':' in by_name['g'][1]:
         return None
     signature = dict(g=int(by_name['g'][1]), real=[], complex=[], couplings=[])
     for name in sorted(used):
+        if name in fixed_names:
+            if used[name] != 0:
+                return None
+            continue
         if name not in by_name or ':' in by_name[name][1]:
             return None
         kind, index = by_name[name]
@@ -658,6 +663,7 @@ def write_helicity_state_comparator(path, members, signature):
              '    logical::same_model',
              '    real(8)::ga,gb,pa,pb', '    complex(8)::ca,cb',
              '    born_helicity_state_equal=.false.',
+             '    if(a%configuration_epoch.ne.b%configuration_epoch)return',
              '    if(.not.allocated(a%real_values).or..not.allocated(b%real_values))return',
              '    if(.not.allocated(a%complex_values).or..not.allocated(b%complex_values))return',
              '    if(size(a%real_values).ne.size(b%real_values))return',
@@ -729,6 +735,7 @@ def write_amplitude_state_comparator(path, members, signature):
     lines = ['  logical function born_amplitude_state_equal(a,b)',
              '    type(BornModelState),intent(in)::a,b',
              '    born_amplitude_state_equal=.false.',
+             '    if(a%configuration_epoch.ne.b%configuration_epoch)return',
              '    if(.not.allocated(a%real_values).or..not.allocated(b%real_values))return',
              '    if(.not.allocated(a%complex_values).or..not.allocated(b%complex_values))return']
     for kind in ('real', 'complex'):
@@ -862,6 +869,7 @@ def optimize_real_helicities(lines):
             result += ['call mc_capture_model_state(helicity_current_state)',
                        'if(.not.born_helicity_state_equal(helicity_model_state,helicity_current_state))then',
                        'ntry=0', 'goodhel=.false.',
+                       'helicity_model_state%configuration_epoch=helicity_current_state%configuration_epoch',
                        'helicity_model_state%real_values=helicity_current_state%real_values',
                        'helicity_model_state%complex_values=helicity_current_state%complex_values',
                        'endif', line]
@@ -993,28 +1001,40 @@ def finalize(exporter):
         histories=histories), indent=2, sort_keys=True)+'\n')
     model_lines = expand(root/'Source'/'MODEL'/'coupl.inc')
     model_lines += expand(root/'Source'/'MODEL'/'input.inc')
-    model_members, model_sizes = common_members(model_lines)
+    model_members, _ = common_members(model_lines)
     model_commons = {m.lower(): 'mcb_model_'+m.lower() for line in model_lines
                      for m in re.findall(r'(?i)common\s*/(\w+)/', line)}
-    signature = helicity_state_signature(root, records, exporter.model, model_members)
+    from madgraph.iolibs.model_state import build_model_state_layout
+    model_layout = build_model_state_layout(root, records, exporter.model, model_members)
+    dynamic_members = model_layout['dynamic_members']
+    model_sizes = model_layout['sizes']['dynamic']
+    (support/'model_state_layout.json').write_text(json.dumps(dict(
+        fixed_members=model_layout['fixed_members'], dynamic_members=dynamic_members,
+        fixed_sizes=model_layout['sizes']['fixed'], dynamic_sizes=model_sizes,
+        manifest=model_layout['manifest']), indent=2, sort_keys=True)+'\n')
+    signature = helicity_state_signature(root, records, exporter.model, dynamic_members,
+                                         model_layout['fixed_members'])
     providers = {}
     for record in records:
         if record['directory'] == record['source']:
             providers[record['provider']] = record
     for provider, record in sorted(providers.items()):
-        write_provider(root, support, record, model_members, model_commons,
-                       cache_model_installation=signature is not None)
+        write_provider(root, support, record, dynamic_members, model_commons,
+                       cache_model_installation=(signature is not None and
+                           not model_layout['manifest'].get('dynamic_writes')))
     for record in records:
         write_metadata(root, support, record)
-    write_api(support, records, providers, model_sizes, histories)
-    write_helicity_state_comparator(support/'mc_born_types.f90', model_members, signature)
-    write_amplitude_state_comparator(support/'mc_born_types.f90', model_members, signature)
+    write_api(support, records, providers, model_sizes, histories,
+              model_layout, model_lines, model_commons)
+    write_helicity_state_comparator(support/'mc_born_types.f90', dynamic_members, signature)
+    write_amplitude_state_comparator(support/'mc_born_types.f90', dynamic_members, signature)
     (support/'helicity_signature.json').write_text(json.dumps(
-        dict(mode='homogeneous_G' if signature else 'full_model_state', signature=signature),
+        dict(mode='homogeneous_G' if signature else 'exact_compact_state', signature=signature),
         indent=2, sort_keys=True)+'\n')
     write_build(root, support, providers, model_commons, records)
+    write_model_revision_hook(root)
     for record in records:
-        write_wrappers(root, record, model_members)
+        write_wrappers(root, record, dynamic_members, model_layout)
     from madgraph.iolibs import native_histories
     native_histories.export(root, records, histories)
     for record in records:
@@ -1306,6 +1326,7 @@ def provider_adapter(r, source, members, cache_model_installation=False):
               'model_epoch=model_epoch+1', 'points%valid=.false.',
               'points%age=0', 'active_slot=0', 'endif',
               'cached_state%real_values=state%real_values',
+              'cached_state%configuration_epoch=state%configuration_epoch',
               'cached_state%complex_values=state%complex_values', 'endif',
               'born_model_epoch=model_epoch',
               # The active point already has the last installed model state.
@@ -1373,6 +1394,7 @@ def provider_adapter(r, source, members, cache_model_installation=False):
               'if(.not.reuse_amplitudes.or.scaled)then',
               'points(slot)%amplitudes=saveamp', 'points(slot)%p=p',
               'points(slot)%state%real_values=state%real_values',
+              'points(slot)%state%configuration_epoch=state%configuration_epoch',
               'points(slot)%state%complex_values=state%complex_values', 'endif',
               'points(slot)%context=context',
               'points(slot)%sector=request%sector', 'points(slot)%valid=.true.']
@@ -1431,15 +1453,54 @@ def provider_adapter(r, source, members, cache_model_installation=False):
     return lines
 
 
-def write_api(support, records, providers, sizes, histories):
+def write_api(support, records, providers, sizes, histories, model_layout=None,
+              model_lines=(), model_commons=None):
     template = Path(__file__).resolve().parents[2]/'Template'/'NLO'/'Source'/'BornSupport'
     (support/'mc_born_types.f90').write_text((template/'mc_born_types.f90').read_text())
+    fixed = model_layout['sizes']['fixed'] if model_layout else dict(real=0, complex=0)
+    fixed_members = model_layout['fixed_members'] if model_layout else []
     lines = ['module mc_born_support', 'use mc_born_types', 'implicit none',
              'private', 'public :: born_query, born_evaluate, born_model_dimensions',
+             'public :: born_configure_model,born_activate_model,born_model_configuration_dimensions',
+             'integer(8),save :: next_configuration_epoch=0',
              'contains', 'subroutine born_model_dimensions(nreal,ncomplex)',
              'integer,intent(out)::nreal,ncomplex',
              'nreal=%d' % sizes['real'], 'ncomplex=%d' % sizes['complex'],
+             'end subroutine', 'subroutine born_model_configuration_dimensions(nreal,ncomplex)',
+             'integer,intent(out)::nreal,ncomplex',
+             'nreal=%d' % fixed['real'], 'ncomplex=%d' % fixed['complex'],
              'end subroutine',
+             'logical function born_configuration_valid(configuration)',
+             'type(BornModelConfiguration),intent(in)::configuration',
+             'born_configuration_valid=.false.',
+             'if(.not.allocated(configuration%real_values).or..not.allocated(configuration%complex_values))return',
+             'if(size(configuration%%real_values).ne.%d.or.size(configuration%%complex_values).ne.%d)return' %
+             (fixed['real'], fixed['complex']),
+             'born_configuration_valid=.true.', 'end function',
+             'subroutine born_configure_model(configuration,status)',
+             'type(BornModelConfiguration),intent(inout)::configuration',
+             'integer,intent(out),optional::status',
+             'if(present(status))status=BORN_INVALID_CONFIGURATION',
+             'if(.not.born_configuration_valid(configuration))return',
+             'next_configuration_epoch=next_configuration_epoch+1',
+             'configuration%epoch=next_configuration_epoch',
+             'call born_activate_model(configuration,status)', 'end subroutine',
+             'subroutine born_activate_model(configuration,status)',
+             'type(BornModelConfiguration),intent(in)::configuration',
+             'integer,intent(out),optional::status',
+             'if(present(status))status=BORN_INVALID_CONFIGURATION',
+             'if(configuration%epoch.le.0.or.configuration%epoch.gt.next_configuration_epoch)return',
+             'if(.not.born_configuration_valid(configuration))return',
+             'if(configuration%epoch.ne.born_active_configuration_epoch)then',
+             'call born_install_configuration(configuration)',
+             'born_active_configuration_epoch=configuration%epoch',
+             'born_installed_provider=0', 'endif',
+             'if(present(status))status=BORN_OK', 'end subroutine',
+             'subroutine born_install_configuration(configuration)',
+             'type(BornModelConfiguration),intent(in)::configuration']
+    lines += [rename(line, model_commons or {}) for line in model_lines]
+    lines += ['%s=configuration%%%s_values(%s)' % member for member in fixed_members]
+    lines += ['end subroutine',
              'subroutine born_query(provider,context,metadata,status,details,require_complete)',
              'integer,intent(in)::provider,context',
              'type(BornMetadata),intent(out)::metadata',
@@ -1503,6 +1564,8 @@ def write_api(support, records, providers, sizes, histories):
               'type(BornResult),intent(inout)::result',
               'integer,intent(out)::status', 'type(BornMetadata)::metadata',
               'call born_reset_result(result)',
+              'status=BORN_INVALID_CONFIGURATION',
+              'if(state%configuration_epoch.le.0.or.state%configuration_epoch.ne.born_active_configuration_epoch)return',
               'call born_query(provider,context,metadata,status,details=.false.)',
               'if(status.ne.0)return', 'status=3',
               'if(size(p,1).ne.4.or.size(p,2).ne.metadata%nexternal-1)return',
@@ -1527,23 +1590,46 @@ def write_api(support, records, providers, sizes, histories):
     (support/'mc_born_support.f90').write_text('\n'.join(lines)+'\n')
 
 
-def write_wrappers(root, r, members):
+def write_model_revision_hook(root):
+    """Record completed cold model updates without a BornSupport dependency."""
+    path = root/'Source/MODEL/couplings.f'
+    source = path.read_text()
+    if re.search(r'(?i)subroutine\s+mc_born_model_changed\b', source):
+        return
+    coup = re.search(r'(?im)^ {6}subroutine\s+coup\s*\([^)]*\)[^\n]*$', source)
+    completed = re.search(r'(?im)^ {6}return\s*$', source[coup.end():]) if coup else None
+    if completed is None:
+        raise MadGraph5Error('Cannot locate the completed COUP model update')
+    offset = coup.end()+completed.start()
+    source = source[:offset]+'      call mc_born_model_changed()\n'+source[offset:]
+    result = ['subroutine mc_born_model_revision_value(value,changed)',
+               'implicit none', 'integer(8) value', 'logical changed',
+               'integer(8),save::revision=0',
+               'if(changed)revision=revision+1', 'value=revision', 'end',
+               'subroutine mc_born_model_changed()', 'implicit none',
+               'integer(8) ignored',
+               'call mc_born_model_revision_value(ignored,.true.)', 'end',
+               'integer(8) function mc_born_model_revision()', 'implicit none',
+               'call mc_born_model_revision_value(mc_born_model_revision,.false.)', 'end']
+    path.write_text(source.rstrip()+'\n\n'+'\n'.join('      '+line for line in result)+'\n')
+
+
+def write_wrappers(root, r, members, model_layout=None):
     directory = root/'SubProcesses'/r['directory']
+    fixed_members = model_layout['fixed_members'] if model_layout else []
+    fixed_sizes = model_layout['sizes']['fixed'] if model_layout else dict(real=0, complex=0)
     lines = ['subroutine mc_born_local(p,request,result)',
              'use mc_born_support', 'use mc_born_types', 'implicit none',
-             "include 'nexternal.inc'", "include 'coupl.inc'",
+             "include 'nexternal.inc'",
              "include 'timing_variables.inc'",
              'double precision p(0:3,nexternal-1)',
              'type(BornRequest) request', 'type(BornResult) result',
-             'type(BornModelState),save::state', 'integer nr,nc,status,nfksprocess',
+             'type(BornModelState),save::state', 'integer status,nfksprocess',
              'common/c_nfksprocess/nfksprocess',
              'double precision charges(nexternal-1)', 'common/c_charges_born/charges',
              ]
-    lines += expand(root/'Source'/'MODEL'/'input.inc')
     lines += ['if(timing_sampled)call timing_enter(timing_born)',
-              'call born_model_dimensions(nr,nc)',
-              'call born_resize_model_state(state,nr,nc)']
-    lines += ['state%%%s_values(%s)=%s' % (kind, index, name) for name,kind,index in members]
+              'call mc_capture_model_state(state)']
     lines += ['request%sector=nfksprocess', 'request%charges=charges',
               'request%helicity_frame=born_active_helicity_frame',
               'call born_evaluate(%d,%d,p,state,request,result,status)' % (r['provider'],r['context']),
@@ -1553,10 +1639,40 @@ def write_wrappers(root, r, members):
                'use mc_born_support','use mc_born_types','implicit none',
                "include 'coupl.inc'",'type(BornModelState) state','integer nr,nc']
     capture += expand(root/'Source'/'MODEL'/'input.inc')
-    capture += ['call born_model_dimensions(nr,nc)',
+    capture += ['call mc_prepare_model_configuration(state%configuration_epoch)',
+                'call born_model_dimensions(nr,nc)',
                 'call born_resize_model_state(state,nr,nc)']
     capture += ['state%%%s_values(%s)=%s' % (kind,index,name) for name,kind,index in members]
-    write_fortran(directory/'born_support.f', lines+capture+['end'])
+    prepare = ['subroutine mc_prepare_model_configuration(epoch)',
+               'use mc_born_support', 'use mc_born_types', 'implicit none',
+               "include 'coupl.inc'", *expand(root/'Source/MODEL/input.inc'),
+               'integer(8) epoch,current_revision,mc_born_model_revision',
+               'external mc_born_model_revision',
+               'integer(8),save::saved_revision=-1',
+               'type(BornModelConfiguration),save::configuration,candidate',
+               'integer status', 'logical same_configuration',
+               'current_revision=mc_born_model_revision()',
+               'if(saved_revision.ne.current_revision.or.configuration%epoch.eq.0)then',
+               'if(.not.allocated(candidate%%real_values))allocate(candidate%%real_values(%d))' % fixed_sizes['real'],
+               'if(.not.allocated(candidate%%complex_values))allocate(candidate%%complex_values(%d))' % fixed_sizes['complex']]
+    prepare += ['candidate%%%s_values(%s)=%s' % (kind,index,name)
+                for name,kind,index in fixed_members]
+    # A completed COUP may update only unused parameters or dynamic inputs.
+    # Compare the used fixed snapshot only at that explicit cold boundary.
+    prepare += ['same_configuration=.false.', 'if(configuration%epoch.gt.0)then',
+                'same_configuration=all(candidate%real_values.eq.configuration%real_values).and.'
+                'all(candidate%complex_values.eq.configuration%complex_values)',
+                'endif', 'if(.not.same_configuration)then',
+                'configuration%real_values=candidate%real_values',
+                'configuration%complex_values=candidate%complex_values',
+                'call born_configure_model(configuration,status)',
+                'if(status.ne.0)stop "Invalid native Born model configuration"',
+                'endif', 'saved_revision=current_revision', 'endif',
+                'if(configuration%epoch.ne.born_active_configuration_epoch)then',
+                'call born_activate_model(configuration,status)',
+                'if(status.ne.0)stop "Cannot reactivate native Born model configuration"',
+                'endif', 'epoch=configuration%epoch', 'end']
+    write_fortran(directory/'born_support.f', lines+capture+['end']+prepare)
     declarations = ['use mc_born_types', 'implicit none', "include 'nexternal.inc'",
                     "include 'orders.inc'", 'double precision p(0:3,nexternal-1),ans',
                     'type(BornRequest),save::request', 'type(BornResult),save::result']

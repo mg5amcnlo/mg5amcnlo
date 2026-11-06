@@ -27,6 +27,9 @@ class TestRealHelicityFilter(unittest.TestCase):
     def test_coherent_strong_scaling_preserves_learned_mask(self):
         self.run_driver(4, 2, SCALING_DRIVER, SCALING_MEMBERS, SCALING_SIGNATURE)
 
+    def test_fixed_configuration_a_b_a_relearns_zero_masks(self):
+        self.run_driver(4, 2, CONFIGURATION_DRIVER)
+
     def test_generated_helicity_state_comparator(self):
         self.run_driver(4, 2, COMPARATOR_DRIVER, SCALING_MEMBERS,
                         SCALING_SIGNATURE, include_real=False)
@@ -324,6 +327,50 @@ subroutine mc_capture_model_state(state)
   call born_resize_model_state(state,1,1)
   state%real_values=[1d0]
   state%complex_values=[(1d0,0d0)]
+end subroutine
+'''
+
+
+CONFIGURATION_DRIVER = '''\
+program check
+  implicit none
+  real(8) width,p(0:3,1)
+  complex(8) coupling
+  integer(8) configuration_epoch
+  common/test_model/coupling,width
+  common/test_configuration/configuration_epoch
+  p=0d0
+  p(0,1)=2d0
+  coupling=(1d0,0d0)
+  width=0d0
+  configuration_epoch=11
+  call check_point(p,4)
+  call check_point(p,2)
+  ! Only fixed configuration changes; the captured dynamic vectors are equal.
+  width=2d0
+  configuration_epoch=12
+  call check_point(p,4)
+  call check_point(p,3)
+  ! Reactivate A with its original identity and zero helicity.
+  width=0d0
+  configuration_epoch=11
+  call check_point(p,4)
+  call check_point(p,2)
+  print *, 'PASS real helicity filtering'
+end program
+''' + DRIVER[DRIVER.index('subroutine check_point'):DRIVER.index('subroutine mc_capture_model_state')] + '''\
+subroutine mc_capture_model_state(state)
+  use mc_born_types
+  implicit none
+  type(BornModelState) state
+  real(8) width
+  complex(8) coupling
+  integer(8) configuration_epoch
+  common/test_model/coupling,width
+  common/test_configuration/configuration_epoch
+  call born_resize_model_state(state,0,1)
+  state%configuration_epoch=configuration_epoch
+  state%complex_values=[coupling]
 end subroutine
 '''
 

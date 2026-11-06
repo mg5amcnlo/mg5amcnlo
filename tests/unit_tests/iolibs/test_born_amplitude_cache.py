@@ -201,6 +201,27 @@ a%complex_values(1)=2d0*a%complex_values(1)
 a%complex_values(2)=4d0*a%complex_values(2)
 call probe1(2,p,a,request,hit,epoch)
 if(hit.or.epoch.ne.4)stop 14
+! The fixed configuration can change while every dynamic entry is identical.
+a%configuration_epoch=11
+call probe1(2,p,a,request,hit,epoch)
+if(hit.or.epoch.ne.5)stop 15
+call probe1(2,p,a,request,hit,epoch)
+if(.not.hit.or.epoch.ne.5)stop 16
+! Revisit a non-active point to check the epoch in the stored LRU snapshot.
+p(0,1)=2d0
+call probe1(2,p,a,request,hit,epoch)
+if(hit)stop 17
+p(0,1)=1d0
+call probe1(2,p,a,request,hit,epoch)
+if(.not.hit)stop 18
+a%configuration_epoch=12
+call probe1(2,p,a,request,hit,epoch)
+if(hit.or.epoch.ne.6)stop 19
+a%configuration_epoch=11
+call probe1(2,p,a,request,hit,epoch)
+if(hit.or.epoch.ne.7)stop 20
+call probe1(2,p,a,request,hit,epoch)
+if(.not.hit.or.epoch.ne.7)stop 21
 end program
 '''+'\n'.join(routines))
             result=subprocess.run(['gfortran','-O2','-fno-automatic','-fcheck=all',
@@ -278,6 +299,29 @@ b=a
 b%complex_values(3)=(8d0,3d0)
 if(born_amplitude_state_equal(a,b))stop 3
 ''', None)
+
+    def test_configuration_epoch_is_part_of_every_cache_key(self):
+        self.check('''
+a%configuration_epoch=11
+b=a
+if(.not.born_model_state_equal(a,b))stop 2
+if(.not.born_amplitude_state_equal(a,b))stop 3
+if(.not.born_helicity_state_equal(a,b))stop 4
+b%configuration_epoch=12
+if(born_model_state_equal(a,b))stop 5
+if(born_amplitude_state_equal(a,b))stop 6
+if(born_helicity_state_equal(a,b))stop 7
+! A common running-coupling rescaling cannot hide a fixed configuration change.
+b%real_values(1)=2d0*a%real_values(1)
+b%complex_values(1)=2d0*a%complex_values(1)
+b%complex_values(2)=4d0*a%complex_values(2)
+if(born_helicity_state_equal(a,b,.true.))stop 8
+if(born_helicity_state_equal(a,b,.false.))stop 9
+! Restoring a snapshot restores its epoch as well as its dynamic values.
+b=a
+if(.not.born_model_state_equal(a,b))stop 10
+if(.not.born_amplitude_state_equal(a,b))stop 11
+''', SIGNATURE)
 
     def test_invalid_state_dimensions_fail_closed(self):
         self.check('''

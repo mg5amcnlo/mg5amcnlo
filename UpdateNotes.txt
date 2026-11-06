@@ -34,6 +34,12 @@ ANNOUNCEMENT:
        requested frame; shared real caches restore diagram weights as well as
        split-order results. Mixed QCD/QED Born amplitudes retain their separate
        strong-coupling powers when cached amplitudes are rescaled.
+       Model snapshots now contain only used point-dependent parameters and
+       numerical couplings, selected using the model converter's dependency
+       metadata and reads in the generated evaluators. Used fixed inputs are
+       installed once per model configuration; card/coupling reinitialization
+       refreshes that configuration and invalidates dependent caches. Running
+       external parameters are included, and unused model inputs are omitted.
    RF: Add massive/QED subtraction and shower-support checks. Experimental NLO
        QED shower launches require --allow_qed_ps; QED Delta/FxFx matching and
        shower channels excluded by the support checks remain unsupported.
