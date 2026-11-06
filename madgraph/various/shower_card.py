@@ -15,6 +15,7 @@
 """A File for splitting"""
 
 from __future__ import absolute_import
+import ast
 import sys
 import re
 import os
@@ -46,7 +47,8 @@ class ShowerCard(banner.RunCard):
                     'mup_stable', 'mum_stable', 'is_4lep', 'is_bbar', 'combine_td', 
                     'qed_shower', 'primordialkt',
                     'space_shower_me_corrections', 'time_shower_me_corrections',
-                    'time_shower_me_extended', 'time_shower_me_after_first']
+                    'time_shower_me_extended', 'time_shower_me_after_first',
+                    'allow_unsafe_shower_options']
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         string_vars.append('dm_'+str(i))
@@ -193,7 +195,7 @@ class ShowerCard(banner.RunCard):
                        hw6='hwuti', hw7='hw7uti',py6='pyuti', py8='py8uti')
 
         # Pythia8 specific
-        self.add_param("qed_shower", True, comment="T = enable QED shower for Q and L !ONLY FOR PYTHIA8!",
+        self.add_param("qed_shower", True, comment="T = enable the QED shower (quarks, leptons, W and other charged resonances, photon splittings) !ONLY FOR PYTHIA8!",
                        py8='qed_shower')
         self.add_param("primordialkt", False, comment="T = enable primordial parton k_T  !ONLY FOR PYTHIA8!",
                         py8='primordialkt')
@@ -214,6 +216,8 @@ class ShowerCard(banner.RunCard):
         #               py8="tune_pp")
         self.add_param("pythia8_options", {'__type__':''}, comment="specify (as dictionary) additional parameters that you want to setup within the pythia8 program",
                        py8='extra_line')
+        self.add_param("allow_unsafe_shower_options", False,
+                       comment="T: allow pythia8_options to change settings required by the MC@NLO matching (the NLO accuracy is lost)")
 
 
     def read(self, input, *opt):
@@ -246,15 +250,77 @@ class ShowerCard(banner.RunCard):
         self.text=content
 
 
+    @staticmethod
+    def parse_pythia8_options(value):
+        """Return pythia8_options as an ordered {setting: value} dictionary.
+
+        Pythia8 setting names and many values contain ':' (for example
+        'PDF:pSet': 'LHAPDF6:NNPDF31_nlo_as_0118'), and string values may be
+        case sensitive. The generic card parser splits on ':' and therefore
+        cannot be used. Accepted inputs are a Python dictionary literal, or
+        'Setting = value' entries separated by ';' or new lines. The case
+        of both names and values is preserved.
+        """
+        if isinstance(value, dict):
+            items = value.items()
+        else:
+            text = str(value).strip()
+            if not text or text.lower() in ['none', '{}', "{'__type__': ''}"]:
+                return {}
+            items = None
+            if text.startswith('{'):
+                try:
+                    parsed = ast.literal_eval(text)
+                except (ValueError, SyntaxError):
+                    raise ShowerCardError(
+                        'pythia8_options must be a dictionary such as '
+                        "{'Tune:pp': 14, 'PDF:pSet': 'LHAPDF6:NNPDF31_nlo_as_0118'}"
+                        ', got: %s' % text)
+                if not isinstance(parsed, dict):
+                    raise ShowerCardError('pythia8_options must be a dictionary')
+                items = parsed.items()
+            else:
+                items = []
+                for entry in re.split(r'[;\n]', text):
+                    if not entry.strip():
+                        continue
+                    if '=' not in entry:
+                        raise ShowerCardError(
+                            "Invalid pythia8_options entry '%s': expected "
+                            "'Setting = value'" % entry.strip())
+                    name, setting = entry.split('=', 1)
+                    items.append((name, setting))
+        options = {}
+        for name, setting in items:
+            name = str(name).strip()
+            if name == '__type__':
+                continue
+            if isinstance(setting, bool):
+                setting = 'on' if setting else 'off'
+            setting = str(setting).strip()
+            if not name or not setting:
+                raise ShowerCardError(
+                    "Invalid pythia8_options entry '%s = %s'" % (name, setting))
+            if any(c in name + setting for c in '\n\r'):
+                raise ShowerCardError(
+                    "pythia8_options entries must fit on one line: '%s'" % name)
+            options[name] = setting
+        return options
+
     def set_param(self, key, value, write_to = ''):
         """set the param key to value.
         if write_to is passed then write the new shower_card:
         if not testing write_to is an input path, if testing the text is
         returned by the function
         """
-        
+
         try:
-            self[key] = value
+            if key.lower() == 'pythia8_options':
+                options = self.parse_pythia8_options(value)
+                dict.__setitem__(self, 'pythia8_options', options)
+                self.user_set.add('pythia8_options')
+            else:
+                self[key] = value
         except InvalidCmd as error:
             raise ShowerCardError(str(error))
 
@@ -383,13 +449,14 @@ class ShowerCard(banner.RunCard):
             elif isinstance(self[key], float):
                 value = '%4.3f' % value
             elif key == 'pythia8_options':
-                if self.shower=='PYTHIA8':
-                    value = '"'
-                    for k, v in self[key].items():
-                        value += " %s = %s \n" % (k,v)
-                    value += '"'
-                else:
-                    value = ''
+                if self.shower == 'PYTHIA8':
+                    # Single quotes keep the shell from expanding $, ` or \.
+                    # The case of Pythia8 values (paths, PDF names) matters.
+                    text = ''.join('%s = %s\n' % (k, v) for k, v in
+                                   self.parse_pythia8_options(value).items())
+                    lines.append('%s=%s' % (self.names_dict[key][self.shower].upper(),
+                                            "'" + text.replace("'", "'\\''") + "'"))
+                continue
             else:
                 raise ShowerCardError('Unknown key: %s = %s' % (key, value))
             try:

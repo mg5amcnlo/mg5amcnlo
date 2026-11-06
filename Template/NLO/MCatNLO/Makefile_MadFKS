@@ -1,7 +1,12 @@
 -include ../../Source/make_opts
 
 DEBUG=
+# With gfortran, Fortran module files (e.g. those of HwU.f) are kept with
+# the objects, so that objects reused from an earlier compilation find them.
 FF=$(FC) $(FFLAGS) $(DEBUG) -std=legacy
+ifneq (,$(findstring gfortran,$(FC)))
+FF+= -J$(OBJDIR) -I$(OBJDIR)
+endif
 CPP=$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLOPTION)
 CC=$(CXX) $(CFLAGS) $(DEBUG) $(INCLOPTION)
 XDRLIB := $(shell sh -c 'tmp=$$(mktemp "$${TMPDIR:-/tmp}/mg5amc_xdr_link_test_XXXXXX" 2>/dev/null || echo "$${TMPDIR:-/tmp}/mg5amc_xdr_link_test_$$$$"); \
@@ -52,6 +57,12 @@ PYFILES=$(PYUTI) $(OBJDIR)/$(PYTHIAVER) $(OBJDIR)/madfks_pydriver.o $(OBJDIR)/ma
         $(OBJDIR)/mcatnlo_str.o
 
 
+# The analyses use the modules of HwU.f: build it first (needed with make -j).
+ANALYSIS_OBJS=$(HWUTI) $(PYUTI)
+ifneq ($(filter %/HwU.o,$(ANALYSIS_OBJS)),)
+$(filter-out %/HwU.o,$(ANALYSIS_OBJS)): $(filter %/HwU.o,$(ANALYSIS_OBJS))
+endif
+
 HW_EXE_DEFAULT : $(HWFILES) $(PDFFILES)
 	$(FF) $(LDFLAGS) $^ $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
@@ -59,7 +70,7 @@ HW_EXE_PDFLIB : $(HWFILES) $(CPDFFILES)
 	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 HW_EXE_LHAPDF : $(HWFILES) $(LPDFFILES)  
-	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
+	$(FF) $(LDFLAGS) $^ $(LHALIB) $(STDLIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 
 PY_EXE_DEFAULT : $(PYFILES) $(PDFFILES)
@@ -69,4 +80,4 @@ PY_EXE_PDFLIB : $(PYFILES) $(CPDFFILES)
 	$(FF) $(LDFLAGS) $^ $(LIBS) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
 
 PY_EXE_LHAPDF : $(PYFILES) $(LPDFFILES)  
-	$(FF) $(LDFLAGS) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@
+	$(FF) $(LDFLAGS) $^ $(LHALIB) $(STDLIB) $(EXTRAPATHS) $(EXTRALIBS) $(XDRLIB) -o $@

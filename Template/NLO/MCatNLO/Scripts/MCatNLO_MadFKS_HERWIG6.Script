@@ -111,8 +111,14 @@ then
   HERPDF='EXTPDF'
   PDFLIBRARY='LHAPDF'
   UsedPdfLib='LHAPDF'
-  cp -f $LHAPDFPATH"/lib/libLHAPDF.a" `pwd`"/lib"
-  LHALIBPATH=`pwd`
+  # Link the configured LHAPDF, whether it provides a shared or a static
+  # library: lhapdf-config --libs gives its location (lib or lib64).
+  if [ -z "${LHAPDFCONFIG:-}" ]; then LHAPDFCONFIG="$LHAPDFPATH/bin/lhapdf-config"; fi
+  LHAPDFLIBS=`"$LHAPDFCONFIG" --libs`
+  if [ -z "$LHAPDFLIBS" ]; then
+    echo "Cannot obtain the LHAPDF libraries from $LHAPDFCONFIG --libs"
+    exit 1
+  fi
   LHALINK=DYNAMIC
   if [ "$PDFCODE" -gt 0 ]; then LHAOFL=FREEZE; fi
   if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
@@ -169,39 +175,36 @@ fi
 LIBSLHA="LHALIB="
 case $1 in
 NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
-MC) if [ $UsedPdfLib = "PDFLIB" ]
+MC) if [ "$UsedPdfLib" = "PDFLIB" ]
      then
        EXEC_NAMEF="HW_EXE_PDFLIB"
-     elif [ $UsedPdfLib = "THISLIB" ]
+     elif [ "$UsedPdfLib" = "THISLIB" ]
      then
        EXEC_NAMEF="HW_EXE_DEFAULT"
-     elif [ $UsedPdfLib = "LHAPDF" ]
+     elif [ "$UsedPdfLib" = "LHAPDF" ]
      then
        EXEC_NAMEF="HW_EXE_LHAPDF"
-       if [ $UsedLhaPdf = "lhasta" ]
-       then
-         LIBSLHA="$LIBSLHA""$LHALIBPATH""/lib/libLHAPDF.a"
-       else
-         LIBSMAKE="$LIBSMAKE"" -lLHAPDF -lstdc++"
-         LIBSMAKEP="$LIBSMAKEP"" -L$LHALIBPATH""/lib/"
-         if [ "$LD_LIBRARY_PATH" = "" ]
-         then
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/"
-         else
-           LD_LIBRARY_PATH="$LHALIBPATH""/lib/:""$LD_LIBRARY_PATH"
-         fi
-       fi
+       # The C++ standard library comes from Source/make_opts (STDLIB),
+       # after LHALIB in Makefile_MadFKS, as a static LHAPDF requires.
+       LHARPATH=""
+       for flag in $LHAPDFLIBS; do
+         case "$flag" in
+           -L*) LHARPATH="$LHARPATH -Wl,-rpath,${flag#-L}"
+                LD_LIBRARY_PATH="${flag#-L}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;;
+         esac
+       done
+       LIBSLHA="LHALIB=$LHAPDFLIBS$LHARPATH"
      else
        echo "fatal error in compile"; exit 1
      fi ;;
 *) echo "do not know what to do in function compile" ; exit 1 ;;
 esac
 export LD_LIBRARY_PATH
-if [ $1 = "NLO" ]
+if [ "$1" = "NLO" ]
 then
   getSTRmake
   EXEC_NAME=$stringmake$EXEC_NAMEF
-elif [ $1 = "MC" ]
+elif [ "$1" = "MC" ]
 then
   EXEC_NAME="$EXEC_NAMEF"
 fi
@@ -222,7 +225,7 @@ mkdir "$thisdir/$TMPDIRNAME"
  "$LIBSLHA" "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" \
  "$INCDIRMK" "$COMSRCMK" "$ANASRCMK" "$HWSSRCMK" \
  "$OBJDIRMK" $EXEC_NAME
- VPATH=$thisdir/:$thisdir/objects/:$HWPATH:$LHALIBPATH/lib/ ;\
+ VPATH=$thisdir/:$thisdir/objects/:$HWPATH ;\
  if [ "$EXEC_NAME" != "$EXEC_NAMEFF" ] 
  then
    \mv $EXEC_NAME $EXEC_NAMEFF
@@ -253,7 +256,7 @@ compile MC
 #put MCMODE to upper case
 MCMODE=`echo $MCMODE | tr '[a-z]' '[A-Z]' `
 # Check correspondence between MCMODE and what written in the event file
-if [ $MCMODE != "HERWIG6" ]
+if [ "$MCMODE" != "HERWIG6" ]
 then
   echo "Error! HERWIG6 Script called with MCMODE not equal to HERWIG6"
   exit 1
@@ -271,24 +274,24 @@ MUMASSHW=$MUMASS
 TAUMASSHW=$TAUMASS
 GMASSHW=$GMASS
 
-if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
-elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
-elif [ $BEAM1 == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
+if [ "$BEAM1" == 1 ]; then PART1="P"; elif [ "$BEAM1" == -1 ]; then PART1="PBAR";
+elif [ "$BEAM1" == 0 ]; then PART1="E+"; elif [ "$BEAM1" == 2 ]; then PART1="N";
+elif [ "$BEAM1" == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
 exit 1; fi
-if [ $BEAM2 == 1 ]; then PART2="P"; elif [ $BEAM2 == -1 ]; then PART2="PBAR";
-elif [ $BEAM2 == 0 ]; then PART2="E-"; elif [ $BEAM2 == 2 ]; then PART2="N";
-elif [ $BEAM2 == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
+if [ "$BEAM2" == 1 ]; then PART2="P"; elif [ "$BEAM2" == -1 ]; then PART2="PBAR";
+elif [ "$BEAM2" == 0 ]; then PART2="E-"; elif [ "$BEAM2" == 2 ]; then PART2="N";
+elif [ "$BEAM2" == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
 
 whichherpdf $HERPDF
-if [ $pdftype = 1 ]
+if [ "$pdftype" = 1 ]
 then
   whichpdflib $PDFLIBRARY
-  if [ $UsedPdfLib = "THISLIB" ]
+  if [ "$UsedPdfLib" = "THISLIB" ]
   then
     dothelinks
-  elif [ $UsedPdfLib = "LHAPDF" ]
+  elif [ "$UsedPdfLib" = "LHAPDF" ]
   then
     linklhapdf
   fi
@@ -316,7 +319,7 @@ cat <<EOF > ./$ifile
   $beammom1 $beammom2               ! beam momenta
   $LHSOFT                         ! Underlying event on (.TRUE.) or off (.FALSE.)
 EOF
-if [ $pdftype = 1 ]
+if [ "$pdftype" = 1 ]
 then
 cat <<EOF >> ./$ifile
  '$PDFGROUP'                      ! PDF group (1)
@@ -418,7 +421,7 @@ esac
 function nameextralib {
 ExtraLibs="$1"
 ilen1=${#ExtraLibs}
-if [ $ilen1 -ne 0 ]
+if [ "$ilen1" -ne 0 ]
 then
   ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
   ExtraLibs="-l""$ExtraLibs"
@@ -429,7 +432,7 @@ fi
 function pathextralib {
 ExtraPaths="$1"
 ilen2=${#ExtraPaths}
-if [ $ilen2 -ne 0 ]
+if [ "$ilen2" -ne 0 ]
 then
   ExtraPaths=`echo $ExtraPaths | sed "s/ / -L/g"`
   ExtraPaths="-L""$ExtraPaths"
@@ -440,7 +443,7 @@ fi
 function pathextralibdyn {
 ExtraPathsDyn="$1"
 ilen3=${#ExtraPathsDyn}
-if [ $ilen3 -ne 0 ]
+if [ "$ilen3" -ne 0 ]
 then
   ExtraPathsDyn=`echo $ExtraPathsDyn | sed "s/ /:/g"`
 fi
@@ -450,7 +453,7 @@ fi
 function pathextraincl {
 ExtraIncl="$1"
 ilen4=${#ExtraIncl}
-if [ $ilen4 -ne 0 ]
+if [ "$ilen4" -ne 0 ]
 then
   ExtraIncl=`echo $ExtraIncl | sed "s/ / -I/g"`
   ExtraIncl="-I""$ExtraIncl"

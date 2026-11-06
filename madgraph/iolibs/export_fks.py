@@ -312,6 +312,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('interface','coloring_logging.py'),
           pjoin('various','misc.py'),
           pjoin('various','shower_card.py'),
+          pjoin('various','mcatnlo_shower.py'),
           pjoin('various','FO_analyse_card.py'),
           pjoin('various','histograms.py'),      
           pjoin('various','banner.py'),          
@@ -996,40 +997,18 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         #return to the initial dir
         os.chdir(old_pos)
         
-        # Setup stdHep
+        # Setup stdHep. StdHEP is only used to write HERWIG6 and PYTHIA6
+        # event files; it is compiled when such a shower is first run (see
+        # aMCatNLOCmd.ensure_stdhep), not here.
         # Find the correct fortran compiler
         base_compiler= ['FC=g77','FC=gfortran']
         
         StdHep_path = pjoin(MG5DIR, 'vendor', 'StdHEP')
         if output_dependencies == 'external':
-            # check if stdhep has to be compiled (only the first time)
-            if (not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libstdhep.a')) or \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP', 'lib', 'libFmcfio.a'))) and \
-                not os.path.exists(pjoin(MG5DIR, 'vendor', 'StdHEP','fail')):
-                if 'FC' not in os.environ or not os.environ['FC']:
-                    path = os.path.join(StdHep_path, 'src', 'make_opts')
-                    text = open(path).read()
-                    for base in base_compiler:
-                        text = text.replace(base,'FC=%s' % fcompiler_chosen)
-                    open(path, 'w').writelines(text)
-                logger.info('Compiling StdHEP. This has to be done only once.')
-                try:
-                    misc.compile(cwd = pjoin(MG5DIR, 'vendor', 'StdHEP'))
-                except Exception as error:
-                    logger.debug(str(error))
-                    logger.warning("StdHep failed to compiled. This forbids to run NLO+PS with PY6 and Herwig6")
-                    logger.info("details on the compilation error are available on %s", pjoin(MG5DIR, 'vendor', 'StdHEP','fail'))
-                    logger.info("if you want to retry the compilation automatically, you have to remove that file first")
-                    with open(pjoin(MG5DIR, 'vendor', 'StdHEP','fail'),'w') as fsock:
-                        fsock.write(str(error))
-                else:
-                    logger.info('Done.')
-            if os.path.exists(pjoin(StdHep_path, 'lib', 'libstdhep.a')):
-                #then link the libraries in the exported dir
-                files.ln(pjoin(StdHep_path, 'lib', 'libstdhep.a'), \
-                                         pjoin(self.dir_path, 'MCatNLO', 'lib'))
-                files.ln(pjoin(StdHep_path, 'lib', 'libFmcfio.a'), \
-                                         pjoin(self.dir_path, 'MCatNLO', 'lib'))
+            # Link the libraries, even if they are not compiled yet.
+            for name in ['libstdhep.a', 'libFmcfio.a']:
+                files.ln(pjoin(StdHep_path, 'lib', name),
+                         pjoin(self.dir_path, 'MCatNLO', 'lib'))
 
         elif output_dependencies == 'internal':
             StdHEP_internal_path = pjoin(self.dir_path,'Source','StdHEP')

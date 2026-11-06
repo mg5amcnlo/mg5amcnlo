@@ -14,7 +14,7 @@ import unittest
 
 from tests.unit_tests.fks.test_momentum_maps import ROOT, TEMPLATE, fortran_routine
 
-SCRIPT = ROOT / 'Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script'
+from madgraph.various import mcatnlo_shower
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
@@ -111,22 +111,20 @@ end program
             expected.append(int(accepted))
         self.assertEqual(self.support(points), expected)
 
-    def test_fortran_and_shower_script_read_same_bound(self):
+    def test_fortran_and_shower_interface_read_same_bound(self):
+        """The shower settings use the bound of the MC subtraction."""
         work = Path(self.tempdir.name)
+        card = work / 'bound.dat'
         for value in ('7.5d0', '2.3D1', '.5', '10.', '10.d0', '5000'):
-            card = work / 'bound.dat'
             card.write_text('#Pythia8MMaxGamma\n'+value+'\n')
             f = subprocess.run([str(self.executable), str(card)],
                                capture_output=True, text=True)
-            shell = subprocess.run(['bash','-c',
-                'source "$1"; pythia8_mmaxgamma "$2"', '_', str(SCRIPT), str(card)],
-                capture_output=True, text=True)
             self.assertEqual(f.returncode,0,f.stdout+f.stderr)
-            self.assertEqual(shell.returncode,0,shell.stdout+shell.stderr)
-            self.assertEqual(float(f.stdout),float(shell.stdout))
+            self.assertEqual(float(f.stdout),
+                             mcatnlo_shower.pythia8_mmaxgamma(str(card)))
         for value in ('0', '-1', '5001', 'garbage'):
             card.write_text('#Pythia8MMaxGamma\n'+value+'\n')
-            shell = subprocess.run(['bash','-c',
-                'source "$1"; pythia8_mmaxgamma "$2"', '_', str(SCRIPT), str(card)],
-                capture_output=True,text=True)
-            self.assertNotEqual(shell.returncode,0,value)
+            with self.assertRaises(mcatnlo_shower.ShowerInterfaceError):
+                mcatnlo_shower.pythia8_mmaxgamma(str(card))
+        card.write_text('! no bound\n')
+        self.assertEqual(mcatnlo_shower.pythia8_mmaxgamma(str(card)), 10.)

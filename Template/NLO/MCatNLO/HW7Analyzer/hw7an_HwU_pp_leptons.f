@@ -312,14 +312,13 @@ c
       DO ILEP1=1,NLEPTON
         OBS(1)=GETPTV4(PLEP(1,ILEP1))
         OBS(2)=GETRAPIDITYV4(PLEP(1,ILEP1))
-        DO KK=1,NWGT_ANALYSIS
+C HwU_FILL fills all weights at once (WWW is the array of weights)
         DO ICUTS=1,NCUTS
-          L0=(KK-1)*NCUTS*NPLOTS+(ICUTS-1)*NPLOTS
+          L0=(ICUTS-1)*NPLOTS
           DO IO=1,NSINGLE
             L=L0+NSINGLE*(ILEP1-1)+IO
-            CALL HwU_FILL(L,OBS(IO),WWW(KK))
+            CALL HwU_FILL(L,OBS(IO),WWW)
           ENDDO
-        ENDDO
         ENDDO
       ENDDO
 c

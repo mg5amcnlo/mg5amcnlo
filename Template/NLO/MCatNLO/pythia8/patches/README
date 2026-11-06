@@ -50,9 +50,10 @@ separate recoil and S/H classification validation. In particular, do not
 infer N from the light-QCD npNLO attribute or nPartonsInBorn.
 
 The photon-conversion mass bound is controlled by #Pythia8MMaxGamma in
-Cards/FKS_params.dat (default 10 GeV). The launch script passes the same
-value to TimeShower:mMaxGamma. Reintegrate when changing it; overriding
-TimeShower:mMaxGamma later in pythia8_options would break that agreement.
+Cards/FKS_params.dat (default 10 GeV). The value used for the integration
+is recorded in the event file (<MCatNLOMatching>) and passed to
+TimeShower:mMaxGamma; with QED matching it is a required setting, which
+pythia8_options cannot change. Reintegrate when changing it.
 The MC subtraction retains its infrared limits and does not cut them off
 at the shower's nonperturbative termination scale.
 

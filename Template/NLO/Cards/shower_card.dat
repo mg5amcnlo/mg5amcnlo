@@ -48,6 +48,7 @@ mum_stable   = XXX      # set mu-'s stable
 # Mass of the b quark                                                  *
 #***********************************************************************
 b_mass       = XXX     # if < 0 = read from SubProcesses/MCmasses_*.inc
+#                      # (PYTHIA8: must agree with the mass used at generation)
 #***********************************************************************
 # Special settings                                                     *
 #***********************************************************************
@@ -59,17 +60,27 @@ is_bbar      = XXX      # T if bb~ production           !ONLY FOR HERWIG6!
 Qcut       = XXX     # Merging scale for FxFx
 njmax      = XXX       # Maximal multiplicity in the merging (fxFx).
 #                     # -1 means guessed  from the process definition
-qed_shower   = XXX      # T = enable QED shower for Q and L 
+qed_shower   = XXX      # T = enable the QED shower (photon emission by quarks,
+#                       # top included, leptons, W and other charged resonances,
+#                       # and photon splittings); always on if NLO QED
+#                       # corrections are matched !ONLY FOR PYTHIA8!
 primordialkt = XXX      # T = enable primordial parton k_T  
-pythia8_options = XXXX # Dictionary specifying any additional entry in the pythia8 command file
-                       # Warning changing some parameter will break NLO accuracy.
+pythia8_options = XXXX # Additional Pythia8 settings, as a dictionary, e.g.
+#                      # {'Tune:pp': 14, 'PDF:pSet': 'LHAPDF6:NNPDF31_nlo_as_0118'}
+#                      # Settings required by the MC@NLO matching cannot be
+#                      # changed (see MCatNLO/README.shower), unless
+allow_unsafe_shower_options = XXX # T: allow it (the NLO accuracy is lost)
 #***********************************************************************
 # Matrix-element corrections                          !ONLY FOR PYTHIA8!
+# Following arXiv:2308.06389, MECs are applied only to resonance decays *
+# (TimeShower:MEcorrections = on, MEextended = off). Those of the hard *
+# process would double count the NLO real emission and are disabled;  *
+# MECs are also disabled in decays that are part of the NLO calculation*
 #***********************************************************************
-space_shower_me_corrections = XX     # MECs for ISR
-time_shower_me_corrections  = XX    # MECs for FSR
-time_shower_me_extended     = XX     # see Pythia8 manual as well as
-time_shower_me_after_first  = XX    # hep-ph/2308.06389 for details
+space_shower_me_corrections = XX     # MECs for ISR (must be F)
+time_shower_me_corrections  = XX    # MECs for FSR in resonance decays
+time_shower_me_extended     = XX     # MECs from equivalent MEs (must be F)
+time_shower_me_after_first  = XX    # MECs also after the first emission
 #***********************************************************************
 # Decay channels                                                       *
 #***********************************************************************

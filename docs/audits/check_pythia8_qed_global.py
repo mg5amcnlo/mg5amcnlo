@@ -30,7 +30,7 @@ def main():
     source = prefix / 'src/SimpleTimeShower.cc'
     if hashlib.sha256(source.read_bytes()).hexdigest() != REFERENCE_SHA256:
         parser.error('SimpleTimeShower.cc is not the audited, unmodified PYTHIA 8.318 source')
-    patch = ROOT / 'Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-global-qed.patch'
+    patch = ROOT / 'Template/NLO/MCatNLO/pythia8/patches/pythia8318-global-qed.patch'
     fixture = ROOT / 'tests/input_files/check_pythia8_qed_global.cc'
     with tempfile.TemporaryDirectory(prefix='mg5_qed_global_shower_') as temp:
         work = Path(temp)

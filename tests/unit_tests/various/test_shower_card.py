@@ -294,7 +294,7 @@ SPACE_SHOWER_ME_CORRECTIONS=.FALSE.
 TIME_SHOWER_ME_CORRECTIONS=.TRUE.
 TIME_SHOWER_ME_EXTENDED=.FALSE.
 TIME_SHOWER_ME_AFTER_FIRST=.FALSE.
-EXTRA_LINE=""
+EXTRA_LINE=''
 """
         text = self.card.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -335,7 +335,7 @@ SPACE_SHOWER_ME_CORRECTIONS=.FALSE.
 TIME_SHOWER_ME_CORRECTIONS=.TRUE.
 TIME_SHOWER_ME_EXTENDED=.FALSE.
 TIME_SHOWER_ME_AFTER_FIRST=.FALSE.
-EXTRA_LINE=""
+EXTRA_LINE=''
 """
         text = self.card_analyse.write_card('PYTHIA8', '')
         for a, b in zip(text.split('\n'), goal.split('\n')):
@@ -566,3 +566,42 @@ PYUTI="mcatnlo_pyan_stdhep.o"
         text = fsock.getvalue()
         self.assertIn("combine_td   = T # combine the topdrawer files if nsplit_jobs > 1", text)
         self.assertIn("ANALYSE      =                    # User\'s analysis and histogramming", text)
+    def test_pythia8_options_preserve_colons_case_and_quotes(self):
+        """pythia8_options values may contain ':' and are case sensitive."""
+        card = shower_card.ShowerCard(self.card.text, testing=True)
+        card.set_param('pythia8_options',
+                       "{'Tune:pp': 14, 'PDF:pSet': 'LHAPDF6:NNPDF31_nlo_as_0118',"
+                       " 'Main:spareWord2': \"it's $HOME\"}")
+        self.assertEqual(card['pythia8_options'],
+                         {'Tune:pp': '14',
+                          'PDF:pSet': 'LHAPDF6:NNPDF31_nlo_as_0118',
+                          'Main:spareWord2': "it's $HOME"})
+        text = card.write_card('PYTHIA8', '')
+        self.assertIn('PDF:pSet = LHAPDF6:NNPDF31_nlo_as_0118',
+                      text.split('EXTRA_LINE=')[1])
+        # The value survives sourcing by bash unchanged.
+        import subprocess
+        out = subprocess.run(['bash', '-c', text.split('EXTRA_LINE=')[0] +
+                              'EXTRA_LINE=' + text.split('EXTRA_LINE=')[1] +
+                              '\nprintf "%s" "$EXTRA_LINE"'],
+                             capture_output=True, text=True, check=True).stdout
+        self.assertEqual(out, "Tune:pp = 14\nPDF:pSet = LHAPDF6:NNPDF31_nlo_as_0118\n"
+                              "Main:spareWord2 = it's $HOME\n")
+
+    def test_pythia8_options_alternative_syntax_and_round_trip(self):
+        card = shower_card.ShowerCard(self.card.text, testing=True)
+        card.set_param('pythia8_options',
+                       'TimeShower:alphaSvalue = 0.1365; PartonLevel:MPI = on')
+        self.assertEqual(card['pythia8_options'],
+                         {'TimeShower:alphaSvalue': '0.1365',
+                          'PartonLevel:MPI': 'on'})
+        text = card.set_param('pythia8_options', card['pythia8_options'],
+                              write_to=True)
+        reread = shower_card.ShowerCard(text, testing=True)
+        self.assertEqual(reread['pythia8_options'], card['pythia8_options'])
+        try:
+            card.set_param('pythia8_options', "{'Tune:pp' 14}")
+        except shower_card.ShowerCardError:
+            pass
+        else:
+            self.fail('Invalid pythia8_options accepted')

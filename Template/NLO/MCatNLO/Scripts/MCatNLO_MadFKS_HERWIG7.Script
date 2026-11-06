@@ -97,40 +97,40 @@ esac
 # converts pdg numbers to names, relevant for decays
 function name {
 # quarks
-if [ $1 == 1 ] ; then echo 'd' ; fi
-if [ $1 == 2 ] ; then echo 'u' ; fi
-if [ $1 == 3 ] ; then echo 's' ; fi
-if [ $1 == 4 ] ; then echo 'c' ; fi
-if [ $1 == 5 ] ; then echo 'b' ; fi
-if [ $1 == 6 ] ; then echo 't' ; fi
+if [ "$1" == 1 ] ; then echo 'd' ; fi
+if [ "$1" == 2 ] ; then echo 'u' ; fi
+if [ "$1" == 3 ] ; then echo 's' ; fi
+if [ "$1" == 4 ] ; then echo 'c' ; fi
+if [ "$1" == 5 ] ; then echo 'b' ; fi
+if [ "$1" == 6 ] ; then echo 't' ; fi
 # antiquarks
-if [ $1 == -1 ] ; then echo 'dbar' ; fi
-if [ $1 == -2 ] ; then echo 'ubar' ; fi
-if [ $1 == -3 ] ; then echo 'sbar' ; fi
-if [ $1 == -4 ] ; then echo 'cbar' ; fi
-if [ $1 == -5 ] ; then echo 'bbar' ; fi
-if [ $1 == -6 ] ; then echo 'tbar' ; fi
+if [ "$1" == -1 ] ; then echo 'dbar' ; fi
+if [ "$1" == -2 ] ; then echo 'ubar' ; fi
+if [ "$1" == -3 ] ; then echo 'sbar' ; fi
+if [ "$1" == -4 ] ; then echo 'cbar' ; fi
+if [ "$1" == -5 ] ; then echo 'bbar' ; fi
+if [ "$1" == -6 ] ; then echo 'tbar' ; fi
 # leptons
-if [ $1 == 11 ] ; then echo 'e-' ; fi
-if [ $1 == 12 ] ; then echo 'nu_e' ; fi
-if [ $1 == 13 ] ; then echo 'mu-' ; fi
-if [ $1 == 14 ] ; then echo 'nu_mu' ; fi
-if [ $1 == 15 ] ; then echo 'tau-' ; fi
-if [ $1 == 16 ] ; then echo 'nu_tau' ; fi
+if [ "$1" == 11 ] ; then echo 'e-' ; fi
+if [ "$1" == 12 ] ; then echo 'nu_e' ; fi
+if [ "$1" == 13 ] ; then echo 'mu-' ; fi
+if [ "$1" == 14 ] ; then echo 'nu_mu' ; fi
+if [ "$1" == 15 ] ; then echo 'tau-' ; fi
+if [ "$1" == 16 ] ; then echo 'nu_tau' ; fi
 # antileptons
-if [ $1 == -11 ] ; then echo 'e+' ; fi
-if [ $1 == -12 ] ; then echo 'nu_ebar' ; fi
-if [ $1 == -13 ] ; then echo 'mu+' ; fi
-if [ $1 == -14 ] ; then echo 'nu_mubar' ; fi
-if [ $1 == -15 ] ; then echo 'tau+' ; fi
-if [ $1 == -16 ] ; then echo 'nu_taubar' ; fi
+if [ "$1" == -11 ] ; then echo 'e+' ; fi
+if [ "$1" == -12 ] ; then echo 'nu_ebar' ; fi
+if [ "$1" == -13 ] ; then echo 'mu+' ; fi
+if [ "$1" == -14 ] ; then echo 'nu_mubar' ; fi
+if [ "$1" == -15 ] ; then echo 'tau+' ; fi
+if [ "$1" == -16 ] ; then echo 'nu_taubar' ; fi
 # bosons
-if [ $1 == 21 ] ; then echo 'g' ; fi
-if [ $1 == 22 ] ; then echo 'gamma' ; fi
-if [ $1 == 23 ] ; then echo 'Z0' ; fi
-if [ $1 == 24 ] ; then echo 'W+' ; fi
-if [ $1 == -24 ] ; then echo 'W-' ; fi
-if [ $1 == 25 ] ; then echo 'h0' ; fi
+if [ "$1" == 21 ] ; then echo 'g' ; fi
+if [ "$1" == 22 ] ; then echo 'gamma' ; fi
+if [ "$1" == 23 ] ; then echo 'Z0' ; fi
+if [ "$1" == 24 ] ; then echo 'W+' ; fi
+if [ "$1" == -24 ] ; then echo 'W-' ; fi
+if [ "$1" == 25 ] ; then echo 'h0' ; fi
 }
 
 # creates the executable for NLO and MC; the entry of the function
@@ -255,13 +255,13 @@ fi
 LIBSLHA="LHALIB="
 case $1 in
 NLO) echo "NLO must be computed with MadFKS"; exit 1 ;;
-MC) if [ $UsedPdfLib = "PDFLIB" ]
+MC) if [ "$UsedPdfLib" = "PDFLIB" ]
      then
        EXEC_NAMEF="HW7_EXE_DEFAULT"
-     elif [ $UsedPdfLib = "THISLIB" ]
+     elif [ "$UsedPdfLib" = "THISLIB" ]
      then
        EXEC_NAMEF="HW7_EXE_DEFAULT"
-     elif [ $UsedPdfLib = "LHAPDF" ]
+     elif [ "$UsedPdfLib" = "LHAPDF" ]
      then
        EXEC_NAMEF="HW7_EXE_LHAPDF"
      else
@@ -270,11 +270,11 @@ MC) if [ $UsedPdfLib = "PDFLIB" ]
 *) echo "do not know what to do in function compile" ; exit 1 ;;
 esac
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HEPMCPATH/lib
-if [ $1 = "NLO" ]
+if [ "$1" = "NLO" ]
 then
   getSTRmake
   EXEC_NAME=$stringmake$EXEC_NAMEF
-elif [ $1 = "MC" ]
+elif [ "$1" = "MC" ]
 then
   EXEC_NAME="$EXEC_NAMEF"
 fi
@@ -300,7 +300,7 @@ fi
   # ln -sf $HERWIG7PATH/bin/$HWEXE $thisdir
   # link the stupid LHAPDF index, if necessary
   whichherpdf $HERPDF
-  if [ $pdftype = 1 ]
+  if [ "$pdftype" = 1 ]
   then
     mkdir -p $thisdir/PDF
     ln -sf $THEPEGPATH/share/ThePEG/PDFsets.index $thisdir/PDF/PDFsets.index
@@ -327,7 +327,7 @@ compile MC
 #put MCMODE to upper case
 MCMODE=`echo $MCMODE | tr '[a-z]' '[A-Z]' `
 # Check correspondence between MCMODE and what written in the event file
-if [ $MCMODE != "HERWIG7" ]
+if [ "$MCMODE" != "HERWIG7" ]
 then
   echo "Error! HERWIG7 Script called with MCMODE not equal to HERWIG7"
   exit 1
@@ -345,24 +345,24 @@ MUMASSHW=$MUMASS
 TAUMASSHW=$TAUMASS
 GMASSHW=$GMASS
 
-if [ $BEAM1 == 1 ]; then PART1="P"; elif [ $BEAM1 == -1 ]; then PART1="PBAR";
-elif [ $BEAM1 == 0 ]; then PART1="E+"; elif [ $BEAM1 == 2 ]; then PART1="N";
-elif [ $BEAM1 == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
+if [ "$BEAM1" == 1 ]; then PART1="P"; elif [ "$BEAM1" == -1 ]; then PART1="PBAR";
+elif [ "$BEAM1" == 0 ]; then PART1="E+"; elif [ "$BEAM1" == 2 ]; then PART1="N";
+elif [ "$BEAM1" == -2 ]; then PART1="NBAR"; else echo "Unrecognized incoming beam 1";
 exit 1; fi
-if [ $BEAM2 == 1 ]; then PART2="P"; elif [ $BEAM2 == -1 ]; then PART2="PBAR";
-elif [ $BEAM2 == 0 ]; then PART2="E-"; elif [ $BEAM2 == 2 ]; then PART2="N";
-elif [ $BEAM2 == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
+if [ "$BEAM2" == 1 ]; then PART2="P"; elif [ "$BEAM2" == -1 ]; then PART2="PBAR";
+elif [ "$BEAM2" == 0 ]; then PART2="E-"; elif [ "$BEAM2" == 2 ]; then PART2="N";
+elif [ "$BEAM2" == -2 ]; then PART2="NBAR"; else echo "Unrecognized incoming beam 2";
 exit 1; fi
 # Check the previous!
 
 whichherpdf $HERPDF
-if [ $pdftype = 1 ]
+if [ "$pdftype" = 1 ]
 then
   whichpdflib $PDFLIBRARY
-  if [ $UsedPdfLib = "THISLIB" ]
+  if [ "$UsedPdfLib" = "THISLIB" ]
   then
     dothelinks
-  elif [ $UsedPdfLib = "LHAPDF" ]
+  elif [ "$UsedPdfLib" = "LHAPDF" ]
   then
     linklhapdf
   fi
@@ -597,7 +597,7 @@ create ThePEG::Cuts /Herwig/Cuts/NoCuts
 set /Herwig/EventHandlers/LHEReader:Cuts /Herwig/Cuts/NoCuts
 EOF
 
-if [ $UE_HW7 = ".FALSE." ]
+if [ "$UE_HW7" = ".FALSE." ]
 then
 cat <<EOF >> ./$ifile
 # Switching off MPI
@@ -607,7 +607,7 @@ EOF
 fi
 
 
-if [ $HADRONIZE_HW7 = ".FALSE." ]
+if [ "$HADRONIZE_HW7" = ".FALSE." ]
 then
 cat <<EOF >> ./$ifile
 # Hadronization off 
@@ -651,22 +651,22 @@ do
  num_of_part=$(echo ${#DM[@]})
  let "num_of_part-=6"
 
- if [ $num_of_part = 2 ]
+ if [ "$num_of_part" = 2 ]
  then
 cat <<EOF >> ./$ifile
 set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]});:OnOff On
 EOF
- elif  [ $num_of_part = 3 ]
+ elif  [ "$num_of_part" = 3 ]
  then
 cat <<EOF >> ./$ifile
 set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]});:OnOff On
 EOF
- elif  [ $num_of_part = 4 ]
+ elif  [ "$num_of_part" = 4 ]
  then
 cat <<EOF >> ./$ifile
 set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]}),$(name ${DM[5]});:OnOff On
 EOF
- elif  [ $num_of_part = 5 ]
+ elif  [ "$num_of_part" = 5 ]
  then
 cat <<EOF >> ./$ifile
 set /Herwig/Particles/$(name ${DM[0]})/$(name ${DM[0]})->$(name ${DM[2]}),$(name ${DM[3]}),$(name ${DM[4]}),$(name ${DM[5]}),$(name ${DM[6]});:OnOff On
@@ -675,7 +675,7 @@ EOF
 done
 
 
-if [ $B_STABLE_HW7 = ".TRUE." ]
+if [ "$B_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -724,7 +724,7 @@ set /Herwig/Particles/eta_b:Stable Stable
 EOF
 fi
 
-if [ $PI_STABLE_HW7 = ".TRUE." ]
+if [ "$PI_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -739,7 +739,7 @@ set /Herwig/Particles/pi0:Stable Stable
 EOF
 fi
 
-if [ $WP_STABLE_HW7 = ".TRUE." ]
+if [ "$WP_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -754,7 +754,7 @@ set /Herwig/Particles/W+:Stable Stable
 EOF
 fi
 
-if [ $WM_STABLE_HW7 = ".TRUE." ]
+if [ "$WM_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -769,7 +769,7 @@ set /Herwig/Particles/W-:Stable Stable
 EOF
 fi
 
-if [ $Z_STABLE_HW7 = ".TRUE." ]
+if [ "$Z_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -784,7 +784,7 @@ set /Herwig/Particles/Z0:Stable Stable
 EOF
 fi
 
-if [ $MUP_STABLE_HW7 = ".TRUE." ]
+if [ "$MUP_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -799,7 +799,7 @@ set /Herwig/Particles/mu+:Stable Stable
 EOF
 fi
 
-if [ $MUM_STABLE_HW7 = ".TRUE." ]
+if [ "$MUM_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -814,7 +814,7 @@ set /Herwig/Particles/mu-:Stable Stable
 EOF
 fi
 
-if [ $TAUP_STABLE_HW7 = ".TRUE." ]
+if [ "$TAUP_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -829,7 +829,7 @@ set /Herwig/Particles/tau+:Stable Stable
 EOF
 fi
 
-if [ $TAUM_STABLE_HW7 = ".TRUE." ]
+if [ "$TAUM_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -844,7 +844,7 @@ set /Herwig/Particles/tau-:Stable Stable
 EOF
 fi
 
-if [ $H_STABLE_HW7 = ".TRUE." ]
+if [ "$H_STABLE_HW7" = ".TRUE." ]
 then
 cat <<EOF >> ./$ifile
 
@@ -922,10 +922,8 @@ saverun $runfile /Herwig/Generators/$GENERATOR
 EOF
 
 
-( cd . ;\
-     $exefile )
-
-mv $thisdir/MCATNLO_HERWIG7.hepmc $thisdir/"$EVT_NAMEF".hepmc
+# The executable is run by shower_template.sh in the run directory, where
+# the Herwig binary is linked. It must not be run here.
 }
 
 # this function set the parameter pdftype according to the value 
@@ -961,7 +959,7 @@ esac
 function nameextralib {
 ExtraLibs="$1"
 ilen1=${#ExtraLibs}
-if [ $ilen1 -ne 0 ]
+if [ "$ilen1" -ne 0 ]
 then
   ExtraLibs=`echo $ExtraLibs | sed "s/ / -l/g"`
   ExtraLibs="-l""$ExtraLibs"
@@ -972,7 +970,7 @@ fi
 function pathextralib {
 ExtraPaths="$1"
 ilen2=${#ExtraPaths}
-if [ $ilen2 -ne 0 ]
+if [ "$ilen2" -ne 0 ]
 then
   ExtraPaths=`echo $ExtraPaths | sed "s/ / -L/g"`
   ExtraPaths="-L""$ExtraPaths"
@@ -983,7 +981,7 @@ fi
 function pathextralibdyn {
 ExtraPathsDyn="$1"
 ilen3=${#ExtraPathsDyn}
-if [ $ilen3 -ne 0 ]
+if [ "$ilen3" -ne 0 ]
 then
   ExtraPathsDyn=`echo $ExtraPathsDyn | sed "s/ /:/g"`
 fi
@@ -993,7 +991,7 @@ fi
 function pathextraincl {
 ExtraIncl="$1"
 ilen4=${#ExtraIncl}
-if [ $ilen4 -ne 0 ]
+if [ "$ilen4" -ne 0 ]
 then
   ExtraIncl=`echo $ExtraIncl | sed "s/ / -I/g"`
   ExtraIncl="-I""$ExtraIncl"

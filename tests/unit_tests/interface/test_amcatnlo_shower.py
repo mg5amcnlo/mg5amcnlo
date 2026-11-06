@@ -12,6 +12,7 @@ from madgraph import MG5DIR
 from madgraph.interface import amcatnlo_run_interface as interface
 from madgraph.various import cluster, histograms
 from madgraph.various.shower_card import ShowerCard
+from madgraph.various import mcatnlo_shower
 
 
 class TestShowerCollection(unittest.TestCase):
@@ -88,6 +89,11 @@ elif mode in ('HWU', 'FXFX'):
         self.cmd.results = mock.Mock()
         self.cmd.do_plot = mock.Mock()
         self.cmd.banner_to_mcatnlo = mock.Mock()
+        self.cmd.ensure_stdhep = mock.Mock()
+        self.cmd.get_matching_contract = lambda evt_file: \
+            mcatnlo_shower.MatchingContract(
+                parton_shower=self.input.read_text().split("' = parton_shower")[0]
+                .rsplit("'", 1)[1])
         self.render = mock.patch.object(interface.common_run, 'render_HwU_plot')
         self.render.start()
         self.addCleanup(self.render.stop)
@@ -169,13 +175,18 @@ elif mode in ('HWU', 'FXFX'):
         config.write_text('#!/bin/sh\nexit 0\n')
         config.chmod(0o755)
         self.cmd.options['pythia8_path'] = str(pythia)
-        self.cmd.run_card['ickkw'] = 3
+        self.cmd.run_card['ickkw'] = 3  # the contract decides
         self.input.write_text(self.input.read_text().replace('HERWIG6', 'PYTHIA8'))
         self.original = self.input.read_text()
-        compiler = self.mcatnlo / 'MCatNLO_MadFKS.inputs'
-        compiler.write_text('#!/bin/sh\ncp analysis_fixture Pythia8.exe\n'
-                            'printf "FXFX\\nRandom:seed = 123\\n" > Pythia8.cmd\n'
-                            'echo "Compiler stdout"\necho "Compiler stderr" >&2\n')
+        # Pythia8 is configured in Python: replace the build by the fixture.
+        def prepare(evt_file, contract, log):
+            with open(log, 'a') as stream:
+                stream.write('Compiler stdout\nCompiler stderr\n')
+            return {'exe': str(self.mcatnlo / 'analysis_fixture'),
+                    'cmd': 'FXFX\nRandom:seed = 123\n', 'locked': ''}
+        self.cmd.prepare_pythia8_shower = prepare
+        self.cmd.get_matching_contract = lambda evt_file: \
+            mcatnlo_shower.MatchingContract(parton_shower='PYTHIA8', ickkw=3)
         with mock.patch.object(interface, 'check_pythia8_fxfx_plugin'):
             self.cmd.run_mcatnlo(str(self.input), {})
         rundir = self.assert_clean(shower='PYTHIA8')
@@ -229,3 +240,50 @@ elif mode in ('HWU', 'FXFX'):
         self.run_shower('EMPTY')
         self.assert_clean()
         self.assertTrue((self.events / 'mcatnlo_run_HERWIG6_1.log').is_file())
+
+
+class TestStdHEPOnDemand(unittest.TestCase):
+    """StdHEP is compiled when a HERWIG6/PYTHIA6 shower first needs it."""
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory(prefix='mg5_stdhep_')
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.me_dir = self.root / 'proc'
+        (self.me_dir / 'MCatNLO' / 'lib').mkdir(parents=True)
+        (self.me_dir / 'Source').mkdir()
+        # A fake StdHEP source tree (as MG5_aMC/vendor/StdHEP).
+        self.source = self.root / 'vendor' / 'StdHEP'
+        (self.source / 'mcfio').mkdir(parents=True)
+        (self.source / 'src').mkdir()
+        (self.source / 'src' / 'make_opts').write_text('FC=gfortran\n')
+        (self.source / 'makefile').write_text(
+            'all:\n\tmkdir -p lib\n\ttouch lib/libstdhep.a lib/libFmcfio.a\n')
+        for name in ['libstdhep.a', 'libFmcfio.a']:
+            (self.me_dir / 'MCatNLO' / 'lib' / name).symlink_to(
+                self.source / 'lib' / name)
+        self.cmd = object.__new__(interface.aMCatNLOCmd)
+        self.cmd.me_dir = str(self.me_dir)
+        self.cmd.options = {'mg5_path': None}
+
+    def test_status_and_compilation(self):
+        self.assertEqual(interface.stdhep_status(str(self.me_dir)),
+                         ('source', str(self.source)))
+        (self.source / 'fail').write_text('old failure')
+        self.cmd.ensure_stdhep('HERWIG6')
+        self.assertEqual(interface.stdhep_status(str(self.me_dir))[0], 'compiled')
+        self.assertFalse((self.source / 'fail').exists())
+        # Nothing to do the second time.
+        (self.source / 'makefile').write_text('all:\n\tfalse\n')
+        self.cmd.ensure_stdhep('HERWIG6')
+
+    def test_failed_and_missing(self):
+        (self.source / 'makefile').write_text('all:\n\tfalse\n')
+        with self.assertRaisesRegex(interface.aMCatNLOError, 'failed to compile'):
+            self.cmd.ensure_stdhep('PYTHIA6Q')
+        import shutil
+        shutil.rmtree(self.source)
+        self.assertEqual(interface.stdhep_status(str(self.me_dir)), ('missing', None))
+        with self.assertRaisesRegex(interface.aMCatNLOError, 'not available'):
+            self.cmd.ensure_stdhep('PYTHIA6Q')
+

@@ -97,52 +97,43 @@ int main(int argc, char** argv) {
 
 @unittest.skipUnless(shutil.which('bash'), 'requires bash')
 class TestPythiaDeltaSteering(unittest.TestCase):
+    """Starting scales of the Pythia8 command file written by MG5_aMC."""
+
     def steering(self, delta, dipole_setting):
-        with tempfile.TemporaryDirectory(prefix='mg5_py8_steering_') as tmp:
-            work = Path(tmp)
-            (work / 'xmldoc').mkdir()
-            (work / 'xmldoc/BeamParameters.xml').write_text(
-                '<flag name="Beams:setDipoleShowerStartingScalesFromLHEF" '
-                'default="off"/>\n' if dipole_setting else '<chapter/>\n')
-            card = ShowerCard()
-            card.testing = True
-            (work / 'shower.dat').write_text(card.write_card('PYTHIA8', ''))
-            # Exercise the complete production steering function. Compilation
-            # is unnecessary, and the default negative Lambda never enables
-            # its optional override (the only use of bc in this function).
-            command = r'''
-source "$1"
-source "$2"
-function bc { cat >/dev/null; echo 0; }
-thisdir="$PWD"
-MCMODE=PYTHIA8
-PY8VER=8.3
-UsedPdfLib=THISLIB
-BEAM1=1
-BEAM2=1
-ICKKW=0
-runMCMadFKS
-'''
-            result = subprocess.run(
-                [shutil.which('bash'), '-c', command, 'test',
-                 str(MCATNLO / 'Scripts/MCatNLO_MadFKS_PYTHIA8.Script'),
-                 str(work / 'shower.dat')], cwd=work,
-                env=dict(os.environ, DELTA='ON' if delta else 'OFF'),
-                text=True, capture_output=True, timeout=10)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            return (work / 'Pythia8.cmd').read_text()
+        from madgraph.various import mcatnlo_shower
+
+        class Installation(object):
+            version = '8.312' if dipole_setting else '8.244'
+            path = '/fake'
+            def has_setting(self, name):
+                return dipole_setting or \
+                    name != 'Beams:setDipoleShowerStartingScalesFromLHEF'
+            def has_lhapdf6(self):
+                return True
+
+        contract = mcatnlo_shower.MatchingContract(parton_shower='PYTHIA8',
+                                                   mcatnlo_delta=delta)
+        run = {'nevents': 10, 'nevents_total': 10, 'event_norm': 'average',
+               'mc_masses': {5: 4.8}, 'pdf': ('internal', None, False), 'seed': 1}
+        return mcatnlo_shower.pythia8_settings(
+            contract, ShowerCard(), run, Installation()).render()
 
     def test_delta_keeps_particle_and_dipole_scales(self):
         result = self.steering(True, True)
         self.assertIn('Beams:setProductionScalesFromLHEF = on', result)
         self.assertIn('Beams:setDipoleShowerStartingScalesFromLHEF = on', result)
 
-    def test_legacy_pythia_has_no_unknown_setting(self):
-        result = self.steering(True, False)
-        self.assertIn('Beams:setProductionScalesFromLHEF = on', result)
-        self.assertNotIn('Beams:setDipoleShowerStartingScalesFromLHEF', result)
+    def test_legacy_pythia_is_refused_for_delta(self):
+        # Without per-dipole starting scales MC@NLO-Delta cannot be showered
+        # consistently: this is an error, no longer a silent downgrade.
+        from madgraph.various import mcatnlo_shower
+        with self.assertRaises(mcatnlo_shower.ShowerInterfaceError):
+            self.steering(True, False)
 
     def test_ordinary_mcatnlo_keeps_scalar_scale(self):
         result = self.steering(False, True)
-        self.assertNotIn('Beams:setProductionScalesFromLHEF', result)
+        self.assertIn('Beams:setProductionScalesFromLHEF = off', result)
         self.assertNotIn('Beams:setDipoleShowerStartingScalesFromLHEF', result)
+        result = self.steering(False, False)
+        self.assertIn('Beams:setProductionScalesFromLHEF = off', result)
+

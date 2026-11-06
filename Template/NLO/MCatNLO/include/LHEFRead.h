@@ -38,7 +38,7 @@ class MyReader {
     std::string hs;
     std::stringstream format_str;
     format_str <<"%"<<wgts_info_len_used<<"s";
-    sprintf(cwgtinfo_weights_info[0],format_str.str().c_str(),"central value");
+    snprintf(cwgtinfo_weights_info[0],wgts_info_len_used,format_str.str().c_str(),"central value");
     cwgtinfo_nn=1;
     hss << reader.headerBlock;
     while (std::getline(hss,hs,'\n')) {
@@ -59,7 +59,7 @@ class MyReader {
 	    int tag;
 	    if ((label >> first) && first == "tag=" && (label >> tag) && tag == 0)
 	      std::getline(label,sRWGT);
-	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],format_str.str().c_str(),sRWGT.c_str());
+	    snprintf(cwgtinfo_weights_info[cwgtinfo_nn],wgts_info_len_used,format_str.str().c_str(),sRWGT.c_str());
 	    ++cwgtinfo_nn;
 	  }
 	}
