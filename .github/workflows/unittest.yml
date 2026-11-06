@@ -640,7 +640,7 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             gfortran --version
-            ./tests/test_manager.py TestRealChannelExport TestBornGscale test_amcatnlo_real_channels test_real_channels_weights test_real_channels_phase_space test_mint_channels test_real_channels_auto -t0
+            ./tests/test_manager.py TestRealChannelExport TestBornGscale test_amcatnlo_real_channels test_real_channels_weights test_real_channels_phase_space test_mint_channels test_mint_uncertainty test_real_channels_auto -t0
 
 
   unittest_write_model:

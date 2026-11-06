@@ -40,6 +40,11 @@ ANNOUNCEMENT:
        installed once per model configuration; card/coupling reinitialization
        refreshes that configuration and invalidates dependent caches. Running
        external parameters are included, and unused model inputs are omitted.
+   RF: Propagate MINT integration uncertainties with the actual iteration
+       weights, including individual channels and the last-three-iteration
+       estimate. Retain the existing central-value and histogram weights;
+       accuracy-driven runs can need more iterations with the corrected error.
+       Handle zero signed estimates and zero-error channels in these updates.
    RF: Add massive/QED subtraction and shower-support checks. Experimental NLO
        QED shower launches require --allow_qed_ps; QED Delta/FxFx matching and
        shower channels excluded by the support checks remain unsupported.

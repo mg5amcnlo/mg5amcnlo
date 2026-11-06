@@ -188,6 +188,9 @@ module mint_module
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
   double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
   double precision, dimension(nintegrals,0:maxchannels), private :: vtot,etot,chi2
+  ! Keep the legacy harmonic errors used to choose iteration weights apart
+  ! from the propagated uncertainty of the weighted estimator itself.
+  double precision, dimension(nintegrals), private :: iteration_weight_unc
   double precision, dimension(nintegrals,3), private :: ans3,unc3
   double precision, dimension(nintegrals), private :: ans_l3,unc_l3,chi2_l3,f
   double precision, dimension(0:maxchannels), private :: ymax_virt,ans_chan
@@ -1078,6 +1081,8 @@ contains
   subroutine combine_final_three_iterations
     implicit none
     integer :: i,j
+    double precision :: weight_unc,old_weight,new_weight
+    logical :: initialized
 ! Update the results of the last tree iterations
     do j=1,2
        ans3(1:nintegrals,j)=ans3(1:nintegrals,j+1)
@@ -1089,14 +1094,26 @@ contains
     if (nit_included.ge.4) then
        do i=1,nintegrals
           ans_l3(i)=0d0
-          unc_l3(i)=ans3(i,1)*1d99
+          unc_l3(i)=0d0
+          weight_unc=0d0
+          initialized=.false.
           chi2_l3(i)=0d0
           do j=1,3 ! the three final iterations
-             if (i.ne.1 .and. (unc_l3(i).eq.0d0 .or. unc3(i,j).eq.0d0)) then
+             if (i.ne.1 .and. unc3(i,j).eq.0d0) then
                 continue ! do not do anything
+             elseif (.not.initialized) then
+                ! Start with an actual observation instead of the signed
+                ! ans3*1d99 sentinel, which fails for a zero first mean.
+                ans_l3(i)=ans3(i,j)
+                unc_l3(i)=unc3(i,j)
+                weight_unc=unc3(i,j)
+                initialized=.true.
              else
-                ans_l3(i)=(ans_l3(i)/unc_l3(i)+ans3(i,j)/unc3(i,j))/(1d0/unc_l3(i)+1d0/unc3(i,j))
-                unc_l3(i)=1d0/sqrt(1d0/unc_l3(i)**2+1/unc3(i,j)**2)
+                old_weight=unc3(i,j)/(weight_unc+unc3(i,j))
+                new_weight=weight_unc/(weight_unc+unc3(i,j))
+                ans_l3(i)=(ans_l3(i)/weight_unc+ans3(i,j)/unc3(i,j))/(1d0/weight_unc+1d0/unc3(i,j))
+                unc_l3(i)=sqrt((old_weight*unc_l3(i))**2+(new_weight*unc3(i,j))**2)
+                weight_unc=1d0/sqrt(1d0/weight_unc**2+1d0/unc3(i,j)**2)
                 chi2_l3(i)=chi2_l3(i)+(ans3(i,j)-ans_l3(i))**2/unc3(i,j)**2
              endif
           enddo
@@ -1151,23 +1168,35 @@ contains
   subroutine combine_iterations
     implicit none
     integer i,kchan
+    double precision :: old_weight,new_weight
     HwU_values(1)=etot(1,0)
-    HwU_values(2)=unc(1,0)
+    HwU_values(2)=iteration_weight_unc(1)
     if(nit.eq.1) then ! first iteration
        ans(1:nintegrals,0:nchans)=vtot(1:nintegrals,0:nchans)
        unc(1:nintegrals,0:nchans)=etot(1:nintegrals,0:nchans)
+       iteration_weight_unc(1:nintegrals)=etot(1:nintegrals,0)
        ans_chan(0:nchans)=ans(1,0:nchans)
        write (*,'(a,1x,e10.4)') 'Chi^2 per d.o.f.',0d0
     else
        do kchan=nchans,0,-1 ! go backwards so that kchan=0 goes last
                             ! (this makes sure central value is correctly updated).
           do i=1,nintegrals
-             if (i.ne.1 .and. (etot(i,0).eq.0d0 .or. unc(i,0).eq.0d0)) then
+             if (i.ne.1 .and. (etot(i,0).eq.0d0 .or. iteration_weight_unc(i).eq.0d0)) then
                 continue ! do not do anything
              else
-                ans(i,kchan)=(ans(i,kchan)/unc(i,0)+vtot(i,kchan)/etot(i,0))/(1d0/unc(i,0)+1d0/etot(i,0))
-                unc(i,kchan)=1d0/sqrt(1d0/unc(i,kchan)**2+1d0/etot(i,kchan)**2)
-                chi2(i,kchan)=chi2(i,kchan)+(vtot(i,kchan)-ans(i,kchan))**2/etot(i,kchan)**2
+                old_weight=etot(i,0)/(iteration_weight_unc(i)+etot(i,0))
+                new_weight=iteration_weight_unc(i)/(iteration_weight_unc(i)+etot(i,0))
+                ans(i,kchan)=(ans(i,kchan)/iteration_weight_unc(i)+vtot(i,kchan)/etot(i,0)) &
+                     /(1d0/iteration_weight_unc(i)+1d0/etot(i,0))
+                ! Every channel uses the total-integral weights. Propagate
+                ! its variance with those same weights, including zero
+                ! channel errors; the total retains its own covariance.
+                ! As for HwU, this treats the estimated weights as fixed.
+                unc(i,kchan)=sqrt((old_weight*unc(i,kchan))**2+(new_weight*etot(i,kchan))**2)
+                if (kchan.eq.0) iteration_weight_unc(i)= &
+                     1d0/sqrt(1d0/iteration_weight_unc(i)**2+1d0/etot(i,0)**2)
+                if (etot(i,kchan).gt.0d0) chi2(i,kchan)= &
+                     chi2(i,kchan)+(vtot(i,kchan)-ans(i,kchan))**2/etot(i,kchan)**2
              endif
           enddo
           ans_chan(kchan)=ans(1,kchan)
@@ -1834,6 +1863,7 @@ contains
     nit_included=0
     ans(1:nintegrals,0:nchans)=0d0
     unc(1:nintegrals,0:nchans)=0d0
+    iteration_weight_unc=0d0
     chi2(1:nintegrals,0:nchans)=0d0
     ans3(1:nintegrals,1:3)=0d0
     unc3(1:nintegrals,1:3)=0d0
