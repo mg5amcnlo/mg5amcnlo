@@ -6,8 +6,6 @@
 !
 ! This module needs neither PYTHIA nor a random number generator.
 ! Momenta are (E,px,py,pz), with positive-energy incoming particles.
-! See mcatnlo_delta_scales.README for scope and provenance, and
-! mcatnlo_delta_scales.COPYING for the license.
 module mcatnlo_delta_scales
   implicit none
   private
