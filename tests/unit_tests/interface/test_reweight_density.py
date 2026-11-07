@@ -75,3 +75,22 @@ class TestDensitySelection(unittest.TestCase):
         self.assertRaises(ValueError, chose, self.momenta, self.pdg, ([6, 6], 'pt', [0]), 'opt')
         # unknown observable
         self.assertRaises(ValueError, chose, self.momenta, self.pdg, ([6], 'not_an_observable', []), 'opt')
+
+
+class TestDensityMatrixNormalisation(unittest.TestCase):
+    """change matrix_normalisation: an invalid value keeps the default (True),
+    as the warning says"""
+
+    def change(self, value):
+        cmd = rwgt_interface.DensityInterface.__new__(rwgt_interface.DensityInterface)
+        cmd.has_run = True      # nothing to clean at deletion
+        cmd.exitted = True
+        cmd.matrix_normalisation = None
+        cmd.do_change_matrix_normalisation([value])
+        return cmd.matrix_normalisation
+
+    def test_matrix_normalisation(self):
+        self.assertIs(self.change('True'), True)
+        self.assertIs(self.change('False'), False)
+        self.assertIs(self.change('(False)'), False)
+        self.assertIs(self.change('yes'), True)
