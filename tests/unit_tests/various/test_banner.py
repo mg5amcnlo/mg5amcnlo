@@ -2979,6 +2979,12 @@ class TestPhotonPDFDefault(unittest.TestCase):
         # the user choice wins
         self.assertEqual(self.lo_card([22, 22], lhaid=331900)['lhaid'], 331900)
 
+    def test_lo_photon_photon_is_not_upc(self):
+        # a a > X takes both photons from the proton; gamma-UPC is opt-in
+        rc = self.lo_card([22, 22])
+        self.assertEqual((rc['lpp1'], rc['lpp2']), (1, 1))
+        self.assertNotIn(rc['pdlabel'], ('edff', 'chff'))
+
     def test_nlo(self):
         # plain sm has a massive b: 4-flavour set
         self.assertEqual(self.nlo_card([2, -2])['lhaid'], [334700])

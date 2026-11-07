@@ -5416,15 +5416,9 @@ class RunCardLO(RunCard):
                         self['lpp2'] = 0  
                         self['ebeam1'] = '6500'  
                         self['ebeam2'] = '1k'
+                # a a > X keeps lpp=1 (photons from the proton): gamma-UPC
+                # (lpp=2, pdlabel edff/chff) is opt-in through the run_card
 
-                # UPC for p p collision
-                elif beam_id == [[22],[22]]:
-                    self['lpp1'] = 2
-                    self['lpp2'] = 2
-                    self['ebeam1'] = '6500'
-                    self['ebeam2'] = '6500'
-                    self['pdlabel'] = 'edff'
-            
             elif any(id in beam_id for id in [11,-11,13,-13,82,-82]):
                 self['lpp1'] = 0
                 self['lpp2'] = 0
