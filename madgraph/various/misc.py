@@ -1824,6 +1824,24 @@ def get_pythia8_merging_plugin(pythia8_path):
         return '%s::aMCatNLOHooks' % library
     return None
 
+_cpp_token = re.compile(r'"(?:\\.|[^"\\])*"'      # string literal
+                        r"|'(?:\\.|[^'\\])*'"     # character literal
+                        r'|//[^\n]*'                 # line comment
+                        r'|/\*.*?\*/', re.S)         # block comment
+
+def strip_cpp_comments(source):
+    """The C/C++ source without its comments and with its whitespace
+    collapsed, so that two copies of a file differing only in comments or
+    layout compare equal. String and character literals are kept as is."""
+
+    code = _cpp_token.sub(lambda m: m.group(0) if m.group(0)[0] in '"\'' else ' ',
+                          source)
+    return ' '.join(code.split())
+
+def same_cpp_code(source1, source2):
+    """True if the two C/C++ sources differ at most by comments and whitespace"""
+    return strip_cpp_comments(source1) == strip_cpp_comments(source2)
+
 def get_pythia8_version(pythia8_path):
     """The version of a Pythia8 installation (e.g. '8.317'), from its
     pythia8-config or its xmldoc, or None if it cannot be told."""

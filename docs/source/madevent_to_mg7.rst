@@ -95,7 +95,8 @@ Scales
       - Applies to the dynamical scale only.
 
 The MadEvent default ``dynamical_scale_choice = -1`` follows the clustering of the diagram,
-as needed for CKKW merging. MG7 does not have it. Its default is ``half_transverse_mass``.
+as needed for MLM merging. In MG7 this is the choice ``"mlm"``, see `MLM merging`_. Otherwise
+the MG7 default is ``half_transverse_mass``.
 
 Generation and phase space
 --------------------------
@@ -144,6 +145,42 @@ Technical settings for the MadEvent run engine, such as ``vector_size``, ``nb_wa
 ``job_strategy``, ``survey_splitting``, ``refine_evt_by_job`` and the ``hel_*`` options, have
 no counterpart. The integration and the hardware are configured in ``[run]``,
 ``[generation]``, ``[vegas]``, ``[phasespace]`` and ``[madnis]`` instead.
+
+MLM merging
+-----------
+
+As MadEvent, MG7 sets up MLM merging by itself when the process has several jet
+multiplicities (for example ``p p > w+`` with ``add process p p > w+ j``): the scale choice
+``"mlm"``, a merging cut ``xqcut = 30`` GeV and no jet ``delta_r`` cuts. The shower then does
+the jet matching (``ickkw = 1``, ``JetMatching:qCut = 1.5 xqcut``). It is not set up for an
+output with ``[amplicol]`` subprocesses.
+
+.. list-table::
+    :header-rows: 1
+    :widths: 30 30 40
+
+    * - ``run_card.dat``
+      - ``run_card.toml``
+      - Notes
+    * - ``ickkw = 1``
+      - ``beam.dynamical_scale_choice = "mlm"``
+      - The events are clustered back and their scales set as in MadEvent. Merging is
+        on when ``xqcut`` is positive as well.
+    * - ``xqcut``
+      - ``phasespace.xqcut``
+      - ``0`` disables the merging cut.
+    * - ``auto_ptj_mjj``
+      - ``phasespace.auto_ptj_mjj``
+      - ``true`` by default in both.
+    * - ``maxjetflavor``
+      - ``beam.max_jet_flavor``
+      - The heaviest quark that the clustering treats as a jet.
+    * - ``pdfwgt``
+      - ``beam.pdf_reweighting``
+      - Hidden in both.
+    * - ``sys_alpsfact``
+      - ``systematics.alps``
+      -
 
 Cuts
 ----
@@ -397,9 +434,10 @@ Not supported yet
 
 The following MadEvent features have no MG7 equivalent. Settings for them are ignored.
 
-* Matching and merging: ``ickkw``, ``xqcut``, ``ktdurham``, ``ptlund``, ``dparameter``,
-  ``highestmult``, ``ktscheme``, ``alpsfact``, ``chcluster``, ``pdfwgt``,
-  ``asrwgtflavor``, ``clusinfo``, ``auto_ptj_mjj``, ``pdgs_for_merging_cut``.
+* Matching and merging other than MLM: ``ickkw = 2``, and the CKKW-L cuts ``ktdurham``,
+  ``ptlund`` and ``dparameter``. The MLM settings ``highestmult``, ``ktscheme``,
+  ``alpsfact``, ``chcluster``, ``asrwgtflavor``, ``clusinfo`` and
+  ``pdgs_for_merging_cut`` have no counterpart either.
 * Biasing: ``bias_module`` and ``bias_parameters``.
 * Beam polarization and heavy-ion or equivalent-photon beams: ``polbeam1``, ``polbeam2``,
   ``nb_proton1``, ``nb_proton2``, ``nb_neutron1``, ``nb_neutron2``, ``mass_ion1``,

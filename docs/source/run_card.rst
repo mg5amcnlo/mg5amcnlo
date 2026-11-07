@@ -416,6 +416,32 @@ The surrogate does not return channel weights, so it needs ``sde_strategy =
     ``Cards/param_card.dat``. A madmatrix library with a different param card, for example,
     is a surrogate for testing.
 
+[amplicol]
+----------
+
+The ``[amplicol]`` subprocesses (``generate p p > j j j [amplicol]``) take their matrix
+elements from AmpliCol instead of Feynman diagrams. They are integrated at leading colour,
+one colour ordering at a time, over colour-ordered phase-space mappings. A second pass
+then re- or unweights the events to full colour with the ratio of the full-colour to the
+leading-colour matrix element, summed over the colour orderings, at the helicity of the
+event. These subprocesses run on CPUs only, and MG7 does not turn MLM merging on by itself
+for an output that has them.
+
+``color_accuracy`` (``"full"``)
+    ``"full"`` corrects the events to full colour in the second pass. ``"lc"`` keeps the
+    leading-colour events and skips the second pass.
+
+``mode`` (``"reweight"``)
+    ``"reweight"`` keeps the full- to leading-colour ratio in the event weights.
+    ``"unweight"`` unweights the events a second time with respect to that ratio. The
+    events then have unit weights apart from overweights.
+
+``first_pass_max_overweight_truncation`` (``0.01``), ``first_pass_freeze_max_weight_after`` (``10000``)
+    ``max_overweight_truncation`` and ``freeze_max_weight_after`` of the first,
+    leading-colour unweighting, in unweight mode. The ones of ``[generation]`` set the
+    second unweighting, to full colour, which gives the final events. In reweight mode, the
+    events are unweighted once, at leading colour, as set by ``[generation]``.
+
 .. _run-card-multiparticles:
 
 [multiparticles]

@@ -3428,8 +3428,8 @@ class DensityInterface(ReweightInterface):
         elif line[0] == 'False':
             self.matrix_normalisation = False
         else:
-            logger.warning('Option matrix_normalisation not understood, set it to True. Please use the syntax: change matrix_normalisation True if you want to enable it.')
-            self.matrix_normalisation = False
+            logger.warning('Option matrix_normalisation not understood, set it to True (the default). Please use the syntax: change matrix_normalisation False if you want to disable it.')
+            self.matrix_normalisation = True
 
 
     def do_change_particle_in_density_matrix(self, line):

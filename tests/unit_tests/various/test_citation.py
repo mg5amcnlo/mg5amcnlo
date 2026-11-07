@@ -177,6 +177,32 @@ class TestCitation(unittest.TestCase):
         self.assertIn('Degrande:2011ua', collected)
         self.assertIn('Alwall:2014hca', collected)
 
+    def test_generation_cites_onia(self):
+        """a bound state in the generated processes (add model sm_onia) cites
+        the onia paper, whatever the model name"""
+        import madgraph.interface.madgraph_interface as mg_interface
+
+        class Interface(object):
+            write_generation_citations = \
+                mg_interface.MadGraphCmd.write_generation_citations
+            _export_format = 'madevent'
+            _export_dir = self.tmpdir
+            _curr_model = {'name': 'sm', 'running_elements': []}
+            _model_v4_path = None
+            options = {}
+            onium = False
+            def has_onium_amplitude(self):
+                return self.onium
+
+        def keys(onium):
+            cmd = Interface()
+            cmd.onium = onium
+            cmd.write_generation_citations()
+            return citation.collect_file(pjoin(self.tmpdir, 'citations.log'))
+
+        self.assertNotIn('ColpaniSerri:2025vdz', keys(False))
+        self.assertIn('ColpaniSerri:2025vdz', keys(True))
+
 
 class TestCitationDatabaseIntegrity(unittest.TestCase):
     """Guard against malformed entries in the shipped citations.bib."""
