@@ -26,6 +26,7 @@ import contextlib
 import logging
 import math
 import copy
+import filecmp
 import os
 import re
 import shutil
@@ -2763,9 +2764,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     'The corresponding directory cannot be found in \n' + \
                     'Source/PDF/lep_densities')
 
-        # now copy the files
+        # now copy the files. Source/makefile builds libpdf.a from the PDF
+        # *directory*, whose mtime does not move when an existing file is
+        # overwritten, so a new density would never be compiled: the previous
+        # one stayed linked (a 240 GeV FCC-ee density used for a 365 GeV run).
+        # Hence remove the stale objects and the library whenever the density
+        # actually changes, and leave everything alone when it does not.
+        changed = False
         for filename in ['eepdf.f', 'gridpdfaux.f']:
-            files.cp(os.path.join(lep_d_path, filename), pdf_path)
+            new = os.path.join(lep_d_path, filename)
+            old = os.path.join(pdf_path, filename)
+            if os.path.exists(old) and filecmp.cmp(new, old, shallow=False):
+                continue
+            files.cp(new, pdf_path)
+            changed = True
+            obj = os.path.join(pdf_path, filename[:-2] + '.o')
+            if os.path.exists(obj):
+                os.remove(obj)
+        libpdf = os.path.join(sourcedir, os.pardir, 'lib', 'libpdf.a')
+        if changed and os.path.exists(libpdf):
+            os.remove(libpdf)
 
     ############################################################################
     # Start of MadAnalysis5 related function
