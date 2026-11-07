@@ -1521,7 +1521,13 @@ class CheckValidForCmd(cmd.CheckCmd):
         # process died with an AttributeError instead of saying so.
         if args[0] in ['processes', 'diagrams', 'diagrams_text'] and \
                 not self._curr_amps and not getattr(self, '_fks_multi_proc', None):
-            raise self.InvalidCmd("No process generated, please generate a process!")
+            # [amplicol] processes are kept without diagrams
+            if self._curr_amplicol_defs and args[0] != 'processes':
+                raise self.InvalidCmd("Only [amplicol] processes are defined: "
+                    "their matrix elements come from AmpliCol, without diagrams. "
+                    "Use 'display processes' to list them.")
+            elif not self._curr_amplicol_defs:
+                raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
 
@@ -4757,6 +4763,9 @@ This implies that with decay chains:
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print(amp.nice_string_processes())
+            for procdef in self._curr_amplicol_defs:
+                print('Process: %s [amplicol] (no diagrams)'
+                      % procdef.nice_string(prefix=False).strip())
 
         elif args[0] == 'diagrams_text':
             dirpath, no_open, merge = self._parse_display_output_args(args[1:])
