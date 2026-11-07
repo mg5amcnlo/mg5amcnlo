@@ -10,10 +10,11 @@ namespace madspace {
  * Refines the categorical probabilities of a @ref DiscreteSampler or @ref
  * DiscreteFlow from accumulated per-category statistics.
  *
- * The training-time counterpart of @ref DiscreteHistogram — @ref add_data
- * feeds in the per-category weight sums accumulated during a warm-up run, and
- * @ref optimize rewrites every `prob_names` global on every context in
- * `contexts` with the refined distribution.
+ * Counterpart of @ref DiscreteHistogram: @ref add_data feeds in the
+ * per-category weight sums and counts it accumulates, and @ref optimize
+ * writes the probability tensor of every `prob_names` global to every context
+ * in `contexts`. The probability update itself is unfinished (see the TODO in
+ * `optimize`).
  */
 class DiscreteOptimizer {
 public:
@@ -30,8 +31,8 @@ public:
     /// Accumulate one batch of `values` and `counts` for each dimension of
     /// `prob_names`, interleaved as `[values_0, counts_0, values_1, ...]`.
     void add_data(const std::vector<Tensor>& values_and_counts);
-    /// Refine the probabilities from the accumulated data and write them
-    /// back to every context.
+    /// Write the probabilities back to every context and reset the accumulated
+    /// data.
     void optimize();
 
 private:

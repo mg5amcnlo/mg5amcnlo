@@ -324,7 +324,6 @@ std::vector<std::pair<std::size_t, std::size_t>> MemPool::total_sizes() const {
 
 std::pair<void*, Tensor>
 AsyncGpuDevice::allocate(std::size_t size, AllocHint hint) const {
-    // if (_mem_pool && hint != AllocHint::normal && size <= 4 * 1024 * 1024) {
     if (_mem_pool && hint != AllocHint::normal && hint != AllocHint::output &&
         size <= 4 * 1024 * 1024) {
         return _mem_pool->allocate(

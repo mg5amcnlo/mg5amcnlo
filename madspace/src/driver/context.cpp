@@ -162,19 +162,26 @@ void MatrixElementApi::throw_error(const std::string& message) const {
     );
 }
 
-void MatrixElementApi::set_parameter(const std::string& name, double real, double imag) const {
+void MatrixElementApi::set_parameter(
+    const std::string& name, double real, double imag
+) const {
     if (!_functions.set_parameter) {
         check_umami_status(UMAMI_ERROR_NOT_IMPLEMENTED);
     }
-    check_umami_status(_functions.set_parameter(process_instance(), name.c_str(), real, imag));
+    check_umami_status(
+        _functions.set_parameter(process_instance(), name.c_str(), real, imag)
+    );
 }
 
-std::pair<double, double> MatrixElementApi::get_parameter(const std::string& name) const {
+std::pair<double, double>
+MatrixElementApi::get_parameter(const std::string& name) const {
     if (!_functions.get_parameter) {
         check_umami_status(UMAMI_ERROR_NOT_IMPLEMENTED);
     }
     double real = 0.0, imag = 0.0;
-    check_umami_status(_functions.get_parameter(process_instance(), name.c_str(), &real, &imag));
+    check_umami_status(
+        _functions.get_parameter(process_instance(), name.c_str(), &real, &imag)
+    );
     return {real, imag};
 }
 

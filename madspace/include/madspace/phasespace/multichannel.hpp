@@ -31,7 +31,7 @@ namespace madspace {
  * **Outputs**
  * - the outputs of the channel mappings (identical across channels).
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -80,7 +80,8 @@ private:
  * is partitioned by the per-channel counts in the `batch_sizes` argument. Each
  * slice is passed through its channel function, and the results are
  * concatenated. All channel functions must share the same argument and return
- * layout, which this class then exposes (Sec. 2.1.1 of [1]).
+ * layout, which this class then exposes (Sec. 2.1.1 of [1]). A batch-size
+ * argument of the channel functions is replaced by the per-channel size.
  *
  * `batch` is the leading batch dimension.
  *
@@ -90,7 +91,8 @@ private:
  *
  * **Returns**
  * - the returns of the channel functions, plus
- * - `batch_sizes` – echoed back, only when @p return_batch_sizes is true.
+ * - `batch_sizes` – the per-channel sizes of the concatenated first return
+ *   value, only when @p return_batch_sizes is true.
  *
  * **References**
  * - [1] T. Heimel, O. Mattelaer, R. Winterhalder, "MadSpace",
@@ -100,8 +102,8 @@ class MultiChannelFunction : public FunctionGenerator {
 public:
     /**
      * @param functions           The per-channel functions.
-     * @param return_batch_sizes  If true, the `batch_sizes` argument is also
-     *                            returned.
+     * @param return_batch_sizes  If true, the per-channel batch sizes of the
+     *                            result are also returned.
      */
     MultiChannelFunction(
         const std::vector<std::shared_ptr<FunctionGenerator>>& functions,

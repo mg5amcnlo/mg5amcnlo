@@ -14,7 +14,8 @@
 namespace madspace {
 
 /**
- * Full @f$2 \to n@f$ phase-space mapping for one diagram topology.
+ * Full @f$2 \to n@f$ (or @f$1 \to n@f$ decay) phase-space mapping for one
+ * diagram topology.
  *
  * Assembles a complete mapping from the elementary building blocks along the
  * recursive decomposition of the tree-level phase space (Sec. 2.2 of [1]),
@@ -29,8 +30,9 @@ namespace madspace {
  * @f]
  *
  * The time-like invariants are sampled with @ref Invariant, the s-channel
- * decays with @ref TwoBodyDecay / @ref ThreeBodyDecay, and the PDF convolution
- * with @ref Luminosity. @ref TChannelMode selects the t-channel strategy. The
+ * decays with @ref TwoBodyDecay / @ref ThreeBodyDecay (@ref FastRamboMapping
+ * for more children), and the PDF convolution with the @ref Luminosity
+ * parametrization. @ref TChannelMode selects the t-channel strategy. The
  * second constructor takes a flat list of external masses instead of a
  * @ref Topology and is used for the topology-free @ref TChannelMode::rambo and
  * @ref TChannelMode::chili modes.
@@ -59,7 +61,7 @@ namespace madspace {
  * - `x2` – `float`, shape `(batch,)` – second parton momentum fraction (1 for
  *   every event if `leptonic` and for a decay).
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -228,8 +230,7 @@ public:
     const Cuts& cuts() const { return _cuts; }
     /// True when the cuts exclude the whole region this mapping samples: a
     /// pair mass cut puts a propagator's floor at or above the upper end of
-    /// its on-shell window. Every point then fails the cuts, so the channel
-    /// contributes nothing and should be dropped rather than sampled.
+    /// its on-shell window. The channel contributes nothing and can be dropped.
     bool empty() const { return _empty; }
 
 private:
@@ -243,15 +244,14 @@ private:
         const NamedVector<Value>& inputs,
         const NamedVector<Value>& conditions
     ) const override;
-    // partonic centre-of-mass frame <-> lab frame (partonic boost, mirror,
-    // beam_rapidity boost)
     // x1, x2 scaled so that log(x1 / x2) / 2 is the rapidity of the partonic
-    // system in the lab frame, which is what the rapidity windows of the
-    // decays and the t-channel need (a mirrored event has the opposite sign of
-    // the beam rapidity relative to the frame the mapping works in)
+    // system in the lab frame, as the rapidity windows of the decays and the
+    // t-channel need (a mirrored event flips the sign of the beam rapidity)
     std::pair<Value, Value> lab_fractions(
         FunctionBuilder& fb, Value x1, Value x2, const NamedVector<Value>& conditions
     ) const;
+    // partonic centre-of-mass frame <-> lab frame (partonic boost, mirror,
+    // beam_rapidity boost)
     Value to_lab(
         FunctionBuilder& fb,
         Value momenta,

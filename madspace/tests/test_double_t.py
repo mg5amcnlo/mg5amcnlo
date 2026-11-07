@@ -87,12 +87,12 @@ def input_points(rng, request):
     pa, pb = beams(pz)  # massless beams in COM
 
     if not com:
-        # boost to a random lab frame (the same recipe used in the 2->3 test)
+        # lab frame: beams with smeared momenta
         pa, pb = lab_beams(rng)
 
     # m1: the fixed single-particle mass
     # mir_min: lower bound on recoil mass (e.g. sum of constituent masses).
-    # Pick mir_min well below the sqrt(s) so there\'s room for the recoil.
+    # Pick mir_min well below the sqrt(s) so there's room for the recoil.
     m1 = uniform(rng, 1.0, 50.0, N)
     mir_min = uniform(rng, 50.0, 200.0, N)
 
@@ -219,7 +219,7 @@ def test_inverse(input_points):
 
 
 def test_phase_space_volume_analytic(fixed_input_points):
-    """The integral of DoubleT\'s det over (r_phi, r_t1, r_t2) should equal
+    """The integral of DoubleT's det over (r_phi, r_t1, r_t2) should equal
     the 2-body phase-space volume integrated over m_ir^2 in [mir_min^2,
     (sqrt(s)-m1)^2]:
 
@@ -279,14 +279,9 @@ def test_phase_space_volume_analytic(fixed_input_points):
 
 
 def test_inverse_lab_specifically(rng):
-    """Explicit LAB test: round-trip should work in any frame, not just COM.
-
-    This was the failing case for the 2->3 mapping before we fixed the
-    rotation; keep it as a guard for double_t too.
-    """
+    """The round trip must work in a lab frame, not just the COM frame."""
     mapping = ms.DoubleT()
 
-    # boosted lab frame
     pz = uniform(rng, 1000.0, 4000.0, N)
     pa, pb = lab_beams(rng)
 
@@ -309,7 +304,7 @@ def test_inverse_lab_specifically(rng):
 
 
 # ----------------------------
-# Massless m1 stress tests (regression for the t-bound precision issue)
+# Massless m1 stress tests (precision of the t bounds)
 # ----------------------------
 
 
@@ -324,8 +319,8 @@ def test_inverse_lab_specifically(rng):
 )
 def massless_input_points(rng, request):
     """Near-massless m1 stresses the inverse: lsquare(p1) suffers
-    catastrophic cancellation when m1 is recovered from it. With m1 as a
-    condition (Option B fix), this should round-trip cleanly."""
+    catastrophic cancellation when m1 is recovered from it, so m1 is taken
+    from the conditions instead."""
     _, m1_val = request.param
 
     pa, pb = beams(torch.full((N,), 6500.0))  # 13 TeV
@@ -362,8 +357,7 @@ def test_inverse_massless(massless_input_points):
     # det round-trip
     assert_approx(inv_det, 1 / det, rel=1e-5)
 
-    # random round-trip; r_t2 used to be the most sensitive (its bounds
-    # depend on t1_abs which depended on the lossy m1^2 recompute).
+    # random round-trip; r_t2 is the most sensitive, as its bounds depend on t1_abs
     for i, (inp, inv_inp) in enumerate(zip(inputs, inv_inputs)):
         assert_approx(
             inp, inv_inp, rel=1e-5, abs=1e-8, msg=f"mismatch in input index {i}"
@@ -371,7 +365,7 @@ def test_inverse_massless(massless_input_points):
 
 
 def test_phase_space_volume_massless(rng):
-    """Volume integral should still match analytic for massless m1."""
+    """The volume integral matches the analytic one for massless m1."""
     from scipy.integrate import quad
 
     m1_val = 0.0

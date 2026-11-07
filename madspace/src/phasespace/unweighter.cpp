@@ -31,9 +31,7 @@ BufferUnweighter::BufferUnweighter(const NamedVector<Type>& types, double quanti
 NamedVector<Value> BufferUnweighter::build_function_impl(
     FunctionBuilder& fb, const NamedVector<Value>& args
 ) const {
-    // quantile of |w|: the acceptance is on |w| (the sign is kept), so a signed
-    // quantile would come out too small with mixed signs, and <= 0 for a mostly
-    // negative integrand (an interference), accepting everything
+    // quantile of |w|, since the acceptance is on |w| and the sign is kept
     Value max_weight = fb.quantile(fb.abs(args.at(0)), _quantile);
     Value full_weight = args.at(0);
     auto [uw_indices, uw_weights] = fb.unweight(full_weight, max_weight);

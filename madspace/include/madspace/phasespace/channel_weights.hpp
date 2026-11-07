@@ -37,10 +37,10 @@ class PropagatorChannelWeights : public FunctionGenerator {
 public:
     /**
      * @param topologies      One @ref Topology per channel.
-     * @param permutations    Per channel, the outgoing-particle permutations to
-     *                        average the weight over.
-     * @param channel_indices Per channel, the global channel indices its weight
-     *                        contributes to.
+     * @param permutations    Per topology, the outgoing-particle permutations;
+     *                        each one is a separate output channel.
+     * @param channel_indices Per topology, the output channel index of each of
+     *                        its permutations.
      */
     PropagatorChannelWeights(
         const std::vector<Topology>& topologies,
@@ -88,7 +88,8 @@ public:
      * @param topologies      Per channel, its list of on-shell sub-channel
      *                        @ref Topology "topologies".
      * @param permutations    Per channel, the outgoing-particle permutations.
-     * @param channel_indices Per channel, the global channel indices.
+     * @param channel_indices Per channel, the input channel index of each
+     *                        permutation.
      */
     SubchannelWeights(
         const nested_vector2<Topology>& topologies,
@@ -96,7 +97,7 @@ public:
         const nested_vector2<std::size_t>& channel_indices
     );
 
-    /// Number of input channels.
+    /// Number of output channels (the sub-channels).
     std::size_t channel_count() const { return _channel_indices.size(); }
 
 private:

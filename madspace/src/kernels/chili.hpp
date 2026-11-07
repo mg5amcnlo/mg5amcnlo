@@ -21,7 +21,7 @@ KERNELSPEC void kernel_chili_forward(
     FVal<T> det_tmp(1.);
     FVal<T> _e_cm(e_cm);
     auto e_cm2 = _e_cm * _e_cm;
-    auto pt_max = _e_cm / 2; // generally too large, that's why we get x1x2 > 1 and NaNs
+    auto pt_max = _e_cm / 2; // loose bound; points with x1 or x2 >= 1 get zero weight
     auto pt2_max = pt_max * pt_max;
     auto n_out = m_out.size();
     for (std::size_t i = 0; i < n_out - 1; ++i) {
@@ -185,7 +185,7 @@ KERNELSPEC void kernel_chili_inverse(
         auto det_pt = where(has_pt_cut, det_pt_withcut, det_pt_nocut);
 
         // ---- invert phi
-        // forward: phi = 2π r_phi + atan2(py_sum, px_sum)
+        // forward: phi = 2 pi r_phi + atan2(py_sum, px_sum)
         if (i == 0) {
             auto phi = atan2(py, px);
             phi = where(phi < 0, phi + 2. * PI, phi);
@@ -202,7 +202,6 @@ KERNELSPEC void kernel_chili_inverse(
         }
 
         // ---- compute y from momentum (same rapidity used forward)
-        // wrong if pt is wrong, so fix pt first
         auto y = 0.5 * log((E + pz) / (E - pz));
         auto mt2 = pt2 + m_out_i * m_out_i;
         auto mt = sqrt(mt2);

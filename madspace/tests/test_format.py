@@ -1,8 +1,6 @@
 """Unit tests for the string-formatting helpers in format.cpp/format.hpp,
 exposed to Python for testing (format_si_prefix, format_with_error,
-format_progress). None of these had direct unit tests before; they were only
-exercised indirectly through the pretty/log console output of a full
-event-generation run.
+format_progress).
 """
 
 import madspace as ms

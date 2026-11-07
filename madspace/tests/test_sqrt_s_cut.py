@@ -43,7 +43,7 @@ MASSES = [0.0, 0.0, M_TOP, M_TOP]
 THRESHOLD = 2 * M_TOP
 # below the threshold: the cut cannot bite, so nothing may change
 NO_OP_CUT = 300.0
-# above it: the cut removes half the points and a large enough part of the
+# above it: the cut removes a large fraction of the points and enough of the
 # volume that a boundary which failed to compensate could not hide in the
 # statistics (see test_the_cut_removes_more_than_the_comparison_could_hide)
 BITING_CUT = 4000.0
@@ -136,7 +136,7 @@ def test_cut_bounds_the_sampled_s_hat():
     assert s.min() >= BITING_CUT - 1e-6
     # the region has not collapsed onto its own boundary
     assert s.max() > 2 * BITING_CUT
-    # and the cut is no longer filtering anything out
+    # and the cut filters nothing out
     assert torch.all(det != 0.0)
 
 

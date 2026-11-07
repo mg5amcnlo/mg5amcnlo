@@ -90,7 +90,7 @@ void EventHistograms::fill(
             groups[subproc].push_back(i);
         }
     }
-    // values[observable][event index in buffer], NaN when not evaluated
+    // values[spec][event index in buffer], NaN when not evaluated
     std::vector<std::vector<double>> values(
         _specs.size(), std::vector<double>(count, std::nan(""))
     );

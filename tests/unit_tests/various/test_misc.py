@@ -623,3 +623,45 @@ class TEST_pythia8_main164(unittest.TestCase):
         self.assertEqual(misc.hepmc_file_version(hepmc2), 2)
         self.assertEqual(misc.hepmc_file_version(hepmc3), 3)
         self.assertEqual(misc.hepmc_file_version(os.path.join(self.tmpdir, 'none')), None)
+
+    # how main164.cc of Pythia8 8.318 requests its merging hook
+    main164_with_merging_plugin = (
+        '  if (doMerging) {\n'
+        '    pythia.readString("Init:plugins += {libpythia8amcatnloHooks.so"\n'
+        '      "::aMCatNLOHooks}");\n'
+        '  }\n')
+
+    def write_merging_plugin(self, pythia8_path):
+        library = os.path.join(pythia8_path, 'lib', 'libpythia8amcatnloHooks.so')
+        os.makedirs(os.path.dirname(library))
+        open(library, 'w').close()
+        return library
+
+    def test_merging_plugin(self):
+        """main164 of Pythia8 8.318 loads its merging hook as a plugin: the
+        entry for Init:plugins, with the absolute path of the library"""
+
+        self.assertEqual(misc.get_pythia8_merging_plugin(self.py8), None)
+        library = self.write_merging_plugin(self.py8)
+        # up to Pythia8 8.317, main164 sets the hook itself
+        with open(os.path.join(self.examples, 'main164.cc'), 'w') as fsock:
+            fsock.write('  if (doMerging) pythia.setUserHooksPtr(mergingHooks);\n')
+        self.assertEqual(misc.get_pythia8_merging_plugin(self.py8), None)
+
+        with open(os.path.join(self.examples, 'main164.cc'), 'w') as fsock:
+            fsock.write(self.main164_with_merging_plugin)
+        self.assertEqual(misc.get_pythia8_merging_plugin(self.py8),
+                         '%s::aMCatNLOHooks' % os.path.abspath(library))
+        os.remove(library)
+        self.assertEqual(misc.get_pythia8_merging_plugin(self.py8), None)
+
+    def test_merging_plugin_path_the_card_cannot_hold(self):
+        """a ',' or a space in the path of the library: its bare name"""
+
+        source_tree = os.path.join(self.tmpdir, 'pythia 8,318')
+        os.makedirs(os.path.join(source_tree, 'examples'))
+        with open(os.path.join(source_tree, 'examples', 'main164.cc'), 'w') as fsock:
+            fsock.write(self.main164_with_merging_plugin)
+        self.write_merging_plugin(source_tree)
+        self.assertEqual(misc.get_pythia8_merging_plugin(source_tree),
+                         'libpythia8amcatnloHooks.so::aMCatNLOHooks')

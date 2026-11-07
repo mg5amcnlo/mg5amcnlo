@@ -2,13 +2,12 @@
 
 cut_all / cut_any apply one window [min, max] (two scalars, as the instruction
 set declares them) to every observable of a vector: all of them inside, or at
-least one inside. The kernels used to take the bounds as FIn<T, 1>, so the
-runtime built a 2-dimensional view of these 1-dimensional tensors from shape
-and stride entries that were never set, and min[i] read out of bounds: a memory
-fault on HIP (MI300A, any process with a cut on several jets), silently min[0]
-on the CPU and CUDA builds. The second test guards every kernel against that
-mismatch: no kernel input may have more inner dimensions than its instruction
-declares.
+least one inside. A kernel that took the bounds as FIn<T, 1> would make the
+runtime build a 2-dimensional view of a 1-dimensional tensor from unset shape
+and stride entries, so min[i] would read out of bounds (a memory fault on HIP,
+silently min[0] on CPU and CUDA). The second test guards every kernel against
+that mismatch: no kernel input may have more inner dimensions than its
+instruction declares.
 """
 
 import glob

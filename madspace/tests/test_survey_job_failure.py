@@ -2,15 +2,13 @@
 of hanging it.
 
 survey() and generate() count the jobs they have in flight and block on the
-result queue until each has posted. A job that threw used to post nothing: the
-thread pool caught the exception and kept it for a ThreadPool.wait() that this
-loop never calls, so the main thread blocked forever at 0% CPU right after
-"survey started". Seen in mg7 on a $-excluded channel whose points all fail the
-veto, where ChannelEventGenerator::start_job throws "not enough points passing
-cuts".
+result queue until each has posted. A job that throws must still post its
+exception; if it posts nothing the main thread blocks forever. A channel whose
+points all fail the cuts is such a job: ChannelEventGenerator::start_job throws
+"not enough points passing cuts".
 
-The survey runs in a child process: with the bug it never returns, and holding
-the GIL it can't be timed out from a thread.
+The survey runs in a child process: a hang holds the GIL, so it cannot be timed
+out from a thread.
 """
 
 import os
@@ -135,7 +133,6 @@ def test_survey_completes_when_every_channel_has_points(tmp_path):
 def test_survey_raises_when_a_job_throws(tmp_path):
     # pt > sqrt(s)/2 is kinematically impossible: every batch of the "dead"
     # channel fails the cuts, and its job throws after max_cut_repetitions.
-    # Before the fix this timed out.
     result = run_survey(tmp_path, dead_pt_min=1000.0)
     assert result.returncode != 0
     assert "survey done" not in result.stdout

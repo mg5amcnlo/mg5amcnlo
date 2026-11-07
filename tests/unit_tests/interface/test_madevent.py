@@ -478,3 +478,65 @@ class TestSharedPdfsetsDir(unittest.TestCase):
         self.assertEqual(cmd.get_shared_pdfsets_dirs(), [])
         cmd.options['run_mode'] = 1
         self.assertEqual(cmd.get_shared_pdfsets_dirs()[0], self.cvmfs)
+
+
+class TestPythia8MergingPlugin(unittest.TestCase):
+    """Since Pythia8 8.318, main164 loads its merging hook as a plugin, with
+    a readString that Pythia8 ignores after reading a card with Main:subrun
+    lines (all of ours): the card of a CKKW-L shower requests the plugin."""
+
+    def setUp(self):
+        import madgraph.various.banner as banner_mod
+        self.banner_mod = banner_mod
+        self.tmpdir = tempfile.mkdtemp(prefix='mg5_py8_merging')
+        self.template = open(pjoin(madgraph.MG5DIR, 'Template', 'LO', 'Cards',
+                                   'pythia8_card_default.dat')).read()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def make_pythia8(self, version):
+        """a fake Pythia8 installation, with main164.cc as in this version"""
+        py8 = pjoin(self.tmpdir, 'pythia%s' % version)
+        os.makedirs(pjoin(py8, 'share', 'Pythia8', 'examples'))
+        os.makedirs(pjoin(py8, 'lib'))
+        if version == '8318':
+            source = ('    pythia.readString("Init:plugins += {libpythia8amcatnloHooks.so"\n'
+                      '      "::aMCatNLOHooks}");\n')
+            open(pjoin(py8, 'lib', 'libpythia8amcatnloHooks.so'), 'w').close()
+        else:
+            source = '    pythia.setUserHooksPtr(mergingHooks);\n'
+        with open(pjoin(py8, 'share', 'Pythia8', 'examples', 'main164.cc'), 'w') as fsock:
+            fsock.write(source)
+        return py8
+
+    def setup_card(self, pythia8_path, run_type, **run_card):
+        """the card of the shower, as do_pythia8 sets it up"""
+        class FakeCmd(object):
+            pass
+        cmd = FakeCmd()
+        cmd.run_tag, cmd.run_name, cmd.me_dir = 'tag_1', 'run_01', self.tmpdir
+        cmd.to_store = []
+        cmd.options = {'run_mode': 2, 'pythia8_path': pythia8_path}
+        cmd.proc_characteristic = {'max_n_matched_jets': 2}
+        cmd.run_card = self.banner_mod.RunCardLO()
+        for name, value in run_card.items():
+            cmd.run_card[name] = value
+        card = self.banner_mod.PY8Card(self.template)
+        card.read(self.template + 'Merging:Process = guess\n', setter='user')
+        mecmd.MadEventCmd.setup_Pythia8RunAndCard(cmd, card, run_type)
+        return card
+
+    def test_ckkwl_requests_the_merging_plugin(self):
+        ckkwl = {'ickkw': 0, 'xqcut': 0.0, 'ktdurham': 30.0}
+        py8 = self.make_pythia8('8318')
+        card = self.setup_card(py8, 'CKKW', **ckkwl)
+        self.assertEqual(card.init_plugins,
+                         ['%s::aMCatNLOHooks::add' %
+                          os.path.abspath(pjoin(py8, 'lib', 'libpythia8amcatnloHooks.so'))])
+        # up to Pythia8 8.317, main164 sets the hook itself
+        card = self.setup_card(self.make_pythia8('8317'), 'CKKW', **ckkwl)
+        self.assertEqual(card.init_plugins, [])
+        # main164 does not merge an MLM shower
+        card = self.setup_card(py8, 'MLM', ickkw=1, xqcut=30.0)
+        self.assertEqual(card.init_plugins, [])

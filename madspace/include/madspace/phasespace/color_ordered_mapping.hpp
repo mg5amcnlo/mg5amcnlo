@@ -19,7 +19,8 @@ namespace madspace {
  * blocks (@ref TwoToThreeParticleScattering) laid out along a color-ordered
  * permutation of the particles, peeling one on-shell momentum off at a time
  * from each beam, with a @ref TwoToTwoParticleScattering or @ref DoubleT
- * central block joining the two sides [1]. It encodes no specific diagram
+ * central block joining the two sides [1] (no central block if all outgoing
+ * particles sit on one side). It encodes no specific diagram
  * topology. The `discrete_i` inputs select, per @f$2 \to 3@f$ peel, which of
  * the two branches to take. See Sec. 2.2.5 of [1], following [2].
  *
@@ -27,22 +28,22 @@ namespace madspace {
  * particles and `n = n_out + 2` the total.
  *
  * **Inputs**
- * - `random_i` – `float`, shape `(batch,)` – the continuous random numbers
+ * - `random_i` - `float`, shape `(batch,)` – the continuous random numbers
  *   (`random_dim()` of them).
- * - `discrete_i` – `int`, shape `(batch,)` – the two-solution choices
+ * - `discrete_i` - `int`, shape `(batch,)` – the two-solution choices
  *   (`discrete_dim()` of them).
  *
  * **Conditions**
- * - `com_energy` – `float`, shape `(batch,)` – total collision energy.
- * - `mass_i` – `float`, shape `(batch,)` – the `n_out` outgoing masses.
- * - `x1`, `x2` – `float`, shape `(batch,)` – beam momentum fractions. Present
+ * - `com_energy` - `float`, shape `(batch,)` – total collision energy.
+ * - `mass_i` - `float`, shape `(batch,)` – the `n_out` outgoing masses.
+ * - `x1`, `x2` - `float`, shape `(batch,)` – beam momentum fractions. Present
  *   only when a rapidity bound is used (see the constructor).
  *
  * **Outputs**
- * - `momentum_i` – `float`, shape `(batch, 4)` – the `n` momenta (incoming
+ * - `momentum_i` - `float`, shape `(batch, 4)` – the `n` momenta (incoming
  *   beams first, then outgoing).
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -187,9 +188,8 @@ private:
     std::vector<std::size_t> _set2;
     std::size_t _n_out;
     std::size_t _random_dim;
-    // Number of discrete two-solution choices (one per 2->3 peel). These are
-    // supplied/recovered as a separate batch_int channel, not through the
-    // continuous random_dim() block (opt-in r_disc).
+    // Number of discrete two-solution choices (one per 2->3 peel). They are
+    // separate batch_int inputs after the continuous randoms.
     std::size_t _discrete_dim;
     // True iff exactly one of (set1, set2) has size 1 (and the other >= 2).
     // In that case the central block is DoubleT instead of 2->2.

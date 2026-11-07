@@ -10,20 +10,20 @@ namespace madspace {
  * The fully differential cross section @f$f(x)@f$.
  *
  * Assembles the integrand of the phase-space integral: a @ref MatrixElement
- * evaluation multiplied by the flux factor, the @ref PartonDensity values for
- * the two beams, and @f$\alpha_s@f$ from a @ref RunningCoupling, all at the
- * @ref EnergyScale of the event [1]. The `Cached*` variants of the PDF and
+ * evaluation, with @f$\alpha_s@f$ from a @ref RunningCoupling, multiplied by
+ * the flux factor and the @ref PartonDensity values for the two beams, all at
+ * the @ref EnergyScale of the event [1]. The `Cached*` variants of the PDF and
  * scale arguments reuse values already computed elsewhere in the graph.
  *
  * With @p decay the generator instead describes the decay of a single incoming
  * particle. The differential rate is then @f$|M|^2 / (2 M)@f$ with
  * @f$M@f$ = @p cm_energy, in GeV, rather than a hadronic cross section in pb.
- * There are no beams, hence no momentum fractions and no PDFs.
+ * There are no beams, hence no PDFs; declared `x1`, `x2` inputs are ignored.
  *
  * `batch` is the leading batch dimension.
  *
  * **Arguments**
- * - the arguments of @p matrix_element, plus
+ * - the arguments of @p matrix_element except `alpha_s`, plus
  * - `x1`, `x2` – `float`, shape `(batch,)` – parton momentum fractions (when
  *   @p input_momentum_fraction is true).
  * - `pdf_id` – `int`, shape `(batch,)` – selected flavour combination.
@@ -51,7 +51,8 @@ public:
 
     /**
      * @param matrix_element          The squared matrix element.
-     * @param cm_energy                Total collision energy.
+     * @param cm_energy                Total collision energy (the mass of the
+     *                                 decaying particle with @p decay).
      * @param running_coupling         Optional @f$\alpha_s@f$ source.
      * @param energy_scale             An @ref EnergyScale, a `CachedScale` tag,
      *                                 or nothing.

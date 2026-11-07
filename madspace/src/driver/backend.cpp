@@ -26,13 +26,12 @@ struct LoadedBackend {
 #endif
         shared_lib = std::shared_ptr<void>(
             dlopen(std::format("{}/{}.{}", lib_path, file, so_ext).c_str(), RTLD_NOW),
-            // Unlike std::unique_ptr, std::shared_ptr's deleter is invoked
-            // unconditionally on destruction, even when the stored pointer is
-            // null -- if dlopen() above fails, the throw a few lines down
-            // would otherwise unwind through a dlclose(nullptr), which
-            // segfaults instead of letting the runtime_error propagate.
+            // shared_ptr calls the deleter even for a null pointer, and
+            // dlclose(nullptr) would crash when dlopen fails.
             [](void* lib) {
-                if (lib) dlclose(lib);
+                if (lib) {
+                    dlclose(lib);
+                }
             }
         );
         if (!shared_lib) {

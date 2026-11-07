@@ -45,18 +45,9 @@ int me_output_index(
     return search == outputs.end() ? -1 : static_cast<int>(search - outputs.begin());
 }
 
-// Whether the event carries the product of its beam densities for the
-// systematics to divide the PDF variations by. Not under MLM pdf reweighting:
-// there the densities are taken low on the clustering ladder (pdf_scale) and
-// walked back up to the factorisation scale by the ladder ratios, so the
-// variations, which are evaluated at (k times) the factorisation scale, would
-// be divided by densities at another scale, and even the central member would
-// differ from one. Without it the systematics take the nominal densities at
-// the factorisation scale themselves, and a variation becomes the ratio of
-// the leading densities there, the ladder ratios left at their nominal value.
 // Whether the event carries the scales of its MLM alpha_s vertices, for the
-// systematics to vary them the way madevent's do: the same condition under
-// which mlm_weights applies them. A 2 -> 1 process has no vertex at all.
+// systematics to vary them; the condition under which mlm_weights applies them.
+// A 2 -> 1 process has no vertex.
 bool emits_alphas_scales(
     const std::optional<EnergyScale>& energy_scale,
     const std::optional<RunningCoupling>& running_coupling,
@@ -66,10 +57,8 @@ bool emits_alphas_scales(
         particle_count > 3;
 }
 
-// Whether the event carries the MLM pdf reweighting ladder, for the
-// systematics to vary it as madevent's do: every clustering scale with
-// alpsfact, mu_F with the factorisation scale, and the whole ladder with each
-// PDF member.
+// Whether the event carries the MLM pdf reweighting ladder, for the systematics
+// to vary it.
 bool emits_pdf_ladder(
     const std::optional<EnergyScale>& energy_scale, bool has_pdf, bool has_pid_options
 ) {
@@ -84,6 +73,10 @@ const std::array<const char*, 4> ladder_slot_names{
 };
 const std::array<const char*, 1> ladder_beam_names{"ladder_lead_q"};
 
+// Whether the event carries the product of its beam densities, for the
+// systematics to divide the PDF variations by. Not under MLM pdf reweighting,
+// where the densities are taken at the clustering ladder's scale, not at the
+// factorisation scale the variations refer to.
 bool emits_partial_weights(
     bool partial_weights, const std::optional<EnergyScale>& energy_scale
 ) {
@@ -201,11 +194,7 @@ Integrand::Integrand(
                 }
                 ret_types.push_back("ren_scale", batch_float);
                 ret_types.push_back("alpha_qcd", batch_float);
-                // The per-beam factorisation scales ride along with x1/x2 in
-                // the event record. They are worth keeping for any hadronic
-                // run, not just a reweighted one: a dynamical scale choice can
-                // give the two beams different scales, and without them the
-                // LHE writer has nothing to report but mu_R.
+                // a dynamical scale choice can give the beams different scales
                 if (diff_xs_first.has_pdf(0)) {
                     ret_types.push_back("x1", batch_float);
                     ret_types.push_back("fact_scale1", batch_float);
@@ -376,11 +365,9 @@ Integrand::Integrand(
                 "MLM pdf reweighting needs the same PDF grid for both beams"
             );
         }
-        // Everything the reweighting can ask for: the gluon, whatever the
-        // beams can be, and the flavours the clustering pinned down along
-        // the way. The kernel names these by class, not by pdg, because
-        // one clustering serves every flavour channel; the table turns
-        // (class, sampled option) into an index into this one density.
+        // Covers the gluon, the beam flavours and those pinned by the clustering.
+        // The kernel names them by class; the table maps (class, option) to an
+        // index into this density.
         auto& absolute = energy_scale->mlm_pdf_absolute_pdgs();
         std::vector<int> rw_pids{21};
         auto index_of = [&](int pid) {
@@ -531,9 +518,8 @@ Integrand::Integrand(
             );
         }
     }
-    // evaluate_pdfs, which takes the densities again once the history is
-    // picked per diagram, knows nothing of the event's orientation, so it
-    // cannot pick a mirrored event's density from the other beam.
+    // evaluate_pdfs knows nothing of the event's orientation, so it cannot
+    // pick a mirrored event's density from the other beam.
     if (_has_mirror && (_pdfs_swapped.at(0) || _pdfs_swapped.at(1)) && energy_scale &&
         energy_scale->mlm_history_per_diagram()) {
         throw std::invalid_argument(
@@ -806,13 +792,9 @@ NamedVector<Value> Integrand::build_channel_part(
     auto scales = _energy_scale.value().build_function(fb, {momenta_acc});
     std::array<Value, 2> pdf_results;
     bool has_pdf_prior = false;
-    // The densities of beam i, for every flavour option, at the scale the
-    // event is generated with. Under MLM pdf reweighting the density is asked
-    // for low on the clustering ladder rather than at the factorisation scale,
-    // and walked back up by the ratios mlm_weights applies. This is madevent
-    // setting q2fact below q2bck before calling DSIG, and it is what the
-    // flavour prior should see too, since that is the density the event is
-    // actually generated with.
+    // The densities of beam i for every flavour option. Under MLM pdf
+    // reweighting they are taken at the bottom of the clustering ladder, not at
+    // the factorisation scale (mlm_weights walks them back up).
     auto beam_pdf = [&](std::size_t i) {
         auto& pdf_scale = _energy_scale->mlm_pdf_reweighting()
             ? scales.at(std::format("pdf_scale{}", i + 1))
@@ -836,12 +818,6 @@ NamedVector<Value> Integrand::build_channel_part(
         ValueVec pdf_priors;
         for (std::size_t i = 0; i < 2; ++i) {
             if (_diff_xs.at(0).has_pdf(i)) {
-                // Under pdf reweighting the density is asked for low on the
-                // clustering ladder rather than at the factorisation scale,
-                // and walked back up by the ratios applied further down. This
-                // is madevent setting q2fact below q2bck before calling DSIG,
-                // and it is what the flavour prior should see too, since that
-                // is the density the event is actually generated with.
                 auto pdf = beam_pdf(i);
                 pdf_results.at(i) = pdf;
                 pdf_priors.push_back(fb.select(pdf, _pdf_indices.at(i)));
@@ -958,19 +934,14 @@ NamedVector<Value> Integrand::build_channel_part(
         }
     }
 
-    // With a clustering history per diagram these scales only serve the pdf
-    // prior above: the history, and every weight read off it, is settled after
-    // the matrix element has given the diagram weights, in the common part.
+    // With a history per diagram these scales only serve the pdf prior; the
+    // history and its weights are settled in the common part.
     bool mlm_history_per_diagram =
         _energy_scale && _energy_scale->mlm_history_per_diagram();
 
-    // The history over every diagram above was clustered before the flavour
-    // was known, as the flavour prior needs its scales. Some of its
-    // clusterings only exist for some flavours of a merged subprocess (the
-    // q-q' t-channel gluon of q q~ > q q~ for a q q~ > q' q~' event), so the
-    // event is clustered again with its own flavours, and the densities are
-    // taken again at the scales that gives. The prior keeps the first ones:
-    // it only steers the sampling.
+    // The first clustering ran before the flavour was known; some clusterings
+    // only exist for some flavours of a merged subprocess, so cluster again
+    // with the event's flavours. The prior keeps the first scales.
     if (_energy_scale && _energy_scale->is_mlm() && !mlm_history_per_diagram &&
         !_mlm_leg_flavors.empty()) {
         scales = _energy_scale->build_mlm_with_flavors(
@@ -994,8 +965,7 @@ NamedVector<Value> Integrand::build_channel_part(
         }
     }
     if (_energy_scale && _energy_scale->has_scale_veto() && !mlm_history_per_diagram) {
-        // Same for the floor on the scales themselves, which applies to every
-        // dynamical scale choice rather than only to the merging one.
+        // the floor on the scales applies to every dynamical scale choice
         weights_after_cuts.push_back(scales.at("scale_weight"));
     }
 
@@ -1102,21 +1072,13 @@ ValueVec Integrand::mlm_weights(
 ) const {
     ValueVec weights;
     auto batch_size_acc = fb.batch_size({flavor_id});
-    // The merging cut comes out of the clustering, which only runs for
-    // events that already passed the phase-space cuts, so it enters as a
-    // factor on the weight rather than as one of the cuts themselves. An
-    // event below xqcut ends up with weight zero and is never unweighted.
+    // The merging cut comes out of the clustering, which runs after the
+    // phase-space cuts, so it is a weight factor (zero below xqcut).
     weights.push_back(scales.at("xqcut_weight"));
 
-    // alpha_s reweighting, the CKKW-style factor madevent applies in
-    // Template/LO/SubProcesses/reweight.f: every clustering vertex that
-    // produced a parton is evaluated at its own scale rather than at the
-    // event's, so the weight carries prod_i alphas(pt_i) instead of
-    // alphas(mu_R)^n. Without it a merged sample is short by one factor
-    // per emission, compounding with multiplicity.
-    //
-    // The kernel hands back 0 for any vertex it does not reweight; that
-    // vertex is evaluated at mu_R, so its ratio is exactly one.
+    // alpha_s reweighting as in madevent's reweight.f: each clustering vertex is
+    // evaluated at its own scale, so the weight carries prod_i alphas(pt_i) /
+    // alphas(mu_R). A scale of 0 marks a vertex that is not reweighted (ratio one).
     if (_energy_scale->mlm_alphas_reweighting() && _running_coupling) {
         auto vertex_scales = scales.at("alphas_scales");
         std::size_t vertex_count = vertex_scales.type.shape.at(0);
@@ -1141,15 +1103,9 @@ ValueVec Integrand::mlm_weights(
         }
     }
 
-    // pdf reweighting: the beam density, evaluated above at the bottom of
-    // the clustering ladder, walked back up one clustering at a time. Each
-    // slot the kernel marked active contributes f(x, Q_i) / f(x, Q_i-1)
-    // for the flavour its beam line carried at that point.
-    //
-    // The flavour is only knowable here, after the sampling: the kernel
-    // hands out a class - the gluon, one of the two beams' own flavours, or
-    // a flavour the diagram pinned down - and the table turns that plus the
-    // sampled option into an index into the reweighting density.
+    // pdf reweighting: walk the beam density back up the clustering ladder. Each
+    // active slot contributes f(x, Q_i) / f(x, Q_i-1) for its beam line's flavour,
+    // which _pdf_rw_table looks up from the kernel's flavour class and flavor_id.
     if (_pdf_rw && _pid_options.size() > 0) {
         auto flavor_classes = scales.at("pdf_rw_flavor");
         std::size_t slot_count = flavor_classes.type.shape.at(0);
@@ -1159,9 +1115,7 @@ ValueVec Integrand::mlm_weights(
         auto ones = fb.full({1., batch_size_acc});
         Value factor, veto;
         ValueVec ladder_x, ladder_pdg, ladder_q, ladder_info;
-        // Slot 0 is the first clustering of the history, which can only ever
-        // record where a beam line's density already sits, so it never
-        // carries a ratio.
+        // slot 0 only records where a beam line's density sits, never a ratio
         for (std::size_t i = 1; i < slot_count; ++i) {
             std::vector<me_int_t> column{static_cast<me_int_t>(i)};
             auto pick = [&](const char* name) {
@@ -1198,21 +1152,15 @@ ValueVec Integrand::mlm_weights(
             auto numerator = density("pdf_rw_q_num");
             auto denominator = density("pdf_rw_q_den");
             if (ladder) {
-                // what madevent books for its systematics at a step: the line's
-                // flavour, its momentum fraction before the step's z, and the
-                // scale the step takes the density to; info is active + 2 beam
+                // per step: flavour, x before the step's z, target scale;
+                // info is active + 2 * beam
                 ladder_x.push_back(fb.mul(x_beam, pick("pdf_rw_x_prev")));
                 ladder_pdg.push_back(fb.gather(index, _pdf_rw_pdgs));
                 ladder_q.push_back(scale_of("pdf_rw_q_num"));
                 ladder_info.push_back(fb.add(active, fb.mul(beam, 2.)));
             }
-            // madevent drops the event outright when the density it is
-            // dividing by falls under 1e-10, where the grid is no longer
-            // saying anything (reweight.f, rewgt=0 for pdfj2 < 1e-10). Same
-            // threshold, as a hard step: a ramp in the denominator would let
-            // 0 < den < 1e-10 through at num*den*1e20 instead of zero. The
-            // floor under the division keeps the term finite so that a
-            // vetoed slot multiplies to zero and not to a NaN.
+            // madevent vetoes the event when the denominator density is below
+            // 1e-10 (reweight.f); the floor keeps a vetoed term finite, not NaN
             auto floor = fb.full({1e-10, batch_size_acc});
             // max(den, 0) is 0 for a NaN density (the comparison max is built
             // on picks the second argument), which cut_one alone would pass
@@ -1220,8 +1168,7 @@ ValueVec Integrand::mlm_weights(
                 fb.max(denominator, fb.full({0., batch_size_acc})), 1e-10, 1e300
             );
             auto ratio = fb.div(numerator, fb.max(denominator, floor));
-            // An inert slot contributes exactly one, whatever its density
-            // came out as.
+            // an inactive slot contributes exactly one
             auto term = fb.add(ones, fb.mul(active, fb.sub(ratio, ones)));
             auto pass = fb.add(ones, fb.mul(active, fb.sub(usable, ones)));
             factor = factor ? fb.mul(factor, term) : term;
@@ -1237,7 +1184,6 @@ ValueVec Integrand::mlm_weights(
             ladder->push_back("ladder_q", fb.stack(ladder_q));
             ladder->push_back("ladder_info", fb.stack(ladder_info));
             // each beam's leading density, at the scale it was evaluated at
-            // (clamped by apply_scale_range)
             ladder->push_back(
                 "ladder_lead_q",
                 fb.stack({scales.at("pdf_scale1"), scales.at("pdf_scale2")})
@@ -1283,11 +1229,6 @@ NamedVector<Value> Integrand::build_common_part(
     auto x2_acc = args.at("x2_acc");
     auto flavor_id = args.at("flavor_id");
     auto batch_size_val = fb.batch_size({args.at("weight_before_cuts")});
-
-    // The matrix element sees the momenta the event is written with: the mirror
-    // is applied inside the mapping. This matters for polarised matrix elements,
-    // which are not invariant under the mirror (HELAS quantises along the frame
-    // z axis).
 
     // With a single flavor, flavor_id is always zero, so looking up per-flavor
     // tables does not need a gather on a constant tensor
@@ -1363,8 +1304,8 @@ NamedVector<Value> Integrand::build_common_part(
     Value alpha_qcd_acc =
         _running_coupling.value().build_function(fb, {args.at("ren_scale")}).at(0);
 
-    // The scales and densities the event is evaluated with. They come from the
-    // channel part, unless the MLM history is picked per diagram further down.
+    // scales and densities from the channel part, unless the MLM history is
+    // picked per diagram below
     Value ren_scale_acc = args.at("ren_scale");
     std::array<Value, 2> fact_scales_acc, pdfs_acc;
     for (std::size_t i = 0; i < 2; ++i) {
@@ -1484,16 +1425,9 @@ NamedVector<Value> Integrand::build_common_part(
         }
     }
 
-    // A clustering history per diagram. The evaluation above, at the scales of
-    // the history over every diagram, has supplied the diagram weights
-    // |A_i|^2 / sum_j |A_j|^2 (and the channel weights, which stay as they
-    // are). One diagram is picked from them - a choice between histories, not
-    // an importance sample, so it puts no factor on the weight - the event is
-    // clustered along it, and the cross section is taken at the scales that
-    // history gives: by rescaling the first evaluation when every diagram has
-    // the same power of alpha_s (mlm_history_qcd_power), by evaluating the
-    // matrix element again when coupling orders mix, as they do for gluon
-    // fusion and VBF in one process.
+    // Clustering history per diagram: pick a diagram from the diagram weights
+    // of the first evaluation (a choice of history, so no weight factor),
+    // cluster along it and take the cross section at the resulting scales.
     ValueVec mlm_history_weights;
     if (_energy_scale && _energy_scale->mlm_history_per_diagram()) {
         auto batch_size_acc = fb.batch_size({momenta_acc});
@@ -1537,15 +1471,9 @@ NamedVector<Value> Integrand::build_common_part(
         alpha_qcd_acc =
             _running_coupling.value().build_function(fb, {ren_scale_acc}).at(0);
         if (_mlm_history_qcd_power >= 0) {
-            // Only the scales changed, and the matrix element sees them only
-            // through alpha_s: with one power n of alpha_s for every diagram
-            // |M|^2 = C alpha_s^n, and the cross section is linear in each
-            // beam density. So the first evaluation, rescaled by
-            // (alpha_s' / alpha_s)^n f1' f2' / (f1 f2), is the second one to
-            // rounding - and exactly it where the history did not change, as
-            // for most events under clustering_history = madevent. The colour,
-            // helicity and diagram weights of the first evaluation stay valid:
-            // their probabilities are ratios of terms of the same power.
+            // |M|^2 ~ alpha_s^n: rescale the first evaluation by
+            // (alpha_s' / alpha_s)^n f1' f2' / (f1 f2); colour, helicity and
+            // diagram weights stay valid (ratios of terms of the same power).
             auto batch_size_acc = fb.batch_size({momenta_acc});
             auto ones = fb.full({1., batch_size_acc});
             Value factor = ones;
@@ -1585,8 +1513,7 @@ NamedVector<Value> Integrand::build_common_part(
             ? fb.mul(diff_xs_acc, fb.gather(flavor_id, _flavor_factors))
             : fb.mul(diff_xs_acc, _flavor_factors.at(0));
     }
-    // weight_after_cuts is one by construction unless the channel part put a
-    // weight into it
+    // weight_after_cuts is one unless the channel part put a weight into it
     ValueVec weights_after_cuts;
     if (has_channel_weight_after_cuts()) {
         weights_after_cuts.push_back(args.at("weight_after_cuts"));
@@ -1595,8 +1522,7 @@ NamedVector<Value> Integrand::build_common_part(
     for (auto& weight : mlm_history_weights) {
         weights_after_cuts.push_back(weight);
     }
-    // the bias enters the weight seen by the adaptation and the unweighting,
-    // the event generator divides it out again
+    // the bias is part of the weight; the event generator divides it out again
     Value bias_acc;
     if (_custom_bias) {
         ValueVec bias_args{momenta_acc};

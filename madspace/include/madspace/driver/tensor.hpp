@@ -230,7 +230,7 @@ using TensorVec = std::vector<Tensor>;
 enum class DeviceType { cpu, cuda, hip };
 
 /// Hint passed to @ref Device::allocate describing how a tensor will be used,
-/// so the allocator can reuse scratch buffers or skip a zero-fill.
+/// so the allocator can pool scratch buffers; gradient hints request zeroed storage.
 enum class AllocHint {
     normal,
     output,
@@ -242,7 +242,7 @@ enum class AllocHint {
     global_grad,
 };
 
-/// Whether newly allocated storage for `hint` must be zero-initialized.
+/// Whether newly allocated storage for `hint` is zero-initialized (gradients).
 inline bool needs_zero_init(AllocHint hint) {
     return hint == AllocHint::input_grad || hint == AllocHint::local_grad ||
         hint == AllocHint::global_grad;
@@ -615,7 +615,7 @@ public:
             storage()->stream = stream;
         }
     }
-    /// The single integer value of a scalar `DataType::batch_sizes` tensor.
+    /// The value of a single-element integer tensor.
     std::size_t index_value() const {
         check_impl();
         if (impl->batch_sizes.size() > 0) {
@@ -680,16 +680,17 @@ public:
     Tensor unsqueeze(std::size_t axis) const;
     /// Broadcasts size-1 dimensions to `shape`, without copying.
     Tensor expand(const Sizes& shape) const;
-    /// A view with a different `shape` over the same elements.
+    /// A view with a different `shape` over the same elements; requires a
+    /// contiguous tensor.
     Tensor reshape(const Sizes& shape) const;
-    /// Splits dimension `axis` into two, the second of size `factor`.
+    /// Splits dimension `axis` into two, the first of size `factor`.
     Tensor factor_dim(std::size_t axis, std::size_t factor);
-    /// Splits along the batch dimension and reshapes each piece.
+    /// Splits a 1-dimensional contiguous tensor into pieces of `shapes`.
     std::vector<Tensor> split_and_reshape(const std::vector<Sizes>& shapes) const;
 
     template <typename D>
-    /// A copy of this tensor on the CPU, allocated through `device`, or
-    /// `*this` if it is already there.
+    /// A copy of this tensor on the CPU, made using `device`, or `*this` if it
+    /// is already there.
     Tensor cpu(const D& device) const {
         check_impl();
         if (impl->device == cpu_device()) {

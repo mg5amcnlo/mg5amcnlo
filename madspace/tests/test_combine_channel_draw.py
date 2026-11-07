@@ -31,16 +31,14 @@ def draw_counts(counts):
 
 
 def test_every_channel_gets_exactly_its_share():
-    # The whole point of the draw: over the full index range each channel comes
-    # up exactly as often as the number of events apportioned to it.
+    # Over the full index range each channel is drawn as often as its count.
     counts = [5, 1, 12, 3, 40]
     assert draw_counts(counts) == counts
 
 
 def test_zero_share_channel_is_never_drawn():
-    # A channel with no events left to give must be unreachable, wherever it
-    # sits -- including index 0, which is the case a lower-bound draw gets
-    # wrong, and which is reached by every draw once the total is down to one.
+    # A channel with a zero share is unreachable, including at index 0, which a
+    # lower-bound draw would hand to it.
     counts = [0, 7, 0, 0, 4, 0]
     assert draw_counts(counts) == counts
 

@@ -6,9 +6,9 @@
 
 namespace madspace {
 
-/// Compute-graph function that rescales a gradient tensor so its norm never
-/// exceeds a threshold; the graph built internally by @ref AdamOptimizer for
-/// `grad_clip_threshold`.
+/// Compute-graph function that rescales `gradients_in` so that its L2 norm does
+/// not exceed `threshold`; also returns the unclipped norm. Used internally by
+/// @ref AdamOptimizer for `grad_clip_threshold`.
 class GradientClipper : public FunctionGenerator {
 public:
     /// @param dtype  Float type of the gradients; the norm is computed in float64.
@@ -28,7 +28,9 @@ private:
  * decay, @p eps for numerical stability, optional @p weight_decay) to its
  * `requires_grad` @ref Context globals. @p schedule optionally decays the
  * learning rate over @p step_count steps; @p grad_clip_threshold, if
- * non-zero, rescales the gradient norm before the update.
+ * non-zero, clips the gradient norm to `grad_clip_threshold` times the square
+ * root of the number of trained parameters before the update. A step is skipped
+ * if the loss is NaN or, after 100 steps, exceeds 20 times its running mean.
  *
  * **References**
  * - [1] D. P. Kingma, J. Ba, "Adam: A method for stochastic optimization",
@@ -55,8 +57,10 @@ public:
      * @param beta1               First-moment decay rate.
      * @param beta2               Second-moment decay rate.
      * @param eps                 Numerical-stability constant.
-     * @param grad_clip_threshold Maximum gradient norm; `0` disables clipping.
-     * @param weight_decay        L2 weight-decay coefficient.
+     * @param grad_clip_threshold Maximum gradient norm per sqrt(parameter
+     *                            count); `0` disables clipping.
+     * @param weight_decay        Decoupled weight decay (parameters shrink
+     *                            by `learning_rate * weight_decay` per step).
      */
     AdamOptimizer(
         const Function& function,
@@ -70,8 +74,8 @@ public:
         double grad_clip_threshold = 0.0,
         double weight_decay = 0.0
     );
-    /// Run one training step on `inputs` and apply the Adam update; returns
-    /// `function`'s outputs.
+    /// Run one training step on `inputs` and apply the Adam update (unless the
+    /// step is skipped, see above); returns `function`'s outputs.
     TensorVec step(const TensorVec& inputs);
     /// Replace the loss function, keeping the optimizer state.
     void replace_function(const Function& function);

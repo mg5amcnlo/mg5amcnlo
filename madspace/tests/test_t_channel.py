@@ -110,11 +110,9 @@ def test_t_channel_masses(masses, rng, mode):
     m_ext = torch.sqrt(
         torch.clamp(p_ext[:, :, 0] ** 2 - torch.sum(p_ext[:, :, 1:] ** 2, dim=2), min=0)
     )
-    # The massless on-shell reconstruction m = sqrt(E^2 - |p|^2) has an FP floor
-    # that scales with the particle energy (~2e-6 * E); the deep color_ordered
-    # boost chains reach it for a few high-energy boundary events. Shallower
-    # modes stay well under the flat 1e-3, so only color_ordered needs the
-    # energy-scaled term (a genuine kinematic error would exceed it ~1000x).
+    # m = sqrt(E^2 - |p|^2) has a rounding floor that scales with the energy;
+    # the deep color_ordered boost chains reach it for a few high-energy events,
+    # so only color_ordered gets the energy-scaled tolerance.
     abs_tol = 1e-3
     if mode == ms.PhaseSpaceMapping.color_ordered:
         abs_tol = 1e-3 + 2e-6 * torch.abs(p_ext[:, :, 0])
@@ -204,12 +202,55 @@ def test_t_channel_inverse(masses, rng, mode):
     det_inv = out[-1]
     r_inv = out[0]
     one_batch = torch.ones_like(det)
-    # Continuous randoms round-trip; the discrete int channel (color_ordered)
-    # is checked for exact bin/solution recovery separately.
+    # Continuous randoms round-trip; the discrete choices (color_ordered) are
+    # recovered exactly.
     assert_approx(r_inv, r, abs=1e-3, rel=1e-3)
     assert_approx(det * det_inv, one_batch, rel=1e-5)
     if disc is not None:
         assert torch.equal(out[1].long(), disc.long())
+
+
+@pytest.mark.parametrize(
+    "masses,energy",
+    [
+        ([0.0, 0.0, 0.0, 0.0], 300.0),
+        ([0.0, 0.0, 0.0, 91.0], 300.0),
+        ([0.0, 0.0, 173.0, 173.0], 1000.0),
+    ],
+    ids=["massless", "massless and Z", "t tbar"],
+)
+def test_two_to_two_inverse_precision(masses, energy):
+    """The inverse of a 2 -> 2 scattering gives back its random numbers to
+    their rounding. The squares of the momenta are off by about eps E^2, also
+    for massless particles, so the range of |t| comes from the masses and is
+    computed without cancellations of order s, and |t| from light-cone
+    components, without cancellations of order E^2 in the forward direction
+    (a lower end of the range from the squared momenta moved r by up to
+    7e-12)."""
+    mapping = ms.PhaseSpaceMapping(
+        masses, energy, leptonic=True, mode=ms.PhaseSpaceMapping.propagator
+    )
+    r = rand((20000, mapping.random_dim()), generator=generator(5))
+    p_ext, x1, x2, _ = mapping.map_forward([r])
+    r_inv = mapping.map_inverse((p_ext, x1, x2))[0]
+    assert torch.max(torch.abs(r_inv - r)) < 2e-15
+
+
+def test_t_channel_chain_inverse_precision():
+    """In a chain of t-channel scatterings the last one starts from a
+    spacelike momentum, whose range of |t| depends on the masses of the
+    outgoing particles in proportion to (s - m_b^2) / s. The inverse takes the
+    masses of the forward map, so that it gives back the random number of
+    |t| of the last scattering, the last random number, to near its rounding
+    (with the squared momenta up to 2e-10 for a light pair of particles 2 and
+    3)."""
+    mapping = ms.PhaseSpaceMapping(
+        [0.0] * 5, 300.0, leptonic=True, mode=ms.PhaseSpaceMapping.propagator
+    )
+    r = rand((20000, mapping.random_dim()), generator=generator(5))
+    p_ext, x1, x2, _ = mapping.map_forward([r])
+    r_inv = mapping.map_inverse((p_ext, x1, x2))[0]
+    assert torch.max(torch.abs(r_inv[:, -1] - r[:, -1])) < 2e-13
 
 
 @pytest.mark.parametrize(
@@ -241,8 +282,8 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
     sample_count = 100000
     inputs, r, _ = _fwd_inputs(mapping, rng, sample_count)
     *rest, det = mapping.map_forward(inputs)
-    # det is the per-branch Jacobian; the solution multiplicity (2 per 2->3 peel)
-    # is owned externally now, so apply 2^discrete_dim to recover the full volume.
+    # det is the per-branch Jacobian; multiply by 2^discrete_dim (two solutions
+    # per 2->3 step) to get the full volume.
     det = det * 2.0 ** mapping.discrete_dim()
     ps_volume = (
         (2 * math.pi) ** (4 - 3 * particle_count)
@@ -263,7 +304,8 @@ def test_t_channel_phase_space_volume(particle_count, energy, rng, mode):
 # (beams cyclically adjacent -> all outgoing on one side). These cases also
 # exercise *two-sided* splits (set1 and set2 both non-empty), which build a
 # genuinely different t-channel topology, and a range of discrete-peel counts
-# (discrete_dim grows by one for every set with > 2 outgoing partons).
+# (one discrete choice per 2->3 step: each peel after the first, and a
+# two-particle side when the other side is not empty).
 # ColorOrderedMapping is never constructed directly here -- only through
 # PhaseSpaceMapping, which is the only entry point it is meant to have.
 # ---------------------------------------------------------------------------

@@ -160,12 +160,12 @@ def test_outgoing_masses(mapping_and_args, input_points):
 
 
 def test_phase_space_via_two_2body(mapping_and_args, rng):
-    mapping_13, make_args, com = mapping_and_args  # your ThreeBodyDecay
+    mapping_13, make_args, com = mapping_and_args
     N = 50000
     r = rand((N, 5), generator=rng)  # 5 random numbers for 1->3 decay
     u = r[:, 0]  # first random number for s12
 
-    # Fix parent in COM for clarity (or use your fixture’s p0)
+    # parent at rest with fixed masses
     m0, m1, m2, m3 = 120.0, 10.0, 15.0, 5.0
     zeros = torch.zeros(N)
     p0 = torch.stack([torch.full((N,), m0), zeros, zeros, zeros], dim=1)

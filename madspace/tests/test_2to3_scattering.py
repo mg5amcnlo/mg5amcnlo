@@ -135,7 +135,7 @@ def input_points(rng, request):
     com = request.param
 
     # start with compatible incoming momenta
-    # COM: pa=(E,0,0,+p), pb=(E,0,0,-p)
+    # COM: pa=(Ea,0,0,+p), pb=(Eb,0,0,-p)
     pz = uniform(rng, 1000.0, 4000.0, N)
     ma = uniform(rng, 50.0, 300.0, N)
     mb = uniform(rng, 200.0, 500.0, N)
@@ -273,11 +273,11 @@ def test_phase_space_compare(rng, input_points):
     p1, p2, det23 = mapping23.map_forward(inputs, conditions)
     p1s, p2s, det22 = mapping22.map_forward(inputs22, conditions22)
 
-    # det23 is now the per-branch Jacobian; the 2-solution multiplicity is owned
-    # externally, so apply it here to compare against the 2->2 phase-space element.
+    # det23 carries a factor 1/2 for the two solutions (kernel_two_to_three_particle_scattering),
+    # so undo it here to compare against the 2->2 phase-space element.
     det23 = det23 * 2.0
 
-    # Outgoing masses must match m1, m2; spectator stays whatever it was.
+    # The mean Jacobians of both mappings must agree within the statistical error.
     std_error_23 = det23.std(correction=0).item() / math.sqrt(N)
     assert det23.mean().item() == approx(
         det22.mean().item(), abs=3 * std_error_23, rel=1e-6
@@ -298,7 +298,7 @@ def test_phase_space_volume(fixed_input_points):
     conditions = [fixed_input_points.pa, fixed_input_points.pb, fixed_input_points.p3]
 
     p1, p2, det = mapping23.map_forward(inputs, conditions)
-    # per-branch Jacobian; apply the 2-solution multiplicity externally
+    # undo the factor 1/2 for the two solutions contained in det
     det = det * 2.0
 
     s = fixed_input_points.m12**2

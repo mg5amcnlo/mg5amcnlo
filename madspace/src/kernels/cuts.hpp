@@ -29,12 +29,8 @@ kernel_cut_one(FIn<T, 0> obs, FSIn<T, 0> min, FSIn<T, 0> max, FOut<T, 0> w) {
     w = where((obs < min) | (obs > max), FVal<T>(0.), 1.);
 }
 
-// The window [min, max] is one pair of scalars applied to every observable of the
-// vector, as the instruction set declares them (cut_all/cut_any: min, max [float]).
-// They must be rank 0 (here FSIn<T, 0>, as they are declared single): as rank-1
-// inputs the runtime built a 2-dimensional view of these 1-dimensional tensors,
-// from shape/stride entries that were never set, and min[i] read out of bounds
-// (a memory fault on HIP, silently min[0] elsewhere).
+// The window [min, max] is a single pair of scalars applied to every observable of
+// the vector.
 template <typename T>
 KERNELSPEC void
 kernel_cut_all(FIn<T, 1> obs, FSIn<T, 0> min, FSIn<T, 0> max, FOut<T, 0> w) {

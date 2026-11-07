@@ -82,8 +82,7 @@ void initialize_layer(
         auto uniform = [&](MixMaxRandom& gen) {
             return bound * (2. * gen.generate_double() - 1.);
         };
-        // Independently seeded per tensor, via a fresh unique_seed_index() rather
-        // than a hash of the tensor's name.
+        // each tensor gets its own seed from unique_seed_index()
         MixMaxRandom weight_rand_gen(
             DerivedSeed(seed, DerivedSeed::global_init, context->unique_seed_index())
         );

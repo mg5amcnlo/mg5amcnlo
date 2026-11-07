@@ -44,7 +44,7 @@ void vegas_init(
     // TODO: check shapes
     auto bias_global = context->global(bias_name);
     auto grid_tensor = context->global(grid_name).cpu();
-    bool is_cpu = false; // context->device() == cpu_device();
+    bool is_cpu = false;
     Tensor bias_tensor =
         is_cpu ? bias_global : Tensor(DataType::dt_float64, bias_global.shape());
     auto bias_view = bias_tensor.view<double, 2>()[0];
@@ -170,9 +170,7 @@ Flow::Flow(
     _condition_dim(condition_dim),
     _bin_count(bin_count),
     _invert_spline(invert_spline) {
-    // A coupling block splits the dimensions in two non-empty halves, so a
-    // one-dimensional input (a 2 -> 1 phase space) would leave the flow
-    // without any block and nothing to train.
+    // a coupling block needs two non-empty halves of the dimensions
     if (input_dim < 2) {
         throw std::invalid_argument(
             std::format("Flow input dimension must be at least 2, got {}", input_dim)

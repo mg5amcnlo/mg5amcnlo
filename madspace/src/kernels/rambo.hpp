@@ -316,7 +316,7 @@ KERNELSPEC void fast_rambo_massive_body_inverse(
 
 // Kernels
 
-// massles
+// massless
 
 template <typename T>
 KERNELSPEC void kernel_fast_rambo_massless(
@@ -342,7 +342,7 @@ KERNELSPEC void kernel_fast_rambo_massless_com(
     fast_rambo_massless_body<T>(r, e_cm, p_out, det, p0);
 }
 
-// masssive
+// massive
 
 template <typename T>
 KERNELSPEC void kernel_fast_rambo_massive(

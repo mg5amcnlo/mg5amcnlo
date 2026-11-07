@@ -658,8 +658,6 @@ PYBIND11_MODULE(_madspace_py, m) {
                 py::arg("shape"),
                 pydoc::doc("FunctionBuilder::global")
             )
-            //.def("instruction", &FunctionBuilder::instruction, py::arg("name"),
-            // py::arg("args"))
             .def(
                 "product",
                 &FunctionBuilder::product,
@@ -1246,9 +1244,8 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def_readonly("min", &Cuts::CutItem::min, pydoc::doc("Cuts::CutItem::min"))
         .def_readonly("max", &Cuts::CutItem::max, pydoc::doc("Cuts::CutItem::max"))
         .def_readonly("mode", &Cuts::CutItem::mode, pydoc::doc("Cuts::CutItem::mode"));
-    // Registered before the methods that return it: pybind11 writes a method's
-    // signature when it is defined, and a type it does not know yet ends up as
-    // its raw C++ name, which pybind11-stubgen rejects.
+    // Registered before the methods that return it, so that their signatures show
+    // the Python type name.
     py::classh<Cuts::PairMassAny>(cuts, "PairMassAny", pydoc::doc("Cuts::PairMassAny"))
         .def_readonly(
             "pairs", &Cuts::PairMassAny::pairs, pydoc::doc("Cuts::PairMassAny::pairs")
@@ -1676,9 +1673,8 @@ PYBIND11_MODULE(_madspace_py, m) {
                 me_int_t>(),
             py::arg("matrix_element_index"),
             py::arg("particle_count"),
-            // C++ defaults to {momenta_in} / {matrix_element_out}; kept required
-            // in Python because pybind11-stubgen cannot render an enum-list
-            // default (see the header @param docs).
+            // C++ defaults are {momenta_in} / {matrix_element_out}; required in Python
+            // because pybind11-stubgen cannot render enum-list defaults.
             py::arg("inputs"),
             py::arg("outputs"),
             py::arg("diagram_count") = 1,

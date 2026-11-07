@@ -39,7 +39,7 @@ namespace madspace {
  * - `momentum_i` – `float`, shape `(batch, 4)` – the `kappa + 3` momenta
  *   (incoming and outgoing) of the `t`-channel chain.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**

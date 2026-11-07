@@ -4,10 +4,10 @@ import math
 
 import numpy as np
 import pytest
+from madspace_testing import to_numpy
 from pytest import approx
 
 import madspace as ms
-from madspace_testing import to_numpy
 
 N = 2000
 
@@ -132,7 +132,7 @@ def test_mirror_beams(rng, pdf_asymmetric_only):
     assert det1 == approx(det)
     assert x1_1 == approx(x1)
     assert x2_1 == approx(x2)
-    # leg 1 now moves along -z with its fraction of beam 2, leg 2 along +z
+    # leg 1 moves along -z with its fraction of beam 2, leg 2 along +z
     assert (p1[ok, 0, 3] < 0).all()
     assert p1[ok, 0, 0] == approx(x1[ok] * e2)
     assert (p1[ok, 1, 3] > 0).all()

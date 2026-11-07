@@ -6,14 +6,11 @@ multiplies its ``adaptive_prob`` by its acceptance probability times
 N / N_kept, so that training on the buffered events stays unbiased for any
 w_max. w_max is the quantile of |w| over the batch.
 
-It used to be the quantile of the *signed* weights. Nothing changes for a
-positive integrand, but an interference has negative weights: for a batch that
-is negative throughout the signed quantile is negative and every event was kept
-at its full weight (no unweighting at all), and for a mostly negative batch
-with a short positive tail it came out far too small. The result stayed
-unbiased (the rescaling above holds for any w_max), only the buffer filled up
-with far fewer effective events. The all-negative and mixed cases below fail
-with the signed quantile.
+The quantile is taken over |w|, not the signed weights. A signed quantile
+would be negative for an all-negative batch (every event kept, no unweighting)
+and far too small for a mostly negative batch with a short positive tail; it
+would stay unbiased but leave the buffer with few effective events. The
+all-negative and mixed cases below guard against this.
 
 Each output event carries its input ``index``, so the per-event relations are
 checked exactly; the kept count and the estimator of the mean weight are
@@ -94,8 +91,7 @@ def test_positive_batch():
 
 
 def test_negative_batch_is_unweighted():
-    """A channel where the interference is negative throughout: the signed
-    quantile was negative, so every event was kept at its full weight."""
+    """All weights negative: a signed quantile would keep every event."""
     g = generator(2)
     weights = -batch(g)
     kept = check(weights, 0.5 + rand(N, generator=g))
@@ -103,9 +99,8 @@ def test_negative_batch_is_unweighted():
 
 
 def test_mixed_batch_is_unweighted():
-    """85% large negative weights and a short positive tail: the signed 95%
-    quantile came from the positive tail, about 30 times below the |w| one,
-    and nearly every negative event was kept as an over-weight."""
+    """85% large negative weights and a short positive tail: a signed 95%
+    quantile would come from the positive tail, far below the |w| one."""
     g = generator(3)
     negative = rand(N, generator=g) < 0.85
     weights = torch.where(negative, -batch(g, 10.0), batch(g, 1.0))

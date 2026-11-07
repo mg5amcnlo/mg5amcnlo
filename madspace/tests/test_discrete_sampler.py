@@ -7,8 +7,7 @@ is routine rather than pathological. kernel_sample_discrete_probs handles
 that by construction instead of via a sentinel: an option with probability
 zero can never be selected, and if every option in a row is zero there is no
 real choice to make, so the sampler deterministically returns index 0 with
-probability 1 (det == 1), same as any other certain draw. Callers no longer
-need to special-case a "degenerate" result.
+probability 1 (det == 1), same as any other certain draw.
 """
 
 import torch
@@ -68,11 +67,8 @@ def run(builder_fn, output_names, inputs, output_types=None):
 
 
 def test_forward_det_is_always_at_least_one():
-    """det is 1/p, so a det that came from an actual choice is >= 1. The
-    all-zero row is not an exception to that anymore: it deterministically
-    gets index 0 and probability 1, so det == 1 there too, and callers no
-    longer need to split det into a separate density factor and weight mask
-    the way build_channel_part used to.
+    """det is 1/p, so it is >= 1. The all-zero row is no exception: it gets
+    index 0 and probability 1, so det == 1 there too.
     """
 
     def build(fb, sampler):
@@ -92,9 +88,8 @@ def test_forward_det_is_always_at_least_one():
 
 
 def test_forward_selects_the_expected_bucket():
-    """Basic correctness of the inverse-CDF walk: r selects the option whose
-    cumulative-probability bucket contains it. For [0.3, 0.2, 0.4, 0.1] the
-    bucket edges are [0.3, 0.5, 0.9, 1.0].
+    """r selects the option whose cumulative-probability bucket contains it.
+    For [0.3, 0.2, 0.4, 0.1] the bucket edges are [0.3, 0.5, 0.9, 1.0].
     """
     prior = torch.tensor([0.3, 0.2, 0.4, 0.1]).repeat(5, 1)
     random = torch.tensor([0.0, 0.29, 0.31, 0.89, 0.99])
@@ -113,10 +108,8 @@ def test_forward_selects_the_expected_bucket():
 
 
 def test_forward_never_selects_a_zero_probability_option():
-    """Only one option carries any density; every draw of r must land on it.
-    The zero-probability options are masked out of the cumulative walk
-    directly, rather than relying on r never landing exactly on their
-    zero-width buckets.
+    """Only one option carries any density; every draw of r must land on it,
+    including r = 0, which sits on the edge of the zero-width buckets.
     """
     prior = torch.tensor([0.0, 0.0, 0.0, 0.7]).repeat(5, 1)
     random = torch.tensor([0.0, 0.25, 0.5, 0.75, 0.999999])
@@ -135,9 +128,8 @@ def test_forward_never_selects_a_zero_probability_option():
 
 def test_forward_and_inverse_dets_are_reciprocal():
     """build_forward's det for the option it draws is 1/p; build_inverse's
-    det for that same option is p. The two must multiply to 1, the usual
-    Mapping invariant for a forward/inverse pair -- including on the
-    all-zero row, where both sides collapse to the certain-draw det of 1.
+    det for that same option is p, so the product is 1, also on the all-zero
+    row where both dets are 1.
     """
 
     def build(fb, sampler):

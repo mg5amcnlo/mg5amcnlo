@@ -123,20 +123,11 @@ std::size_t ps_discrete_dim(
     return 0;
 }
 
-// The floor every pair of final-state particles puts on its invariant mass:
-// the pair mass cuts m_inv_min, raised wherever the pt and delta R cuts imply
-// more. All tables are indexed by outgoing position. For two massless
-// particles
-//     m^2 = 2 pt_i pt_j (cosh(d_eta) - cos(d_phi)),
-// and on d_eta^2 + d_phi^2 >= R^2 the bracket is smallest at d_eta = 0,
-// d_phi = R (moving along the circle towards d_phi = 0 costs more in cosh than
-// it gains in cos, since sin b <= b), so
-//     m >= sqrt(2 pt_i,min pt_j,min (1 - cos R)).
-// That is a consequence of the cuts, not an approximation to them, so it can
-// bound the sampling without changing the integral. It needs d_phi = R to be
-// reachable (R <= pi), and it needs massless legs: with a mass, delta R is
-// measured in pseudorapidity while the invariant depends on the rapidity, and
-// the bound no longer follows.
+// Floor on the invariant mass of every pair of final-state particles: the pair
+// mass cuts, raised where pt and delta R cuts imply more. Tables are indexed by
+// outgoing position. For massless legs m^2 = 2 pt_i pt_j (cosh(d_eta) -
+// cos(d_phi)) is smallest at d_eta = 0, d_phi = R, so m >= sqrt(2 pt_i pt_j
+// (1 - cos R)). Needs R <= pi and massless legs (delta R uses pseudorapidity).
 std::vector<std::vector<double>> pair_mass_floors(
     std::vector<std::vector<double>> floors,
     const std::vector<double>& pt_min,
@@ -163,14 +154,10 @@ std::vector<std::vector<double>> pair_mass_floors(
     return floors;
 }
 
-// The smallest sum_i sqrt(m_i^2 + pt_i^2) the final state can have when every
-// pt_i >= pt_min_i. The beams carry no transverse momentum, so the outgoing
-// transverse momenta add up to zero, and that needs the largest to be no more
-// than the sum of the others. When the cuts alone leave that unsatisfied (one
-// hard cut, little else cut), the others have to make up the deficit, and the
-// cheapest way is to spread it over the massive ones, at equal pt_i / m_i,
-// whose transverse mass grows more slowly than pt; with no massive particle
-// to take it, it costs its full size.
+// Smallest sum_i sqrt(m_i^2 + pt_i^2) of the final state with pt_i >= pt_min_i
+// and the transverse momenta adding up to zero. If the largest pt_min exceeds
+// the sum of the others, the deficit is made up by raising the massive legs at
+// equal pt_i / m_i, or costs its full size if there are none.
 double min_transverse_mass_sum(
     const std::vector<double>& masses, const std::vector<double>& pt_min
 ) {
@@ -191,9 +178,8 @@ double min_transverse_mass_sum(
     if (deficit <= 0.) {
         return sum;
     }
-    // raise every massive particle other than the hardest to pt = t m (where
-    // that is more than its cut), with t such that the raises add up to the
-    // deficit
+    // raise massive non-hardest particles to pt = t m (where above their cut),
+    // with t solved by bisection so the raises add up to the deficit
     std::vector<std::size_t> massive;
     double mass_sum = 0., massive_pt_sum = 0., t_high = 0.;
     for (std::size_t i = 0; i < masses.size(); ++i) {
@@ -327,17 +313,10 @@ PhaseSpaceMapping::PhaseSpaceMapping(
     };
     std::vector<DecayInfo> decay_info(_topology.decays().size());
 
-    // The cuts are indexed by the position of a particle in the event the
-    // mapping returns, and that event is the topology's own momenta reordered
-    // by the channel permutation (output[i] = topology[perm[i]], see
-    // permute_momenta). The same mapping serves every permutation, so a bound
-    // is handed to the sampler only in a form that holds for all of them:
-    // the weakest of the per-permutation bounds. Without permutations the
-    // topology order is the event order.
-    //
-    // Cuts indexes its per-particle tables by outgoing position, counting two
-    // incoming particles. A decay topology has one, so the tables cannot be
-    // read against it at all - and a decay has no cuts to apply anyway.
+    // Cuts are indexed by event position: the topology's momenta reordered by
+    // the permutation (output[i] = topology[perm[i]]). Bounds given to the
+    // sampler are the weakest over all permutations. Decays (one incoming
+    // particle) have no cuts to read.
     constexpr std::size_t no_index = static_cast<std::size_t>(-1);
     const std::size_t n_in = _topology.incoming_masses().size();
     const std::size_t n_out = _topology.outgoing_masses().size();
@@ -413,12 +392,8 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         decay_info.at(index) = {m_min, pt_min, eta_max, std::nullopt};
     }
 
-    // A cut on the invariant mass of a pair is also a statement about the
-    // phase space, not only about which events to keep afterwards. Wherever
-    // both members of the pair come out of the same propagator, the cut is a
-    // floor on that propagator's invariant and can be handed straight to the
-    // sampler, which is the difference between generating the region the cut
-    // allows and throwing away nearly everything generated.
+    // Where both members of a cut pair come out of the same propagator, the
+    // cut is a floor on that propagator's invariant and can go to the sampler.
     constexpr std::size_t no_leaf = static_cast<std::size_t>(-1);
     std::vector<std::vector<std::size_t>> node_leaves(_topology.decays().size());
     {
@@ -445,11 +420,9 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             std::sort(leaves.begin(), leaves.end());
         }
     }
-    // A bound on the absolute rapidity of every node whose leaves all have a
-    // pseudorapidity cut, and negative otherwise. A leaf has |y| <= |eta|, and
-    // the rapidity of a sum of momenta, tanh(y) = sum_i m_T,i sinh(y_i) /
-    // sum_i m_T,i cosh(y_i), is a weighted mean of the tanh(y_i), so it never
-    // exceeds the largest |y_i|. This holds for massive particles too.
+    // Bound on |y| of every node whose leaves all have an eta cut (negative
+    // otherwise): |y| <= |eta| for a leaf, and tanh(y) of a sum is a weighted
+    // mean of the leaves' tanh(y_i), also for massive particles.
     std::vector<double> node_y_max(node_leaves.size(), -1.);
     for (std::size_t d = 0; d < node_leaves.size(); ++d) {
         if (node_leaves.at(d).empty()) {
@@ -466,33 +439,21 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         }
         node_y_max.at(d) = y_max;
     }
-    // The rapidity of the partonic system, log(x1 / x2) / 2, is the root's. The
-    // cuts hold in the lab frame and x1, x2 live in the beams' centre-of-mass
-    // frame, which is boosted by beam_rapidity: |y_cm| <= |y_lab| + |y0|. (The
-    // bounds on the children, in the partonic frame, are unaffected.)
+    // The partonic rapidity log(x1 / x2) / 2 is the root's. The cuts hold in the
+    // lab, x1 and x2 in the beams' frame: |y_cm| <= |y_lab| + |beam_rapidity|.
     if (_map_luminosity && read_cuts) {
         double y_root = node_y_max.at(0);
         _y_max_lab = y_root >= 0. ? y_root + std::abs(beam_rapidity) : y_root;
     }
 
-    // The floor a set of final-state particles (topology outgoing positions)
-    // inherits from the pair mass cuts. A pair contributes at least its cut and
-    // every other particle at least its mass, and for future-pointing momenta
-    // the invariant mass of a sum is at least the sum of the invariant masses:
-    //   * a cut every pair must pass (topo_m_inv_min) gives
-    //         m(leaves) >= cut(i, j) + sum_{k != i, j} m_k
-    //     for each cut pair (i, j) among the leaves;
-    //   * a CutMode::any cut, which only one of its pairs has to pass, gives
-    //     the smallest of those bounds over its pairs - provided every one of
-    //     them lies among the leaves, or the passing pair may lie elsewhere.
-    //   * every pair together: expanding (sum p_k)^2 with
-    //     2 p_i.p_j = m_ij^2 - m_i^2 - m_j^2 gives the exact identity
-    //         m(leaves)^2 = sum_{i<j} m_ij^2 - (n - 2) sum_k m_k^2,
-    //     and m_ij is at least its cut and at least m_i + m_j. With several
-    //     cut pairs among the leaves this beats any single pair: four leptons
-    //     with every pair above 50 GeV are at least sqrt(6) * 50 GeV heavy.
-    // Each holds, so the largest is the floor. The any-mode cuts are read per
-    // permutation and the weakest result is kept, like the tables above.
+    // Floor on the invariant mass of a set of final-state particles (topology
+    // outgoing positions) from the pair mass cuts. The largest of:
+    //   * cut(i, j) + sum_{k != i, j} m_k for each cut pair among the leaves;
+    //   * for a CutMode::any cut, the smallest such bound over its pairs, if
+    //     all of them lie among the leaves;
+    //   * m^2 = sum_{i<j} m_ij^2 - (n - 2) sum_k m_k^2 with m_ij >= max(cut,
+    //     m_i + m_j).
+    // The any-mode cuts are read per permutation and the weakest is kept.
     const auto& out_masses = _topology.outgoing_masses();
     auto pair_floor = [&](const std::vector<std::size_t>& leaves) {
         double leaf_mass_sum = 0.;
@@ -560,14 +521,8 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         }
         return std::max(floor, any_floor);
     };
-    // e_min is the propagator's own floor on its invariant mass, and
-    // update_mass_min_max already carries it into every s_min the sampler uses
-    // and into what the parents subtract, so raising it here is all that is
-    // needed for the cut to shape the integration. A floor at or above the top
-    // of an on-shell window (e_max) leaves the propagator nothing to sample:
-    // the cuts reject the whole channel. It is then not handed on as an
-    // inverted range but reported through empty(), so the channel can be
-    // dropped instead of failing to find a single passing point.
+    // Raise e_min (picked up by update_mass_min_max). A floor at or above e_max
+    // leaves nothing to sample and is reported through empty().
     for (std::size_t d = 1; d < node_leaves.size(); ++d) {
         const auto& decay = _topology.decays().at(d);
         if (decay.child_indices.empty()) {
@@ -584,38 +539,18 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         _topology.raise_decay_e_min(d, floor);
     }
 
-    // The same thing one level up: a floor on the total invariant mass of the
-    // final state is a floor on the root propagator, which is the s-hat the
-    // luminosity mapping samples. Handing it over is the difference between
-    // sampling the region the cut allows and sampling everything and throwing
-    // nearly all of it away; the Invariant's Jacobian follows the range it is
-    // given, so the integral is unchanged and only the efficiency moves.
-    //
-    // Two sources of such a floor: a cut on sqrt(s_hat) itself, and the pair
-    // cuts, every one of which bounds the total exactly as it bounds a
-    // propagator above.
+    // A floor on the total final-state mass is a floor on the root, i.e. on
+    // s_hat. Sources: the sqrt(s_hat) cut and the pair cuts.
     double sqrt_s_hat_min =
         std::max(read_cuts ? _cuts.sqrt_s_min() : 0., pair_floor(node_leaves.at(0)));
-    // Only the luminosity mapping samples the root virtuality, and the root's
-    // e_min is read nowhere else: build_forward_impl gives the root its s_min
-    // only when it samples it, and the other propagators bound themselves by
-    // the root's mass, never by its floor. A leptonic collision has s_hat fixed
-    // at s_lab and chili reconstructs it from the momenta it has already
-    // generated, so in neither case is there a range to narrow -- the cut
-    // stays a filter there. A floor at or above the beam energy leaves nothing
-    // to sample at all, and is left to the filter too rather than handed on as
-    // an empty range.
+    // Only the luminosity mapping samples s_hat. Leptonic and chili modes have
+    // no range to narrow, and a floor at or above the beam energy would leave
+    // an empty one; the cut stays a filter in these cases.
     if (_map_luminosity && sqrt_s_hat_min > 0. && sqrt_s_hat_min < _sqrt_s_lab) {
         _topology.raise_decay_e_min(0, sqrt_s_hat_min);
     }
-    // One more floor on s_hat, from the pt cuts: in the partonic
-    // centre-of-mass frame sqrt(s_hat) is the sum of the outgoing energies,
-    // each at least the transverse mass, and the transverse momenta are the
-    // same there as in the lab, so
-    //     sqrt(s_hat) >= sum_i sqrt(m_i^2 + pt_i^2),
-    // minimised over pt_i >= pt_i,min with the pt_i adding up to zero
-    // (min_transverse_mass_sum). Without a pt cut this is just the sum of the
-    // masses, which the sampler already respects.
+    // Floor on s_hat from the pt cuts: sqrt(s_hat) >= sum_i sqrt(m_i^2 + pt_i^2),
+    // minimised over pt_i >= pt_i,min (min_transverse_mass_sum).
     if (_map_luminosity && read_cuts) {
         bool has_pt_cut = std::any_of(
             topo_pt_min.begin(), topo_pt_min.end(), [](double pt) { return pt > 0.; }
@@ -636,11 +571,8 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         bool is_com_decay = decay.index == 0;
         if (decay.index != 0 || !has_t_channel) {
             if (decay.child_indices.size() == 2 && is_com_decay && read_cuts) {
-                // The root decays in the partonic centre-of-mass frame, which
-                // is the lab up to a boost along the beam, so the pt cut of a
-                // final-state child and the rapidity bound of any child
-                // restrict its polar angle (TwoBodyDecay). A composite child
-                // has no pt bound of its own.
+                // The pt cut of a final-state child and the rapidity bounds of
+                // the children restrict the polar angle (TwoBodyDecay).
                 double pt_min = 0.;
                 for (std::size_t child_index : decay.child_indices) {
                     pt_min = std::max(pt_min, decay_info.at(child_index).pt_min);
@@ -673,11 +605,8 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         if (!is_com_decay || _map_luminosity) {
             double mass = decay.width == 0. ? 0. : decay.mass;
             double width = decay.width;
-            // The root is s_hat, which the PDF convolution samples. A
-            // color-ordered chain samples it as AmpliCol does, with
-            // 1/s_hat^1.2, when masses or cuts bound it from below; without a
-            // bound that density piles the points up at the regulator of
-            // Invariant (and AmpliCol falls back to a flat one).
+            // Color-ordered mode samples s_hat with 1/s_hat^1.2 as AmpliCol
+            // does, but only if it is bounded from below.
             double s_hat_default =
                 t_channel_mode == PhaseSpaceMapping::color_ordered && info.m_min > 0.
                 ? 1.2
@@ -713,10 +642,8 @@ PhaseSpaceMapping::PhaseSpaceMapping(
             _t_mapping =
                 ChiliMapping(_topology.t_propagator_count() + 1, eta_max, pt_min);
         } else if (t_channel_mode == PhaseSpaceMapping::color_ordered) {
-            // Reorder the per-pair cut matrices (indexed by topology outgoing
-            // position) into the child order in which masses/pt are handed to the
-            // chain, mirroring the pt_min reordering above. Composite (non-leaf)
-            // children carry no pairwise cut.
+            // Reorder the per-pair cut matrices into the child order handed to
+            // the chain. Composite children carry no pairwise cut.
             const auto& out_idx = topology.outgoing_indices();
             const auto& child_indices = topology.decays().at(0).child_indices;
             std::vector<std::size_t> child_to_out(
@@ -745,22 +672,17 @@ PhaseSpaceMapping::PhaseSpaceMapping(
                     }
                     m_inv_co.at(a).at(b) =
                         m_inv_full.at(child_to_out.at(a)).at(child_to_out.at(b));
-                    // Delta R uses pseudorapidities, which a longitudinal boost
-                    // does not shift uniformly for massive particles: a lab
-                    // cut is no bound in the beams' frame. The cut itself is
-                    // still applied to the lab momenta.
+                    // Delta R is not boost invariant for massive particles, so
+                    // a lab cut bounds nothing in the beams' frame.
                     if (beam_rapidity == 0.) {
                         dr_co.at(a).at(b) =
                             dr_full.at(child_to_out.at(a)).at(child_to_out.at(b));
                     }
                 }
             }
-            // The blocks of the chain that scatter the two beams (central 2->2,
-            // double-t, first peel of a single chain) take the rapidity bounds.
-            // An unset chain power is 1 with cuts, as in AmpliCol, and
-            // invariant_power without: then the ranges of the momentum transfers
-            // and s23 invariants reach zero, where 1/|x| piles the points up at
-            // the regulator of Invariant (AmpliCol falls back to a flat density).
+            // The blocks scattering the two beams (central 2->2, double-t, first
+            // peel of a single chain) take the rapidity bounds. The chain power
+            // is 1 with cuts, as in AmpliCol, to avoid ranges reaching zero.
             auto options = *color_ordered;
             auto positive = [](double x) { return x > 0.; };
             bool chain_cuts = std::any_of(pt_min.begin(), pt_min.end(), positive);
@@ -789,7 +711,6 @@ PhaseSpaceMapping::PhaseSpaceMapping(
         }
     }
 
-    // Random-number budget: identical computation to the declared input shape.
     _n_discrete = ps_discrete_dim(_topology, t_channel_mode, color_ordered);
 
     for (auto& perm : permutations) {
@@ -902,10 +823,8 @@ Mapping::Result PhaseSpaceMapping::build_forward_impl(
         auto p_ext_lab = to_lab(fb, p_ext_stack, x1, x2, conditions);
         dets.push_back(_cuts.build_function(fb, {p_ext_lab}).at(0));
         auto ps_weight = fb.cut_unphysical(fb.product(dets), p_ext_lab, x1, x2);
-        // Without sampled momentum fractions (leptonic, a decay) x1 = x2 = 1
-        // stay constants above. They are returned with the batch dimension of
-        // their type like every output, so that the outputs of channels can
-        // be concatenated (MultiChannelMapping).
+        // Constant x1 = x2 = 1 (leptonic, decay) are expanded to the batch so
+        // that the outputs of channels can be concatenated (MultiChannelMapping).
         auto as_batch = [&](Value x) {
             return std::holds_alternative<std::monostate>(x.literal_value)
                 ? x
@@ -1043,10 +962,8 @@ Mapping::Result PhaseSpaceMapping::build_forward_impl(
             [&](std::monostate) {
                 auto [p1, p2] = fb.com_p_in(sqrt_s_hat);
                 if (_topology.is_decay()) {
-                    // Single incoming particle, at rest in the frame the decay
-                    // products are generated in: p_in = (M, 0, 0, 0), which is
-                    // exactly the sum of the two back-to-back beam momenta
-                    // com_p_in builds for sqrt(s_hat) = M.
+                    // Single incoming particle at rest: p_in = (M, 0, 0, 0) is
+                    // the sum of the beam momenta com_p_in builds for M.
                     p_ext = {fb.add(p1, p2)};
                 } else {
                     p_ext = {p1, p2};

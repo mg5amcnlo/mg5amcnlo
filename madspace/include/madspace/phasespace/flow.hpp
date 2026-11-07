@@ -30,7 +30,7 @@ namespace madspace {
  * **Outputs**
  * - `data` – `float`, shape `(batch, input_dim)` – the transformed coordinates.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -44,7 +44,7 @@ namespace madspace {
 class Flow : public Mapping {
 public:
     /**
-     * @param input_dim         Number of dimensions to transform.
+     * @param input_dim         Number of dimensions to transform (at least 2).
      * @param condition_dim     Width of the conditioning input; `0` for an
      *                          unconditional flow.
      * @param prefix            Prefix for the trainable global names.

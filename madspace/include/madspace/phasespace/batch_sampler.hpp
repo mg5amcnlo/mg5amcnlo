@@ -5,21 +5,20 @@
 namespace madspace {
 
 /**
- * Concatenates the per-channel tensors of a multi-channel batch.
+ * Draws random batches from per-channel buffers.
  *
- * Given one tensor set per channel and the per-channel batch sizes, it packs
- * them into a single contiguous batch (the inverse of the split done inside
- * @ref MultiChannelMapping). Used to assemble a mixed batch for the shared
- * integrand evaluation (see Sec. 3.1 of [1]).
+ * For each channel, picks `batch_sizes[i]` rows at random indices (with
+ * replacement) of that channel's buffered tensors. Used to draw MadNIS training
+ * batches from the replay buffer.
  *
  * `batch` is the leading batch dimension. `i` indexes the channels.
  *
  * **Arguments**
- * - `channel<i>_in_<key>` – the per-channel input tensors.
- * - `batch_sizes` – the number of entries in each channel.
+ * - `channel<i>_in_<key>` – the buffered tensors of channel `i`.
+ * - `batch_sizes` – the number of rows to draw for each channel.
  *
  * **Returns**
- * - `channel<i>_out_<key>` – the concatenated tensors.
+ * - `channel<i>_out_<key>` – the drawn rows, one tensor per input tensor.
  *
  * **References**
  * - [1] T. Heimel, O. Mattelaer, R. Winterhalder, "MadSpace",

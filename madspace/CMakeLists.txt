@@ -584,8 +584,8 @@ install(TARGETS _madspace_py DESTINATION madspace)
 if(ENABLE_DOCS)
     set(MADSPACE_PYI_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_pyi)
 
-    # Runs whenever _madspace_py is relinked, i.e. whenever madspace.cpp or,
-    # transitively (via instruction_set.hpp), instruction_set.yaml change. Imports
+    # Runs whenever _madspace_py is relinked, e.g. when a binding source, the
+    # generated instruction_set.hpp or docstrings.hpp change. Imports
     # the freshly built extension from an isolated staging copy of the madspace
     # package (see generate_pyi.py) so pybind11-stubgen can introspect it.
     add_custom_command(

@@ -13,8 +13,7 @@ pytestmark = pytest.mark.cpu_only
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 # Copy of PROC_tt_decay/SubProcesses/subprocesses.json (a hadronically decaying
-# ttbar process), checked in here since the PROC_tt_decay output directory
-# itself isn't guaranteed to exist/persist.
+# ttbar process).
 TT_DECAY_SUBPROCESSES = os.path.join(
     HERE, "test_data", "lhe", "tt_decay_subprocesses.json"
 )
@@ -49,8 +48,9 @@ def subproc_meta():
 def build_topology_and_args(meta, bw_cutoff=BW_CUTOFF):
     """Rebuild the ms.Topology/ms.SubprocArgs for the single channel/diagram
     described in PROC_tt_decay's subprocesses.json, mirroring what
-    MadgraphSubprocess.build_multi_channel_data/build_lhe_completer do in the
-    madevent.py template, without needing a full MadgraphProcess/run_card setup.
+    MadgraphSubprocess.build_multi_channel_data and
+    MadgraphProcess.build_lhe_completer (madgraph/mg7) do, without needing a
+    full MadgraphProcess/run_card setup.
     """
     channel = meta["channels"][0]
     propagators = []
@@ -168,7 +168,7 @@ def test_event_attributes_are_bound_to_their_own_members():
 
     Guards against copy-paste slips in the pybind11 binding block: a
     def_readwrite pointing at the wrong struct member silently shadows another
-    field (alpha_qcd used to be bound to LHEEvent::process_id).
+    field (e.g. alpha_qcd bound to LHEEvent::process_id).
     """
     values = dict(
         process_id=7,
@@ -192,7 +192,7 @@ def test_event_attributes_are_bound_to_their_own_members():
 
 def test_event_header_line_written_to_lhe():
     """The event header line of the written LHE file carries the values set
-    from Python, in the order defined by arXiv:0109068 (NUP IDPRUP XWGTUP
+    from Python, in the order defined by hep-ph/0109068 (NUP IDPRUP XWGTUP
     SCALUP AQEDUP AQCDUP).
 
     The attributes are set one by one rather than passed to the constructor, so
@@ -363,10 +363,9 @@ def test_resonance_colors_consistent_with_daughters(events, subproc_meta):
 def test_external_color_flows_match_input_across_subprocesses(
     topology_and_args, mapping, subproc_meta
 ):
-    """Regression test for a color-offset bug where a second subprocess's
-    external colors were read from the wrong location in the flattened color
-    table. Uses two (identical) subprocesses so the offset for subproc index 1
-    is actually exercised.
+    """Colors of a later subprocess must be read from its own part of the
+    flattened color table. Uses two (identical) subprocesses so that the offset
+    for subproc index 1 is exercised.
     """
     _, _, subproc_args = topology_and_args
     lhe_completer = ms.LHECompleter([subproc_args, subproc_args], bw_cutoff=BW_CUTOFF)
@@ -483,7 +482,7 @@ def test_invalid_color_index_raises(lhe_completer, mapping):
 def test_particle_momentum_kwargs_match_attributes():
     """The constructor kwargs for the momentum components are spelled like the
     attributes they set: px/py/pz, matching LHEParticle's C++ members and the
-    rest of madspace. The old p_x/p_y/p_z spelling is gone."""
+    rest of madspace; p_x/p_y/p_z are rejected."""
     particle = ms.LHEParticle(px=1.5, py=-2.5, pz=3.5, energy=4.5)
     assert (particle.px, particle.py, particle.pz) == (1.5, -2.5, 3.5)
     assert particle.energy == 4.5

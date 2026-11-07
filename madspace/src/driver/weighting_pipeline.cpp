@@ -78,7 +78,8 @@ json matrix_element_to_json(const MatrixElement& matrix_element) {
         ++i;
     }
     // see the MatrixElement constructor: an empty reference mask with a frame
-    // means that the frame is the one of the incoming particles
+    // means that the frame is the incoming system or there are two incoming
+    // particles
     auto& reference_mask = matrix_element.reference_mask();
     auto& incoming_mask =
         reference_mask.empty() ? matrix_element.frame_mask() : reference_mask;

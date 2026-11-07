@@ -1,20 +1,20 @@
 """The 2->3 scattering block when one of its particles is soft.
 
 TwoToThreeParticleScattering samples s23 inside its kinematic range and weights
-the point with the Byckling-Kajantie Jacobian 1 / (8 sqrt(-G4)). The block once
-formed the 4x4 Gram determinant G4 (and cos(phi)) directly from invariants of
-order s, cancelling terms of order s^4 down to a result proportional to the
-square of the s23 range. Once a particle is soft that range is tiny, the
-difference drowned in rounding, and the block returned Jacobians of up to
-1e14 in place of O(1). One such point in a few million could throw a whole
-ColorOrderedMapping integration off by a factor of up to 1e12.
+the point with the Byckling-Kajantie Jacobian 1 / (8 sqrt(-G4)). Forming the 4x4
+Gram determinant G4 (and cos(phi)) directly from invariants of order s cancels
+terms of order s^4 down to a result proportional to the square of the s23 range.
+Once a particle is soft that range is tiny and the difference drowns in
+rounding, giving Jacobians of up to 1e14 in place of O(1); one such point in a
+few million could throw a ColorOrderedMapping integration off by a factor of up
+to 1e12.
 
-Both are now computed from where s23 lies in its range, and that range from
-momenta in the p12 rest frame: its Byckling-Kajantie form through 3x3 Gram
-determinants cancelled the same way one level down, and gave NaN or zero
-Jacobians below a softness of about 1e-8. These tests pin that:
-the Jacobian follows its smooth soft limit, and ColorOrderedMapping integrates
-the massless n-body phase space to its analytic value.
+The block therefore computes both from where s23 lies in its range, and that
+range from momenta in the p12 rest frame: its Byckling-Kajantie form through 3x3
+Gram determinants cancels the same way one level down and gives NaN or zero
+Jacobians below a softness of about 1e-8. These tests pin that the Jacobian
+follows its smooth soft limit, and that ColorOrderedMapping integrates the
+massless n-body phase space to its analytic value.
 """
 
 import math
@@ -28,8 +28,8 @@ import madspace as ms
 E_BEAM = 500.0
 PA = torch.tensor([E_BEAM, 0.0, 0.0, E_BEAM])
 PB = torch.tensor([E_BEAM, 0.0, 0.0, -E_BEAM])
-# deep enough into the soft limit to reach where the old Gram determinant
-# broke down (about 1e-8)
+# deep enough into the soft limit to pass the softness (about 1e-8) where a
+# Gram-determinant evaluation breaks down
 DELTAS = 10.0 ** -torch.arange(2.0, 15.0)
 
 
@@ -97,9 +97,9 @@ def test_jacobian_with_soft_third_particle():
     ids=["single chain", "1+3 split"],
 )
 def test_color_ordered_massless_volume(color_order):
-    """The volume of massless 4-body phase space, (pi/2)^3 s^2 / 12. The
-    broken Jacobian showed up only in a few points per million, so this
-    needs more than a handful of batches to catch."""
+    """The volume of massless 4-body phase space, (pi/2)^3 s^2 / 12. A
+    bad Jacobian shows up in only a few points per million, so this needs more
+    than a handful of batches to catch."""
     cm_energy = 1000.0
     n_out = len(color_order) - 2
     volume = (
@@ -158,9 +158,10 @@ def extreme_points():
 def test_finite_at_extreme_points(arcsine, s_power):
     """Forward and inverse stay finite in all these limits. Where p1 or p3 is
     along pa the azimuth is undefined and the weight is zero; there the s23
-    range has zero width, and the inverse used to divide 0 / 0. A p3 below
-    ~1e-12 GeV (or a p_12 that close to rest) also hit absolute floors in the
-    normalisation of the frame and the boost axis and came out far off shell."""
+    range has zero width, and the inverse must not divide 0 / 0. A p3 below
+    ~1e-12 GeV (or a p_12 that close to rest) must not hit absolute floors in the
+    normalisation of the frame and the boost axis, which would put the momenta
+    far off shell."""
     points = extreme_points()
     n = len(points)
     mapping = ms.TwoToThreeParticleScattering(
@@ -181,10 +182,9 @@ def test_finite_at_extreme_points(arcsine, s_power):
     p1, p2, det = mapping.map_forward(inputs, conditions)
     assert torch.all(torch.isfinite(p1)) and torch.all(torch.isfinite(p2))
     assert torch.all(torch.isfinite(det)) and torch.all(det >= 0)
-    # On shell where the weight is not zero: the soft-p3 points used to be off
-    # by ~1e4 GeV^2, |p^2 - m^2| / E^2 ~ 1e-2. What is left comes from s12 -> 0,
-    # a pair collinear to ~1e-6 whose mass pa + pb - p3 fixes only to ~1e-4,
-    # and stays below ~1e-9. (At zero weight the pair mass can be below
+    # On shell where the weight is not zero. The residual |p^2 - m^2| / E^2 comes
+    # from s12 -> 0, a pair collinear to ~1e-6 whose mass pa + pb - p3 fixes only
+    # to ~1e-4, and stays below ~1e-9. (At zero weight the pair mass can be below
     # sqrt(eps) of its energy, which momenta cannot carry at all.)
     live = det > 0
     m1 = inputs[3][live]

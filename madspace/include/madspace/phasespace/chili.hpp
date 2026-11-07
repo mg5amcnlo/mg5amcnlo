@@ -49,7 +49,7 @@ namespace madspace {
  * - `momentum_i` – `float`, shape `(batch, 4)` – the `n_particles + 2` momenta
  *   (incoming beams first, then outgoing).
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -66,10 +66,11 @@ class ChiliMapping : public Mapping {
 public:
     /**
      * @param n_particles Number of outgoing particles.
-     * @param y_max       Per-outgoing-particle maximum rapidity; empty disables
-     *                    the rapidity cut. See @ref Cuts.
-     * @param pt_min      Per-outgoing-particle minimum transverse momentum;
-     *                    empty disables the cut. See @ref Cuts.
+     * @param y_max       Per-outgoing-particle maximum rapidity, one entry per
+     *                    particle; infinity disables the cut. See @ref Cuts.
+     * @param pt_min      Per-outgoing-particle minimum transverse momentum, one
+     *                    entry per particle (the last is unused); 0 disables
+     *                    the cut. See @ref Cuts.
      */
     ChiliMapping(
         std::size_t n_particles,

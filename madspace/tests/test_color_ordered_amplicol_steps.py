@@ -9,7 +9,7 @@
 - With cut_aware_branch the 2->3 steps keep the azimuthal solution that passes
   the pt cuts, and pick at random only when both do.
 - The fiducial volume agrees with RAMBO's, whatever the options.
-- The function builder no longer folds 0 - x to x.
+- The function builder does not fold 0 - x to x.
 """
 
 import math
@@ -35,8 +35,8 @@ def lsquare(p):
 
 
 def test_sub_of_zero_literal():
-    """sub(0, x) was folded to x, which turned the bounds built from massless
-    literal masses upside down."""
+    """sub(0, x) is -x and not x, which matters for bounds built from massless
+    literal masses."""
     fb = ms.FunctionBuilder(
         ms.NamedTypes([("x", ms.batch_float)]),
         ms.NamedTypes([("minus_x", ms.batch_float), ("x_minus_0", ms.batch_float)]),
@@ -46,7 +46,7 @@ def test_sub_of_zero_literal():
     fb.output(1, fb.sub(x, ms.Value(0.0)))
     runtime = ms.FunctionRuntime(fb.function(), default_context())
     values = torch.tensor([1.0, -2.0, 3.5])
-    minus_x, x_minus_0 = [torch.from_dlpack(t) for t in runtime.call([values])]
+    minus_x, x_minus_0 = (torch.from_dlpack(t) for t in runtime.call([values]))
     torch.testing.assert_close(minus_x, -values)
     torch.testing.assert_close(x_minus_0, values)
 
@@ -258,7 +258,7 @@ def test_cut_volume(order, options):
     "order", [[0, 2, 3, 1, 4, 5], [0, 2, 3, 4, 5, 1]], ids=["2+2", "chain"]
 )
 def test_round_trip_with_cuts(order):
-    """Forward and inverse agree with the new steps and the branch choice;
+    """Forward and inverse agree for the 2->3 steps and the branch choice;
     where only one solution passes, the inverse returns the one taken."""
     n = 200_000
     mapping = ms.ColorOrderedMapping(ms.ColorOrderedMapping.Options(order), **CUTS)

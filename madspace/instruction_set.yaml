@@ -27,7 +27,7 @@ stack_sizes:
   outputs:
     - name: sizes
       desc: "combined batch-size list, one entry per input"
-  desc: "Packs the batch sizes of several batch-size-list values into one list."
+  desc: "Combines several single-entry batch-size lists into one list, one entry per input."
   class: StackSizesInstruction
   custom_op: True
 
@@ -48,13 +48,13 @@ pop:
   outputs:
     - name: rest
       type: [float, n-1, ...]
-      desc: "the remaining n-1 slices"
+      desc: "the first n-1 slices"
     - name: item
       type: [float, ...]
-      desc: "the first slice"
+      desc: "the last slice"
   custom_op: True
   differentiable: True
-  desc: "Splits off the first slice along the dimension after the batch dimension."
+  desc: "Splits off the last slice along the dimension after the batch dimension."
 
 batch_cat:
   inputs: any
@@ -84,8 +84,8 @@ cat:
   inputs: any
   outputs:
     - name: out
-      desc: "concatenation along the last dimension"
-  desc: "Concatenates several tensors along their last dimension."
+      desc: "concatenation along the dimension after the batch dimension"
+  desc: "Concatenates several tensors along the dimension after the batch dimension."
   class: CatInstruction
   custom_op: True
   differentiable: True
@@ -110,7 +110,7 @@ offset_indices:
       desc: "integer offset per output element"
   class: OffsetIndicesInstruction
   custom_op: True
-  desc: "Builds flat offsets into a concatenated batch from two batch-size lists."
+  desc: "Builds an integer tensor of total length sum(batch_sizes_out). Entries of group k hold the sum of the first k entries of batch_sizes_offset."
 
 full:
   inputs: any
@@ -124,14 +124,14 @@ full:
 squeeze:
   inputs:
     - name: input
-      desc: "tensor with at least one trailing dimension"
+      desc: "tensor with shape (batch, 1, ...)"
   outputs:
     - name: output
-      desc: "tensor with that dimension removed"
+      desc: "tensor with shape (batch, ...)"
   class: SqueezeInstruction
   custom_op: True
   differentiable: True
-  desc: "Removes the first trailing dimension of a tensor."
+  desc: "Removes the dimension after the batch dimension by taking its first entry (normally of size 1)."
 
 unsqueeze:
   inputs:
@@ -139,7 +139,7 @@ unsqueeze:
       desc: "input tensor"
   outputs:
     - name: output
-      desc: "tensor with a leading size-1 trailing dimension"
+      desc: "tensor with an added size-1 dimension after the batch dimension"
   class: UnsqueezeInstruction
   custom_op: True
   differentiable: True
@@ -156,7 +156,7 @@ accept_norm:
       desc: "ratio of full to accepted batch size"
   class: AcceptNormInstruction
   custom_op: True
-  desc: "Normalization factor relating an accepted sub-batch to the full batch."
+  desc: "Ratio of the full batch size to the accepted batch size, as a float scalar."
 
 batch_split_by_index:
   inputs:
@@ -418,7 +418,7 @@ obs_sqrt_s:
     - name: obs
       type: [float]
       desc: "center-of-mass energy"
-  desc: "Invariant mass of the sum of all external momenta. See @ref Observable."
+  desc: "Invariant mass of the sum of the first two external momenta (the incoming particles). See @ref Observable."
 
 obs_e:
   inputs:
@@ -524,7 +524,7 @@ obs_theta:
   outputs:
     - name: obs
       type: [float, ...]
-      desc: "polar angle"
+      desc: "polar angle in [0, pi]"
   dims: 0
   desc: "Polar angle of a four-momentum. See @ref Observable."
 
@@ -562,7 +562,7 @@ obs_eta:
       type: [float, ...]
       desc: "pseudorapidity"
   dims: 0
-  desc: "Pseudorapidity of a four-momentum. See @ref Observable."
+  desc: "Pseudorapidity of a four-momentum; 99 if the momentum is (nearly) zero. See @ref Observable."
 
 obs_eta_abs:
   inputs:
@@ -574,7 +574,7 @@ obs_eta_abs:
       type: [float, ...]
       desc: "absolute pseudorapidity"
   dims: 0
-  desc: "Absolute pseudorapidity of a four-momentum. See @ref Observable."
+  desc: "Absolute pseudorapidity of a four-momentum; 99 if the momentum is (nearly) zero. See @ref Observable."
 
 obs_delta_eta:
   inputs:
@@ -589,7 +589,7 @@ obs_delta_eta:
       type: [float, ...]
       desc: "pseudorapidity difference"
   dims: 0
-  desc: "Pseudorapidity difference between two four-momenta. See @ref Observable."
+  desc: "Signed pseudorapidity difference eta(p1) - eta(p2). See @ref Observable."
 
 obs_delta_phi:
   inputs:
@@ -604,7 +604,7 @@ obs_delta_phi:
       type: [float, ...]
       desc: "azimuthal angle difference"
   dims: 0
-  desc: "Azimuthal angle difference between two four-momenta. See @ref Observable."
+  desc: "Azimuthal angle difference phi(p1) - phi(p2), wrapped to [-pi, pi). See @ref Observable."
 
 obs_delta_r:
   inputs:
@@ -809,7 +809,7 @@ diff_cross_section:
     - name: result
       type: [float]
       desc: "differential cross section"
-  desc: "Assembles the differential cross section from PDFs, the matrix element and the flux factor. See @ref DifferentialCrossSection."
+  desc: "Differential cross section in pb: matrix_element * pdf1 * pdf2 / (2 e_cm2 x1^2 x2^2), with the unit conversion from GeV^-2. See @ref DifferentialCrossSection."
 
 two_body_decay_com:
   inputs:
@@ -1546,6 +1546,32 @@ t_inv_value_and_min_max:
       desc: "upper limit of the momentum transfer"
   desc: "Momentum transfer and its kinematic limits for a given final state. Building block of @ref TwoToTwoParticleScattering."
 
+t_inv_value:
+  inputs:
+    - name: pa
+      type: [float, 4]
+      desc: "first incoming momentum"
+    - name: pb
+      type: [float, 4]
+      desc: "second incoming momentum"
+    - name: p1
+      type: [float, 4]
+      desc: "first outgoing momentum"
+    - name: p2
+      type: [float, 4]
+      desc: "second outgoing momentum"
+    - name: m1
+      type: [float]
+      desc: "mass of the first outgoing particle"
+    - name: m2
+      type: [float]
+      desc: "mass of the second outgoing particle"
+  outputs:
+    - name: t_abs
+      type: [float]
+      desc: "absolute value of the momentum transfer"
+  desc: "Momentum transfer |t| = |(pa - p1)^2| = |(pb - p2)^2| of a given final state with the masses of the outgoing particles given, from the light-cone components of the pair of an incoming and an outgoing momentum with the smaller masses, so that nothing of order E^2 cancels near the collinear limit. Building block of @ref TwoToTwoParticleScattering."
+
 t_inv_min_max_cut:
   inputs:
     - name: pa
@@ -2116,12 +2142,12 @@ invariants_from_momenta:
       desc: "external four-momenta"
     - name: factors
       type: [float, single, m, n]
-      desc: "coefficient matrix selecting the invariant combinations"
+      desc: "coefficient matrix, one row of per-particle coefficients for each invariant"
   outputs:
     - name: invariants
       type: [float, m]
-      desc: "the requested invariant combinations"
-  desc: "Linear combinations of the pairwise invariants built from the external momenta. Building block of @ref PropagatorChannelWeights."
+      desc: "squared invariant mass of the coefficient-weighted sum of external momenta, one per row"
+  desc: "For each row of factors, the Minkowski square of the sum of the external momenta weighted by that row. Building block of @ref PropagatorChannelWeights."
 
 sde2_channel_weights:
   inputs:
@@ -2136,12 +2162,12 @@ sde2_channel_weights:
       desc: "propagator widths per channel"
     - name: indices
       type: [int, single, c, n]
-      desc: "invariant index feeding each propagator"
+      desc: "index into invariants for each propagator, -1 for an unused slot"
   outputs:
     - name: channel_weights
       type: [float, c]
       desc: "normalized weight per channel"
-  desc: "Single-diagram-enhanced channel weights from propagator invariants. Building block of @ref PropagatorChannelWeights."
+  desc: "Channel weights proportional to the inverse product of Breit-Wigner denominators (s - m^2)^2 + (m w)^2 over each channel's propagators, normalized to sum to one. Building block of @ref PropagatorChannelWeights."
 
 subchannel_weights:
   inputs:
@@ -2156,18 +2182,18 @@ subchannel_weights:
       desc: "propagator widths per channel"
     - name: indices
       type: [int, single, c, n]
-      desc: "invariant index feeding each propagator"
+      desc: "index into invariants for each propagator, -1 for an unused slot"
     - name: on_shell
       type: [int, single, c, n]
-      desc: "flag marking on-shell propagators per channel"
+      desc: "flag marking on-shell propagators per channel (0: propagator is ignored)"
     - name: group_sizes
       type: [int, single, g]
       desc: "number of subchannels in each channel group"
   outputs:
     - name: channel_weights
       type: [float, c]
-      desc: "normalized weight per subchannel"
-  desc: "Channel weights refined into subchannel weights using on-shell information. Building block of @ref SubchannelWeights."
+      desc: "weight per subchannel, normalized to sum to one within each group"
+  desc: "Subchannel weights from the product over flagged propagators of (m^4 + (m w)^2) / ((s - m^2)^2 + (m w)^2), normalized within each group of subchannels. Building block of @ref SubchannelWeights."
 
 apply_subchannel_weights:
   inputs:
@@ -2187,27 +2213,27 @@ apply_subchannel_weights:
     - name: channel_weights_out
       type: [float, d]
       desc: "weight per diagram"
-  desc: "Combines channel and subchannel weights into a per-diagram weight. Building block of @ref SubchannelWeights."
+  desc: "Per-diagram weight: the channel weight times the subchannel weight, with a subchannel index of -1 meaning a subchannel weight of 1. Building block of @ref SubchannelWeights."
 
 compress_channel_weights:
   inputs:
     - name: channel_index
       type: [int]
-      desc: "index of the current channel"
+      desc: "index of the current channel, always kept"
     - name: channel_weights
       type: [float, n]
       desc: "dense weight per channel"
     - name: keep_count
       type: [size, k]
-      desc: "number of channels to keep"
+      desc: "number of entries k to keep"
   outputs:
     - name: chan_weight_values
       type: [float, k]
-      desc: "the kept weights"
+      desc: "the kept weights; the weight of the current channel is last, unused slots are 0"
     - name: chan_weight_indices
       type: [int, k]
-      desc: "channel index of each kept weight"
-  desc: "Keeps only the largest channel weights, returning them as a sparse list. Building block of @ref PropagatorChannelWeights."
+      desc: "channel index of each kept weight, -1 for unused slots"
+  desc: "Keeps the weight of the current channel plus the k-1 largest other weights, returning them as a sparse list. Building block of @ref PropagatorChannelWeights."
 
 restore_channel_weights:
   inputs:
@@ -2224,7 +2250,7 @@ restore_channel_weights:
     - name: channel_weights
       type: [float, n]
       desc: "dense weight per channel"
-  desc: "Inverse of `compress_channel_weights`: expands the sparse weights back to a dense vector. Building block of @ref PropagatorChannelWeights."
+  desc: "Expands the sparse weights back to a dense vector, adds a floor of 1e-12 to every channel and renormalizes to sum one (inverse of `compress_channel_weights` up to that). Building block of @ref PropagatorChannelWeights."
 
 pt_eta_phi_x:
   inputs:
@@ -2240,8 +2266,8 @@ pt_eta_phi_x:
   outputs:
     - name: output
       type: [float, 3n+2]
-      desc: "flattened (pt, eta, phi) per final-state particle plus the two momentum fractions"
-  desc: "Converts external momenta to the transverse-momentum, pseudorapidity, azimuth and momentum-fraction parametrization. Building block of @ref ChiliMapping."
+      desc: "x1, x2, then (log pt, phi, eta) for each final-state particle"
+  desc: "Converts external momenta to the parametrization of the beam momentum fractions and per-particle log transverse momentum, azimuth and pseudorapidity. Building block of @ref ChiliMapping."
 
 mirror_momenta:
   inputs:
@@ -2250,12 +2276,12 @@ mirror_momenta:
       desc: "external four-momenta"
     - name: mirror
       type: [int]
-      desc: "per-event flag selecting whether to reflect"
+      desc: "per-event flag, 1 to mirror, 0 to leave unchanged"
   outputs:
     - name: p_mirror
       type: [float, n, 4]
-      desc: "the possibly reflected momenta"
-  desc: "Optionally reflects the momenta along the beam axis to symmetrize the final state."
+      desc: "the possibly mirrored momenta"
+  desc: "Flips the sign of the y and z components of all momenta if mirror is 1."
 
 momenta_to_x1x2:
   inputs:
@@ -2272,7 +2298,7 @@ momenta_to_x1x2:
     - name: x2
       type: [float]
       desc: "momentum fraction of beam 2"
-  desc: "Recovers the beam momentum fractions from a set of external momenta."
+  desc: "Beam momentum fractions x1 = 2 E_1 / e_cm and x2 = 2 E_2 / e_cm from the energies of the first two (incoming) momenta."
 
 boost_to_frame:
   inputs:
@@ -2286,7 +2312,7 @@ boost_to_frame:
     - name: p_frame
       type: [float, n, 4]
       desc: "all momenta boosted into that rest frame"
-  desc: "Boosts the external momenta into the rest frame of the selected particles, the frame the run card's me_frame asks the matrix element to be evaluated in; a single selected particle comes out exactly at rest. See @ref MatrixElement."
+  desc: "Boosts the external momenta into the rest frame of the selected particles, the frame the run card's me_frame asks the matrix element to be evaluated in; a single selected particle comes out exactly at rest. If no particle is selected the momenta are passed through unchanged. See @ref MatrixElement."
 
 boost_to_zero_rapidity:
   inputs:
@@ -2323,8 +2349,8 @@ uniform_invariant:
       desc: "sampled invariant"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
-  desc: "Samples a propagator invariant flat in s. Building block of @ref Invariant."
+      desc: "Jacobian ds/dr"
+  desc: "Samples a propagator invariant uniformly in [s_min, s_max]. Building block of @ref Invariant."
 
 uniform_invariant_inverse:
   inputs:
@@ -2343,7 +2369,7 @@ uniform_invariant_inverse:
       desc: "random number in [0, 1]"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian dr/ds"
   desc: "Inverse of `uniform_invariant`. Building block of @ref Invariant."
 
 breit_wigner_invariant:
@@ -2369,7 +2395,7 @@ breit_wigner_invariant:
       desc: "sampled invariant"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian ds/dr"
   desc: "Samples a propagator invariant with a Breit-Wigner density around the pole mass. Building block of @ref Invariant."
 
 breit_wigner_invariant_inverse:
@@ -2395,7 +2421,7 @@ breit_wigner_invariant_inverse:
       desc: "random number in [0, 1]"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian dr/ds"
   desc: "Inverse of `breit_wigner_invariant`. Building block of @ref Invariant."
 
 flat_window_breit_wigner_invariant:
@@ -2424,8 +2450,8 @@ flat_window_breit_wigner_invariant:
       desc: "sampled invariant"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
-  desc: "Samples a propagator invariant with a Breit-Wigner density whose peak is flattened to a constant inside |sqrt(s) - mass| < window * width (the $-excluded region). Building block of @ref Invariant."
+      desc: "Jacobian ds/dr"
+  desc: "Samples a propagator invariant with a Breit-Wigner density whose peak is flattened to a constant (the mean of its two edge values) inside |sqrt(s) - mass| < window * width (the $-excluded region). Building block of @ref Invariant."
 
 flat_window_breit_wigner_invariant_inverse:
   inputs:
@@ -2453,7 +2479,7 @@ flat_window_breit_wigner_invariant_inverse:
       desc: "random number in [0, 1]"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian dr/ds"
   desc: "Inverse of `flat_window_breit_wigner_invariant`. Building block of @ref Invariant."
 
 stable_invariant:
@@ -2476,8 +2502,8 @@ stable_invariant:
       desc: "sampled invariant"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
-  desc: "Samples a propagator invariant with a 1/s power law around a stable pole. Building block of @ref Invariant."
+      desc: "Jacobian ds/dr"
+  desc: "Samples a propagator invariant with a 1/(s - m^2 + 0.01) density, the pole shifted slightly below m^2. Building block of @ref Invariant."
 
 stable_invariant_inverse:
   inputs:
@@ -2499,7 +2525,7 @@ stable_invariant_inverse:
       desc: "random number in [0, 1]"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian dr/ds"
   desc: "Inverse of `stable_invariant`. Building block of @ref Invariant."
 
 stable_invariant_nu:
@@ -2525,8 +2551,8 @@ stable_invariant_nu:
       desc: "sampled invariant"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
-  desc: "Samples a propagator invariant with a tunable 1/s^nu power law. Building block of @ref Invariant."
+      desc: "Jacobian ds/dr"
+  desc: "Samples a propagator invariant with a (s - m^2 + 0.01)^-nu density, the pole shifted slightly below m^2. Building block of @ref Invariant."
 
 stable_invariant_nu_inverse:
   inputs:
@@ -2551,7 +2577,7 @@ stable_invariant_nu_inverse:
       desc: "random number in [0, 1]"
     - name: gs
       type: [float]
-      desc: "sampling density at s"
+      desc: "Jacobian dr/ds"
   desc: "Inverse of `stable_invariant_nu`. Building block of @ref Invariant."
 
 ---
@@ -2701,7 +2727,7 @@ cut_unphysical:
     - name: w_out
       type: [float]
       desc: "weight, set to zero for unphysical events"
-  desc: "Zeroes the weight of events with unphysical momenta or momentum fractions. See @ref Cuts."
+  desc: "Zeroes the weight of events with NaN weight or momenta, or with a momentum fraction outside [0, 1]. See @ref Cuts."
 
 cut_one:
   inputs:
@@ -2717,8 +2743,8 @@ cut_one:
   outputs:
     - name: w
       type: [float]
-      desc: "weight, zero when the observable is outside [min, max]"
-  desc: "Zeroes the weight when a single observable falls outside its window. See @ref Cuts."
+      desc: "1 if the observable is inside [min, max], 0 otherwise"
+  desc: "Cut indicator for a single observable: 1 inside the window, 0 outside. See @ref Cuts."
 
 cut_all:
   inputs:
@@ -2734,8 +2760,8 @@ cut_all:
   outputs:
     - name: w
       type: [float]
-      desc: "weight, zero unless all observables are in [min, max]"
-  desc: "Zeroes the weight unless every observable in the vector is inside its window. See @ref Cuts."
+      desc: "1 if all observables are in [min, max], 0 otherwise"
+  desc: "Cut indicator: 1 only if every observable in the vector is inside the window, 0 otherwise. See @ref Cuts."
 
 cut_any:
   inputs:
@@ -2751,8 +2777,8 @@ cut_any:
   outputs:
     - name: w
       type: [float]
-      desc: "weight, zero unless some observable is in [min, max]"
-  desc: "Zeroes the weight unless at least one observable in the vector is inside its window. See @ref Cuts."
+      desc: "1 if at least one observable is in [min, max], 0 otherwise"
+  desc: "Cut indicator: 1 if at least one observable in the vector is inside the window, 0 otherwise. See @ref Cuts."
 
 ---
 title: Energy scale
@@ -2761,45 +2787,45 @@ scale_transverse_energy:
   inputs:
     - name: momenta
       type: [float, n, 4]
-      desc: "final-state momenta"
+      desc: "external momenta, the two incoming ones first"
   outputs:
     - name: scale
       type: [float]
       desc: "the energy scale"
-  desc: "Dynamical scale set to the summed transverse energy of the final state. See @ref EnergyScale."
+  desc: "Dynamical scale set to the sum of E sin(theta) over the final-state particles (momenta from index 2 on). See @ref EnergyScale."
 
 scale_transverse_mass:
   inputs:
     - name: momenta
       type: [float, n, 4]
-      desc: "final-state momenta"
+      desc: "external momenta, the two incoming ones first"
   outputs:
     - name: scale
       type: [float]
       desc: "the energy scale"
-  desc: "Dynamical scale set to the summed transverse mass of the final state. See @ref EnergyScale."
+  desc: "Dynamical scale set to the sum of sqrt(E^2 - pz^2) over the final-state particles (momenta from index 2 on). See @ref EnergyScale."
 
 scale_half_transverse_mass:
   inputs:
     - name: momenta
       type: [float, n, 4]
-      desc: "final-state momenta"
+      desc: "external momenta, the two incoming ones first"
   outputs:
     - name: scale
       type: [float]
       desc: "the energy scale"
-  desc: "Dynamical scale set to half the summed transverse mass of the final state. See @ref EnergyScale."
+  desc: "Dynamical scale set to half the sum of sqrt(E^2 - pz^2) over the final-state particles (momenta from index 2 on). See @ref EnergyScale."
 
 scale_partonic_energy:
   inputs:
     - name: momenta
       type: [float, n, 4]
-      desc: "final-state momenta"
+      desc: "external momenta, the two incoming ones first"
   outputs:
     - name: scale
       type: [float]
       desc: "the energy scale"
-  desc: "Dynamical scale set to the partonic center-of-mass energy. See @ref EnergyScale."
+  desc: "Dynamical scale set to sqrt(E^2 - pz^2) of the sum of the first two (incoming) momenta. See @ref EnergyScale."
 
 mlm_clustering_hadronic:
   inputs:
@@ -3063,7 +3089,7 @@ chili_forward:
       desc: "mass of each final-state particle"
     - name: pt_min
       type: [float, single, n]
-      desc: "minimum transverse momentum per final-state particle"
+      desc: "minimum transverse momentum per final-state particle (the last entry is not used)"
     - name: y_max
       type: [float, single, n]
       desc: "maximum rapidity per final-state particle"
@@ -3089,7 +3115,7 @@ chili_inverse:
       desc: "mass of each final-state particle"
     - name: pt_min
       type: [float, single, n]
-      desc: "minimum transverse momentum per final-state particle"
+      desc: "minimum transverse momentum per final-state particle (the last entry is not used)"
     - name: y_max
       type: [float, single, n]
       desc: "maximum rapidity per final-state particle"
@@ -3141,7 +3167,7 @@ density_channel_weights:
     - name: channel_weights
       type: [float, n]
       desc: "weight per channel"
-  desc: "Normalised channel weights proportional to the masked channel densities, uniform over the masked channels if none is positive. Building block of @ref MappingChannelWeights."
+  desc: "Normalised channel weights proportional to the masked channel densities, uniform over the masked channels if no masked density is a finite positive number. Building block of @ref MappingChannelWeights."
 
 interpolate_pdf:
   inputs:
@@ -3440,7 +3466,7 @@ leaky_relu:
       desc: "activated tensor"
   dims: 0
   differentiable: True
-  desc: "Element-wise leaky ReLU activation. Building block of @ref MLP."
+  desc: "Element-wise leaky ReLU activation with negative slope 0.01. Building block of @ref MLP."
 
 elu:
   precision: [float32, float64]
@@ -3454,7 +3480,7 @@ elu:
       desc: "activated tensor"
   dims: 0
   differentiable: True
-  desc: "Element-wise ELU activation. Building block of @ref MLP."
+  desc: "Element-wise ELU activation, x for x >= 0 and exp(x) - 1 otherwise. Building block of @ref MLP."
 
 gelu:
   precision: [float32, float64]
@@ -3468,7 +3494,7 @@ gelu:
       desc: "activated tensor"
   dims: 0
   differentiable: True
-  desc: "Element-wise GELU activation. Building block of @ref MLP."
+  desc: "Element-wise GELU activation, x Phi(x) with the exact Gaussian CDF. Building block of @ref MLP."
 
 sigmoid:
   precision: [float32, float64]
@@ -3498,7 +3524,7 @@ scaled_tanh:
       desc: "activated tensor"
   dims: 0
   differentiable: True
-  desc: "Element-wise scaled hyperbolic tangent activation. Building block of @ref MLP."
+  desc: "Element-wise scaled hyperbolic tangent activation, 4 tanh(x / 4). Building block of @ref MLP."
 
 softplus:
   precision: [float32, float64]
@@ -3512,25 +3538,25 @@ softplus:
       desc: "activated tensor"
   dims: 0
   differentiable: True
-  desc: "Element-wise softplus activation. Building block of @ref MLP."
+  desc: "Element-wise softplus activation, log(1 + exp(x)). Building block of @ref MLP."
 
 rqs_reshape:
   inputs:
     - name: input
-      desc: "raw spline parameters from the subnetwork"
+      desc: "raw network output with dim * (3 * bin_count + 1) values per event"
     - name: bin_count
       desc: "number of spline bins"
   outputs:
     - name: widths
-      desc: "normalized bin widths"
+      desc: "unnormalized bin widths, shape (batch, dim, bin_count)"
     - name: heights
-      desc: "normalized bin heights"
+      desc: "unnormalized bin heights, shape (batch, dim, bin_count)"
     - name: derivatives
-      desc: "knot derivatives"
+      desc: "unnormalized knot derivatives, shape (batch, dim, bin_count + 1)"
   class: RqsReshapeInstruction
   differentiable: True
   custom_op: True
-  desc: "Reshapes raw network outputs into rational-quadratic-spline bin widths, heights and derivatives. Building block of @ref Flow."
+  desc: "Splits raw network outputs per dimension into rational-quadratic-spline bin widths, heights and knot derivatives (no normalization applied). Building block of @ref Flow."
 
 rqs_find_bin:
   inputs:
@@ -3539,20 +3565,20 @@ rqs_find_bin:
       desc: "values to be transformed"
     - name: in_sizes
       type: [float, n, b]
-      desc: "cumulative input-side bin sizes"
+      desc: "relative input-side bin sizes (not cumulative)"
     - name: out_sizes
       type: [float, n, b]
-      desc: "cumulative output-side bin sizes"
+      desc: "relative output-side bin sizes (not cumulative)"
     - name: derivatives
       type: [float, n, b+1]
-      desc: "knot derivatives"
+      desc: "unnormalized knot derivatives"
   outputs:
     - name: condition
       type: [float, n, 6]
-      desc: "packed spline parameters for the active bin"
+      desc: "(width, height, cumulative width, cumulative height, left and right unnormalized derivative) of the active bin"
   differentiable: True
   dims: 2
-  desc: "Builds the per-element spline condition by locating the active bin. Building block of @ref Flow."
+  desc: "Locates the bin containing each input in [0, 1] and packs its spline parameters; the input is clamped to [0, 1] for the lookup. Building block of @ref Flow."
 
 rqs_forward:
   inputs:
@@ -3571,7 +3597,7 @@ rqs_forward:
       desc: "per-element Jacobian"
   differentiable: True
   dims: 2
-  desc: "Applies a rational-quadratic spline in the forward direction. Building block of @ref Flow."
+  desc: "Applies the rational-quadratic spline in the forward direction; inputs outside [0, 1] are passed through with Jacobian 1. Building block of @ref Flow."
 
 rqs_inverse:
   inputs:
@@ -3590,7 +3616,7 @@ rqs_inverse:
       desc: "per-element Jacobian"
   differentiable: True
   dims: 2
-  desc: "Applies a rational-quadratic spline in the inverse direction. Building block of @ref Flow."
+  desc: "Applies the rational-quadratic spline in the inverse direction; inputs outside [0, 1] are passed through with Jacobian 1. Building block of @ref Flow."
 
 rqs_forward_with_float32:
   inputs:
@@ -3666,7 +3692,7 @@ softmax_prior:
       desc: "normalized probabilities"
       backward_arg: True
   differentiable: True
-  desc: "Softmax over the last dimension reweighted by a prior. Building block of @ref DiscreteSampler."
+  desc: "Softmax over the last dimension with each exp(input) multiplied by the prior before normalization. Building block of @ref DiscreteSampler."
 
 ---
 title: Discrete sampling
@@ -3682,10 +3708,10 @@ sample_discrete:
   outputs:
     - name: output
       type: [int]
-      desc: "sampled index"
+      desc: "sampled index, floor(r * option_count)"
     - name: det
       type: [float]
-      desc: "probability of the sampled index"
+      desc: "inverse probability of the sampled index, i.e. option_count"
   desc: "Samples a uniform discrete choice from a random number. Building block of @ref DiscreteSampler."
 
 sample_discrete_inverse:
@@ -3702,8 +3728,8 @@ sample_discrete_inverse:
       desc: "random number in [0, 1]"
     - name: det
       type: [float]
-      desc: "probability of the index"
-  desc: "Inverse of `sample_discrete`. Building block of @ref DiscreteSampler."
+      desc: "probability of the index, 1 / option_count"
+  desc: "Inverse of `sample_discrete`; r is the midpoint of the interval belonging to the index. Building block of @ref DiscreteSampler."
 
 sample_discrete_probs:
   inputs:
@@ -3716,11 +3742,11 @@ sample_discrete_probs:
   outputs:
     - name: output
       type: [int]
-      desc: "sampled index"
+      desc: "sampled index; choices with zero probability are never sampled"
     - name: det
       type: [float]
-      desc: "probability of the sampled index"
-  desc: "Samples a discrete choice from a given probability vector. Building block of @ref DiscreteFlow."
+      desc: "inverse probability of the sampled index"
+  desc: "Samples a discrete choice from a probability vector (normalized internally). Building block of @ref DiscreteFlow."
 
 sample_discrete_probs_inverse:
   inputs:
@@ -3738,7 +3764,7 @@ sample_discrete_probs_inverse:
       type: [float]
       desc: "probability of the index"
   differentiable: True
-  desc: "Inverse of `sample_discrete_probs`. Building block of @ref DiscreteFlow."
+  desc: "Inverse of `sample_discrete_probs`; r is the midpoint of the interval belonging to the index. Building block of @ref DiscreteFlow."
 
 discrete_histogram:
   inputs:
@@ -3912,9 +3938,9 @@ quantile:
   outputs:
     - name: output
       type: [float, single]
-      desc: "the estimated quantile"
+      desc: "the value at position floor(q * batch size), clamped to the last, in the sorted batch; 0 for an empty batch"
   custom_op: True
-  desc: "Estimates a quantile of a value over the batch."
+  desc: "Empirical quantile of a value over the batch, read off the sorted values."
 
 one_hot:
   inputs:
@@ -3941,9 +3967,9 @@ madnis_abs_weight:
   outputs:
     - name: w
       type: [float]
-      desc: "absolute weight f / q"
+      desc: "absolute weight |f| / q"
   differentiable: True
-  desc: "Absolute integrand contribution used by the MadNIS loss. Building block of @ref MadnisLoss."
+  desc: "Absolute weight |f| / q used by the MadNIS loss. Building block of @ref MadnisLoss."
 
 madnis_softclip:
   inputs:
@@ -3964,7 +3990,7 @@ madnis_softclip:
       type: [float]
       desc: "softly clipped integrand"
   differentiable: True
-  desc: "Softly clips the integrand to limit large weights during training. Building block of @ref MadnisLoss."
+  desc: "Softly clips the integrand to c asinh(f / c) with c = q * norm * threshold, limiting large weights during training. Building block of @ref MadnisLoss."
 
 madnis_variance:
   inputs:
@@ -3983,9 +4009,9 @@ madnis_variance:
   outputs:
     - name: w
       type: [float]
-      desc: "per-event variance contribution"
+      desc: "per-event variance contribution g (f / g - mean)^2 / q"
   differentiable: True
-  desc: "Per-event contribution to the variance loss. Building block of @ref MadnisLoss."
+  desc: "Per-event contribution g (f / g - mean)^2 / q to the variance loss. Building block of @ref MadnisLoss."
 
 madnis_single_channel_variance:
   inputs:
@@ -4001,7 +4027,7 @@ madnis_single_channel_variance:
       type: [float]
       desc: "the variance loss"
   differentiable: True
-  desc: "Single-channel variance loss from its running moments. Building block of @ref MadnisLoss."
+  desc: "Single-channel variance loss var / abs_mean^2. Building block of @ref MadnisLoss."
 
 madnis_multi_channel_variance:
   inputs:
@@ -4016,7 +4042,7 @@ madnis_multi_channel_variance:
       type: [float]
       desc: "the variance loss"
   differentiable: True
-  desc: "Multi-channel variance loss summed over channels. Building block of @ref MadnisLoss."
+  desc: "Multi-channel variance loss (sum_c sqrt(var_c) / sum_c abs_mean_c)^2. Building block of @ref MadnisLoss."
 
 ---
 title: Indexing
@@ -4099,10 +4125,10 @@ unweight:
     - name: indices
       desc: "batch indices of the accepted events"
     - name: uw_weights
-      desc: "residual weights of the accepted events"
+      desc: "weights of the accepted events, max(|w|, max_weight) with the sign of w"
   class: UnweightInstruction
   custom_op: True
-  desc: "Accept/reject unweighting against a maximum weight. See @ref Unweighter."
+  desc: "Accept/reject unweighting: an event is accepted with probability |w| / max_weight. See @ref Unweighter."
 
 ---
 title: VEGAS
@@ -4157,12 +4183,12 @@ vegas_histogram:
   outputs:
     - name: values
       type: [float, single, n, b]
-      desc: "summed weight per bin and dimension"
+      desc: "summed squared weight per bin and dimension"
     - name: counts
       type: [int, single, n, b]
       desc: "event count per bin and dimension"
   custom_op: True
-  desc: "Accumulates the weighted histograms VEGAS uses to refine its grid. Building block of @ref VegasHistogram."
+  desc: "Accumulates, per dimension, the squared weights and event counts in equal-width bins of the unit interval, as used to refine the VEGAS grid. Points outside [0, 1) are skipped. Building block of @ref VegasHistogram."
 
 histogram:
   inputs:
@@ -4184,9 +4210,9 @@ histogram:
   outputs:
     - name: values
       type: [float, single, b+2]
-      desc: "summed weight per bin, with underflow and overflow"
+      desc: "summed weight per bin; first entry is underflow, last is overflow"
     - name: square_values
       type: [float, single, b+2]
       desc: "summed squared weight per bin, for the statistical error"
   custom_op: True
-  desc: "Accumulates a weighted histogram with underflow and overflow bins. See @ref Histogram."
+  desc: "Accumulates a weighted histogram over equal-width bins between min and max, with underflow and overflow bins. See @ref Histogram."

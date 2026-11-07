@@ -10,8 +10,8 @@ namespace madspace {
 /**
  * Rate-limited JSON status file, merged from possibly multiple sources.
  *
- * Lets several parts of a run (or several processes) report progress into
- * the same file without flooding the disk: @ref write merges its argument
+ * Lets several parts of a run report progress into the same file without
+ * flooding the disk: @ref write merges its argument
  * into the accumulated content and only actually rewrites the file at most
  * every @p min_interval_sec, unless forced.
  */

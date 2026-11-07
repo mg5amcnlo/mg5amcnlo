@@ -3,9 +3,9 @@
 In color_ordered mode PhaseSpaceMapping reorders the pairwise invariant-mass
 and delta-R cut matrices of Cuts (indexed by outgoing position) into the order
 of the t-channel children and passes them to ColorOrderedMapping, which turns
-them into floors on the invariants it samples. A stray extra increment in the
-loop building that reordering once skipped every odd child, so any pair cut
-involving the second, fourth, ... child silently never reached the mapping.
+them into floors on the invariants it samples. The tests guard against the
+reordering skipping every odd child, which would silently drop any pair cut
+involving the second, fourth, ... child.
 
 The process is e+ e- > d u s c: leptonic, so every random number goes straight
 to the t-channel mapping and PhaseSpaceMapping returns exactly the momenta of a
@@ -147,14 +147,11 @@ def test_pair_cut_reaches_color_ordered_mapping(
     no_pair = matrix([], 0.0)
     p_without = co_momenta(order, pt_min, no_pair, no_pair, r, d)
 
-    # Near degenerate configurations the extra operations in
-    # PhaseSpaceMapping can be amplified past ATOL, so allow a few points.
+    # Near degenerate configurations rounding can exceed ATOL, so allow a few points.
     assert same_points(p_psm, p_with).double().mean() > 0.99
 
-    # Without the comparison below the test would pass for a cut that does
-    # not affect this topology at all, and prove nothing. A floor only moves
-    # the points where it lies above the kinematic one: all of them for the
-    # pair masses here, about half for the delta-R cut.
+    # Guards against a cut that does not affect this topology at all; a floor
+    # only moves points where it lies above the kinematic bound.
     assert same_points(p_with, p_without).double().mean() < 0.9
 
 

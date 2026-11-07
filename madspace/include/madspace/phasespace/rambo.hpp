@@ -51,7 +51,7 @@ namespace madspace {
  * - `momentum_i` – `float`, shape `(batch, 4)` – the `n_particles` final-state
  *   four-momenta.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**

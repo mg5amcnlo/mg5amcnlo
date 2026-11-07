@@ -375,8 +375,7 @@ ColorOrderedMapping::ColorOrderedMapping(
             for (std::size_t i = 0; i < total; ++i) {
                 input_types.push_back(std::format("random{}", i), batch_float);
             }
-            // Opt-in discrete channel: one int per 2->3 peel (the two-solution
-            // choice), appended after the continuous randoms.
+            // One int per 2->3 step (the two-solution choice), after the randoms.
             for (std::size_t j = 0; j < n_discrete; ++j) {
                 input_types.push_back(std::format("discrete{}", j), batch_int);
             }
@@ -673,13 +672,10 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
     Value R_b_for_set1 = fb.sub(pb, P_set2);
     Value R_b_for_set2 = fb.sub(pa, P_set1);
 
-    // Phase 1b: pre-sample intermediate rest masses for each walk.
-    // For each step j in 0..k-3 (last is the residual mass(s[k-1])):
-    //   m_min = sum masses [set[j+1]..set[k-1]]
-    //   m_max = m_rest_j - mass[set[j]],  m_rest_0 = m_set
-    // Sampling from [m_min, m_set - sum_peeled] independently would
-    // over-count by (k-2)! by ignoring the monotonic ordering.
-    // Sampled after the central block: DoubleT only fixes m_set then.
+    // Phase 1b: intermediate rest masses of each walk, for steps j in 0..k-3.
+    // Each is bounded by the previous one (rest_mass_range), which avoids
+    // (k-2)! over-counting. Sampled after the central block, since DoubleT
+    // only fixes m_set there.
     auto sample_intermediate_masses =
         [&](const std::vector<std::size_t>& s, Value m_set) -> ValueVec {
         std::size_t k = s.size();
@@ -768,8 +764,8 @@ Mapping::Result ColorOrderedMapping::build_forward_impl(
             Value im1, chain;
             bool first = true;
             for (std::size_t j = 0; j < k - 1; ++j) {
-                // New-rest mass: intermediate (rest_masses[j]) or final residual (j ==
-                // k-2).
+                // Rest mass after this peel: rest_masses[j], or the last particle's
+                // mass for j == k-2.
                 Value m_rest = (j < k - 2) ? rest_masses[j] : m_out.at(s.at(k - 1));
                 Value m_peel = m_out.at(s.at(j));
                 // Block convention: the first output is the chain (mass m_rest),
@@ -1068,8 +1064,8 @@ Mapping::Result ColorOrderedMapping::build_inverse_impl(
     Value R_b_for_set1 = fb.sub(pb, P_set2);
     Value R_b_for_set2 = fb.sub(pa, P_set1);
 
-    // Phase 3 inverse: peel-off walks (mirror the forward restructure: first peel
-    // projects the own-side beam R_a, 2->3 peels project beam_other = 3-i side).
+    // Phase 3 inverse: peel-off walks, mirroring the forward (first peel projects
+    // the own-side beam R_a, 2->3 peels project beam_other).
     auto walk_inverse =
         [&](const std::vector<std::size_t>& s,
             std::size_t k_other,

@@ -125,9 +125,7 @@ struct Variation {
     /// the nominal scales and PDF member).
     bool is_emission() const { return pdf_index == -1 && !is_scale() && alps != 1.; }
     /// Whether this is the nominal point (nominal scale and PDF member).
-    bool is_nominal() const {
-        return pdf_index == -1 && !is_scale() && !is_emission();
-    }
+    bool is_nominal() const { return pdf_index == -1 && !is_scale() && !is_emission(); }
 };
 
 /// The variations belonging to one PDF set, for computing an uncertainty band.
@@ -159,8 +157,8 @@ public:
     /**
      * @param config           The scale and PDF variations to compute.
      * @param subproc_args     Per-subprocess bookkeeping needed to reweight
-     *                         its events; indexed like the subprocess index
-     *                         passed to @ref compute.
+     *                         its events; indexed by the events'
+     *                         subprocess index.
      * @param nominal_pdf      The PDF the events were generated with;
      *                         `nullopt` for leptonic beams.
      * @param nominal_alpha_s  The `alpha_s` grid the events were generated
@@ -202,8 +200,8 @@ public:
     std::size_t weight_count() const { return _variations.size(); }
     /// LHEF `<weight>` ids, in the order of @ref variations.
     std::vector<int> weight_ids() const;
-    /// PDF members actually used (the nominal set's member 0 first, when it
-    /// is part of a group).
+    /// PDF members actually used: the configured ones minus those ignored
+    /// with a warning. The nominal member is not listed.
     const std::vector<PdfMemberSpec>& members() const { return _members; }
     /// Warnings emitted while building the variation list.
     const std::vector<std::string>& warnings() const { return _warnings; }
@@ -244,11 +242,11 @@ public:
      *
      * @param error_type     LHAPDF `ErrorType` (`replicas`, `hessian`, ...).
      * @param central        Central value; used when member `0` is absent
-     *                       from `member_values`.
+     *                       from `member_values` (not used for `replicas`).
      * @param member_values  `(member number, value)` pairs; member `0` is
      *                       the central member.
-     * @return `(central, up, down)`; `NaN` entries when they cannot be
-     *         computed.
+     * @return `(central, up, down)`; for `replicas` the first entry is the
+     *         replica mean. `NaN` entries when they cannot be computed.
      */
     static std::tuple<double, double, double> pdf_uncertainty(
         const std::string& error_type,

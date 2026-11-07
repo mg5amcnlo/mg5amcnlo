@@ -35,7 +35,7 @@ public:
         std::size_t dependency_count_backward;
         DummyAllocHints<false> output_alloc_hints;
         DummyAllocHints<true> input_grad_alloc_hints;
-        // inputs whose gradient is never used (literals, integer locals); the
+        // inputs whose gradient is never used (literals, integer intermediates); the
         // backward kernels write it to batch-sized scratch memory instead of a
         // broadcast gradient, see backward_batch_foreach
         std::vector<bool> discard_input_grad;

@@ -762,13 +762,10 @@ void SystematicsCalculator::compute(
 
     // per-event inputs
     struct EventInput {
-        // the scales of the MLM clustering vertices whose alpha_s is evaluated
-        // at their own scale rather than at mu_R (empty if none)
+        // scales of the MLM clustering vertices (empty if none)
         std::vector<double> vertex_scales;
-        // the MLM pdf reweighting ladder of each beam, as madevent books it
-        // for its systematics (pdfrwt): the beam parton at x_beam and its
-        // leading scale, then for every step the line's flavour, its momentum
-        // fraction before the step and the scale the step takes it to
+        // MLM pdf ladder of each beam (madevent's pdfrwt): the beam parton
+        // at its x and leading scale, then one entry per step
         struct LadderEntry {
             double x, q;
             me_int_t slot;
@@ -995,13 +992,11 @@ void SystematicsCalculator::compute(
         }
     }
 
-    // MLM pdf reweighting ladder, as madevent's systematics.py rebuilds it
-    // from the pdfrwt entries (q_0..q_N-1, x_0..x_N-1) of each beam:
+    // MLM pdf ladder as in madevent's systematics.py, per beam:
     //   f(x_N-1, k S) prod_i<N-1 f_i(x_i, Q_i) / f_i(x_i+1, Q_i),
     //   Q_i = min(alpsfact q_i, k S),
-    // S being the last entry's scale (mu_F where the ladder reaches it) or
-    // the alternative dynamical scale. A PDF member evaluates all of it. The
-    // nominal is rebuilt the same way, so the central point is exactly one.
+    // with S the last entry's scale or the dynamical scale. The nominal is
+    // rebuilt the same way, so the central point is exactly one.
     std::vector<std::size_t> ladder_events;
     for (std::size_t i = 0; use_pdf && i < count; ++i) {
         if (inputs[i].has_ladder) {
@@ -1081,7 +1076,7 @@ void SystematicsCalculator::compute(
         }
     }
 
-    // alpha_s part: the distinct (alpha_s grid, mur, dyn) combinations, one
+    // alpha_s part: the distinct (alpha_s grid, mur, dyn, alps) combinations, one
     // batched alpha_s call each; the matrix element is re-evaluated for the
     // events of the mixed-order subprocesses
     std::vector<AlphaSKey> keys;
@@ -1170,14 +1165,10 @@ void SystematicsCalculator::compute(
                 }
             }
         }
-        // MLM vertices, as madevent's systematics.py: the weight is
-        // alpha_s(mu_R)^(n - n_v) prod_v alpha_s(q_v), and a variation takes the
-        // n - n_v powers at k mu_R but every vertex at alpsfact q_v. The ratio
-        // above moved all n powers to k mu_R, so the vertices are taken back
-        // out of it and put in at their own scales:
+        // MLM vertices: the weight is alpha_s(mu_R)^(n - n_v) prod_v alpha_s(q_v),
+        // with vertices varied at alpsfact q_v. The ratio above moved all n
+        // powers to k mu_R, so the vertex factor is
         //   prod_v alpha'(alps q_v) / alpha(q_v) * (alpha(mu_R) / alpha'(k mu_R))^n_v
-        // which holds for the matrix element re-evaluation too, since that
-        // ratio is the same (alpha'(k mu_R) / alpha(mu_R))^n.
         if (has_vertices) {
             std::vector<double> vq;
             for (auto& in : inputs) {

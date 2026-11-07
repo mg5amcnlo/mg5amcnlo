@@ -168,7 +168,7 @@ def test_flow_float32_subnets(tmp_path, gen):
         )
         ctx.get_global(name.replace("f64", "f32")).torch()[:] = weights.float()
 
-    # outputs and gradients with respect to the input and the float32 weights
+    # outputs and gradients with respect to the input and the first weight
     r = _rand((N, 4), dtype=torch.float64, generator=gen)
     outputs, grads = {}, {}
     for dtype, flow in flows.items():
@@ -230,8 +230,8 @@ def test_structural_ops_backward_repeated_input(op, precision):
     """An input passed several times to one structural op gets every gradient.
 
     On the CPU each gradient add is a separate thread pool job, so adds into the
-    same gradient tensor used to race and lose updates now and then. The batch is
-    large and the input repeated many times so that racing adds overlap.
+    same gradient tensor could race and lose updates. The batch is large and the
+    input repeated many times so that racing adds overlap.
     """
     ms_dtype, torch_dtype, _ = DTYPES[precision]
     repeats = 16

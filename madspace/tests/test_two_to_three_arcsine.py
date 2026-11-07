@@ -72,7 +72,7 @@ def test_flat_weight_is_constant():
 
 @pytest.mark.parametrize("s_power", [0.8, 1.0])
 def test_weight_bounded_with_importance_sampling(s_power):
-    """With 1/s23^nu importance sampling the weight is no longer constant,
+    """With 1/s23^nu importance sampling the weight is not constant,
     but it must stay finite and bounded out to the edges of the range."""
     *_, det = block_weights(R_S23, arcsine=True, s_power=s_power)
     assert torch.all(torch.isfinite(det)) and torch.all(det > 0)
@@ -116,7 +116,7 @@ def test_round_trip_at_the_edges(s_power):
     """With the arcsine map the position in the s23 range is carried as u and
     1 - u in both directions, never through s23 itself, so r_s23 is recovered
     to the precision of the momenta also within 1e-12 of the edges, where
-    going through s23 left an absolute error of ~1e-8."""
+    going through s23 would lose absolute precision."""
     edge = 10.0 ** -torch.arange(6.0, 13.0)
     r_s23 = torch.cat([edge, 1.0 - edge])
     mapping, inputs, conditions, det = block_weights(

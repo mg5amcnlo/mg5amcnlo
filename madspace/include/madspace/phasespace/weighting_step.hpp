@@ -47,9 +47,10 @@ struct WeightingStep {
     double max_overweight_truncation = 0.01;
     /// Like @ref GeneratorConfig::freeze_max_weight_after, for this step.
     std::size_t freeze_max_weight_after = 10000;
-    /// Color, helicity or diagram index outputs that replace the values of the
-    /// earlier steps. Without, an index is taken from the first step whose
-    /// matrix element returns it.
+    /// Color, helicity or diagram index outputs that replace the values of
+    /// the integrand or earlier steps. Without, an index returned by the matrix
+    /// elements is only written if neither the integrand nor an earlier step
+    /// provides it.
     std::vector<MatrixElement::MatrixElementOutput> override_outputs;
 
     /// Whether the matrix elements return the ratio to the previous step

@@ -74,8 +74,7 @@ void op_matrix_element(
         );
         output_ptrs[i] = output.data();
         if (me_index == 0xBADCAFE) {
-            // flat dummy matrix element for testing purposes
-            // implemented at LUMI hackathon where the coffee was indeed terrible
+            // flat dummy matrix element for testing
             switch (output_keys[i]) {
             case UMAMI_OUT_MATRIX_ELEMENT:
             case UMAMI_OUT_MATRIX_ELEMENT_RATIO:
@@ -1786,9 +1785,8 @@ void op_histogram(
         thrust::device_pointer_cast(static_cast<double*>(square_weights_tmp.data()));
     auto square_values_ptr =
         thrust::device_pointer_cast(static_cast<double*>(square_values.data()));
-    // one sort of the bin indices, carrying the weights AND the squared weights along:
-    // sorting the indices again for the squared weights (as before) left these in the
-    // event order, so the squared weights of the wrong events were summed in each bin
+    // one sort of the bin indices carries weights and squared weights along, so both
+    // stay matched to the same events within each bin
     thrust::sort_by_key(
         policy,
         indices_ptr,
@@ -1923,8 +1921,8 @@ GpuRuntime::GpuRuntime(const Function& function_arg, ContextPtr context) :
     // check_error(cudaMemPoolSetAttribute(pool, cudaMemPoolAttrReleaseThreshold,
     // &thresh));
 
-    // MADSPACE_NO_FUSION disables the lowering of precision conversions, to compare
-    // the fused and the unfused instructions
+    // MADSPACE_NO_FUSION skips fuse_instructions (fusing conversions and activations
+    // into matmuls), to compare the fused and unfused instructions
     Function function = sort_breadth_first(
         std::getenv("MADSPACE_NO_FUSION")
             ? function_arg

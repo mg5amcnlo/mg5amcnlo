@@ -50,9 +50,8 @@ def test_block_gradient(inverse):
 
 
 def test_one_dimensional_flow_is_refused():
-    # a coupling block needs two non-empty halves: a 2 -> 1 phase space has a
-    # single random number, which used to leave a flow without any block and
-    # crash initialize_from_vegas with an IndexError
+    # a coupling block needs two non-empty halves, so a flow over a single random
+    # number (2 -> 1 phase space) would have no block at all
     for input_dim in [0, 1]:
         with pytest.raises(ValueError, match="at least 2"):
             ms.Flow(input_dim=input_dim)

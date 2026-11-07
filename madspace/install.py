@@ -40,10 +40,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 INSTALL_DIR = SCRIPT_DIR / "install"
 BUILD_DIR = SCRIPT_DIR / "build"
-# Deliberately outside both directories, so --clean resets the build without
-# also forgetting how the user wants madspace built. _LEGACY_SETTINGS_FILE is
-# where it used to live; still read so an existing installation keeps its
-# choices.
+# Outside both directories, so --clean resets the build without also forgetting
+# how the user wants madspace built. _LEGACY_SETTINGS_FILE is an older location,
+# still read so an existing installation keeps its choices.
 SETTINGS_FILE = SCRIPT_DIR / "install_settings.json"
 _LEGACY_SETTINGS_FILE = BUILD_DIR / "install_settings.json"
 
@@ -167,8 +166,8 @@ def ask_compile_options(
 
     *keys*, if given, restricts the menu to entries whose output_key is in
     it (used to split the compile-options prompt into a basic and an expert
-    stage). *show_expert_option* appends a pseudo entry ("_expert") used to
-    let the user opt into seeing the expert stage.
+    stage). *show_expert_option* appends a pseudo entry (output key "_expert")
+    that lets the user opt into the expert stage.
 
     *from_saved* controls the Enter hint wording.
     """
@@ -345,7 +344,7 @@ def resolve_gpu_arch(args: argparse.Namespace, saved: dict, backend: str) -> str
 # The source build (scikit-build-core) needs cmake >= 3.15 on PATH. When it is
 # missing (or too old) we fall back to a cmake installed through MadGraph's
 # HEPTools installer (`install cmake` in MG5), which lives next to this package
-# under <MG5>/HEPTools. An explicit MADGRAPH_CMAKE / CMAKE env var wins.
+# under <MG5>/HEPTools. A cmake on PATH that is recent enough is preferred.
 
 CMAKE_MIN_VERSION = (3, 15)
 
@@ -462,8 +461,7 @@ def set_build_parallelism(env: dict, jobs: int | None) -> dict:
     count comes entirely from the environment. With the Ninja generator that
     goes unnoticed (ninja parallelises on its own), but whenever ninja is
     missing scikit-build-core falls back to "Unix Makefiles", and make without
-    ``-j`` compiles one file at a time -- which is why a gcc/make build took
-    minutes while the ninja one did not.
+    ``-j`` compiles one file at a time.
 
     ``CMAKE_BUILD_PARALLEL_LEVEL`` is read by ``cmake --build`` itself, so it
     works for either generator, and being an environment variable it is also
@@ -494,9 +492,9 @@ def run(cmd: list, env: dict | None = None) -> None:
 def install_build_deps(system: bool = False) -> dict:
     """Install build-system dependencies and return an updated env.
 
-    Reads the list from pyproject.toml's [build-system] requires, which now
-    also includes pyyaml and pybind11-stubgen for the CMake-driven code
-    generation (see CMakeLists.txt).
+    Reads the list from pyproject.toml's [build-system] requires, which includes
+    pyyaml and pybind11-stubgen for the CMake-driven code generation (see
+    CMakeLists.txt).
 
     When *system* is False (default) deps are installed into INSTALL_DIR and
     PYTHONPATH is set so the subsequent pip invocation picks them up.
@@ -634,7 +632,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--bin",
         action="store_true",
         default=False,
-        help="Install pre-compiled package (default when interactive).",
+        help="Install pre-compiled package (the interactive default in a release "
+        "tarball whose wheel matches this platform).",
     )
     mode.add_argument(
         "--source",
@@ -832,7 +831,7 @@ def main(argv: list[str] | None = None) -> None:
             from_source = True
 
     # PyPI installation, pinned to this checkout's madspace version so the
-    # wheel matches the bundled source (see SOURCE_HASH check in mg7/launch.py).
+    # wheel matches the bundled source (see SOURCE_HASH check in madgraph/mg7/common.py).
     if not from_source:
         pip_cmd = [
             sys.executable,

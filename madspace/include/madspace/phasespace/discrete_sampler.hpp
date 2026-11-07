@@ -8,20 +8,20 @@ namespace madspace {
 /**
  * Per-category weight accumulator that adapts a @ref DiscreteSampler.
  *
- * During the warm-up run it sums the sample weights for each category of each
- * discrete dimension. The accumulated `values_d` and `counts_d` are then used
+ * Sums the sample weights for each category of each discrete dimension. The
+ * accumulated `values{d}` and `counts{d}` are then used
  * to refine the learned categorical distributions (Sec. 3.2.2 of [1]).
  *
  * `batch` is the leading batch dimension. `d` indexes the discrete dimensions.
  *
  * **Arguments**
- * - `index_d` – `int`, shape `(batch,)` – the chosen category per dimension.
+ * - `index{d}` – `int`, shape `(batch,)` – the chosen category per dimension.
  * - `weight` – `float`, shape `(batch,)` – the per-sample weights.
  *
  * **Returns**
- * - `values_d` – `float`, shape `(option_counts[d],)` – summed weight per
+ * - `values{d}` – `float`, shape `(option_counts[d],)` – summed weight per
  *   category.
- * - `counts_d` – `int`, shape `(option_counts[d],)` – sample count per category.
+ * - `counts{d}` – `int`, shape `(option_counts[d],)` – sample count per category.
  *
  * **References**
  * - [1] T. Heimel, O. Mattelaer, R. Winterhalder, "MadSpace",
@@ -46,22 +46,22 @@ private:
  * Maps one uniform random number per discrete dimension to a category index,
  * using a learned categorical distribution per dimension [1]. The
  * probabilities are compute-graph globals named after @p prefix; call
- * `initialize_globals(context)` once before use. A dimension listed in
- * @p dims_with_prior is instead conditioned on a `prior_i` input.
+ * `initialize_globals(context)` once before use. For a dimension listed in
+ * @p dims_with_prior the probabilities are multiplied by a `prior{d}` input.
  *
  * `batch` is the leading batch dimension. `d` indexes the discrete dimensions.
  *
  * **Inputs**
- * - `random_i` – `float`, shape `(batch,)` – one uniform number per dimension.
+ * - `random{d}` – `float`, shape `(batch,)` – one uniform number per dimension.
  *
  * **Conditions**
- * - `prior_d` – `float`, shape `(batch, option_counts[d])` – prior category
+ * - `prior{d}` – `float`, shape `(batch, option_counts[d])` – prior category
  *   weights. Present only for the dimensions in @p dims_with_prior.
  *
  * **Outputs**
- * - `index_i` – `int`, shape `(batch,)` – the chosen category per dimension.
+ * - `index{d}` – `int`, shape `(batch,)` – the chosen category per dimension.
  *
- * In addition every mapping returns a `weight` (`float`, shape `(batch,)`), the
+ * In addition every mapping returns a `det` (`float`, shape `(batch,)`), the
  * Jacobian of the transformation.
  *
  * **References**
@@ -73,8 +73,8 @@ public:
     /**
      * @param option_counts    Number of categories for each discrete dimension.
      * @param prefix           Prefix for the probability global names.
-     * @param dims_with_prior  Dimensions conditioned on a `prior_i` input
-     *                         rather than a learned global.
+     * @param dims_with_prior  Dimensions whose learned probabilities are
+     *                         multiplied by a `prior{d}` input.
      */
     DiscreteSampler(
         const std::vector<std::size_t>& option_counts,
@@ -111,6 +111,7 @@ private:
     std::vector<std::string> _prob_names;
 };
 
+/// Define the global @p name and fill it with uniform probabilities.
 void initialize_uniform_probs(
     ContextPtr context, const std::string& name, std::size_t option_count
 );

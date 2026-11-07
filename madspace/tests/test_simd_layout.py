@@ -179,7 +179,7 @@ def test_row_major_and_column_major_inputs(order):
 @pytest.mark.parametrize("size", [3, 8, 100])
 def test_literal_arrays(size):
     """Small literal arrays are stored padded to the vector size, large ones
-    (more than 256 stored elements) are not and fall back to the scalar
+    (more than 512 stored elements) are not and fall back to the scalar
     kernels."""
     values = list(rng.normal(size=size))
     func = build(

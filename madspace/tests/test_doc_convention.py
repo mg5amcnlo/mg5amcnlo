@@ -2,7 +2,7 @@
 
 For each documented ``Mapping`` subclass under ``phasespace/``, construct it
 with every parameter its docstring names passed **by keyword**. This fails if a
-binding drops a constructor argument (as ``DoubleT`` did with ``has_cut``) or
+binding drops a constructor argument (e.g. ``has_cut`` of ``DoubleT``) or
 renames one away from the header, keeping the rendered Parameters list honest.
 """
 
@@ -136,7 +136,7 @@ def test_phasespace_mapping_both_constructors():
 
 
 def test_matrix_element_index_is_not_diagram_count():
-    """`MatrixElement.matrix_element_index` was bound to `diagram_count`."""
+    """`matrix_element_index` and `diagram_count` are separate parameters."""
     me = ms.MatrixElement(
         matrix_element_index=3,
         particle_count=4,

@@ -1797,6 +1797,33 @@ def find_pythia8_main164(pythia8_path):
             examples_dir = examples
     return None, examples_dir
 
+def get_pythia8_merging_plugin(pythia8_path):
+    """The 'Init:plugins' entry ('<library>::aMCatNLOHooks') of the merging
+    hook that main164 of this Pythia8 installation loads as a plugin, as the
+    main164 of Pythia8 8.318 does, or None if its main164 does not (up to
+    Pythia8 8.317, main164 sets the hook itself) or the plugin is missing.
+    The library is given by its absolute path, since the shower does not run
+    with the Pythia8 library directory in the library search path."""
+
+    for examples in (pjoin(pythia8_path, 'share', 'Pythia8', 'examples'),
+                     pjoin(pythia8_path, 'examples')):
+        try:
+            source = open(pjoin(examples, 'main164.cc')).read()
+        except IOError:
+            continue
+        # join the adjacent string literals of the C++ source
+        source = re.sub(r'"\s*"', '', source)
+        if 'Init:plugins += {libpythia8amcatnloHooks.so::aMCatNLOHooks}' not in source:
+            return None
+        library = os.path.abspath(pjoin(pythia8_path, 'lib', 'libpythia8amcatnloHooks.so'))
+        if not os.path.isfile(library):
+            return None
+        # a path that the Pythia8 card (or MadGraph7's reading of it) would cut
+        if re.search(r'[\s,{}"!=]', library):
+            library = os.path.basename(library)
+        return '%s::aMCatNLOHooks' % library
+    return None
+
 def get_pythia8_version(pythia8_path):
     """The version of a Pythia8 installation (e.g. '8.317'), from its
     pythia8-config or its xmldoc, or None if it cannot be told."""

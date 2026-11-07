@@ -100,7 +100,6 @@ public:
         if (batch_size == 0) {
             return {0, 0};
         }
-        // return {1, batch_size};
         if (single_job) {
             return {1, batch_size};
         }
@@ -111,7 +110,6 @@ public:
             (batch_size + simd_vec_size_max - 1) / simd_vec_size_max;
         std::size_t min_batch_size = std::max(64 / simd_vec_size_max, 1);
         std::size_t thread_count = _thread_pool.thread_count();
-        // std::size_t job_count = (batch_size + min_batch_size - 1) / min_batch_size;
         std::size_t job_count = batch_size_vec < thread_count * min_batch_size
             ? (batch_size_vec + min_batch_size - 1) / min_batch_size
             : thread_count;
@@ -141,7 +139,6 @@ public:
             if (_barrier_state) {
                 _funcs_after_barrier.push_back(job_func);
             } else {
-                // _thread_pool.submit(job_func);
                 jobs.push_back(job_func);
             }
         }

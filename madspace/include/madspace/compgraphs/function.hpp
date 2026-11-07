@@ -31,7 +31,7 @@ struct InstructionCall {
 /**
  * An immutable compute graph produced by @ref FunctionBuilder.
  *
- * A function has named `inputs` and `outputs`, a list of intermediate `locals`,
+ * A function has named `inputs` and `outputs`, a list of `locals`,
  * named `globals` for trainable or externally supplied tensors, and the ordered
  * list of @ref InstructionCall that computes the outputs from the inputs. Run
  * one with a `FunctionRuntime`, or `save` it to disk and `load` it back.
@@ -46,7 +46,7 @@ public:
     const NamedVector<Value>& inputs() const { return _inputs; }
     /// Named graph outputs.
     const NamedVector<Value>& outputs() const { return _outputs; }
-    /// Intermediate values, one per instruction output.
+    /// All local values: inputs, globals, literals and instruction outputs.
     const ValueVec& locals() const { return _locals; }
     /// Named global tensors: trainable parameters and external inputs.
     const std::vector<std::pair<std::string, Value>>& globals() const {
@@ -98,7 +98,7 @@ void from_json(const nlohmann::json& j, Function& call);
  *
  * Construct it with the input and output types, read the graph inputs with
  * `input`, add nodes by calling the instruction methods (for example `add`,
- * `stack` or `two_body_decay_com`, listed below), wire the results to the
+ * `stack` or `two_body_decay_com`, generated below), wire the results to the
  * outputs with `output`, then call `function` to obtain the finished
  * @ref Function. The instruction methods are generated from
  * `madspace/instruction_set.yaml`.
@@ -109,7 +109,8 @@ public:
     FunctionBuilder(
         const NamedVector<Type>& _input_types, const NamedVector<Type>& _output_types
     );
-    /// Start a builder pre-populated with an existing function.
+    /// Start a builder that has the inputs of an existing function; its
+    /// instructions are not copied.
     FunctionBuilder(const Function& function);
     /// The graph input at position @p index.
     Value input(int index) const;
@@ -139,12 +140,13 @@ public:
     void set_current_stream(std::size_t stream_index) {
         _current_stream = stream_index;
     }
-    /// Freeze the recorded graph into an immutable @ref Function.
+    /// Freeze the recorded graph into an immutable @ref Function. Instructions
+    /// that do not contribute to any output are dropped.
     Function function();
 
-    /// Sum of @p values, element by element.
+    /// Sum of @p values (0 for an empty list).
     Value sum(const ValueVec& values);
-    /// Product of @p values, element by element.
+    /// Product of @p values (1 for an empty list).
     Value product(const ValueVec& values);
 
 #include "function_builder_mixin.inc"

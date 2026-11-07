@@ -25,16 +25,7 @@ KERNELSPEC void kernel_collect_channel_weights(
         norm = norm + amp2_val;
         channel_weights[chan_index] += amp2_val;
     }
-    // Every amplitude can vanish at once -- a channel whose matrix element is
-    // identically zero (an FCNC subprocess whose Wilson coefficients are all zero,
-    // say) has amp2 == 0 for every diagram, so norm == 0. Dividing by it would give
-    // 0/0 = nan for every channel weight, and that nan reaches the event weight and
-    // aborts the whole integration instead of contributing nothing. Fall back to the
-    // uniform distribution: the channel weights have to stay a normalised
-    // distribution over the channels, and with no amplitude to prefer one, none is
-    // preferred. The event weight is zero either way, since the amplitudes are.
-    // norm is substituted before the division rather than the result being repaired
-    // after it, so that the degenerate 0/0 is never formed in the first place.
+    // If all amplitudes vanish, norm == 0; use uniform weights instead of 0/0 = nan.
     auto degenerate = norm == 0.;
     auto safe_norm = where(degenerate, FVal<T>(1.), norm);
     FVal<T> uniform_weight(1. / static_cast<double>(channel_weights.size()));
