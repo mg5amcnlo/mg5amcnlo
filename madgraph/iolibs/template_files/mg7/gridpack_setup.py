@@ -80,13 +80,13 @@ SOURCE_HASH_MESSAGE = (
 
 def configure_mlm_shower_start(config, madspace_data: dict) -> None:
     """The MLM shower start of the run that made the gridpack (data.json,
-    written by MadgraphProcess.save_gridpack): the non-jet particles' pt_clust
-    at the hardest scale of the event rather than the collider energy. A
-    gridpack without the entry keeps the collider energy."""
+    written by MadgraphProcess.save_gridpack): the pt_clust of the particles
+    that are not light partons at the hardest scale of the event, or at the
+    collider energy. A gridpack without the entry (no MLM) changes nothing."""
     settings = madspace_data.get("mlm_shower_start") or {}
-    if not settings.get("hardest_scale"):
+    if not settings.get("collider_energy"):
         return
-    config.mlm_hardest_shower_scale = True
+    config.mlm_hardest_shower_scale = bool(settings.get("hardest_scale"))
     config.mlm_collider_energy = float(settings["collider_energy"])
     config.mlm_max_jet_flavor = int(settings["max_jet_flavor"])
 

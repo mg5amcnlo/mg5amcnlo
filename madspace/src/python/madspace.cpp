@@ -3425,6 +3425,14 @@ PYBIND11_MODULE(_madspace_py, m) {
         py::arg("max_jet_flavor"),
         pydoc::doc("apply_mlm_hardest_shower_scale")
     );
+    m.def(
+        "apply_mlm_collider_shower_scale",
+        &apply_mlm_collider_shower_scale,
+        py::arg("event"),
+        py::arg("collider_energy"),
+        py::arg("max_jet_flavor"),
+        pydoc::doc("apply_mlm_collider_shower_scale")
+    );
     py::classh<LHECompleter::SubprocArgs>(
         m, "SubprocArgs", pydoc::doc("LHECompleter::SubprocArgs")
     )

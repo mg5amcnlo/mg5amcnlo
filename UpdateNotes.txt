@@ -5,6 +5,13 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 0.3.0 (XX/XX/XX):
+   OM: MLM (mg7 and madevent): the hardest scale the shower of the particles that are not
+       light jets starts from now also includes the core-process scale of the clustering
+       (madevent's central factorisation scale for scalefact = 1), so it no longer drops
+       below the hard process when mu_F does: mg7 clustering_mean without the pdf ladder
+       (beam.pdf_reweighting = false puts mu_F at the softest clustering scale, about
+       40 GeV for t tbar + 1 jet instead of 210 GeV), madevent scalefact < 1. Samples with
+       the default settings are unchanged (mu_F is the core-process scale there).
    OM: MLM (mg7 and madevent): the shower of the particles that are not light jets
        (leptons, photons, top and other heavy quarks) now starts from the hardest scale of
        the event, the larger of mu_F and the light jets' pt_clust, and no longer from the

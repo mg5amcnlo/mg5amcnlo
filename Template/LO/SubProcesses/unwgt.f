@@ -955,7 +955,10 @@ c     are not light partons the event's hardest scale instead:
 c     max(SCALUP, pt_clust of the light partons below sqrt(s)). Light
 c     partons at sqrt(s) (core partons) keep it: that value is Pythia8's
 c     do-not-match flag. Only the shower start changes, not the matching.
-c     Same rule as apply_mlm_hardest_shower_scale in madspace.
+c     The hardest scale also includes the core-process scale of the
+c     clustering (mlm_core_scale, cluster.inc), so it does not drop below the
+c     hard process when mu_F does. Same rule as apply_mlm_hardest_shower_scale
+c     in madspace.
 c************************************************************************
       implicit none
       include 'genps.inc'
@@ -970,9 +973,15 @@ c************************************************************************
       integer i, id
       double precision flag, hardest
       logical light
+c     cluster.inc (not included: it also declares ptclus)
+      double precision mlm_core_scale
+      common/cl_core/mlm_core_scale
 
       flag = 0.999d0*sqrt(stot)
+c     the core-process scale (setclscales) keeps the start at the hard
+c     process when mu_F is lower (scalefact < 1, a fixed scale)
       hardest = 0d0
+      if (mlm_core_scale.lt.flag) hardest = max(hardest, mlm_core_scale)
       if (q2fact(1).gt.0d0) hardest = max(hardest, sqrt(q2fact(1)))
       if (q2fact(2).gt.0d0) hardest = max(hardest, sqrt(q2fact(2)))
       do i=nincoming+1,nexternal
