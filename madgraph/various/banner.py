@@ -5418,7 +5418,7 @@ class RunCardLO(RunCard):
                         self['ebeam2'] = '1k'
 
                 # UPC for p p collision
-                elif beam_id == set([22]):
+                elif beam_id == [[22],[22]]:
                     self['lpp1'] = 2
                     self['lpp2'] = 2
                     self['ebeam1'] = '6500'
