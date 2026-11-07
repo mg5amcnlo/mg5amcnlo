@@ -1686,3 +1686,39 @@ class TestMadLoopParam(unittest.TestCase):
             if key != 'CTLoopLibrary':
                 self.assertEqual(value, param2[key])
 
+
+
+class TestRunCardLODefaultBeams(unittest.TestCase):
+    """RunCardLO.create_default_for_process: beam defaults from the initial state"""
+
+    model = None
+
+    @classmethod
+    def setUpClass(cls):
+        import madgraph.various.misc as misc
+        import models.import_ufo as import_ufo
+        with misc.MuteLogger(['madgraph', 'ALOHA', 'cmdprint', 'models'],
+                             [40, 40, 40, 40]):
+            cls.model = import_ufo.import_model('sm')
+
+    def lo_card(self, initial, final=(11, -11)):
+        import madgraph.core.base_objects as base_objects
+        legs = [base_objects.Leg({'id': i, 'state': False}) for i in initial]
+        legs += [base_objects.Leg({'id': i, 'state': True}) for i in final]
+        proc = base_objects.Process({'legs': base_objects.LegList(legs),
+                                     'model': self.model})
+        rc = bannermod.RunCardLO()
+        pc = bannermod.ProcCharacteristic()
+        pc['ninitial'] = 2
+        rc.create_default_for_process(pc, '', [[proc]])
+        return rc
+
+    def test_photon_photon_is_upc(self):
+        # a a > X: both photons from the gamma-UPC flux, not from the proton
+        rc = self.lo_card([22, 22])
+        self.assertEqual((rc['lpp1'], rc['lpp2']), (2, 2))
+        self.assertEqual(rc['pdlabel'], 'edff')
+        # a single photon still comes from the proton PDF
+        rc = self.lo_card([2, 22])
+        self.assertEqual((rc['lpp1'], rc['lpp2']), (1, 1))
+        self.assertNotEqual(rc['pdlabel'], 'edff')
