@@ -14,6 +14,12 @@ ANNOUNCEMENT:
           cross sections, for the uncertainty estimate.
         - new photoabsorption and 1n-4n emission cross sections for Pb208, Au197, O16 (and U238,
           not enabled yet), and a new interpolation of the photon-photon luminosity grid.
+    HS+OM: Bug fix (gamma-UPC): at LO, a run with a regular pdlabel followed by a run with a
+        gamma-UPC pdlabel in the same output kept the dummy library and stopped. libgammaUPC is
+        now built by Source/makefile only, which follows the pdlabel; under 'make -j' it was
+        also compiled twice at once.
+    HS+OM: Bug fix (gamma-UPC): an error inside gamma-UPC now stops with a non-zero exit status
+        (it used to report success).
 
 3.8.0 (15/09/26):
     OM+SA+VD: MadSpin2 (2609.02794)

@@ -406,7 +406,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in PhotonNumberDensity_ChargeFormFactor_proton_correction"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        K=0
@@ -419,7 +419,7 @@ CONTAINS
        ENDDO
        IF(K.NE.NYA-1)THEN
           WRITE(*,*)"ERROR: K != NYA-1"
-          STOP
+          STOP 1
        ENDIF
        kTmax=DSQRT(3d0) ! match with Q2max in PND_ChargeFormFactor_proton_corr_fxn
        YA(NYA)=DBLE(log10xmin)
@@ -470,7 +470,7 @@ CONTAINS
              IF(ISNAN(integral))THEN
                 WRITE(*,*)"ERROR: the integral is not stable (b,Ega,gamma,RA,wA,aA)=",&
                      b_common,Ega2,gamma
-                STOP
+                STOP 1
              ENDIF
              ZA(I,J)=integral
           ENDDO
@@ -495,11 +495,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.b)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.b)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.b)EXIT
@@ -512,7 +512,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
        IF(YI(1).GE.0d0)THEN
@@ -615,7 +615,7 @@ CONTAINS
     !ENDIF
     IF(ISNAN(CFF))THEN
        PRINT *, "ChargeFormFactor is NaN with ",Q
-       STOP
+       STOP 1
        CFF=0d0
     ENDIF
     PND_ChargeFormFactor_proton_corr_fxn=pref*BESSJ1(bkT)*CFF
@@ -683,7 +683,7 @@ CONTAINS
     REAL(KIND(1d0)),DIMENSION(n_interp,nxseg+1)::ZD2
     IF(ibeam.GT.2.OR.ibeam.LT.1)THEN
        WRITE(*,*)"Error: ibeam=/=1,2 in PhotonNumberDensity_ChargeFormFactor_WS"
-       STOP
+       STOP 1
     ENDIF
     Egaoga=Ega/gamma ! gamma=Ebeam/mN, xga=Ega/Ebeam, Egaoga=xga*mN
     xga=Egaoga/mN
@@ -815,7 +815,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in PhotonNumberDensity_ChargeFormFactor_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam,1)=0d0
           K=0
@@ -828,7 +828,7 @@ CONTAINS
           ENDDO
           IF(K.NE.NYA-1)THEN
              WRITE(*,*)"ERROR: K != NYA-1"
-             STOP
+             STOP 1
           ENDIF
           YA(ibeam,NYA)=DBLE(log10xmin)
           DO I=1,NXA
@@ -957,7 +957,7 @@ CONTAINS
                    IF(ISNAN(integral))THEN
                       WRITE(*,*)"ERROR: the integral is not stable (b,Ega,gamma,RA,wA,aA)=",&
                            b_common/Egaoga2,Ega2,gamma,RR,w,aa
-                      STOP
+                      STOP 1
                    ENDIF
                    ZA(ibeam,I,J)=integral
                 ENDIF
@@ -971,7 +971,7 @@ CONTAINS
        WRITE(*,*)"INFO: ibeam=",ibeam
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_save(ibeam),w_save(ibeam),aa_save(ibeam)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR,w,aa
-       STOP
+       STOP 1
     ENDIF
     IF(b.GT.rescaling_bmax_save(ibeam).OR.b.LE.0d0)THEN
        IF(bcut.LE.0d0.OR.b.LE.0d0)THEN
@@ -1003,11 +1003,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam,k-NBSEG).GT.b)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam,k).LT.b)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam,i).GE.b)EXIT
@@ -1032,7 +1032,7 @@ CONTAINS
              !ENDDO
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
           !CALL SPLINE_INTERPOLATE(XA2,YA2,n_interp,bb,integral)
        ENDIF
@@ -1096,7 +1096,7 @@ CONTAINS
     CFF=ChargeFormFactor_WoodsSaxon(Q,R_common,w_common,aa_common,0)
     IF(ISNAN(CFF))THEN
        PRINT *, "ChargeFormFactor is NaN with ",Q, R_common, w_common, aa_common
-       STOP
+       STOP 1
        CFF=0d0
     ENDIF
     !IF(bkT.LE.5d2)THEN
@@ -1244,7 +1244,7 @@ CONTAINS
     CFF=ChargeFormFactor_WoodsSaxon(Qtil,Rtil,w_common,atil,0)
     IF(ISNAN(CFF))THEN
        PRINT *, "ChargeFormFactor is NaN with ",Qtil, Rtil, w_common, atil
-       STOP
+       STOP 1
        CFF=0d0
     ENDIF
     PND_ChargeFormFactor_WS_fxn2=BESSJ1(bkT)*CFF*kTtil**2/Qtil**2
@@ -1450,7 +1450,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        bupper=bmaxoR*Rproton/GeVm12fm ! the hard cut in the grid of PhotonNumberDensity_ChargeFormFactor_proton_correction 
@@ -1592,7 +1592,7 @@ CONTAINS
     SAVE XA,ZA,ZA1_save,ZA2_save
     IF(ibeam.GT.2.OR.ibeam.LT.1)THEN
        WRITE(*,*)"Error: ibeam=/=1,2 in PhotonFlux_nucleus_ChFF_nob"
-       STOP
+       STOP 1
     ENDIF
     IF(x.LT.1d-99)THEN
        PhotonFlux_nucleus_ChFF_nob=0d0
@@ -1685,7 +1685,7 @@ CONTAINS
           ENDDO
           IF(K.NE.NXA-1)THEN
              WRITE(*,*)"ERROR: K != NXA-1"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam,NXA)=DBLE(log10xmin)
           DO I=1,NXA
@@ -1723,7 +1723,7 @@ CONTAINS
        WRITE(*,*)"INFO: ibeam=",ibeam
        WRITE(*,*)"INFO: Saved ones (gamma,RA,wA,aA)=",gamma_save(ibeam),R_save(ibeam),w_save(ibeam),aa_save(ibeam)
        WRITE(*,*)"INFO: New ones (gamma,RA,wA,aA)=",gamma,RA,wA,aA
-       STOP
+       STOP 1
     ENDIF
     XI(1)=DLOG10(x)
     N=-FLOOR(XI(1))-1 ! x is from 10**(-n-1) to 10**(-n)
@@ -1737,11 +1737,11 @@ CONTAINS
        ENDIF
        IF(XA(ibeam,k+NXSEG).GT.XI(1))THEN
           WRITE(*,*)"Error: k is not proper #1"
-          STOP
+          STOP 1
        ENDIF
        IF(XA(ibeam,k).LT.XI(1))THEN
           WRITE(*,*)"Error: k is not proper #2"
-          STOP
+          STOP 1
        ENDIF
        DO i=k,k+NXSEG
           IF(XA(ibeam,i).LE.XI(1))EXIT
@@ -1754,7 +1754,7 @@ CONTAINS
           K=NXA-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here !"
-          STOP
+          STOP 1
        ENDIF
     ENDIF
     ! it turns out to be important with spline
@@ -1942,7 +1942,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        YD_1D(MY+1)=DBLE(log10xmin)
@@ -2022,7 +2022,7 @@ CONTAINS
              K=MX_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #1 !"
-             STOP
+             STOP 1
           ENDIF
           L=nseg*(-ilog10x2-1)
           DO I=L+1,L+nseg+1
@@ -2036,7 +2036,7 @@ CONTAINS
              L=MY_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #2 !"
-             STOP
+             STOP 1
           ENDIF
           DO I=1,n_interp
              XD2_1D(I)=XD_1D(K+I)
@@ -2417,7 +2417,7 @@ CONTAINS
           ENDDO
           IF(K.NE.MX)THEN
              WRITE(*,*)"ERROR: K != MX"
-             STOP
+             STOP 1
           ENDIF
           XD_1D(MX+1)=DBLE(log10xmin)
           YD_1D(MY+1)=DBLE(log10xmin)
@@ -2497,7 +2497,7 @@ CONTAINS
           K=MX_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #1 !"
-          STOP
+          STOP 1
        ENDIF
        L=nseg*(-ilog10x2-1)
        DO I=L+1,L+nseg+1
@@ -2511,7 +2511,7 @@ CONTAINS
           L=MY_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #2 !"
-          STOP
+          STOP 1
        ENDIF
        DO I=1,n_interp
           XD2_1D(I)=XD_1D(K+I)
@@ -2710,7 +2710,7 @@ CONTAINS
     REAL(KIND(1d0))::arg1,arg2
     IF(dim_num.NE.3.AND.dim_num.NE.2)THEN
        WRITE(*,*)"ERROR: PhotonPhotonFlux_pp_fxn is not a three or two dimensional function"
-       STOP
+       STOP 1
     ENDIF
     ! in unit of GeV-1
     ! x1*b1*mproton=Exp(bA(1))
@@ -2874,7 +2874,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        YD_1D(MY+1)=DBLE(log10xmin)
@@ -2953,7 +2953,7 @@ CONTAINS
              K=MX_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #1 !"
-             STOP
+             STOP 1
           ENDIF
           L=nseg*(-ilog10x2-1)
           DO I=L+1,L+nseg+1
@@ -2967,7 +2967,7 @@ CONTAINS
              L=MY_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #2 !"
-             STOP
+             STOP 1
           ENDIF
           DO I=1,n_interp
              XD2_1D(I)=XD_1D(K+I)
@@ -3088,7 +3088,7 @@ CONTAINS
           Aname=GetASymbol(nuclearA_beam2,nuclearZ_beam2)
        ELSE
           WRITE(*,*)"ERROR: please set nuclearA_beam1 or nuclearA_beam2 nonzero first !"
-          STOP
+          STOP 1
        ENDIF
        WRITE(*,*)"INFO: Two photon UPCs in p+"//TRIM(Aname)//" collisions"
        CALL GetNuclearInfo(Aname,A_common,Z2,RA_common,aaval,wval)
@@ -3197,7 +3197,7 @@ CONTAINS
     REAL(KIND(1d0)),PARAMETER::mN=0.9315d0 ! average nucleaon mass in nuclei (GeV)
     IF(dim_num.NE.3)THEN
        WRITE(*,*)"ERROR: PhotonPhotonFlux_pA_hardsphere_fxn is not a three dimensional function"
-       STOP
+       STOP 1
     ENDIF
     costh=DCOS(bA(3))
     ! in unit of GeV-1
@@ -3329,7 +3329,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        YD_1D(MY+1)=DBLE(log10xmin)
@@ -3406,7 +3406,7 @@ CONTAINS
              K=MX_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #1 !"
-             STOP
+             STOP 1
           ENDIF
           L=nseg*(-ilog10x2-1)
           DO I=L+1,L+nseg+1
@@ -3420,7 +3420,7 @@ CONTAINS
              L=MY_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #2 !"
-             STOP
+             STOP 1
           ENDIF
           DO I=1,n_interp
              XD2_1D(I)=XD_1D(K+I)
@@ -3542,7 +3542,7 @@ CONTAINS
           Aname=GetASymbol(nuclearA_beam2,nuclearZ_beam2)
        ELSE
           WRITE(*,*)"ERROR: please set nuclearA_beam1/nuclearZ_beam1 or nuclearA_beam2/nuclearZ_beam2 nonzero first !"
-          STOP
+          STOP 1
        ENDIF
        WRITE(*,*)"INFO: Two photon UPCs in p+"//TRIM(Aname)//" collisions"
        CALL GetNuclearInfo(Aname,A_common,Z2,RA_common,aaVal_common,wVal_common)
@@ -3842,7 +3842,7 @@ CONTAINS
           ENDDO
           IF(K.NE.MX)THEN
              WRITE(*,*)"ERROR: K != MX"
-             STOP
+             STOP 1
           ENDIF
           XD_1D(MX+1)=DBLE(log10xmin)
           YD_1D(MY+1)=DBLE(log10xmin)
@@ -3922,7 +3922,7 @@ CONTAINS
           K=MX_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #1 !"
-          STOP
+          STOP 1
        ENDIF
        L=nseg*(-ilog10x2-1)
        DO I=L+1,L+nseg+1
@@ -3936,7 +3936,7 @@ CONTAINS
           L=MY_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #2 !"
-          STOP
+          STOP 1
        ENDIF
        DO I=1,n_interp
           XD2_1D(I)=XD_1D(K+I)
@@ -4046,7 +4046,7 @@ CONTAINS
           Aname=GetASymbol(nuclearA_beam2,nuclearZ_beam2)
        ELSE
           WRITE(*,*)"ERROR: please set nuclearA_beam1/nuclearZ_beam1 or nuclearA_beam2/nuclearZ_beam2 nonzero first !"
-          STOP
+          STOP 1
        ENDIF
        WRITE(*,*)"INFO: Two photon UPCs in p+"//TRIM(Aname)//" collisions"
        CALL GetNuclearInfo(Aname,A_common,Z2,RA_common,aaVal_common,wVal_common)
@@ -4179,7 +4179,7 @@ CONTAINS
     REAL(KIND(1d0))::arg1,arg2
     IF(dim_num.NE.3.AND.dim_num.NE.2)THEN
        WRITE(*,*)"ERROR: PhotonPhotonFlux_pA_WoodsSaxon_fxn is not a three or two dimensional function"
-       STOP
+       STOP 1
     ENDIF
     ! in unit of GeV-1
     ! x1*b1*mproton=Exp(bA(1))
@@ -4369,7 +4369,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        YD_1D(MY+1)=DBLE(log10xmin)
@@ -4448,7 +4448,7 @@ CONTAINS
              K=MX_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #1 !"
-             STOP
+             STOP 1
           ENDIF
           L=nseg*(-ilog10x2-1)
           DO I=L+1,L+nseg+1
@@ -4462,7 +4462,7 @@ CONTAINS
              L=MY_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #2 !"
-             STOP
+             STOP 1
           ENDIF
           DO I=1,n_interp
              XD2_1D(I)=XD_1D(K+I)
@@ -4557,7 +4557,7 @@ CONTAINS
        ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
-          STOP
+          STOP 1
        ENDIf
        gamma1_common=ebeam_PN(1)/mN
        gamma2_common=ebeam_PN(2)/mN
@@ -4680,7 +4680,7 @@ CONTAINS
     REAL(KIND(1d0)),PARAMETER::mN=0.9315d0 ! average nucleaon mass in nuclei (GeV)
     IF(dim_num.NE.3)THEN
        WRITE(*,*)"ERROR: PhotonPhotonFlux_AB_hardsphere_fxn is not a three dimensional function"
-       STOP
+       STOP 1
     ENDIF
     costh=DCOS(bA(3))
     ! in unit of GeV-1
@@ -4814,7 +4814,7 @@ CONTAINS
        ENDDO
        IF(K.NE.MX)THEN
           WRITE(*,*)"ERROR: K != MX"
-          STOP
+          STOP 1
        ENDIF
        XD_1D(MX+1)=DBLE(log10xmin)
        YD_1D(MY+1)=DBLE(log10xmin)
@@ -4894,7 +4894,7 @@ CONTAINS
              K=MX_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #1 !"
-             STOP
+             STOP 1
           ENDIF
           L=nseg*(-ilog10x2-1)
           DO I=L+1,L+nseg+1
@@ -4908,7 +4908,7 @@ CONTAINS
              L=MY_save+1-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here #2 !"
-             STOP
+             STOP 1
           ENDIF
           DO I=1,n_interp
              XD2_1D(I)=XD_1D(K+I)
@@ -5009,7 +5009,7 @@ CONTAINS
        ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
-          STOP
+          STOP 1
        ENDIf
        gamma1_common=ebeam_PN(1)/mN
        gamma2_common=ebeam_PN(2)/mN
@@ -5338,7 +5338,7 @@ CONTAINS
           ENDDO
           IF(K.NE.MX)THEN
              WRITE(*,*)"ERROR: K != MX"
-             STOP
+             STOP 1
           ENDIF
           XD_1D(MX+1)=DBLE(log10xmin)
           YD_1D(MY+1)=DBLE(log10xmin)
@@ -5418,7 +5418,7 @@ CONTAINS
           K=MX_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #1 !"
-          STOP
+          STOP 1
        ENDIF
        L=nseg*(-ilog10x2-1)
        DO I=L+1,L+nseg+1
@@ -5432,7 +5432,7 @@ CONTAINS
           L=MY_save(igrid)+1-n_interp
        ELSE
           WRITE(*,*)"Error: you cannot reach here #2 !"
-          STOP
+          STOP 1
        ENDIF
        DO I=1,n_interp
           XD2_1D(I)=XD_1D(K+I)
@@ -5517,7 +5517,7 @@ CONTAINS
        ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
-          STOP
+          STOP 1
        ENDIf
        gamma1_common=ebeam_PN(1)/mN
        gamma2_common=ebeam_PN(2)/mN
@@ -5672,7 +5672,7 @@ CONTAINS
     REAL(KIND(1d0))::arg1,arg2
     IF(dim_num.NE.3.AND.dim_num.NE.2)THEN
        WRITE(*,*)"ERROR: PhotonPhotonFlux_AB_WoodsSaxon_fxn is not a three or two dimensional function"
-       STOP
+       STOP 1
     ENDIF
     ! in unit of GeV-1
     ! x1*b1*mN=Exp(bA(1))
@@ -5800,7 +5800,7 @@ CONTAINS
           Lgammagamma_UPC_fxn=PhotonPhotonFlux_pA_WoodsSaxon(x1,x2,.TRUE.)
        ELSE
           WRITE(*,*)"ERROR: do not know the profile type = ",profile_type_common
-          STOP
+          STOP 1
        ENDIF
     ELSEIF(collision_type_common.EQ.3)THEN
        ! AB
@@ -5815,11 +5815,11 @@ CONTAINS
           Lgammagamma_UPC_fxn=PhotonPhotonFlux_AB_WoodsSaxon(x1,x2,.TRUE.)
        ELSE
           WRITE(*,*)"ERROR: do not know the profile type = ",profile_type_common
-          STOP
+          STOP 1
        ENDIF
     ELSE
        WRITE(*,*)"ERROR: do not know the collision type = ",collision_type_common
-       STOP
+       STOP 1
     ENDIF
     RETURN
   END FUNCTION Lgammagamma_UPC_fxn
@@ -5977,13 +5977,13 @@ CONTAINS
        ELSEIF(profile_type_common.EQ.2)THEN
           ! Hard-Sphere
           WRITE(*,*)"ERROR: LgammagammaDeltaB_UPC does not support hard-sphere"
-          STOP
+          STOP 1
        ELSEIF(profile_type_common.EQ.0)THEN
           ! P_{NOHAD}=1
           LgammagammaDeltaB_UPC_fxn=PhotonPhotonDeltaB_pA_WoodsSaxon(x1,x2,.TRUE.)
        ELSE
           WRITE(*,*)"ERROR: do not know the profile type = ",profile_type_common
-          STOP
+          STOP 1
        ENDIF
     ELSEIF(collision_type_common.EQ.3)THEN
        ! AB
@@ -5993,17 +5993,17 @@ CONTAINS
        ELSEIF(profile_type_common.EQ.2)THEN
           ! Hard-Sphere
           WRITE(*,*)"ERROR: LgammagammaDeltaB_UPC does not support hard-sphere"
-          STOP
+          STOP 1
        ELSEIF(profile_type_common.EQ.0)THEN
           ! P_{NOHAD}=1
           LgammagammaDeltaB_UPC_fxn=PhotonPhotonDeltaB_AB_WoodsSaxon(x1,x2,.TRUE.)
        ELSE
           WRITE(*,*)"ERROR: do not know the profile type = ",profile_type_common
-          STOP
+          STOP 1
        ENDIF
     ELSE
        WRITE(*,*)"ERROR: do not know the collision type = ",collision_type_common
-       STOP
+       STOP 1
     ENDIF
     RETURN
   END FUNCTION LgammagammaDeltaB_UPC_fxn
@@ -6047,11 +6047,11 @@ CONTAINS
     
     IF(in1.LT.-2.OR.in1.GT.4)THEN
        WRITE(*,*)"ERROR: only the following options for in1: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
-       STOP
+       STOP 1
     ENDIF
     IF(in2.LT.-2.OR.in2.GT.4)THEN
        WRITE(*,*)"ERROR: only the following options for in2: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
-       STOP
+       STOP 1
     ENDIF
 
     IF(in1.EQ.-2.AND.in2.EQ.-2)THEN
@@ -6084,7 +6084,7 @@ CONTAINS
        ebeam_PN(2)=ebeamMG5(2)/(nb_proton(2)+nb_neutron(2))
        IF(nuclearA_beam1.EQ.0.OR.nuclearA_beam2.EQ.0)THEN
           WRITE(*,*)"ERROR: Please set two beams as heavy ions first"
-          STOP
+          STOP 1
        ENDIf
        gamma1_save=ebeam_PN(1)/mN
        gamma2_save=ebeam_PN(2)/mN
@@ -6358,7 +6358,7 @@ CONTAINS
 
     IF(in2.LT.-2.OR.in2.GT.4)THEN
        WRITE(*,*)"ERROR: only the following options for in2: -2 (0n+Xn), -1 (Xn), 0 (0n), 1 (1n), 2 (2n), 3 (3n), 4 (4n)"
-       STOP
+       STOP 1
     ENDIF
 
     IF(in2.EQ.-2)THEN
@@ -6409,7 +6409,7 @@ CONTAINS
           Aname=GetASymbol(nuclearA_beam2,nuclearZ_beam2)
        ELSE
           WRITE(*,*)"ERROR: please set nuclearA_beam1/nuclearZ_beam1 or nuclearA_beam2/nuclearZ_beam2 nonzero first !"
-          STOP
+          STOP 1
        ENDIF
        CALL GetNuclearInfo(Aname,A2,Z2,RA_save,aaVal_save,wVal_save)
        A_save=INT(A2)
@@ -6542,15 +6542,15 @@ CONTAINS
     
     IF(ibeam_proj.GT.2.OR.ibeam_proj.LT.1)THEN
        WRITE(*,*)"Error: ibeam_proj=/=1,2 in PbreakXn_LO_AB_WS"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -6563,7 +6563,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -6662,7 +6662,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in PbreakXn_LO_AB_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam_proj,1)=0d0
           DO I=1,NXA
@@ -6706,7 +6706,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_proj_save(ibeam_proj),&
             w_proj_save(ibeam_proj),aa_proj_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR_proj,w_proj,aa_proj
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj_save(ibeam_proj).NE.gamma_proj&
          .OR.gamma_target_save(ibeam_proj).NE.gamma_target)THEN
@@ -6715,7 +6715,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save(ibeam_proj),&
             gamma_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save(ibeam_proj).NE.A_target&
          .OR.Z_target_save(ibeam_proj).NE.Z_target)THEN
@@ -6724,7 +6724,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save(ibeam_proj),&
             Z_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
   
     IF(db.GT.rescaling_bmax_save(ibeam_proj).OR.db.LE.0d0)THEN
@@ -6743,11 +6743,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam_proj,k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam_proj,k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam_proj,i).GE.db)EXIT
@@ -6760,7 +6760,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -6894,11 +6894,11 @@ CONTAINS
 
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -6911,7 +6911,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -6989,7 +6989,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in PbreakXn_LO_pA"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        DO I=1,NXA
@@ -7029,7 +7029,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save,&
             gamma_target_save
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save.NE.A_target&
          .OR.Z_target_save.NE.Z_target)THEN
@@ -7037,7 +7037,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save,&
             Z_target_save
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
 
     IF(db.GT.rescaling_bmax_save.OR.db.LE.0d0)THEN
@@ -7056,11 +7056,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.db)EXIT
@@ -7073,7 +7073,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -7210,15 +7210,15 @@ CONTAINS
     
     IF(ibeam_proj.GT.2.OR.ibeam_proj.LT.1)THEN
        WRITE(*,*)"Error: ibeam_proj=/=1,2 in Pbreak1n_LO_AB_WS"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -7231,7 +7231,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -7330,7 +7330,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak1n_LO_AB_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam_proj,1)=0d0
           DO I=1,NXA
@@ -7374,7 +7374,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_proj_save(ibeam_proj),&
             w_proj_save(ibeam_proj),aa_proj_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR_proj,w_proj,aa_proj
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj_save(ibeam_proj).NE.gamma_proj&
          .OR.gamma_target_save(ibeam_proj).NE.gamma_target)THEN
@@ -7383,7 +7383,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save(ibeam_proj),&
             gamma_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save(ibeam_proj).NE.A_target&
          .OR.Z_target_save(ibeam_proj).NE.Z_target)THEN
@@ -7392,7 +7392,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save(ibeam_proj),&
             Z_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
   
     IF(db.GT.rescaling_bmax_save(ibeam_proj).OR.db.LE.0d0)THEN
@@ -7411,11 +7411,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam_proj,k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam_proj,k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam_proj,i).GE.db)EXIT
@@ -7428,7 +7428,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -7563,11 +7563,11 @@ CONTAINS
 
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -7580,7 +7580,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -7658,7 +7658,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak1n_LO_pA"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        DO I=1,NXA
@@ -7698,7 +7698,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save,&
             gamma_target_save
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save.NE.A_target&
          .OR.Z_target_save.NE.Z_target)THEN
@@ -7706,7 +7706,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save,&
             Z_target_save
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
 
     IF(db.GT.rescaling_bmax_save.OR.db.LE.0d0)THEN
@@ -7725,11 +7725,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.db)EXIT
@@ -7742,7 +7742,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -7879,15 +7879,15 @@ CONTAINS
     
     IF(ibeam_proj.GT.2.OR.ibeam_proj.LT.1)THEN
        WRITE(*,*)"Error: ibeam_proj=/=1,2 in Pbreak2n_LO_AB_WS"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -7900,7 +7900,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -7999,7 +7999,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak2n_LO_AB_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam_proj,1)=0d0
           DO I=1,NXA
@@ -8043,7 +8043,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_proj_save(ibeam_proj),&
             w_proj_save(ibeam_proj),aa_proj_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR_proj,w_proj,aa_proj
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj_save(ibeam_proj).NE.gamma_proj&
          .OR.gamma_target_save(ibeam_proj).NE.gamma_target)THEN
@@ -8052,7 +8052,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save(ibeam_proj),&
             gamma_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save(ibeam_proj).NE.A_target&
          .OR.Z_target_save(ibeam_proj).NE.Z_target)THEN
@@ -8061,7 +8061,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save(ibeam_proj),&
             Z_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
   
     IF(db.GT.rescaling_bmax_save(ibeam_proj).OR.db.LE.0d0)THEN
@@ -8080,11 +8080,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam_proj,k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam_proj,k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam_proj,i).GE.db)EXIT
@@ -8097,7 +8097,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -8232,11 +8232,11 @@ CONTAINS
 
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -8249,7 +8249,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -8327,7 +8327,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak2n_LO_pA"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        DO I=1,NXA
@@ -8367,7 +8367,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save,&
             gamma_target_save
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save.NE.A_target&
          .OR.Z_target_save.NE.Z_target)THEN
@@ -8375,7 +8375,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save,&
             Z_target_save
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
 
     IF(db.GT.rescaling_bmax_save.OR.db.LE.0d0)THEN
@@ -8394,11 +8394,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.db)EXIT
@@ -8411,7 +8411,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -8549,15 +8549,15 @@ CONTAINS
     
     IF(ibeam_proj.GT.2.OR.ibeam_proj.LT.1)THEN
        WRITE(*,*)"Error: ibeam_proj=/=1,2 in Pbreak3n_LO_AB_WS"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -8570,7 +8570,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -8669,7 +8669,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak3n_LO_AB_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam_proj,1)=0d0
           DO I=1,NXA
@@ -8713,7 +8713,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_proj_save(ibeam_proj),&
             w_proj_save(ibeam_proj),aa_proj_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR_proj,w_proj,aa_proj
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj_save(ibeam_proj).NE.gamma_proj&
          .OR.gamma_target_save(ibeam_proj).NE.gamma_target)THEN
@@ -8722,7 +8722,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save(ibeam_proj),&
             gamma_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save(ibeam_proj).NE.A_target&
          .OR.Z_target_save(ibeam_proj).NE.Z_target)THEN
@@ -8731,7 +8731,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save(ibeam_proj),&
             Z_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
   
     IF(db.GT.rescaling_bmax_save(ibeam_proj).OR.db.LE.0d0)THEN
@@ -8750,11 +8750,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam_proj,k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam_proj,k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam_proj,i).GE.db)EXIT
@@ -8767,7 +8767,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -8902,11 +8902,11 @@ CONTAINS
 
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -8919,7 +8919,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -8997,7 +8997,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak3n_LO_pA"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        DO I=1,NXA
@@ -9037,7 +9037,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save,&
             gamma_target_save
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save.NE.A_target&
          .OR.Z_target_save.NE.Z_target)THEN
@@ -9045,7 +9045,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save,&
             Z_target_save
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
 
     IF(db.GT.rescaling_bmax_save.OR.db.LE.0d0)THEN
@@ -9064,11 +9064,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.db)EXIT
@@ -9081,7 +9081,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -9218,15 +9218,15 @@ CONTAINS
     
     IF(ibeam_proj.GT.2.OR.ibeam_proj.LT.1)THEN
        WRITE(*,*)"Error: ibeam_proj=/=1,2 in Pbreak4n_LO_AB_WS"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -9239,7 +9239,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -9338,7 +9338,7 @@ CONTAINS
           ENDDO
           IF(k+1.NE.NXA)THEN
              WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak4n_LO_AB_WS"
-             STOP
+             STOP 1
           ENDIF
           XA(ibeam_proj,1)=0d0
           DO I=1,NXA
@@ -9382,7 +9382,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (RA,wA,aA)=",R_proj_save(ibeam_proj),&
             w_proj_save(ibeam_proj),aa_proj_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (RA,wA,aA)=",RR_proj,w_proj,aa_proj
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj_save(ibeam_proj).NE.gamma_proj&
          .OR.gamma_target_save(ibeam_proj).NE.gamma_target)THEN
@@ -9391,7 +9391,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save(ibeam_proj),&
             gamma_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save(ibeam_proj).NE.A_target&
          .OR.Z_target_save(ibeam_proj).NE.Z_target)THEN
@@ -9400,7 +9400,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save(ibeam_proj),&
             Z_target_save(ibeam_proj)
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
   
     IF(db.GT.rescaling_bmax_save(ibeam_proj).OR.db.LE.0d0)THEN
@@ -9419,11 +9419,11 @@ CONTAINS
           ENDIF
           IF(XA(ibeam_proj,k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(ibeam_proj,k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(ibeam_proj,i).GE.db)EXIT
@@ -9436,7 +9436,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -9571,11 +9571,11 @@ CONTAINS
 
     IF(gamma_target.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_target < 1"
-       STOP
+       STOP 1
     ENDIF
     IF(gamma_proj.LT.1d0)THEN
        WRITE(*,*)"Error: gamma_proj < 1"
-       STOP
+       STOP 1
     ENDIF
     gamma_proj_target=gamma_proj*gamma_target&
          +dsqrt((gamma_proj**2-one)*(gamma_target**2-one))
@@ -9588,7 +9588,7 @@ CONTAINS
     IF(Egamma_max_target.GT.0d0)THEN
        IF(Egamma_max_target.LE.Egamma_min_target)THEN
           WRITE(*,*)"Error: Egamma_max_target <= Egamma_min_target"
-          STOP
+          STOP 1
        ENDIF
        ! highest gamma energy [GeV] in the lab frame if Egamma_max_target > 0
        Egamma_max_lab=Egamma_max_target/(gamma_target+dsqrt(gamma_target**2-one))
@@ -9666,7 +9666,7 @@ CONTAINS
        ENDDO
        IF(k+1.NE.NXA)THEN
           WRITE(*,*)"ERROR: mismatching k+1 and NXA in Pbreak4n_LO_pA"
-          STOP
+          STOP 1
        ENDIF
        XA(1)=0d0
        DO I=1,NXA
@@ -9706,7 +9706,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (gamma_proj,gamma_target)=",gamma_proj_save,&
             gamma_target_save
        WRITE(*,*)"INFO: New ones (gamma_proj,gamma_target)=",gamma_proj,gamma_target
-       STOP
+       STOP 1
     ENDIF
     IF(A_target_save.NE.A_target&
          .OR.Z_target_save.NE.Z_target)THEN
@@ -9714,7 +9714,7 @@ CONTAINS
        WRITE(*,*)"INFO: Saved ones (A_target,Z_target)=",A_target_save,&
             Z_target_save
        WRITE(*,*)"INFO: New ones (A_target,Z_target)=",A_target,Z_target
-       STOP
+       STOP 1
     ENDIF
 
     IF(db.GT.rescaling_bmax_save.OR.db.LE.0d0)THEN
@@ -9733,11 +9733,11 @@ CONTAINS
           ENDIF
           IF(XA(k-NBSEG).GT.db)THEN
              WRITE(*,*)"Error: k is not proper #1"
-             STOP
+             STOP 1
           ENDIF
           IF(XA(k).LT.db)THEN
              WRITE(*,*)"Error: k is not proper #2"
-             STOP
+             STOP 1
           ENDIF
           DO i=k-NBSEG,k
              IF(XA(i).GE.db)EXIT
@@ -9750,7 +9750,7 @@ CONTAINS
              K=NXA-n_interp
           ELSE
              WRITE(*,*)"Error: you cannot reach here !"
-             STOP
+             STOP 1
           ENDIF
        ENDIF
 
@@ -9877,7 +9877,7 @@ CONTAINS
     REAL(KIND(1d0))::w,p
     IF(DABS(x).GE.1d0)THEN
        WRITE(*,*)"ERROR: |x|>= 1 in erfinv"
-       STOP
+       STOP 1
     ENDIF
     w=-DLOG(1d0-x**2)
     IF(w.LT.5d0)THEN
@@ -9932,7 +9932,7 @@ CONTAINS
     integer::i,j
     if(x.ge.1d0.or.x.le.0d0)then
        write(*,*)"ERROR: x>=1 or x<=0"
-       stop
+       stop 1
     endif
     mp2=mp**2
     Q2min=mp2*x**2/(1d0-x)
@@ -10015,15 +10015,15 @@ CONTAINS
     integer::i,j
     if(ion_Form.ne.1.and.ion_Form.ne.2)then
        write(*,*)"ERROR: ion_Form =/= 1 or 2"
-       stop
+       stop 1
     endif
     if(ibeam.ne.1.and.ibeam.ne.2)then
        write(*,*)"ERROR: ibeam =/= 1 or 2"
-       stop
+       stop 1
     endif
     if(x.ge.1d0.or.x.le.0d0)then
        write(*,*)"ERROR: x>=1 or x<=0"
-       stop
+       stop 1
     endif
     mn2=mn**2
     if(ion_Form.eq.2)then

@@ -317,7 +317,7 @@ CONTAINS
        Z=0
        WRITE(*,*)"Error: Only 1<=N,M<=4 and N+M<=5 is allowed !"
        WRITE(*,101) N,M
-       STOP
+       STOP 1
     ELSEIF(X .EQ. 1) THEN
        Z=S1(N,M)
     ELSEIF(X .GT. 2 .OR. X .LT. -1) THEN

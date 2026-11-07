@@ -23,9 +23,12 @@ tens of minutes; the ChFF labels are covered by the unit tests."""
 
 from __future__ import absolute_import
 
+import collections
 import math
 import os
+import re
 import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -186,6 +189,31 @@ class TestGammaUPCMadEvent(unittest.TestCase):
         with self.assertRaises(InvalidCmd):
             self.cmd_line.exec_cmd('generate_events upc_bad -f', errorhandling=False,
                                    precmd=True)
+
+
+    def test_upc_source_build_switch(self):
+        """Source built with 'make -j' links the gamma-UPC library that the
+        pdlabel needs, also after a switch between a gamma-UPC label and a
+        regular one (the dummy library used to stay after nn23lo1 -> edff),
+        and compiles each gamma-UPC source at most once per build"""
+
+        source = pjoin(self.run_dir, 'Source')
+        for card in ['param', 'run']:
+            self.cmd_line.exec_cmd('treatcards %s' % card, errorhandling=False)
+        compiled = re.compile(r'-c (\w+\.f90|photonpdfsquare\.f)\b')
+        for label, real in [('edff', True), ('nn23lo1', False), ('edff', True),
+                            ('edff', True), ('nn23lo1', False)]:
+            self.cmd_line.update_make_opts_full(pjoin(source, 'make_opts'),
+                                                {'pdlabel1': label, 'pdlabel2': label})
+            out = subprocess.run(['make', '-j4', 'all'], cwd=source, text=True,
+                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(out.returncode, 0, out.stdout[-3000:])
+            counts = collections.Counter(compiled.findall(out.stdout))
+            self.assertLessEqual(max(counts.values(), default=0), 1, (label, counts))
+            members = subprocess.run(['ar', 't', pjoin(self.run_dir, 'lib', 'libgammaUPC.a')],
+                                     text=True, stdout=subprocess.PIPE).stdout.split()
+            self.assertEqual('ElasticPhotonPhotonFlux.o' in members, real, (label, members))
+            self.assertEqual('gammaUPC_dummy.o' in members, not real, (label, members))
 
 
 class TestGammaUPCNLO(unittest.TestCase):

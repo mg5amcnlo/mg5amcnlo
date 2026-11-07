@@ -78,8 +78,9 @@ $(LIBDIR)libgeneric.$(libext): ../../Cards/run_card.dat
 $(LIBDIR)libpdf.$(libext): 
 	cd ../../Source/PDF; make
 
+# through Source/makefile, which picks the real or the dummy library
 $(LIBDIR)libgammaUPC.$(libext):
-	cd ../../Source/PDF/gammaUPC; make
+	cd ../../Source && make ../lib/libgammaUPC.$(libext)
 
 # Add source so that the compiler finds the DiscreteSampler module.
 $(MATRIX): %.o: %.f

@@ -38,7 +38,7 @@ contains
     ELSE
        WRITE(*,*) 'Only Pb208, Au197, U238, O16 are supported for now'
        WRITE(*,*) 'A=',A,'Z=',Z
-       STOP
+       STOP 1
     ENDIF
     return
   END FUNCTION GAMMAABS
@@ -66,7 +66,7 @@ contains
     ELSE
        WRITE(*,*) 'Only Pb208, Au197, U238, O16 are supported for now'
        WRITE(*,*) 'A=',A,'Z=',Z
-       STOP
+       STOP 1
     ENDIF
     return
   END FUNCTION GAMMATO1N
@@ -94,7 +94,7 @@ contains
     ELSE
        WRITE(*,*) 'Only Pb208, Au197, U238, O16 are supported for now'
        WRITE(*,*) 'A=',A,'Z=',Z
-       STOP
+       STOP 1
     ENDIF
     return
   END FUNCTION GAMMATO2N
@@ -119,7 +119,7 @@ contains
     ELSE
        WRITE(*,*) 'Only Pb208, Au197, U238 are supported for now'
        WRITE(*,*) 'A=',A,'Z=',Z
-       STOP
+       STOP 1
     ENDIF
     return
   END FUNCTION GAMMATO3N
@@ -144,7 +144,7 @@ contains
     ELSE
        WRITE(*,*) 'Only Pb208, Au197, U238 are supported for now'
        WRITE(*,*) 'A=',A,'Z=',Z
-       STOP
+       STOP 1
     ENDIF
     return
   END FUNCTION GAMMATO4N
@@ -1509,7 +1509,7 @@ contains
        END IF
     ELSE
        WRITE (*,*) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION SIGMA_NC_UPS_1
@@ -1530,7 +1530,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION SIGMA_NC_UPS_2
@@ -1551,7 +1551,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION SIGMA_NC_UPS_3
@@ -1572,7 +1572,7 @@ contains
        ENDIF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION SIGMA_NC_UPS_4
@@ -1593,7 +1593,7 @@ contains
        ENDIF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION SIGMA_NC_UPS_5
@@ -1635,7 +1635,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION GAMMATO1N_NC
@@ -1665,7 +1665,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION GAMMATO2N_NC
@@ -1691,7 +1691,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION GAMMATO3N_NC
@@ -1715,7 +1715,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   END FUNCTION GAMMATO4N_NC
@@ -1752,7 +1752,7 @@ contains
        END IF
     ELSE
        WRITE (*, *) 'Only Pb208 supported for now'
-       STOP
+       STOP 1
     END IF
     return
   end FUNCTION GAMMAABS_NC

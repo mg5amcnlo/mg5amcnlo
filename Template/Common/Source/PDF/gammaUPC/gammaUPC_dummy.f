@@ -3,7 +3,7 @@
        double precision x1,x2
        write(*,*) "ERROR: gamma-UPC dummy linked"
        photonpdfsquare = 1.0
-       stop 'gamma-UPC 1'
+       stop 1
        return
        end
 
@@ -14,6 +14,6 @@
        double precision RAI
        write(*,*) "ERROR: gamma-UPC dummy linked"
        RAI = 1d0
-       stop 'gamma-UPC 2'
+       stop 2
        return
        end

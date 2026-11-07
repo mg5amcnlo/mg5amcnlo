@@ -645,7 +645,7 @@ CONTAINS
        write ( *, '(a)' ) ' '
        write ( *, '(a)' ) 'CC_COMPUTE_POINTS - Fatal error!'
        write ( *, '(a,i8)' ) '  Illegal value of N = ', n
-       stop
+       stop 1
        
     else if ( n == 1 ) then
        
@@ -1128,7 +1128,7 @@ CONTAINS
        write ( *, '(a)' ) ''
        write ( *, '(a)' ) 'ORDER_FROM_LEVEL_135 - Fatal error!'
        write ( *, '(a)' ) '  Illegal input value of L!'
-       stop
+       stop 1
     else if ( l == 0 ) then
        n = 1
     else

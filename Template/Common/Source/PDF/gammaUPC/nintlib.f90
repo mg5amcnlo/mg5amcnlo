@@ -80,7 +80,7 @@ CONTAINS
        WRITE( *, '(a)' ) 'BOX_ND - Fatal error!'
        WRITE( *, '(a)' ) '  DIM_NUM < 1'
        WRITE( *, '(a,i8)' ) '  DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
     
     IF( order.LT.1)THEN
@@ -88,7 +88,7 @@ CONTAINS
        WRITE( *, '(a)' ) 'BOX_ND - Fatal error!'
        WRITE( *, '(a)' ) '  ORDER < 1'
        WRITE( *, '(a,i8)' ) '  ORDER = ', order
-       STOP
+       STOP 1
     ENDIF
 
     k = 0
@@ -281,7 +281,7 @@ CONTAINS
        WRITE( *, '(a)' ) ' '
        WRITE( *, '(a)' ) 'P5_ND - Fatal error!'
        WRITE( *, '(a,i8)' ) '  DIM_NUM < 1, DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
 
     a2 = 25.0D+00 / 324.0D+00
@@ -431,7 +431,7 @@ CONTAINS
        WRITE( *, '(a)' ) ' '
        WRITE( *, '(a)' ) 'R8VEC_UNIFORM_01 - Fatal error!'
        WRITE( *, '(a)' ) '  Input value of SEED = 0.'
-       STOP
+       STOP 1
     ENDIF
 
     DO i = 1, n
@@ -574,14 +574,14 @@ CONTAINS
        WRITE( *, '(a)' ) ' '
        WRITE( *, '(a)' ) 'ROMBERG_ND - Fatal error!'
        WRITE( *, '(a,i8)' ) '  DIM_NUM is less than 1.  DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
 
     IF(it_max.LT.1)THEN
        WRITE( *, '(a)' ) ' '
        WRITE( *, '(a)' ) 'ROMBERG_ND - Fatal error!'
        WRITE( *, '(a,i8)' ) '  IT_MAX is less than 1.  IT_MAX = ', it_max
-       STOP
+       STOP 1
     ENDIF
 
     DO i = 1, dim_num
@@ -591,7 +591,7 @@ CONTAINS
           WRITE( *, '(a)' ) '  SUB_NUM(I) is less than 1.'
           WRITE( *, '(a,i8)' ) '  for I = ', i
           WRITE( *, '(a,i8)' ) '  SUB_NUM(I) = ', sub_num(i)
-          STOP
+          STOP 1
        ENDIF
     ENDDO
 
@@ -867,7 +867,7 @@ CONTAINS
        WRITE( *, '(a)' ) 'SAMPLE_ND - Fatal error!'
        WRITE( *, '(a)' ) '  DIM_NUM must be at least 1,'
        WRITE( *, '(a,i8)' ) '  but DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
 
     IF(dim_max.LT.dim_num)THEN
@@ -875,14 +875,14 @@ CONTAINS
        WRITE( *, '(a)' ) 'SAMPLE_ND - Fatal error!'
        WRITE( *, '(a,i8)' ) '  DIM_NUM must be no more than DIM_MAX = ', dim_max
        WRITE( *, '(a,i8)' ) '  but DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
 
     IF(k1.LT.1)THEN
        WRITE( *, '(a)' ) ' '
        WRITE( *, '(a)' ) 'SAMPLE_ND - Fatal error!'
        WRITE( *, '(a,i8)' ) '  K1 must be at least 1, but K1 = ', k1
-       STOP
+       STOP 1
     ENDIF
 
     IF(k2.LT.k1)THEN
@@ -891,7 +891,7 @@ CONTAINS
        WRITE( *, '(a)' ) '  K1 may not be greater than K2, but '
        WRITE( *, '(a,i8)' ) '  K1 = ', k1
        WRITE( *, '(a,i8)' ) '  K2 = ', k2
-       STOP
+       STOP 1
     ENDIF
 
     be(1:dim_num) = al(1:dim_num)
@@ -1093,7 +1093,7 @@ CONTAINS
        WRITE( *, '(a)' ) 'SUM2_ND - Fatal error!'
        WRITE( *, '(a)' ) '  DIM_NUM < 1'
        WRITE( *, '(a,i8)' ) '  DIM_NUM = ', dim_num
-       STOP
+       STOP 1
     ENDIF
 
     DO i = 1, dim_num
@@ -1104,7 +1104,7 @@ CONTAINS
           WRITE( *, '(a)' ) '  ORDER(I) < 1.'
           WRITE( *, '(a,i8)' ) '  For I = ', i
           WRITE( *, '(a,i8)' ) '  ORDER(I) = ', order(i)
-          STOP
+          STOP 1
        ENDIF
 
     ENDDO
@@ -1355,7 +1355,7 @@ CONTAINS
     REAL(KIND(1d0))::xxs1,xxs2
     IF(s.LT.-1)THEN
        WRITE(*,*)"Error: s<-1 in mWT_Mfun"
-       STOP
+       STOP 1
     ENDIF
     IF(p.LE.-1)THEN
        Mfun=Fs(s)/psis(s)
@@ -1377,7 +1377,7 @@ CONTAINS
     REAL(KIND(1d0))::xxs1,xxs2
     IF(s.LT.-1)THEN
        WRITE(*,*)"Error: s<-1 in mWT_Nfun"
-       STOP
+       STOP 1
     ENDIF
     IF(p.LE.-1)THEN
        Nfun=psis(s)**(-1)

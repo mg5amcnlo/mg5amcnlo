@@ -46,13 +46,28 @@ $(LIBDIR)libpdf.$(libext): PDF $(alfas_functions).o
 	cd PDF; make; cd ..
 # gamma-UPC pdlabels (edff, chff, edpf, edf1n2n, ...) all start with ed or ch,
 # a prefix no other pdlabel uses (checked in tests/unit_tests/various/test_gamma_upc.py)
+#
+# libgammaUPC is built here only (PDF/makefile and SubProcesses/makefile do not
+# build it). The real and the dummy library are both lib/libgammaUPC, so a stamp
+# file in PDF/gammaUPC records which one was built. When the pdlabel changes,
+# the old library is removed ('ar cru' would add the new objects to it and keep
+# the old ones) and the other one is built. The rule always runs and checks the
+# stamp itself: make compares times to the second, so a stamp prerequisite
+# would be missed when two builds follow within the same second. The sub-make
+# does nothing when the library is up to date.
 ifneq (,$(filter ed%% ch%%, $(pdlabel1) $(pdlabel2)))
-$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-	cd PDF/gammaUPC; make ; cd ../../
+gammaUPC_variant = real
+gammaUPC_makefile = makefile
 else
-$(LIBDIR)libgammaUPC.$(libext): PDF/gammaUPC
-				cd PDF/gammaUPC; make -f makefile_dummy; cd ../../
-endif	
+gammaUPC_variant = dummy
+gammaUPC_makefile = makefile_dummy
+endif
+gammaUPC_stamp = PDF/gammaUPC/libgammaUPC_$(gammaUPC_variant).stamp
+$(LIBDIR)libgammaUPC.$(libext): FORCE_GAMMAUPC
+	if [ ! -f $(gammaUPC_stamp) ]; then rm -f $@ PDF/gammaUPC/libgammaUPC_*.stamp; touch $(gammaUPC_stamp); fi
+	cd PDF/gammaUPC && make -f $(gammaUPC_makefile)
+.PHONY: FORCE_GAMMAUPC
+FORCE_GAMMAUPC:
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make; cd ..
 # The bias library is here the dummy by default; compilation of other ones specified in the run_card will be done by MG5aMC directly.
