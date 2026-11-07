@@ -143,19 +143,21 @@ struct LHEEvent {
     int process_id;
     /// Event weight.
     double weight;
-    /// Event scale, in GeV.
+    /// Event scale (SCALUP), in GeV: the larger factorisation scale, as
+    /// madevent writes it.
     double scale;
     /// QED coupling at the event scale.
     double alpha_qed;
-    /// QCD coupling at the event scale.
+    /// QCD coupling at the renormalisation scale (@ref mu_r).
     double alpha_qcd;
     /// One entry per particle, incoming and outgoing.
     std::vector<LHEParticle> particles;
     /// Whether the MLM clustering scales of the outgoing particles are written
     /// (`pt_clust_<i>` attributes of `<scales>`).
     bool has_cluster_scales;
-    /// Renormalisation scale, written as the `mur` attribute of `<scales>`. The
-    /// event `scale` (SCALUP) is written separately.
+    /// Renormalisation scale, written as the `mur` attribute of `<scales>`.
+    /// It is not in SCALUP: the event `scale` is the larger factorisation
+    /// scale, as unwgt.f writes sqrt(max(q2fact)).
     double mu_r;
     /// Factorisation scales of the two beams (`muf1`, `muf2`; `muf` is their
     /// maximum).
@@ -174,6 +176,27 @@ struct LHEEvent {
     /// Append this event's LHE text to `buffer`.
     void format_to(std::string& buffer) const;
 };
+
+/**
+ * Start the MLM shower from the hardest scale of the event rather than from the
+ * collider energy.
+ *
+ * The MLM clustering reports every outgoing leg it assigned no clustering scale
+ * to at the collider energy: the leptons, photons and heavy quarks, and the
+ * light partons it puts in the core process. With
+ * Beams:setProductionScalesFromLHEF, which MLM merging turns on, Pythia8 starts
+ * each particle's final-state shower from its pt_clust and the initial-state
+ * shower from the largest of them, so both would start at the kinematic limit.
+ * Here the outgoing particles at `collider_energy` that are not light partons
+ * (|pdg| <= `max_jet_flavor` or a gluon) get the hardest scale of the event
+ * instead: the largest of SCALUP (mu_F) and the light partons' pt_clust below
+ * the collider energy. Only the shower start moves, not the matching. A light
+ * parton at the collider energy keeps it: that value is Pythia8's "do not
+ * match" flag.
+ */
+void apply_mlm_hardest_shower_scale(
+    LHEEvent& event, double collider_energy, int max_jet_flavor
+);
 
 /**
  * Fills in the non-kinematic data of an @ref LHEEvent from sampled indices.

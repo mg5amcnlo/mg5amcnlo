@@ -15,6 +15,7 @@ import tempfile
 from gridpack_setup import (
     SOURCE_HASH_MESSAGE,
     build_lhe_meta,
+    configure_mlm_shower_start,
     load_channels,
     load_context_data,
     load_lhe_completer,
@@ -234,6 +235,7 @@ def main() -> None:
     config.combine_thread_count = run_args["combine_thread_pool_size"]
     config.cut_efficiency_threshold = gen_args["cut_efficiency_threshold"]
     config.max_cut_repetitions = gen_args["max_cut_repetitions"]
+    configure_mlm_shower_start(config, madspace_data)
 
     # set up contexts and generators
     load_context_data(contexts, backends, madspace_data, run_args["precision"])

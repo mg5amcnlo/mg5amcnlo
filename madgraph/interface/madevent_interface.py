@@ -4688,6 +4688,13 @@ already exists and is not a fifo file."""%fifo_path)
             # Also make sure to use the shower starting scales specified in the LHE
             # unless the user specified it
             PY8_Card.systemSet('Beams:setProductionScalesFromLHEF',True)
+            # Pythia8 then starts the initial-state shower from the largest
+            # pt_clust. Without this, a sample with no light parton in the final
+            # state (0 jets) radiates up to the kinematic limit regardless. The
+            # mg7 output writes the event's hardest scale for the non-jet
+            # particles (beam.mlm_shower_start), so its shower starts there;
+            # madevent writes sqrt(s) for them, where this changes nothing.
+            PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch', 1)
 
 
             if PY8_Card['SysCalc:qCutList']!='auto':

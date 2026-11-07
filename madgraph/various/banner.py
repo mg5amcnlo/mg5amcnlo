@@ -4837,6 +4837,16 @@ class RunCardLO(RunCard):
         self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5, hidden=True,                          comment = 'highest quark flavor for a_s reweighting in MLM')
         self.add_param("clusinfo", True, hidden=True)
+        # Where Pythia8 starts the MLM shower for the outgoing particles that
+        # are not light jets (leptons, heavy quarks), which setclscales writes at
+        # sqrt(s): "hardest_scale" gives them the hardest scale of the event,
+        # max(SCALUP, the light jets' pt_clust), "collider_energy" keeps sqrt(s).
+        # Light partons of the core process keep sqrt(s) either way (Pythia8's
+        # do-not-match flag). Same switch as MadGraph7's beam.mlm_shower_start.
+        self.add_param("mlm_shower_start", "hardest_scale", hidden=True, include=False,
+                       allowed=['hardest_scale', 'collider_energy'],
+                       comment="MLM shower start for non-jet particles: hardest_scale or collider_energy")
+        self.add_param("mlm_hardest_shower", True, system=True)
         self.add_param("custom_fcts",[],typelist="str", include=False,           comment="list of files containing functions that overwrite dummy functions in the code (like adding cuts/...)")
         #format output / boost
         self.add_param("lhe_version", 3.0, hidden=True)
@@ -5280,6 +5290,9 @@ class RunCardLO(RunCard):
         
         # polarization
         self['frame_id'] = sum(2**(n) for n in self['me_frame'])
+
+        # MLM shower start (unwgt.f)
+        self['mlm_hardest_shower'] = self['mlm_shower_start'] == 'hardest_scale'
         
         # set the pdg_for_cut fortran parameter
         pdg_to_cut = set(list(self['pt_min_pdg'].keys()) +list(self['pt_max_pdg'].keys()) + 
@@ -7300,6 +7313,23 @@ class RunCardMG7(RunCard):
         self.add_toml_param('beam', 'jet_scale_scheme', "production",
             allowed=['production', 'emission'],
             comment="MLM clustering scale of each outgoing jet: production or emission",
+            hidden=True)
+        # Where the MLM shower starts for what is not a light jet. The
+        # clustering gives a leg it books no scale onto the collider energy as
+        # pt_clust, and Pythia8 (Beams:setProductionScalesFromLHEF) starts the
+        # initial-state shower from the largest pt_clust and each particle's
+        # final-state shower from its own: from the kinematic limit.
+        #   "hardest_scale":   leptons, photons and heavy quarks get the hardest
+        #                      scale of the event, max(mu_F, light-jet pt_clust),
+        #                      so the shower starts there (with
+        #                      SpaceShower:pTmaxMatch = 1, also for a sample
+        #                      without light partons). Light partons of the core
+        #                      process keep the collider energy: it is Pythia8's
+        #                      do-not-match flag.
+        #   "collider_energy": the collider energy for all of them, as madevent.
+        self.add_toml_param('beam', 'mlm_shower_start', "hardest_scale",
+            allowed=['hardest_scale', 'collider_energy'],
+            comment="MLM shower start for non-jet particles: hardest_scale or collider_energy",
             hidden=True)
         # How mu_R and mu_F are read off the clustering history:
         #   "clustering_mean": geometric mean of every clustering scale, with a
@@ -9433,6 +9463,8 @@ class RunCardMG7(RunCard):
                 mg7.set('beam.dynamical_scale_choice', 'mlm')
                 mg7.set('beam.scale_scheme', 'madevent')
                 mg7.set('phasespace.xqcut', xqcut)
+                if 'mlm_shower_start' in lo:
+                    mg7.set('beam.mlm_shower_start', lo['mlm_shower_start'])
                 if 'auto_ptj_mjj' in lo:
                     mg7.set('phasespace.auto_ptj_mjj', bool(lo['auto_ptj_mjj']))
                 if dyn != -1:

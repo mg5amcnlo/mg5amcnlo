@@ -111,6 +111,15 @@ struct GeneratorConfig {
     /// Number of standard deviations of headroom added when sizing a batch,
     /// to avoid overshooting the target count.
     double batch_overshoot_sigma = 1.0;
+    /// MLM merging: write the event's hardest scale, instead of the collider
+    /// energy, as the pt_clust of the outgoing particles that are not light
+    /// partons; see @ref apply_mlm_hardest_shower_scale.
+    bool mlm_hardest_shower_scale = false;
+    /// The collider energy, the pt_clust the MLM clustering gives a leg it
+    /// assigned no clustering scale to.
+    double mlm_collider_energy = 0.;
+    /// Heaviest quark flavour that is a light jet, Pythia8's JetMatching:nQmatch.
+    int mlm_max_jet_flavor = 4;
 };
 
 /// Settings of a re- or unweighting step after the first unweighting, as far

@@ -814,7 +814,8 @@ void EventGenerator::combine_to_lhe_npy(
                 i,
                 rand_gen,
                 _channels.at(0)->event_layout_extra_flags(),
-                _channels.at(0)->particle_layout_extra_flags()
+                _channels.at(0)->particle_layout_extra_flags(),
+                _config
             );
             buffer_out.event(i).from_lhe_event(lhe_event);
             copy_event_fields(buffer, i, buffer_out, i, syst_weights);
@@ -919,7 +920,8 @@ void EventGenerator::combine_to_lhe(
                             i,
                             rand_gen,
                             _channels.at(0)->event_layout_extra_flags(),
-                            _channels.at(0)->particle_layout_extra_flags()
+                            _channels.at(0)->particle_layout_extra_flags(),
+                            _config
                         );
                         fill_systematics(
                             lhe_event, in_buffer, i, syst_weights, syst_ids

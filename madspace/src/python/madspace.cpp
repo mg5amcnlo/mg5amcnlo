@@ -3074,6 +3074,21 @@ PYBIND11_MODULE(_madspace_py, m) {
             "batch_overshoot_sigma",
             &GeneratorConfig::batch_overshoot_sigma,
             pydoc::doc("GeneratorConfig::batch_overshoot_sigma")
+        )
+        .def_readwrite(
+            "mlm_hardest_shower_scale",
+            &GeneratorConfig::mlm_hardest_shower_scale,
+            pydoc::doc("GeneratorConfig::mlm_hardest_shower_scale")
+        )
+        .def_readwrite(
+            "mlm_collider_energy",
+            &GeneratorConfig::mlm_collider_energy,
+            pydoc::doc("GeneratorConfig::mlm_collider_energy")
+        )
+        .def_readwrite(
+            "mlm_max_jet_flavor",
+            &GeneratorConfig::mlm_max_jet_flavor,
+            pydoc::doc("GeneratorConfig::mlm_max_jet_flavor")
         );
 
     m.def(
@@ -3354,7 +3369,12 @@ PYBIND11_MODULE(_madspace_py, m) {
         .def_readwrite(
             "lifetime", &LHEParticle::lifetime, pydoc::doc("LHEParticle::lifetime")
         )
-        .def_readwrite("spin", &LHEParticle::spin, pydoc::doc("LHEParticle::spin"));
+        .def_readwrite("spin", &LHEParticle::spin, pydoc::doc("LHEParticle::spin"))
+        .def_readwrite(
+            "cluster_scale",
+            &LHEParticle::cluster_scale,
+            pydoc::doc("LHEParticle::cluster_scale")
+        );
     py::classh<LHEEvent>(m, "LHEEvent", pydoc::doc("LHEEvent"))
         .def(
             py::init<int, double, double, double, double, std::vector<LHEParticle>>(),
@@ -3383,6 +3403,11 @@ PYBIND11_MODULE(_madspace_py, m) {
             "rwgt_ids", &LHEEvent::rwgt_ids, pydoc::doc("LHEEvent::rwgt_ids")
         )
         .def_readwrite("rwgt", &LHEEvent::rwgt, pydoc::doc("LHEEvent::rwgt"))
+        .def_readwrite(
+            "has_cluster_scales",
+            &LHEEvent::has_cluster_scales,
+            pydoc::doc("LHEEvent::has_cluster_scales")
+        )
         .def(
             "format",
             [](const LHEEvent& event) {
@@ -3392,6 +3417,14 @@ PYBIND11_MODULE(_madspace_py, m) {
             },
             pydoc::doc("LHEEvent::format_to")
         );
+    m.def(
+        "apply_mlm_hardest_shower_scale",
+        &apply_mlm_hardest_shower_scale,
+        py::arg("event"),
+        py::arg("collider_energy"),
+        py::arg("max_jet_flavor"),
+        pydoc::doc("apply_mlm_hardest_shower_scale")
+    );
     py::classh<LHECompleter::SubprocArgs>(
         m, "SubprocArgs", pydoc::doc("LHECompleter::SubprocArgs")
     )

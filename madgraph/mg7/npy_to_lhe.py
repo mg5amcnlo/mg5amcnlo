@@ -95,6 +95,17 @@ def _particle_count(names):
     return count
 
 
+def _scalup(events):
+    """SCALUP as the direct LHE output writes it: the larger factorisation
+    scale, mu_R for a beam without a PDF. A run that kept the systematics
+    weights but not their inputs has no fact_scale columns: mu_R then."""
+    import numpy as np
+    names = events.dtype.names
+    mu_f1 = events["fact_scale1"] if "fact_scale1" in names else events["ren_scale"]
+    mu_f2 = events["fact_scale2"] if "fact_scale2" in names else mu_f1
+    return np.maximum(mu_f1, mu_f2)
+
+
 def _compact_events(ms, events, completer, columns, rng):
     names = events.dtype.names
     nparticles = _particle_count(names)
@@ -102,6 +113,7 @@ def _compact_events(ms, events, completer, columns, rng):
                      for c in ("energy", "px", "py", "pz"))
                for i in range(nparticles)]
     rwgt = [events[c] for c in columns]
+    scalup = _scalup(events)
     for n in range(len(events)):
         particles = []
         for energy, px, py, pz in momenta:
@@ -110,7 +122,7 @@ def _compact_events(ms, events, completer, columns, rng):
             particles.append(ms.LHEParticle(px=px[n], py=py[n], pz=pz[n],
                                             energy=energy[n]))
         event = ms.LHEEvent(weight=events["weight"][n],
-                            scale=events["ren_scale"][n],
+                            scale=scalup[n],
                             alpha_qcd=events["alpha_qcd"][n],
                             particles=particles)
         completer.complete_event_data(
