@@ -56,7 +56,7 @@ c are filled from the PDG codes (iPDG array) in this function.
       logical is_a_lp(nexternal),is_a_lm(nexternal),is_a_j(nexternal),is_nph_iso(nexternal),is_nextph_iso(nexternal),
      $     is_nextph_iso_reco(nexternal)
       logical is_a_lp_reco(nexternal),is_a_lm_reco(nexternal)
-      logical passcuts_leptons, passcuts_jet_veto, passcuts_photons,
+      logical passcuts_leptons, passcuts_photons,
      $        passcuts_jets, passcuts_pdgs,passcuts_fxfx
       logical dummy_cuts
       passcuts_user=.true. ! event is okay; otherwise it is changed
@@ -89,10 +89,6 @@ C***************************************************************
       ! A. All photons if gamma_is_j is on
       ! B. Non-iso, non-reco photons if reco is on
       call identify_QCD_partons(is_nextph_iso_reco,p_reco,istatus,ipdg_reco,is_a_j,pQCD,nQCD)
-
-      ! Apply the NNLL jet-veto cuts
-      passcuts_user = passcuts_user .and.passcuts_jet_veto(pQCD,nQCD,ickkw)
-      if (.not.passcuts_user) return
 
       ! Apply the Jet cuts
       if (ickkw.ne.3) then
@@ -548,36 +544,6 @@ c Apply the jet cuts
          endif
       endif
 
-      return
-      end
-
-
-
-      logical function passcuts_jet_veto(pQCD,nQCD,ickkw)
-      implicit none
-      include 'nexternal.inc'
-      integer nQCD
-      double precision pQCD(0:3,nexternal)
-      integer ickkw
-      include "cuts.inc"
-
-      REAL*8 pt
-      external pt
-
-      passcuts_jet_veto=.true.
-
-c Use veto'ed Xsec for analytic NNLL resummation
-      if (ickkw.eq.-1 .and. ptj.gt.0d0) then
-         if (nQCD.ne.1) then
-            write (*,*) 'ERROR: more than one QCD parton in '/
-     $           /'this event in cuts.f. There should only be one'
-            stop
-         endif
-         if (pt(pQCD(0,1)) .gt. ptj) then
-            passcuts_jet_veto=.false.
-            return
-         endif
-      endif
       return
       end
 

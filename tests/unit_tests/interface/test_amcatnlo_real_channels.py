@@ -101,7 +101,7 @@ class TestRealChannelJobs(unittest.TestCase):
             self.command.run_card['real_channels_x0'] = 0.1
             self.assertEqual(self.command.check_real_channels_mode(mode), -1.0)
             self.assertEqual(self.command.run_card['real_channels_x0'], -1.0)
-        for ickkw in (-1, 3):
+        for ickkw in (3,):
             self.command.run_card['real_channels_x0'] = 0.1
             self.command.run_card['ickkw'] = ickkw
             self.assertEqual(self.command.check_real_channels_mode('NLO'), -1.0)

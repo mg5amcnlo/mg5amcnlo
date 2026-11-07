@@ -3448,14 +3448,9 @@ RESTART = %(mint_mode)s
                     message = message + '\n      Scale variation %s:' % computed
                     for s in scale_pdf_info[0]:
                         if s['unc']:
-                            if self.run_card['ickkw'] != -1:
-                                message = message + \
-                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
-                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % s
-                            else:
-                                message = message + \
-                                          ('\n          Soft and hard scale dependence (added in quadrature): '\
-                                           '\n              %(cen)8.3e pb  +%(max_q)0.1f%% -%(min_q)0.1f%%') % s
+                            message = message + \
+                                      ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
+                                       '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % s
                                     
                         else:
                             message = message + \
@@ -5075,24 +5070,13 @@ RESTART = %(mint_mode)s
                 # max and min of the full envelope
                 s_max=(max(scale)/s_cen-1)*100
                 s_min=(1-min(scale)/s_cen)*100
-                # ren and fac scale dependence added in quadrature
-                ren_var=[]
-                fac_var=[]
-                for i in range(len(self.run_card['rw_rscale'])):
-                    ren_var.append(scale[i]-s_cen) # central fac scale
-                for i in range(len(self.run_card['rw_fscale'])):
-                    fac_var.append(scale[i*len(self.run_card['rw_rscale'])]-s_cen) # central ren scale
-                s_max_q=((s_cen+math.sqrt(math.pow(max(ren_var),2)+math.pow(max(fac_var),2)))/s_cen-1)*100
-                s_min_q=(1-(s_cen-math.sqrt(math.pow(min(ren_var),2)+math.pow(min(fac_var),2)))/s_cen)*100
                 s_size=len(scale)
             else:
                 s_max=0.0
                 s_min=0.0
-                s_max_q=0.0
-                s_min_q=0.0
                 s_size=len(scale)
             scale_info.append({'cen':s_cen, 'min':s_min, 'max':s_max, \
-                               'min_q':s_min_q, 'max_q':s_max_q, 'size':s_size, \
+                               'size':s_size, \
                                'label':self.run_card['dynamical_scale_choice'][j], \
                                'unc':self.run_card['reweight_scale'][j]})
 
@@ -6063,9 +6047,6 @@ RESTART = %(mint_mode)s
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
-            elif self.run_card['ickkw'] == -1 and mode in ['aMC@NLO', 'noshower']:
-                    # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
-                raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO or LO.""")
         if 'aMC@' in mode or mode == 'onlyshower':
             self.shower_card = self.banner.charge_card('shower_card')
             

@@ -466,15 +466,6 @@ c value to the list of weights using the add_wgt subroutine
       if (f_nb.eq.0d0) goto 9909
       if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) goto 9909
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
-      if (ickkw.eq.-1) then
-         if (wgtbpower.ne.0) then
-            write (*,*) 'ERROR in VETO XSec: bpower should'/
-     $           /' be zero (no QCD partons at the'/
-     $           /' Born allowed)', wgtbpower
-         endif
-        write(*,*) 'FIX VETOXSEC in FKS_EW'
-        stop
-      endif
       iamp_test=0
       do iamp=1, amp_split_size
         if (amp_split_wgtnstmp(iamp).eq.0d0.and.
@@ -2031,7 +2022,6 @@ c     type=3 : integrated counter terms
 c     type=4 : soft counter-term
 c     type=5 : collinear counter-term
 c     type=6 : soft-collinear counter-term
-c     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO
 c     type=8 : soft counter-term (with n+1-body kin.)
 c     type=9 : collinear counter-term (with n+1-body kin.)
 c     type=10: soft-collinear counter-term (with n+1-body kin.)
@@ -2320,7 +2310,7 @@ c subtr term
          enddo
          H_event(icontr)=.true.
          need_match(1:nexternal,icontr)=need_matching_H(1:nexternal)
-      elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
+      elseif(type.ge.2 .and. type.le.6 .or. type.eq.11 .or. type.eq.12
      $        .or. type.eq.14 .or. type.eq.15
      $        .or. (type.ge.20 .and. type.le.22)) then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
@@ -2340,27 +2330,6 @@ c and MC subtraction terms.
       end
 
 
-      subroutine include_veto_multiplier
-      use weight_lines
-      use extra_weights
-      implicit none
-c Multiply all the weights by the NNLL-NLO jet veto Sudakov factors,
-c i.e., the term on the 2nd line of Eq.(20) of arXiv:1412.8408.
-      include 'nexternal.inc'
-      integer i,j
-      if (H1_factor_virt.ne.0d0) then
-         call compute_veto_multiplier(H1_factor_virt,1d0,1d0
-     &        ,veto_multiplier)
-         do i=1,icontr
-            do j=1,3
-               wgt(j,i)=wgt(j,i)*veto_multiplier
-            enddo
-         enddo
-      else
-         veto_multiplier=1d0
-      endif
-      end
-      
       subroutine include_PDF_and_alphas
 c Multiply the saved wgt() info by the PDFs, alpha_S and the scale
 c dependence and saves the weights in the wgts() array. The weights in
@@ -3047,114 +3016,6 @@ c add the weights to the array
       return
       end
 
-      subroutine reweight_scale_NNLL
-c Use the saved weight lines info to perform scale reweighting. Extends the
-c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
-c computations (ickkw.eq.-1).
-      use weight_lines
-      use extra_weights
-      use FKSParams
-      implicit none
-      include 'nexternal.inc'
-      include 'run.inc'
-      include 'timing_variables.inc'
-      include 'genps.inc'
-      integer i,ks,kh,iwgt_save
-      double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
-     &     ,mu2_f(maxscales),mu2_q,alphas,g(maxscales),rwgt_muR_dep_fac
-     &     ,veto_multiplier_new(maxscales,maxscales)
-     &     ,veto_compensating_factor_new,conv
-      external rwgt_muR_dep_fac
-      parameter (pi=3.1415926535897932385d0)
-      external dlum,alphas
-      integer              nFKSprocess
-      common/c_nFKSprocess/nFKSprocess
-      INTEGER              IPROC
-      DOUBLE PRECISION PD(0:MAXPROC)
-      COMMON /SUBPROC/ PD, IPROC
-      parameter (conv=389379660d0) ! conversion to picobarns
-      if(timing_sampled)call timing_enter(timing_reweight)
-      write(*,*) 'FIX NLLL'
-      stop 1
-      if (icontr.eq.0) goto 9909
-      if (dyn_scale(0).gt.1) then
-         write (*,*) "When doing NNLL+NLO veto, "/
-     $        /"can only do one dynamical_scale_choice",dyn_scale(0)
-         stop
-      endif
-
-c currently we have 'iwgt' weights in the wgts() array.
-      iwgt_save=iwgt
-c compute the new veto multiplier factor      
-      do ks=1,nint(scalevarR(0))
-         if ((.not. lscalevar(1)) .and. ks.ne.1) exit
-         do kh=1,nint(scalevarF(0))
-            if ((.not. lscalevar(1)) .and. kh.ne.1) exit
-            if (H1_factor_virt.ne.0d0) then
-               call compute_veto_multiplier(H1_factor_virt,scalevarR(ks)
-     $              ,scalevarF(kh),veto_multiplier_new(ks,kh))
-               veto_multiplier_new(ks,kh)=veto_multiplier_new(ks,kh)
-     &              /veto_multiplier
-            else
-               veto_multiplier_new(ks,kh)=1d0
-            endif
-         enddo
-      enddo
-c loop over all the contributions in the weight lines module
-      do i=1,icontr
-         iwgt=iwgt_save
-         nFKSprocess=nFKS(i)
-         call mc_set_history(native_ids(3,i))
-         xbk(1) = bjx(1,i)
-         xbk(2) = bjx(2,i)
-         mu2_q=scales2(1,i)
-c Hard scale variation
-         do kh=1,nint(scalevarF(0))
-            if ((.not. lscalevar(1)) .and. kh.ne.1) exit
-c soft scale variation
-            do ks=1,nint(scalevarR(0))
-               if ((.not. lscalevar(1)) .and. ks.ne.1) exit
-               mu2_r(ks)=scales2(2,i)*scalevarR(ks)**2
-               g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
-               mu2_f(ks)=scales2(2,i)*scalevarR(ks)**2
-               q2fact(1)=mu2_f(ks)
-               q2fact(2)=mu2_f(ks)
-               if(timing_sampled)call timing_enter(timing_pdf)
-               xlum(ks) = dlum()
-               if(timing_sampled)call timing_leave(timing_pdf)
-               if (separate_flavour_configs .and. ipr(i).ne.0) then
-                  if (nincoming.eq.2) then
-                     xlum=pd(ipr(i))*conv
-                  else
-                     xlum=pd(ipr(i))
-                  endif
-               endif
-               iwgt=iwgt+1      ! increment the iwgt for the wgts() array
-               call weight_lines_allocated(nexternal,max_contr,iwgt
-     $              ,max_iproc)
-c add the weights to the array
-               if (itype(i).ne.7) then
-                  wgts(iwgt,i)=xlum(ks) * (wgt(1,i)+wgt(2,i)
-     &                 *log(mu2_r(ks)/mu2_q)+wgt(3,i)*log(mu2_f(ks)
-     &                 /mu2_q))*g(ks)**QCDpower(i)
-               else
-c special for the itype=7 (i.e, the veto-compensating factor)                  
-      call compute_veto_compensating_factor(H1_factor_virt,born_wgt_veto,scalevarR(ks),veto_compensating_factor_new)
-                  wgts(iwgt,i)=xlum(ks) * wgt(1,i)*g(ks)**QCDpower(i)
-     &                 /veto_compensating_factor
-     &                 *veto_compensating_factor_new
-               endif
-               wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
-     &              sqrt(mu2_r(ks)),sqrt(scales2(2,i)),cpower(i))
-               wgts(iwgt,i)=wgts(iwgt,i)*veto_multiplier_new(ks,kh)
-            enddo
-         enddo
-      enddo
- 9909 continue
-      if(timing_sampled)call timing_leave(timing_reweight)
-      return
-      end
-
       subroutine reweight_pdf
 c Use the saved weight_lines info to perform PDF reweighting. Extends the
 c wgts() array to include the weights.
@@ -3359,7 +3220,7 @@ c section
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14 .or.
-     &        itype(i).eq.7 .or. itype(i).eq.15) then
+     &        itype(i).eq.15) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -3378,7 +3239,7 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7 .and. itype(i).ne.15.and.itype(i).lt.20) then
+     &        .and. itype(i).ne.15.and.itype(i).lt.20) then
              ! MZ <20 is needed to exclude the ew sudakov 
             sig=sig+wgts(1,i)
          endif
@@ -3775,7 +3636,7 @@ c configuration.
             ict=group_member(j,i)
             ifl=ifold_cnt(ict)
             if ( itype(ict).ne.2 .and. itype(ict).ne.3 .and.
-     $           itype(ict).ne.7 .and. itype(ict).ne.14 .and.
+     $           itype(ict).ne.14 .and.
      $           itype(ict).ne.15) then
                   ! do not include the "born" or "nbody_noborn"
                wgt_fold_fks(nFKS(ict),ifl) = 
@@ -6943,8 +6804,7 @@ C end of the external particle loop
 c     If doing MC over helicities, must sum over the two
 c     helicity contributions for the Q-terms of collinear limit.
  547  continue
-      collect_surrogate=VirtTrickSurrogate.ge.1.and.
-     $     ickkw.ne.-1.and.fold.eq.0
+      collect_surrogate=VirtTrickSurrogate.ge.1.and.fold.eq.0
      $     .and.born_spread_phase.ne.1.and.born_spread_phase.ne.2
       if (fold.eq.0) call vs_clear_links
 c Separate virtual events need only the colour links from this loop.
@@ -7013,8 +6873,7 @@ C set back the fks i/j info as prior to enter this function
       call fks_inc_chooser()
 
  548  continue
-      use_surrogate=VirtTrickSurrogate.ge.1.and.
-     $     ickkw.ne.-1
+      use_surrogate=VirtTrickSurrogate.ge.1
 c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
       virt_wgt=0d0
@@ -7085,16 +6944,14 @@ c polynomial when the channel's fit has not been selected.
             virtual_over_born=0d0
             if (born_wgt.ne.0d0)
      $           virtual_over_born=virt_wgt/born_wgt
-            if (ickkw.ne.-1) then
-               virt_wgt = 0d0
-               do iamp=1,amp_split_size
-                  if (.not.vs_ratio_set.and.
-     $                 amp_split_virt(iamp).eq.0d0) cycle
-                  amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $                 ave_ratio(iamp)*amp_split_born_for_virt(iamp)
-                  virt_wgt = virt_wgt + amp_split_virt(iamp)
-               enddo
-            endif
+            virt_wgt = 0d0
+            do iamp=1,amp_split_size
+               if (.not.vs_ratio_set.and.
+     $              amp_split_virt(iamp).eq.0d0) cycle
+               amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $              ave_ratio(iamp)*amp_split_born_for_virt(iamp)
+               virt_wgt = virt_wgt + amp_split_virt(iamp)
+            enddo
 c Separate virtual events have no type-15 approximation record. Retain
 c a nonzero residual component to recover their final fit normalization,
 c even when different amplitude orders cancel in the summed residual.
@@ -7120,7 +6977,7 @@ c even when different amplitude orders cancel in the summed residual.
          amp_split_virt(1:amp_split_size)=
      $        amp_split_virt_save(1:amp_split_size)
       endif
-      if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
+      if (abrv(1:4).ne.'virt') then
          avv_wgt=ave_ratio(0)*born_wgt
          do iamp=1, amp_split_size
             if (amp_split_born_for_virt(iamp).eq.0d0) cycle

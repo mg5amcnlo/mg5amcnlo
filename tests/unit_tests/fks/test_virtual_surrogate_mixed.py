@@ -18,15 +18,15 @@ def production_fixture():
     choice = source.split('c The scalar fit is valid only for one virtual Born order normalized by', 1)[1]
     choice = choice[:choice.index('      if (fold.eq.0) then\n         vs_vcomp=.false.')]
     choice = 'c The scalar fit is valid only for one virtual Born order normalized by'+choice
-    ratio = re.search(r'^            virtual_over_born=0d0\n.*?(?=^            if \(ickkw)', source, re.M | re.S).group()
+    ratio = re.search(r'^            virtual_over_born=0d0\n.*?(?=^            virt_wgt = 0d0)', source, re.M | re.S).group()
     capture = re.search(r'^            if \(use_surrogate\) then\n.*?^            endif\n(?=            virtual_over_born)', source, re.M | re.S).group()
-    residual = re.search(r'^            if \(ickkw.ne.-1\) then\n.*?(?=^c Separate virtual events)', source, re.M | re.S).group()
+    residual = re.search(r'^            virt_wgt = 0d0\n.*?(?=^c Separate virtual events)', source, re.M | re.S).group()
     fraction = re.search(r"^            if \(abrv.ne.'virt'\) then\n.*?^            endif", source, re.M | re.S).group()
-    approximation = re.search(r"^      if \(abrv\(1:4\).ne.'virt' .and. ickkw.ne.-1\) then\n.*?(?=^c eq.)", source, re.M | re.S).group()
+    approximation = re.search(r"^      if \(abrv\(1:4\).ne.'virt'\) then\n.*?(?=^c eq.)", source, re.M | re.S).group()
     return '''      subroutine choose_fit
       use point_fixture
       implicit none
-      use_surrogate=VirtTrickSurrogate.ge.1.and.ickkw.ne.-1
+      use_surrogate=VirtTrickSurrogate.ge.1
 ''' + choice + '''      end
       subroutine evaluate_virtual
       use point_fixture
@@ -56,7 +56,7 @@ use virt_surrogate
 use mint_module
 implicit none
 integer,parameter :: amp_split_size=2
-integer :: fold=0,ickkw=0
+integer :: fold=0
 logical :: use_surrogate=.true.
 character(len=4) :: abrv='all '
 real(8) :: p_born(0:3,4),QES2=100d0,born_wgt=2d0,virt_wgt,virtual_over_born,avv_wgt

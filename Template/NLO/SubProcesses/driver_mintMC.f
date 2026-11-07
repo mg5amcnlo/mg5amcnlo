@@ -229,7 +229,6 @@ c*************************************************************
 c Mass-shell stuff. This is MC-dependent
          call fill_MC_mshell()
          putonshell=.true.
-         if (ickkw.eq.-1) putonshell=.false.
          unwgt=.true.
          write(*,*) 'Generating ', nevts, ' events'
          if(nevts.eq.0) then

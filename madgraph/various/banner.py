@@ -6299,7 +6299,7 @@ class RunCardNLO(RunCard):
         self.add_param('flavour_bias',[5,1], hidden=True, comment="Example: '5,100' means that the probability to generate an event with a bottom (or anti-bottom) quark is increased by a factor 100, but the weight of those events is reduced by a factor 100. Requires that the 'event_norm' is set to 'bias'.")
         
         #merging
-        self.add_param('ickkw', 0, allowed=[-1,0,3], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
+        self.add_param('ickkw', 0, allowed=[0,3], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm")
         self.add_param('bwcutoff', 15.0)
         #cuts        
         self.add_param('jetalgo', 1.0)
@@ -6433,12 +6433,6 @@ class RunCardNLO(RunCard):
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
                                 % jetparam ,'$MG:BOLD')
                     self[jetparam] = 1.0
-        elif self['ickkw'] == -1 and (self["dynamical_scale_choice"][0] != -1 or
-                                      len(self["dynamical_scale_choice"]) > 1):
-                self["dynamical_scale_choice"] = [-1]
-                self["reweight_scale"]=[self["reweight_scale"][0]]
-                logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
-                                ,'$MG:BOLD')            
                                 
         # For interface to PINEAPPL, need to use LHAPDF and reweighting to get scale uncertainties
         if self['pineappl'] and self['pdlabel'].lower() != 'lhapdf':

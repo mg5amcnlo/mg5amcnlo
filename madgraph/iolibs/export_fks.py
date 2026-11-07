@@ -763,8 +763,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'orderstags_glob.f',
                      'chooser_functions.f',
                      'mc_native_runtime.f',
-                     'veto_xsec.f',
-                     'veto_xsec.inc',
                      'weight_lines.f',
                      'fks_phase_space_data.f',
                      'genps_fks.f',

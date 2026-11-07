@@ -8,7 +8,6 @@
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
-      include "run.inc"
       logical Hevents
       common/SHevents/Hevents
       integer i,lunlhe,p_label
@@ -62,7 +61,7 @@ c
       
 c Write-out the events
       call write_events_lhe(pb(0,1),evnt_wgt,jpart(1,1),npart,lunlhe
-     $     ,ickkw,shower_scale_a,p_label)
+     $     ,shower_scale_a,p_label)
       
       return
       end
@@ -102,7 +101,7 @@ c get info on beam and PDFs
       return
       end
 
-      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe ,ickkw
+      subroutine write_events_lhe(p,wgt,ic,npart,lunlhe
      $     ,shower_scale_a,p_label)
       use extra_weights
       use process_module
@@ -111,7 +110,7 @@ c get info on beam and PDFs
       include "nexternal.inc"
       include "coupl.inc"
       double precision p(0:4,2*nexternal-3),wgt
-      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw,p_label
+      integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,p_label
       double precision pi,zero
       parameter (pi=3.1415926535897932385d0)
       parameter (zero=0.d0)
@@ -119,7 +118,7 @@ c get info on beam and PDFs
       parameter (izero=0)
       double precision aqcd,aqed
       character*1000 buff
-      INTEGER MAXNUP,i,j,k
+      INTEGER MAXNUP,i
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
      # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
@@ -143,33 +142,23 @@ c Reuse the large event-scale workspace without using the call stack.
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
 c
       scalup_a=-1d0
-      if (ickkw.eq.-1) then
-         SCALUP = mu_r
-         do j=1,2*nexternal-3
-            do k=1,2*nexternal-3
-               if(j.eq.k)cycle
-               scalup_a(j,k)=mu_r
-            enddo
-         enddo
-      else
-         if (iSorH_lhe.eq.1.and.scalar_S_scales()) then
+      if (iSorH_lhe.eq.1.and.scalar_S_scales()) then
 c The scalar is the damped hard scale. The shower applies its dipole
 c limits; Delta additionally records the effective directed scales.
-            SCALUP=showerscaleS_hard
-            if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
+         SCALUP=showerscaleS_hard
+         if (mcatnlo_delta_mod) scalup_a(1:npart,1:npart)=
      $           shower_scale_a(1:npart,1:npart)
-         elseif (.not.mcatnlo_delta_mod) then
-            if (iSorH_lhe.eq.1) then ! S-event
-               SCALUP=showerscaleS(1,1)
-            else
-               SCALUP=showerscaleH(1,1)
-            endif
-            scalup_a(1:npart,1:npart)=-1d0
+      elseif (.not.mcatnlo_delta_mod) then
+         if (iSorH_lhe.eq.1) then ! S-event
+            SCALUP=showerscaleS(1,1)
          else
-            ! use array of scale for MC@NLO-Delta
-            SCALUP=-1d0
-            scalup_a(1:npart,1:npart)=shower_scale_a(1:npart,1:npart)
+            SCALUP=showerscaleH(1,1)
          endif
+         scalup_a(1:npart,1:npart)=-1d0
+      else
+         ! use array of scale for MC@NLO-Delta
+         SCALUP=-1d0
+         scalup_a(1:npart,1:npart)=shower_scale_a(1:npart,1:npart)
       endif
 c
       aqcd=g**2/(4d0*pi)

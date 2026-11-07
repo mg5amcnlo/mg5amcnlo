@@ -1182,7 +1182,7 @@ class TestRunCard(unittest.TestCase):
 
     def test_nlo_matching_modes(self):
         """Legacy matching selections must not silently change the physics."""
-        for mode in (-1, 0, 3):
+        for mode in (0, 3):
             with self.subTest(mode=mode):
                 card = bannermod.RunCardNLO(
                     '%s = ickkw\n' % mode, consistency=False)
@@ -1195,17 +1195,21 @@ class TestRunCard(unittest.TestCase):
                 card.write_include_file(None, output_file=include)
                 self.assertIn('ickkw = %s' % mode, include.getvalue())
 
-        with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
-            bannermod.RunCardNLO('4 = ickkw\n', consistency=False)
+        for mode in (-1, 4):
+            with self.subTest(unsupported_mode=mode):
+                with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
+                    bannermod.RunCardNLO('%s = ickkw\n' % mode, consistency=False)
         for initial_mode in (0, 3):
             card = bannermod.RunCardNLO()
             card['ickkw'] = initial_mode
-            with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
-                card.set('ickkw', 4, user=True)
-            self.assertEqual(card['ickkw'], initial_mode)
-            with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
-                card['ickkw'] = 4
-            self.assertEqual(card['ickkw'], initial_mode)
+            for mode in (-1, 4):
+                with self.subTest(initial_mode=initial_mode, unsupported_mode=mode):
+                    with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
+                        card.set('ickkw', mode, user=True)
+                    self.assertEqual(card['ickkw'], initial_mode)
+                    with self.assertRaisesRegex(bannermod.InvalidRunCard, 'ickkw'):
+                        card['ickkw'] = mode
+                    self.assertEqual(card['ickkw'], initial_mode)
 
     def test_born_spreading_option(self):
         """Born spreading is off by default and can be enabled."""

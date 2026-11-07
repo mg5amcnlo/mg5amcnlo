@@ -525,7 +525,6 @@ c a scale to be used as a reference for renormalization scale
       include 'genps.inc'
       include 'nexternal.inc'
       include 'run.inc'
-      include 'cuts.inc'
       double precision scale_global_reference,pp(0:3,nexternal)
       double precision tmp,pt,et,dot,sumdot
       external pt,et,dot,sumdot
@@ -536,11 +535,7 @@ c a scale to be used as a reference for renormalization scale
       external user_dynamical_scale
 c
       tmp=0
-      if(ickkw.eq.-1)then
-c Special for analytic resummation in veto'ed cross sections:
-         tmp=ptj
-         temp_scale_id='NLO+NNLL veto scale: ptj_max'
-      elseif(dynamical_scale_choice.eq.1) then
+      if(dynamical_scale_choice.eq.1) then
 c         Total transverse energy of the event.         
           tmp=0d0
           do i=3,nexternal

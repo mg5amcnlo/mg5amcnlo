@@ -636,36 +636,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
         
         
-    @test_manager.bypass_for_py3
-    def test_short_jet_veto_xsec(self):
-        """tests the jet-veto cross section at NNLL+NLO"""    
-
-        self.generate_production()
-
-        cmd = """generate_events NLO
-                 set ickkw -1
-                 set ptj 10
-                 """
-        open('/tmp/mg5_cmd','w').write(cmd)
-        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
-        self.cmd_line.import_command_file('/tmp/mg5_cmd')
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
-        data=text.split('\n')
-        for i,line in enumerate(data):
-            if 'Process' in line:
-                break
-        #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertIn('Run at p-p collider (6500.0 + 6500.0 GeV)', data[i+1])
-        cross_section = data[i+2]
-        cross_section = float(cross_section.split(':')[1].split('+-')[0])
-        try:
-            # By default run to 1% precision: set delta=120 for ~2sigma effect.
-            self.assertAlmostEqual(5933.0, cross_section,delta=120)
-        except TypeError:
-            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
-
-
     def load_result(self, run_name):
         
         import madgraph.iolibs.save_load_object as save_load_object

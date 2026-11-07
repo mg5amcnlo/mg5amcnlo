@@ -5971,7 +5971,6 @@ class OneNLOWeight(object):
         #     type=4 : soft counter-term: 
         #     type=5 : collinear counter-term: 
         #     type=6 : soft-collinear counter-term: 
-        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO:  
         #     type=8 : soft counter-term (with n+1-body kin.):     
         #     type=9 : collinear counter-term (with n+1-body kin.): 
         #     type=10: soft-collinear counter-term (with n+1-body kin.): 

@@ -69,7 +69,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard matrix_*.f)) 			\
 	 FKSParams.o real_me_chooser.o chooser_functions.o recmom.o	\
 	 $(GENPS_OBJECTS) resonance_recoil.o initial_recoil.o		\
-	 recoil_selection.o resonance_histories.o setcuts.o setscales.o veto_xsec.o	\
+	 recoil_selection.o resonance_histories.o setcuts.o setscales.o	\
 	 $(patsubst %.f,%.o,$(wildcard b_sf_???.f)) 			\
 	 born.o sborn_sf.o extra_cnt_wrapper.o $(BORN_SUPPORT_OBJECTS) \
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
@@ -131,7 +131,7 @@ SYM= $(RUN) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o write_event.o handli
 # Files for event reweighting to get e.g. scale and PDF uncertainties
 RWGFILES=fks_phase_space_data.o FKSParams.o reweight_xsec_events.o handling_lhe_events.o recmom.o \
 	$(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) setscales.o	\
-	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
+	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	iproc_map.o chooser_functions.o 		\
 	splitorders_stuff.o reweight_xsec.o \
@@ -226,7 +226,7 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     mc_native_runtime.o montecarlocounter.o \
     recoil_selection.o resonance_histories.o resonance_recoil.o \
     reweight_xsec_events.o sa_ewsudakov_dummyfcts.o setcuts.o \
-    symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o
+    symmetry_fks_v3.o test_soft_col_limits.o write_event.o: fks_phase_space_data.o
 
 process_module.o : qed_shower_support.o
 scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o

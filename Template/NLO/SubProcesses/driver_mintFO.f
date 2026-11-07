@@ -196,12 +196,6 @@ c Don't safe the reweight information when just setting up the grids.
 c
          write (*,*) 'imode is ',imode
 
-         if (ickkw.eq.-1) then
-            min_virt_fraction=1d0
-            do kchan=1,nchans
-               virtual_fraction(kchan)=1d0
-            enddo
-         endif
          call mint(sigint)
          call topout
          call deallocate_weight_lines
@@ -346,7 +340,6 @@ c Share the sampled Born within this evaluation when sectors permit it.
       virtual_over_born=0d0
       wgt_me_born=0d0
       wgt_me_real=0d0
-      if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
       if (real_channel_type.eq.1) then
@@ -462,7 +455,6 @@ c Counterevents keep the scales of their underlying Born state.
       
  12   continue
 c Include PDFs and alpha_S and reweight to include the uncertainties
-      if (ickkw.eq.-1) call include_veto_multiplier
       call include_PDF_and_alphas
 
 c Include the bias weight specified in the bias_weight_function
@@ -471,8 +463,7 @@ c Fit the virtual surrogate after the PDF and bias factors are included.
       call virt_surrogate_fit_point
 
       if (doreweight) then
-         if (do_rwgt_scale .and. ickkw.ne.-1) call reweight_scale
-         if (do_rwgt_scale .and. ickkw.eq.-1) call reweight_scale_NNLL
+         if (do_rwgt_scale) call reweight_scale
          if (do_rwgt_pdf) call reweight_pdf
       endif
       

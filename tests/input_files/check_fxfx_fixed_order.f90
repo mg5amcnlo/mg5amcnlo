@@ -54,7 +54,6 @@ end module
 
 module extra_weights
   logical :: doreweight=.false.
-  double precision :: H1_factor_virt=0d0
 end module
 
 module mint_module

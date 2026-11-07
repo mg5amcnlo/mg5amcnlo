@@ -27,17 +27,10 @@ c set the weights_info string for scale variations
                      allocate(ctemp(nwgt))
                      ctemp(1:nwgt-1)=weights_info
                      call move_alloc(ctemp,weights_info)
-                     if (ickkw.ne.-1) then
-                        write(weights_info(nwgt),
-     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
-     $                       "dyn=",dyn_scale(kk),"muR=",scalevarR(jj)
-     $                       ,"muF=",scalevarF(ii)
-                     else
-                        write(weights_info(nwgt),
-     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
-     $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
-     $                       ,"muH=",scalevarF(ii)
-                     endif
+                     write(weights_info(nwgt),
+     &                             '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $                    "dyn=",dyn_scale(kk),"muR=",scalevarR(jj)
+     $                    ,"muF=",scalevarF(ii)
                   enddo
                enddo
             else
@@ -45,15 +38,9 @@ c set the weights_info string for scale variations
                allocate(ctemp(nwgt))
                ctemp(1:nwgt-1)=weights_info
                call move_alloc(ctemp,weights_info)
-               if (ickkw.ne.-1) then
-                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
-     $                 "dyn=",dyn_scale(kk),"muR=",scalevarR(1)
-     $                 ,"muF=",scalevarF(1)
-               else
-                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
-     $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
-     $                 ,"muH=",scalevarF(1)
-               endif
+               write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
+     $              "dyn=",dyn_scale(kk),"muR=",scalevarR(1)
+     $              ,"muF=",scalevarF(1)
             endif
          enddo
       endif
