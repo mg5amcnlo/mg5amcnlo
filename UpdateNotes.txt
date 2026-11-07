@@ -5,6 +5,9 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 0.3.0 (XX/XX/XX):
+   RF: Remove UNLOPS merging, including its clustering code, cuts and extra
+       LHE event records. NLO runs now accept only ickkw=0 (no merging),
+       ickkw=3 (FxFx) and ickkw=-1 (NNLL+NLO jet veto).
    RF: Refactor MC@NLO subtraction around native labelled matching histories and
        an output-wide BornSupport library. Equivalent Born evaluators share
        amplitudes, helicity sums and colour/spin correlations, with explicit

@@ -269,8 +269,7 @@
 ! sampling chart so that the S events have identical underlying momenta.
 ! Any separate initial/final-state integration channels remain separate.
 ! Independent of MCExplicitKLSum (the inner matching-history sum).
-! Requires event projection. Ignored at fixed order; not supported for
-! UNLOPS (ickkw=4).
+! Requires event projection. Ignored at fixed order.
 ! Rerun integration/grid setup after changing this setting.
 #FKSExplicitSum
 .true.

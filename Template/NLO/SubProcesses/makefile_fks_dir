@@ -93,7 +93,7 @@ FILESSUD= fks_phase_space_data.o \
 
 
 # Files needed for mintFO & mintMC
-RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o pythia_unlops.o recluster.o 		\
+RUN= $(FO_ANALYSE) $(FILES) cuts.o dummy_fct.o 		\
 	fill_MC_mshell.o born_hel.o open_output_files.o			\
 	add_write_info.o madfks_plot.o
 
@@ -134,7 +134,7 @@ RWGFILES=fks_phase_space_data.o FKSParams.o reweight_xsec_events.o handling_lhe_
 	cuts.o dummy_fct.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	iproc_map.o chooser_functions.o 		\
-	pythia_unlops.o recluster.o splitorders_stuff.o reweight_xsec.o \
+	splitorders_stuff.o reweight_xsec.o \
 	weight_lines.o orderstags_glob.o $(BORN_SUPPORT_OBJECTS) $(BORN_SUPPORT_REWEIGHT_OBJECTS) born.o sborn_sf.o extra_cnt_wrapper.o
 
 %.o: %.f
@@ -223,7 +223,7 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     driver_mintFO.o driver_mintMC.o ewsudakov_functions_dummy.o \
     fks_Sij.o fks_singular.o genps_fks.o genps_fks_sampling.o \
     genps_fks_radiation.o initial_recoil.o \
-    mc_native_runtime.o montecarlocounter.o pythia_unlops.o \
+    mc_native_runtime.o montecarlocounter.o \
     recoil_selection.o resonance_histories.o resonance_recoil.o \
     reweight_xsec_events.o sa_ewsudakov_dummyfcts.o setcuts.o \
     symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o

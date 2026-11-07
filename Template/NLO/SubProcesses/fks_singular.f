@@ -986,16 +986,11 @@ c value to the list of weights using the add_wgt subroutine
       gfactazi=0d0
       if (passcuts_nbody .and. abrv.ne.'real') then
          pass_cuts_check=.true.
-         if (ickkw.ne.4) then
-            call set_cms_stuff(-100)
-            if (ickkw.eq.3) call set_FxFx_scale(-3,p)
-            call set_alphaS(p)
-            call include_multichannel_enhance(4)
-            call compute_MC_subt_term(p,p_cms,probne)
-         else
-! UNLOPS transfers the real contribution to S and has no MC subtraction.
-            probne=0d0
-         endif
+         call set_cms_stuff(-100)
+         if (ickkw.eq.3) call set_FxFx_scale(-3,p)
+         call set_alphaS(p)
+         call include_multichannel_enhance(4)
+         call compute_MC_subt_term(p,p_cms,probne)
 
 ! Exactly one G replacement for this native history, with the same P
 ! used for its raw MC term and its real-emission H/S split.

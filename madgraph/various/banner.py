@@ -2237,7 +2237,7 @@ class PY8Card(ConfigFile):
               comment='Specify one must read inputs from the MadGraph banner.') 
         self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
-        # for CKKWL merging (common with UMEPS, UNLOPS)
+        # for CKKWL merging (common with UMEPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
         self.add_param("SysCalc:tmsList", [10.0,20.0], hidden=True, always_write_to_card=False)
@@ -6299,7 +6299,7 @@ class RunCardNLO(RunCard):
         self.add_param('flavour_bias',[5,1], hidden=True, comment="Example: '5,100' means that the probability to generate an event with a bottom (or anti-bottom) quark is increased by a factor 100, but the weight of those events is reduced by a factor 100. Requires that the 'event_norm' is set to 'bias'.")
         
         #merging
-        self.add_param('ickkw', 0, allowed=[-1,0,3,4], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - 4: UNLOPS merging (No interface within MadGraph7)\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
+        self.add_param('ickkw', 0, allowed=[-1,0,3], comment=" - 0: No merging\n - 3:  FxFx Merging :  http://amcatnlo.cern.ch/FxFx_merging.htm\n - -1:  NNLL+NLO jet-veto computation. See arxiv:1412.8408 [hep-ph]")
         self.add_param('bwcutoff', 15.0)
         #cuts        
         self.add_param('jetalgo', 1.0)
@@ -6347,6 +6347,14 @@ class RunCardNLO(RunCard):
         self.add_param('ptmax4pdg',[-1.], hidden=True, system=True, energy=True)
         self.add_param('mxxmin4pdg',[0.], hidden=True, system=True, energy=True)
         self.add_param('mxxpart_antipart', [False], hidden=True, system=True)
+
+    def __setitem__(self, name, value, change_userdefine=False, raiseerror=False):
+        # A removed matching mode must not silently become an unmerged run
+        # when a legacy card is read or edited.
+        if name.strip().lower() == 'ickkw':
+            raiseerror = InvalidRunCard
+        return super(RunCardNLO, self).__setitem__(
+            name, value, change_userdefine, raiseerror)
 
     def post_set_parton_shower(self, value, change_userdefine, raiseerror, **opt):
         """Use the current shower name when reading or editing legacy cards."""

@@ -738,7 +738,7 @@ c For the S-events, we can combine processes when they give identical
 c processes at the Born. Make sure we check that we get indeed identical
 c IRPOC's
          call find_iproc_map()
-c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c For FxFx matching with pythia8, set the correct attributes
 c for the <event> tag in the LHEF file. "npNLO" are the number of Born
 c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
@@ -1037,7 +1037,7 @@ c check if event or counter-event passes cuts
 ! Another native Born projection can pass cuts even if this one does
 ! not. The complete H sum must still be evaluated in that case.
             if (.not.(passcuts_nbody.or.passcuts_n1body) .and.
-     $           (ickkw.eq.4 .or. abrv.eq.'real')) cycle
+     $           abrv.eq.'real') cycle
             first_native_H=icontr+1
 ! Share full real amplitudes at this physical point. Each native
 ! history retains its own counterevents and regulated factors; FxFx H
@@ -1047,7 +1047,7 @@ c check if event or counter-event passes cuts
 ! replacements, but omit H records and the complete inner H-history sum.
 ! Outside calibration, suppress outer H only when it will be rebuilt.
             mc_S_only=calibrating_spread.or.
-     $           (MCExplicitKLSum.and.ickkw.ne.4.and.abrv.ne.'real'.and.
+     $           (MCExplicitKLSum.and.abrv.ne.'real'.and.
      $           p(0,1).gt.0d0.and.jacPS.gt.0d0.and.MC_HIST_COUNT.gt.0)
             call compute_NLOPS_flow_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne,weights_valid)
             mc_S_only=.false.
@@ -1056,7 +1056,7 @@ c check if event or counter-event passes cuts
                goto 900
             endif
             if (MCExplicitKLSum.and..not.calibrating_spread.and.
-     $           ickkw.ne.4.and.abrv.ne.'real') then
+     $           abrv.ne.'real') then
                call repartition_MC_H(first_native_H,p,p_lab,
      $              p_cms,jacPS,vegas_wgt,1d0/vol1,born_flow_factor,
      $              phase_space,weights_valid)
@@ -1659,7 +1659,7 @@ c Use the final, finite PDF/bias weights of the complete point for the fit.
 
       weights_valid=.true.
       if (MCSubtractionAtFixedFlow.or..not.passcuts_nbody.or.
-     $     abrv.eq.'real'.or.ickkw.eq.4) then
+     $     abrv.eq.'real') then
          call compute_native_NLOPS_weights(p,p_cms,passcuts_nbody,passcuts_n1body,probne)
          weights_valid=.not.nonfinite_contribution
          return
@@ -1855,16 +1855,6 @@ c summed explicitly and which by MC-ing.
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
       sum=3
-      if (ickkw.eq.4) then
-         if (FKSExplicitSum) then
-            write (*,*) 'FKSExplicitSum is not supported for UNLOPS',
-     $           ' (ickkw=4).'
-            stop 1
-         endif
-         sum=0
-         write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
-     $        /' Born PS point (sum=0)'
-      endif
       do nFKSprocess=1,fks_integrated
          call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
@@ -1994,13 +1984,6 @@ c gluons splitting
                endif
             endif
          enddo
-      elseif (sum.eq.0 .and. ickkw.eq.4) then
-c MC over FKS directories (1 FKS directory per nbody PS point)
-         proc_map(0,0)=fks_integrated
-         do i=1,fks_integrated
-            proc_map(i,0)=1
-            proc_map(i,1)=i
-         enddo
       else
          write (*,*) 'sum not known in driver_mintMC.f',sum
          stop
@@ -2038,7 +2021,7 @@ c
 
 
       subroutine setup_event_attributes
-c For FxFx or UNLOPS matching with pythia8, set the correct attributes
+c For FxFx matching with pythia8, set the correct attributes
 c for the <event> tag in the LHEF file. "npNLO" are the number of Born
 c partons in this multiplicity when running the code at NLO accuracy
 c ("npLO" is -1 in that case). When running LO only, invert "npLO" and
@@ -2058,7 +2041,7 @@ c "npNLO".
       character*4      abrv
       common /to_abrv/ abrv
       if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIG7') .and.
-     $     (ickkw.eq.3.or.ickkw.eq.4))then
+     $     ickkw.eq.3)then
          nattr=2
          nFKSprocess=1          ! just pick one
          call fks_inc_chooser()

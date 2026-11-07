@@ -714,7 +714,8 @@ c
       CHARACTER(LEN=1000) ptclusstring
       common /c_ptclusstring/ ptclusstring
       include './run.inc'
-      include 'unlops.inc'
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       logical are_col_conn
       integer n_orderstags
@@ -805,17 +806,6 @@ c
                write (ifile,'(a)') trim(adjustl(n_ctr_str(i)))
             enddo
             write(ifile,'(a)')'  </mgrwgt>'
-         endif
-         if(jwgtinfo.eq.15) then
-            write(ifile,'(a)')'  <unlops>'
-            write(ifile,*)NUP_H
-            do i=1,NUP_H
-               write(ifile,504)IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $              VTIMUP_H(I),SPINUP_H(I)
-            enddo
-            write(ifile,'(a)')'  </unlops>'
          endif
          if(abs(jwgtinfo).eq.9)then
             if (do_rwgt_scale .or. do_rwgt_pdf) then
@@ -927,7 +917,8 @@ c
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
-      include 'unlops.inc'
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       integer mg_rwgt_count
@@ -987,17 +978,6 @@ c
                read (ifile,'(a)') n_ctr_str(i)
             enddo
             read(ifile,'(a)')string
-         endif
-         if(jwgtinfo.eq.15) then
-            read(ifile,'(a)') string
-            read(ifile,*)NUP_H
-            do i=1,NUP_H
-               read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $              VTIMUP_H(I),SPINUP_H(I)
-            enddo
-            read(ifile,'(a)') string
          endif
          if(abs(jwgtinfo).eq.9)then
             if (do_rwgt_scale .or. do_rwgt_pdf) then
@@ -1130,7 +1110,8 @@ c Same as read_lhef_event, except for the end-of-file catch
       integer n_orderstags
       integer orderstags_glob(maxorders)
       common /c_orderstags_glob/n_orderstags, orderstags_glob
-      include 'unlops.inc'
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
       include 'run.inc'
       DOUBLE PRECISION SCALUP_a(MAXNUP,MAXNUP)
       CHARACTER(LEN=1000) ptclusstring
@@ -1200,17 +1181,6 @@ c
                read (ifile,'(a)') n_ctr_str(i)
             enddo
             read(ifile,'(a)')string
-         endif
-         if(jwgtinfo.eq.15) then
-            read(ifile,'(a)') string
-            read(ifile,*)NUP_H
-            do i=1,NUP_H
-               read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $              VTIMUP_H(I),SPINUP_H(I)
-            enddo
-            read(ifile,'(a)') string
          endif
          if(abs(jwgtinfo).eq.9)then
             if (do_rwgt_scale .or. do_rwgt_pdf) then

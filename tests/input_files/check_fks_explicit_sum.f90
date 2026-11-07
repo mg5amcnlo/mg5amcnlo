@@ -71,13 +71,6 @@ program check_fks_explicit_sum
     call get_MC_integer(1,map(0,0),picked,volume)
     if(volume.ne.1d0)error stop 'adapted explicit weight'
     write(*,*) 'PASS map and sampling'
-  case('unlops')
-    ickkw=4
-    call setup_proc_map(mode,map,0)
-    if(mode.ne.0.or.map(0,0).ne.6)error stop 'sampled UNLOPS changed'
-    FKSExplicitSum=.true.
-    call setup_proc_map(mode,map,0)
-    error stop 'accepted explicit UNLOPS'
   case default
     error stop 'unknown test'
   end select

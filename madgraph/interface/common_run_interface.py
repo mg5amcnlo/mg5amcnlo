@@ -7510,14 +7510,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if proc_charac and 'MLM' in proc_charac['limitations']:
                 if self.run_card['ickkw']:
                     raise Exception( "Your model is identified as not fully supported within MadGraph7.\n" +\
-                      "You can NOT run with FxFx/UnLOPS matching/merging. Please check if merging outside MadGraph7 are suitable or refrain to use merging with this model")
+                      "You can NOT run with FxFx matching/merging. Please check if merging outside MadGraph7 are suitable or refrain to use merging with this model")
             
-            # ensure that for fixed order ICKKW model are not set to FxFx and/or UNLOPS
+            # FxFx requires shower matching, so it cannot be used at fixed order.
             if 'shower_cards' not in self.cards and self.opt['switch']['fixed_order'] == 'ON':
-                if self.run_card['ickkw'] in [3,4]:
-                    # 3 is FxFx and 4 is UNLOPS
-                    mergemode = {3:'FxFx', 4:'UNLOPS'}
-                    raise Exception("You are running in fixed order mode but ICKKW is set to %s (%s). This does not make sense. Please fix and retry" %(self.run_card['ickkw'], mergemode[self.run_card['ickkw']]))
+                if self.run_card['ickkw'] == 3:
+                    raise Exception("You are running in fixed order mode but ICKKW is set to 3 (FxFx). This does not make sense. Please fix and retry")
 
 
             if 'fix_scale' in proc_charac['limitations']:

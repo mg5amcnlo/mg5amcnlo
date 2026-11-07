@@ -89,11 +89,11 @@ c check that the event normalization input is reasoble
      &        /'Current input is: ', event_norm
          stop 1
       endif
-c Check parameters for FxFx/UNLOPS/NNLL-veto
-      if ( ickkw.ne.0 .and. ickkw.ne.4 .and. ickkw.ne.3 .and.
+c Check parameters for FxFx/NNLL-veto
+      if ( ickkw.ne.0 .and. ickkw.ne.3 .and.
      &     ickkw.ne.-1) then
          write (*,*) 'ickkw parameter not known. ickkw=',ickkw
-         stop
+         stop 1
       endif
       chcluster=.false.
       ktscheme=1

@@ -4745,7 +4745,7 @@ already exists and is not a fifo file."""%fifo_path)
             # Since Pythia8 8.318, main164 loads its merging hook as a plugin with
             # a readString after reading the card. Pythia8 ignores that readString
             # for a card with 'Main:subrun' lines, as ours always has: without
-            # the hook, 'Merging:Process = guess' crashes and UMEPS/UNLOPS lose
+            # the hook, 'Merging:Process = guess' crashes and UMEPS loses
             # their subtractive samples. Load the hook from the card instead.
             merging_plugin = misc.get_pythia8_merging_plugin(self.options['pythia8_path'])
             if merging_plugin:

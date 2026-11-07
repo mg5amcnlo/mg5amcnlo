@@ -8,7 +8,6 @@
       implicit none
       include 'nexternal.inc'
       include "genps.inc"
-      include "unlops.inc"
       include "run.inc"
       logical Hevents
       common/SHevents/Hevents
@@ -38,7 +37,7 @@
       
       wgt=1d0
       evnt_wgt=evtsgn*weight
-      if(.not.Hevents.and.ickkw.ne.4)then
+      if(.not.Hevents)then
 c S events need the Born momenta and their beam frame only.
          call generate_born_event(ndim,iconfig,wgt,x,
      $        phase_space)
@@ -46,7 +45,7 @@ c S events need the Born momenta and their beam frame only.
          p_lab=phase_space%p_lab
          p_cms=phase_space%p_cms
       else
-c H events and the additional ickkw=4 record need real momenta.
+c H events need real momenta.
          call generate_momenta(ndim,iconfig,wgt,x,p,p_lab,p_cms)
       endif
 c
@@ -58,36 +57,6 @@ c
          call set_cms_stuff(0)
       endif
 
-      if (ickkw.eq.4) putonshell=.false.
-
-      if (ickkw.eq.4) then
-         if (Hevents) then
-            write (*,*) 'For ickkw=4, Hevents should be false',Hevents
-            stop
-         endif
-         Hevents=.true.
-         call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
-     &        .false.,ndim,x,jpart,npart,pb,shower_scale_a)
-c Put the Hevent info in a common block
-         NUP_H=npart
-         do i=1,NUP_H
-            IDUP_H(i)=jpart(1,i)
-            ISTUP_H(i)=jpart(6,i)
-            MOTHUP_H(1,i)=jpart(2,i)
-            MOTHUP_H(2,i)=jpart(3,i)
-            ICOLUP_H(1,i)=jpart(4,i)
-            ICOLUP_H(2,i)=jpart(5,i)
-            PUP_H(1,i)=pb(1,i)
-            PUP_H(2,i)=pb(2,i)
-            PUP_H(3,i)=pb(3,i)
-            PUP_H(4,i)=pb(0,i)
-            PUP_H(5,i)=pb(4,i)
-            VTIMUP_H(i)=0.d0
-            SPINUP_H(i)=dfloat(jpart(7,i))
-         enddo
-         Hevents=.false.
-      endif
-      
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale_a)
       
@@ -168,25 +137,13 @@ c Reuse the large event-scale workspace without using the call stack.
       common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
      #                fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
-      double precision muR2_current,muF12_current,
-     #                 muF22_current,QES2_current
-      common/cscales_current_values/muR2_current,muF12_current,
-     #                              muF22_current,QES2_current
       logical firsttime
       data firsttime/.true./
       double precision shower_scale_a(-nexternal+3:2
      $     *nexternal-3,-nexternal+3:2*nexternal-3)
 c
       scalup_a=-1d0
-      if (ickkw.eq.4) then
-         SCALUP = sqrt(muF12_current)
-         do j=1,2*nexternal-3
-            do k=1,2*nexternal-3
-               if(j.eq.k)cycle
-               scalup_a(j,k)=sqrt(muF12_current)
-            enddo
-         enddo
-      elseif (ickkw.eq.-1) then
+      if (ickkw.eq.-1) then
          SCALUP = mu_r
          do j=1,2*nexternal-3
             do k=1,2*nexternal-3

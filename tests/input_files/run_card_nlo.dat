@@ -104,7 +104,7 @@
 # After showering an MLM-type merging should be applied as well.       *
 # See http://amcatnlo.cern.ch/FxFx_merging.htm for more details.       *
 #***********************************************************************
- 0        = ickkw            ! 0 no merging, 3 FxFx merging, 4 UNLOPS
+ 0        = ickkw            ! 0 no merging, 3 FxFx merging
 #***********************************************************************
 #
 #***********************************************************************

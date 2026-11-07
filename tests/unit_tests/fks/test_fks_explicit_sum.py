@@ -64,11 +64,6 @@ class TestFKSExplicitSum(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn('PASS map and sampling', result.stdout)
 
-    def test_unlops_rejects_explicit_sum(self):
-        result = self.run_mode('unlops')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('FKSExplicitSum is not supported for UNLOPS', result.stdout)
-
     def test_common_born_chart_with_jet_cuts(self):
         """Share outer charts while retaining auxiliary recoil and physical bounds."""
         with tempfile.TemporaryDirectory(prefix='mg5_fks_sum_chart_') as tmp:
