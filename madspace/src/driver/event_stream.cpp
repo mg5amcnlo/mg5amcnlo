@@ -490,7 +490,8 @@ std::vector<LHEEvent> EventStream::next_events(std::size_t count) {
             i,
             _lhe_rng,
             _channels.at(0)->event_layout_extra_flags(),
-            _channels.at(0)->particle_layout_extra_flags()
+            _channels.at(0)->particle_layout_extra_flags(),
+            _config
         );
     }
     return events;

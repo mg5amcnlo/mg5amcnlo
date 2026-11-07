@@ -78,6 +78,19 @@ SOURCE_HASH_MESSAGE = (
 )
 
 
+def configure_mlm_shower_start(config, madspace_data: dict) -> None:
+    """The MLM shower start of the run that made the gridpack (data.json,
+    written by MadgraphProcess.save_gridpack): the non-jet particles' pt_clust
+    at the hardest scale of the event rather than the collider energy. A
+    gridpack without the entry keeps the collider energy."""
+    settings = madspace_data.get("mlm_shower_start") or {}
+    if not settings.get("hardest_scale"):
+        return
+    config.mlm_hardest_shower_scale = True
+    config.mlm_collider_energy = float(settings["collider_energy"])
+    config.mlm_max_jet_flavor = int(settings["max_jet_flavor"])
+
+
 def resolve_seed(seed: int) -> int:
     """Resolve the run_card "seed": -1 draws a fresh 64-bit seed via
     os.urandom, any other value is used as-is."""

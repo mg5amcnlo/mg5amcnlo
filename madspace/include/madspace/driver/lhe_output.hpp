@@ -95,6 +95,8 @@ struct LHEParticle {
     double lifetime;
     /// Cosine of the spin angle, or `9` if the spin is not specified.
     double spin;
+    /// MLM clustering scale in GeV, written as pt_clust_<i> of `<scales>` when
+    /// the event has cluster scales.
     double cluster_scale;
 };
 
@@ -170,6 +172,27 @@ struct LHEEvent {
     /// Append this event's LHE text to `buffer`.
     void format_to(std::string& buffer) const;
 };
+
+/**
+ * Start the MLM shower from the hardest scale of the event rather than from the
+ * collider energy.
+ *
+ * The MLM clustering reports every outgoing leg it assigned no clustering scale
+ * to at the collider energy: the leptons, photons and heavy quarks, and the
+ * light partons it puts in the core process. With
+ * Beams:setProductionScalesFromLHEF, which MLM merging turns on, Pythia8 starts
+ * each particle's final-state shower from its pt_clust and the initial-state
+ * shower from the largest of them, so both would start at the kinematic limit.
+ * Here the outgoing particles at `collider_energy` that are not light partons
+ * (|pdg| <= `max_jet_flavor` or a gluon) get the hardest scale of the event
+ * instead: the largest of SCALUP (mu_F) and the light partons' pt_clust below
+ * the collider energy. Only the shower start moves, not the matching. A light
+ * parton at the collider energy keeps it: that value is Pythia8's "do not
+ * match" flag.
+ */
+void apply_mlm_hardest_shower_scale(
+    LHEEvent& event, double collider_energy, int max_jet_flavor
+);
 
 /**
  * Fills in the non-kinematic data of an @ref LHEEvent from sampled indices.

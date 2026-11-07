@@ -136,7 +136,8 @@ void madspace::fill_lhe_event(
     std::size_t event_index,
     MixMaxRandom& rand_gen,
     int extra_event_flags,
-    int extra_particle_flags
+    int extra_particle_flags,
+    const GeneratorConfig& config
 ) {
     EventRecord event_in = buffer.event(event_index);
     lhe_event.weight = event_in.weight();
@@ -190,6 +191,12 @@ void madspace::fill_lhe_event(
         event_in.helicity_index(),
         rand_gen
     );
+    // after the completion, which sets the pdg ids it needs
+    if (has_clustering && config.mlm_hardest_shower_scale) {
+        apply_mlm_hardest_shower_scale(
+            lhe_event, config.mlm_collider_energy, config.mlm_max_jet_flavor
+        );
+    }
 }
 
 void madspace::write_lhe_particles(

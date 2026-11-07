@@ -217,6 +217,33 @@ void LHEEvent::format_to(std::string& buffer) const {
     buffer += "</event>\n";
 }
 
+void madspace::apply_mlm_hardest_shower_scale(
+    LHEEvent& event, double collider_energy, int max_jet_flavor
+) {
+    if (!event.has_cluster_scales) {
+        return;
+    }
+    auto is_light_parton = [&](int pdg_id) {
+        int id = std::abs(pdg_id);
+        return id == 21 || (id >= 1 && id <= max_jet_flavor);
+    };
+    // the clustering writes exactly the collider energy; leave room for rounding
+    double flag = 0.999 * collider_energy;
+    double hardest = event.scale;
+    for (auto& particle : event.particles) {
+        if (particle.status_code == LHEParticle::status_outgoing &&
+            is_light_parton(particle.pdg_id) && particle.cluster_scale < flag) {
+            hardest = std::max(hardest, particle.cluster_scale);
+        }
+    }
+    for (auto& particle : event.particles) {
+        if (particle.status_code == LHEParticle::status_outgoing &&
+            !is_light_parton(particle.pdg_id) && particle.cluster_scale >= flag) {
+            particle.cluster_scale = hardest;
+        }
+    }
+}
+
 std::size_t LHECompleter::append_helicities(const SubprocArgs& args) {
     std::size_t particle_count = args.helicities.at(0).size();
     for (auto& helicities : args.helicities) {

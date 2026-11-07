@@ -682,6 +682,11 @@ c   Fix ordering of ptclus
       do i=1,nexternal
         ptclus(i) = ptcltmp(i)
       enddo
+c     MLM: start the shower of the non-jet particles from the hardest
+c     scale of the event instead of sqrt(s) (run_card mlm_shower_start)
+      if (ickkw.gt.0 .and. mlm_hardest_shower) then
+         call mlm_hardest_shower_scale(jpart, ptclus)
+      endif
 
 c     Check if we have flipped particle 1 and 2, and flip back
       flip = .false.
@@ -938,6 +943,52 @@ c     Store weight for event
 
       end
       
+      subroutine mlm_hardest_shower_scale(jpart, ptclus)
+c************************************************************************
+c     setclscales writes ptclus = sqrt(s) for every outgoing particle that
+c     no QCD clustering booked a scale onto. With
+c     Beams:setProductionScalesFromLHEF, Pythia8 starts each particle's
+c     final-state shower from its pt_clust and the initial-state shower
+c     from the largest one, so leptons and heavy quarks at sqrt(s) start
+c     the shower at the collider energy. Give the outgoing particles that
+c     are not light partons the event's hardest scale instead:
+c     max(SCALUP, pt_clust of the light partons below sqrt(s)). Light
+c     partons at sqrt(s) (core partons) keep it: that value is Pythia8's
+c     do-not-match flag. Only the shower start changes, not the matching.
+c     Same rule as apply_mlm_hardest_shower_scale in madspace.
+c************************************************************************
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      double precision ptclus(nexternal)
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+      integer i, id
+      double precision flag, hardest
+      logical light
+
+      flag = 0.999d0*sqrt(stot)
+      hardest = 0d0
+      if (q2fact(1).gt.0d0) hardest = max(hardest, sqrt(q2fact(1)))
+      if (q2fact(2).gt.0d0) hardest = max(hardest, sqrt(q2fact(2)))
+      do i=nincoming+1,nexternal
+         id = abs(jpart(1,i))
+         light = id.eq.21 .or. (id.ge.1 .and. id.le.maxjetflavor)
+         if (light .and. ptclus(i).lt.flag)
+     $        hardest = max(hardest, ptclus(i))
+      enddo
+      if (hardest.le.0d0) return
+      do i=nincoming+1,nexternal
+         id = abs(jpart(1,i))
+         light = id.eq.21 .or. (id.ge.1 .and. id.le.maxjetflavor)
+         if (.not.light .and. ptclus(i).ge.flag) ptclus(i) = hardest
+      enddo
+      end
+
       integer function n_unwgted()
 c************************************************************************
 c     Determines the number of unweighted events which have been written
