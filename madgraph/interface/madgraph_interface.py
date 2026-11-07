@@ -6262,7 +6262,6 @@ This implies that with decay chains:
         # Reset polarization-citation marker (a new process definition starts)
         self._uses_polarization = False
         self._uses_density_matrix = False
-        self._uses_quarkonia = False
         # Reset _done_export, since we have new process
         self._done_export = False
         # Also reset _export_format and _export_dir
@@ -13463,13 +13462,14 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
         except Exception:
             pass
 
-        # quarkonium / leptonium (NRQCD/NRQED) models: detect from model name
+        # quarkonium / leptonium (NRQCD/NRQED): a bound state in the generated
+        # processes (e.g. with 'add model sm_onia'), or such a model by name
         _quarkonia_kws = ('nrqcd', 'nrqed', 'quarkon', 'leptonium')
         try:
             _mn = (self._curr_model.get('name') or '').lower() if self._curr_model else ''
         except Exception:
             _mn = ''
-        if getattr(self, '_uses_quarkonia', False) or any(k in _mn for k in _quarkonia_kws):
+        if self.has_onium_amplitude() or any(k in _mn for k in _quarkonia_kws):
             pairs.append(('ColpaniSerri:2025vdz',
                            'S-wave quarkonium/leptonium production (NRQCD/NRQED)'))
 
