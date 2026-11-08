@@ -4273,6 +4273,9 @@ Parameters              %(params)s\n\
         Born/extra-counterterm, splitting orders and native colour basis. No
         outer-to-inner colour-flow identification is made: flows are sampled
         independently at each native Born point.
+
+        Outer statistical factors can compensate photon label permutations
+        excluded from the strict identities used by these history rows.
         """
         infos = fksborn.get_fks_info_list()
         nexternal, nincoming = fksborn.born_me.get_nexternal_ninitial()
@@ -4295,6 +4298,16 @@ Parameters              %(params)s\n\
             if len(legs) != nexternal or len(tags) != nexternal:
                 raise MadGraph5Error('Inconsistent external states in MC history export')
             return fks_common.external_process_identity(proc, tags)
+
+        def statistical_identity(state):
+            # Photon tags select the Born multiplicity/isolation requirement;
+            # the real ME denominator and photon cuts remain symmetric in
+            # final photons. Their omitted label permutations therefore need
+            # statistical compensation, without making them safe MC relabels.
+            state = list(state)
+            if state[0] == 22 and state[1]:
+                state[3] = False
+            return tuple(state)
 
         for sector, info in enumerate(infos, 1):
             real = fksborn.real_processes[info['n_me']-1]
@@ -4329,8 +4342,16 @@ Parameters              %(params)s\n\
             jj_list = ([j] if j <= nincoming else
                        [k for k in range(nincoming+1, nexternal+1)
                         if states[k-1] == states[j-1]])
-            fac_i = len(ii_list)
-            fac_j = len(jj_list) - int(i in jj_list)
+            statistical_states = tuple(tuple(statistical_identity(state)
+                                             for state in leg_states)
+                                       for leg_states in states)
+            stat_ii_list = [k for k in range(nincoming+1, nexternal+1)
+                            if statistical_states[k-1] == statistical_states[i-1]]
+            stat_jj_list = ([j] if j <= nincoming else
+                            [k for k in range(nincoming+1, nexternal+1)
+                             if statistical_states[k-1] == statistical_states[j-1]])
+            fac_i = len(stat_ii_list)
+            fac_j = len(stat_jj_list) - int(i in stat_jj_list)
             # A common matrix element/PDF list must have one common orbit.
             # Otherwise split the process group instead of losing histories.
             for _, proc_states in processes:
@@ -4341,6 +4362,14 @@ Parameters              %(params)s\n\
                       if proc_states[k-1] == proc_states[j-1]])):
                     raise MadGraph5Error('Different FKS orbits in grouped subprocesses '
                                          'of sector %d; separate these processes' % sector)
+                stat_proc_states = tuple(statistical_identity(state) for state in proc_states)
+                if (stat_ii_list != [k for k in range(nincoming+1, nexternal+1)
+                                    if stat_proc_states[k-1] == stat_proc_states[i-1]] or
+                    (j > nincoming and stat_jj_list !=
+                     [k for k in range(nincoming+1, nexternal+1)
+                      if stat_proc_states[k-1] == stat_proc_states[j-1]])):
+                    raise MadGraph5Error('Different FKS statistical factors in grouped '
+                                         'subprocesses of sector %d; separate these processes' % sector)
             symmetry.append((fac_i, fac_j, born_iden, real_iden))
             orbit = []
             for ii in ii_list:
@@ -4369,7 +4398,9 @@ Parameters              %(params)s\n\
                     row = (sector, ii, jj, perm)
                     groups[group].append(row)
                     orbit.append(row)
-            if len(orbit) != fac_i * fac_j or not orbit:
+            # Statistical photon compensation may exceed the strict identity
+            # orbit. Only safe label permutations belong in this history list.
+            if len(orbit) != len(ii_list) * (len(jj_list) - int(i in jj_list)) or not orbit:
                 raise MadGraph5Error('Incorrect MC orbit size in FKS sector %d' % sector)
 
         # No real correction: retain the fake LO-only sector, but no MC histories.

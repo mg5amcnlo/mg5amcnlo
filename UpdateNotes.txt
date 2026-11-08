@@ -92,6 +92,11 @@ ANNOUNCEMENT:
        near branch junctions and stationary daughters for zero and nonzero
        recoil mass. Use stable phase-space weights and inverse branch
        selection with the dimensionful momentum normalization.
+   RF: Restore the outer FKS statistical compensation for omitted final
+       photon permutations when photons are tagged. Preserve strict tag,
+       polarization and on-shell identities for evaluator reuse and native
+       MC histories. Regenerate tagged-photon NLO outputs to obtain the
+       corrected factors.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.

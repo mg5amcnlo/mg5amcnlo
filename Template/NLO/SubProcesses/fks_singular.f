@@ -7804,9 +7804,9 @@ c
          i_fks_pdg=pdg_type(i_fks)
          j_fks_pdg=pdg_type(j_fks)
       
-c The exporter uses complete external-state identities (including tags
-c and helicities) and checks these counts against the ordered MC table.
-c These are OUTER orbit factors, not multiplicities of explicit histories.
+c These OUTER statistical factors compensate omitted FKS sectors. Final
+c photon tags do not distinguish particles in the real ME denominator
+c or isolation cuts; MC history permutations keep their strict identity.
          fac_i_FKS(nFKSprocess)=FKS_FAC_I_D(nFKSprocess)
          fac_j_FKS(nFKSprocess)=FKS_FAC_J_D(nFKSprocess)
          if (fac_i_FKS(nFKSprocess).le.0 .or.

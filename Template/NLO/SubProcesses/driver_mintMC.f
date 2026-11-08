@@ -1262,7 +1262,8 @@ c Use the final, finite PDF/bias weights of the complete point for the fit.
       if (sector_weight.eq.0d0) return
 
 ! K_a is the full outer real measure, including its sampling probability
-! and orbit multiplicity, and the outer matrix-element channel weight.
+! and statistical compensation, and the outer matrix-element channel weight.
+! This compensation can exceed the strict MC orbit for tagged photons.
       outer_measure=xinorm_ev*xi_i_fks_ev*jacPS*vegas_wgt*
      $     sampling_wgt*fkssymmetryfactor*outer_channel
       if (outer_measure.le.0d0) return
