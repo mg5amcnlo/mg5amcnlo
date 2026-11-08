@@ -181,20 +181,33 @@ struct LHEEvent {
  * Start the MLM shower from the hardest scale of the event rather than from the
  * collider energy.
  *
- * The MLM clustering reports every outgoing leg it assigned no clustering scale
- * to at the collider energy: the leptons, photons and heavy quarks, and the
- * light partons it puts in the core process. With
+ * The MLM clustering reports the light partons it assigned no clustering scale
+ * to (those of the core process) at the collider energy, and the outgoing
+ * particles that are not light partons (leptons, photons, heavy quarks) at the
+ * core-process scale, madevent's central factorisation scale. With
  * Beams:setProductionScalesFromLHEF, which MLM merging turns on, Pythia8 starts
  * each particle's final-state shower from its pt_clust and the initial-state
- * shower from the largest of them, so both would start at the kinematic limit.
- * Here the outgoing particles at `collider_energy` that are not light partons
- * (|pdg| <= `max_jet_flavor` or a gluon) get the hardest scale of the event
- * instead: the largest of SCALUP (mu_F) and the light partons' pt_clust below
- * the collider energy. Only the shower start moves, not the matching. A light
- * parton at the collider energy keeps it: that value is Pythia8's "do not
- * match" flag.
+ * shower from the largest of them. Here the outgoing particles that are not
+ * light partons (|pdg| <= `max_jet_flavor` or a gluon) get the hardest scale of
+ * the event: the largest of their own pt_clust (the core-process scale), SCALUP
+ * (mu_F) and the light partons' pt_clust below the collider energy. The
+ * core-process scale keeps the start at the hard process when mu_F is a soft
+ * clustering scale (clustering_mean without the pdf ladder). Only the shower
+ * start moves, not the matching. A light parton at the collider energy keeps
+ * it: that value is Pythia8's "do not match" flag.
  */
 void apply_mlm_hardest_shower_scale(
+    LHEEvent& event, double collider_energy, int max_jet_flavor
+);
+
+/**
+ * Start the MLM shower of the outgoing particles that are not light partons
+ * (|pdg| <= `max_jet_flavor` or a gluon) from the collider energy, the
+ * behaviour of mlm_shower_start = "collider_energy": their pt_clust, which the
+ * MLM clustering sets to the core-process scale, is replaced by
+ * `collider_energy`.
+ */
+void apply_mlm_collider_shower_scale(
     LHEEvent& event, double collider_energy, int max_jet_flavor
 );
 

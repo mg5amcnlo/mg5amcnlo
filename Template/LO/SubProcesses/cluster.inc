@@ -31,6 +31,11 @@ c     variable for LH output of clustering info (R,E,S,I)
 c     parameters for qcd jets
       double precision ptclus(nexternal)
       common/cl_jets/ptclus
+c     MLM core-process scale (madevent's central factorisation scale before
+c     scalefact and fixed scales), set in setclscales; the shower of the
+c     particles that are not light partons starts at least there
+      double precision mlm_core_scale
+      common/cl_core/mlm_core_scale
 c     parameters for sudakovs
       double precision m_colfac(-6:21),m_dlog(-6:21),m_slog(-6:21),
      &     m_power(-6:21,3,2),m_qmass(21)

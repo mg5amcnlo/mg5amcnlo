@@ -787,8 +787,17 @@ KERNELSPEC int mlm_clustering_walk(
     // below but keep only its pdf part (ladder and per-beam final scale, which
     // is also the reported factorisation scale).
     bool mean_with_ladder = scale_scheme != SCALES_MADEVENT && pdf_reweighting == 2;
+    // The scales and densities the walk below writes are used only then.
+    bool walk_sets_scales = scale_scheme == SCALES_MADEVENT || mean_with_ladder;
 
-    if (scale_scheme == SCALES_MADEVENT || mean_with_ladder) {
+    // The core-process scale: madevent's factorisation scale (the central scale
+    // of each beam line, mT of what the core produces), whatever scale scheme
+    // and pdf reweighting the event uses. The walk below is taken for it in
+    // every mode; it only starts the shower of the outgoing particles that are
+    // not light partons (see the end of the walk).
+    FVal<T> core_scale = 0.0;
+
+    {
         // Writes other than the densities and mu_F (mu_R, alpha_s vertex scales,
         // jet scales, merging-jet gating) happen only when this is set.
         bool madevent_scales = scale_scheme == SCALES_MADEVENT;
@@ -1175,49 +1184,54 @@ KERNELSPEC int mlm_clustering_walk(
         // mu_F, one per beam. madevent stores q2fact = mu_F^2 as
         // sqrt(pt2[jlast] pt2[jcentral]), i.e. mu_F is the geometric mean of
         // the two scales.
-        fac_scale1 = jlast[0] >= 0 ? sqrt(s_last[0]) * sqrt(s_central[0]) : 0.0;
-        fac_scale2 = jlast[1] >= 0 ? sqrt(s_last[1]) * sqrt(s_central[1]) : 0.0;
+        FVal<T> walk_fac1 = jlast[0] >= 0 ? sqrt(s_last[0]) * sqrt(s_central[0]) : 0.0;
+        FVal<T> walk_fac2 = jlast[1] >= 0 ? sqrt(s_last[1]) * sqrt(s_central[1]) : 0.0;
         // "We have a qcd line going through the whole event, use single scale"
         if (jcentral[0] >= 0 && jcentral[0] == jcentral[1]) {
-            fac_scale1 = max(fac_scale1, fac_scale2);
-            fac_scale2 = fac_scale1;
+            walk_fac1 = max(walk_fac1, walk_fac2);
+            walk_fac2 = walk_fac1;
         }
 
         // "Take care of case when jcentral are zero". The pdfwgt branch of
         // reweight.f (capping each beam at min(pt2ijcl(jfirst), q2fact)) is not
         // ported here; the ladder is handled by the pdf reweighting block below.
         if (jcentral[0] < 0 && jcentral[1] < 0) {
-            if (!(fac_scale1 > 0.0) && !(fac_scale2 > 0.0)) {
-                fac_scale1 = pt_step[steps - 1];
-                fac_scale2 = fac_scale1;
+            if (!(walk_fac1 > 0.0) && !(walk_fac2 > 0.0)) {
+                walk_fac1 = pt_step[steps - 1];
+                walk_fac2 = walk_fac1;
             }
         } else if (jcentral[0] < 0) {
             if (jfirst[0] >= 0) {
-                fac_scale1 = pt_step[jfirst[0]];
+                walk_fac1 = pt_step[jfirst[0]];
             }
         } else if (jcentral[1] < 0) {
             if (jfirst[1] >= 0) {
-                fac_scale2 = pt_step[jfirst[1]];
+                walk_fac2 = pt_step[jfirst[1]];
             }
         }
-        if (!(fac_scale1 > 0.0)) {
-            fac_scale1 = walk_ren_scale;
+        if (!(walk_fac1 > 0.0)) {
+            walk_fac1 = walk_ren_scale;
         }
-        if (!(fac_scale2 > 0.0)) {
-            fac_scale2 = walk_ren_scale;
+        if (!(walk_fac2 > 0.0)) {
+            walk_fac2 = walk_ren_scale;
         }
         // and keep everything inside the range the rest of the kernel uses
         if (!(walk_ren_scale > 0.0) || !(walk_ren_scale < SCALE_MAX)) {
             walk_ren_scale = last_scale;
         }
-        if (!(fac_scale1 > 0.0) || !(fac_scale1 < SCALE_MAX)) {
-            fac_scale1 = walk_ren_scale;
+        if (!(walk_fac1 > 0.0) || !(walk_fac1 < SCALE_MAX)) {
+            walk_fac1 = walk_ren_scale;
         }
-        if (!(fac_scale2 > 0.0) || !(fac_scale2 < SCALE_MAX)) {
-            fac_scale2 = walk_ren_scale;
+        if (!(walk_fac2 > 0.0) || !(walk_fac2 < SCALE_MAX)) {
+            walk_fac2 = walk_ren_scale;
         }
         if (madevent_scales) {
             ren_scale_val = walk_ren_scale;
+        }
+        core_scale = max(walk_fac1, walk_fac2);
+        if (walk_sets_scales) {
+            fac_scale1 = walk_fac1;
+            fac_scale2 = walk_fac2;
         }
 
         // The pdf half of rewgt in Template/LO/SubProcesses/reweight.f. The
@@ -1228,10 +1242,12 @@ KERNELSPEC int mlm_clustering_walk(
         //
         // Only scales, momentum fractions and flavour classes are set here; the
         // flavour is sampled later from the densities being corrected.
-        bool reweight_pdf =
-            pdf_reweighting != 0 && jcentral[0] >= 0 && jcentral[1] >= 0;
-        pdf_scale_val[0] = fac_scale1;
-        pdf_scale_val[1] = fac_scale2;
+        bool reweight_pdf = walk_sets_scales && pdf_reweighting != 0 &&
+            jcentral[0] >= 0 && jcentral[1] >= 0;
+        if (walk_sets_scales) {
+            pdf_scale_val[0] = fac_scale1;
+            pdf_scale_val[1] = fac_scale2;
+        }
         if (reweight_pdf) {
             FVal<T> q_central[2] = {fac_scale1, fac_scale2};
             for (int j = 0; j < 2; ++j) {
@@ -1290,6 +1306,23 @@ KERNELSPEC int mlm_clustering_walk(
                            TRACE_FLAVOR_MASK) -
                             1;
                 }
+            }
+        }
+    }
+
+    // Outgoing particles that are not light partons (leptons, photons, heavy
+    // quarks) have no QCD scale booked and sit at sqrt(s) so far. Give them the
+    // core-process scale instead: with Beams:setProductionScalesFromLHEF their
+    // pt_clust is where Pythia8 starts their final-state shower, and the
+    // largest pt_clust is where it starts the initial-state one. The LHE writer
+    // raises it to the hardest scale of the event or, for
+    // mlm_shower_start = "collider_energy", puts sqrt(s) back. Light partons
+    // keep sqrt(s): there it is Pythia8's do-not-match flag.
+    if (core_scale > 0.0 && core_scale < FVal<T>(cm_energy)) {
+        for (int leg = 2; leg < n_part; ++leg) {
+            if (!((jet_leg_mask >> leg) & 1) &&
+                !(outgoing_scales[leg - 2] < FVal<T>(cm_energy))) {
+                outgoing_scales[leg - 2] = core_scale;
             }
         }
     }

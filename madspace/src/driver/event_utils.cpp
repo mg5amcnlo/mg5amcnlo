@@ -196,6 +196,10 @@ void madspace::fill_lhe_event(
         apply_mlm_hardest_shower_scale(
             lhe_event, config.mlm_collider_energy, config.mlm_max_jet_flavor
         );
+    } else if (has_clustering && config.mlm_collider_energy > 0.) {
+        apply_mlm_collider_shower_scale(
+            lhe_event, config.mlm_collider_energy, config.mlm_max_jet_flavor
+        );
     }
 }
 

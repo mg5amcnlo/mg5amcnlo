@@ -560,6 +560,41 @@ c***************************************************
       return
       end
 
+      subroutine mlm_set_core_scale(jfirst, jlast, jcentral)
+c************************************************************************
+c     The core-process scale of the clustered event, for the MLM shower
+c     start: madevent's central factorisation scale (setclscales) as it is
+c     for scalefact = 1 and dynamical scales, with the same fallbacks.
+c     Mirrors core_scale in madspace's MLM kernel (kernels/mlm.hpp).
+c************************************************************************
+      implicit none
+      include 'message.inc'
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'maxamps.inc'
+      include 'cluster.inc'
+      integer jfirst(2), jlast(2), jcentral(2)
+      double precision q(2)
+      integer j
+
+      do j=1,2
+         q(j)=0d0
+         if(jlast(j).gt.0.and.jcentral(j).gt.0)
+     $        q(j)=sqrt(sqrt(pt2ijcl(jlast(j))*pt2ijcl(jcentral(j))))
+      enddo
+      if(jcentral(1).eq.0.and.jcentral(2).eq.0)then
+         if(q(1).le.0d0.and.q(2).le.0d0)
+     $        q(1)=sqrt(pt2ijcl(nexternal-2))
+      elseif(jcentral(1).eq.0)then
+         if(jfirst(1).gt.0) q(1)=sqrt(pt2ijcl(jfirst(1)))
+      elseif(jcentral(2).eq.0)then
+         if(jfirst(2).gt.0) q(2)=sqrt(pt2ijcl(jfirst(2)))
+      endif
+      mlm_core_scale=max(q(1),q(2))
+      if(mlm_core_scale.le.0d0) mlm_core_scale=sqrt(pt2ijcl(nexternal-2))
+      end
+
+
       logical function setclscales(p, keepq2bck, ivec, flavor)
 c**************************************************
 c     Calculate dynamic scales based on clustering
@@ -1166,6 +1201,13 @@ c     Ensure that last scales are at least as big as first scales
      $     pt2ijcl(jlast(1))=max(pt2ijcl(jlast(1)),pt2ijcl(jfirst(1)))
       if(jlast(2).gt.0)
      $     pt2ijcl(jlast(2))=max(pt2ijcl(jlast(2)),pt2ijcl(jfirst(2)))
+
+c     MLM core-process scale: the factorisation scale below for scalefact = 1
+c     and dynamical scales, i.e. sqrt(sqrt(pt2(jlast) pt2(jcentral))) per beam,
+c     the larger of the two, with the same fallbacks. Taken before a fixed
+c     scale can overwrite pt2ijcl(jcentral). Starts the shower of the outgoing
+c     particles that are not light partons (unwgt.f, mlm_hardest_shower_scale).
+      call mlm_set_core_scale(jfirst, jlast, jcentral)
 
       if(ickkw.gt.0.and.q2fact(1).gt.0.and.q2fact(2).gt.0) then
 c     Use the fixed or previously set scale for central scale
