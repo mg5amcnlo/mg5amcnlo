@@ -1548,9 +1548,9 @@ c     the starting-scale PDFs: sum(pdfnum)/sum(pdfden).
             pdfden=0d0
             do ip=1,size(flavours)
                id=get_parton_id(flavours(ip),lp)
-               pdfnum=pdfnum+pdg2pdf(abs(beam_type),id,lp,bjorken,
+               pdfnum=pdfnum+pdg2pdf(abs(beam_type),id,ipart,bjorken,
      $              connections%stop(out_con))
-               pdfden=pdfden+pdg2pdf(abs(beam_type),id,lp,bjorken,
+               pdfden=pdfden+pdg2pdf(abs(beam_type),id,ipart,bjorken,
      $              connections%start(out_con))
             enddo
          else
