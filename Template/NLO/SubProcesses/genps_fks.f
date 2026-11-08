@@ -302,6 +302,7 @@ c resonance descendants. Recoil selection must follow that operation.
       common/write_granny_resonance/which_is_granny,write_granny
       character*4 abrv
       common/to_abrv/abrv
+      logical default_members(nexternal)
 
       resonance_recoil=.false.
       resonance_members=.false.
@@ -309,9 +310,10 @@ c resonance descendants. Recoil selection must follow that operation.
       resonance_mass2=0d0
       initial_recoil_leg=0
       call set_tau_min()
+      default_members=.false.
       if(granny_is_res)
-     $     resonance_members=granny_chain_real_final(1:nexternal)
-      call select_fks_recoil(resonance_members,abrv.ne.'born')
+     $     default_members=granny_chain_real_final(1:nexternal)
+      call select_fks_recoil(default_members,abrv.ne.'born')
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=igranny
       end subroutine initialize_fks_recoil

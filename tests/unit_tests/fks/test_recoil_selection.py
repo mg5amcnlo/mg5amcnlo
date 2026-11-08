@@ -83,8 +83,10 @@ program check_recoil_selection
     call select_fks_recoil(defaults, .true.)
     if (.not.local.or.beam.ne.0) error stop 'resonance default'
     if (any(defaults.neqv.members)) error stop 'resonance mask'
-    call select_fks_recoil(members, .true.)
-    if (any(defaults.neqv.members)) error stop 'aliased default mask'
+    mask = members
+    call select_fks_recoil(mask, .true.)
+    if (any(defaults.neqv.members)) error stop 'saved default mask'
+    if (any(defaults.neqv.mask)) error stop 'modified input mask'
 
   case ('invalid')
     call set_fks_recoilers(mask, pass)
@@ -208,7 +210,7 @@ class TestRecoilSelection(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("PASS " + mode, result.stdout)
 
-    def test_card_policy_explicit_overrides_and_aliasing(self):
+    def test_card_policy_explicit_overrides_and_saved_mask(self):
         self.check_mode("selection")
 
     def test_invalid_recoilers_and_beam_configurations(self):
