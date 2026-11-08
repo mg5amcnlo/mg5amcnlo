@@ -85,6 +85,12 @@ class TestPythia8FxFxPlugin(unittest.TestCase):
         (self.plugins / 'JetMatching.h').write_text(self.reference.read_text())
         self.check_plugin()
 
+    def test_legacy_plugin_accepts_comment_only_changes(self):
+        self.reference.write_text('// MadGraph7 input\nint n = 1;\n')
+        (self.plugins / 'JetMatching.h').write_text(
+            '// MadGraph 5 input\nint n = 1; /* multiplicity */\n')
+        self.check_plugin()
+
     def test_legacy_plugin_mismatch_is_rejected(self):
         (self.plugins / 'JetMatching.h').write_text('Different matching plugin\n')
         with self.assertRaisesRegex(run_interface.aMCatNLOError,

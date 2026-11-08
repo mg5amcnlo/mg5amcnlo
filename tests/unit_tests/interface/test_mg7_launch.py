@@ -2060,6 +2060,23 @@ class TestNpyToLHE(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             self.npy_to_lhe.convert(self.run)
 
+    def test_compact_scalup_is_the_larger_factorisation_scale(self):
+        """The compact_npy completion writes SCALUP as the direct LHE output
+        does: max(mu_F1, mu_F2), mu_R for a beam without a PDF."""
+        both = self.np.zeros(2, dtype=[('ren_scale', '<f8'), ('fact_scale1', '<f8'),
+                                       ('fact_scale2', '<f8')])
+        both['ren_scale'] = [30., 30.]
+        both['fact_scale1'] = [80., 50.]
+        both['fact_scale2'] = [70., 90.]
+        self.assertEqual(list(self.npy_to_lhe._scalup(both)), [80., 90.])
+        beam1 = self.np.zeros(1, dtype=[('ren_scale', '<f8'), ('fact_scale1', '<f8')])
+        beam1['ren_scale'], beam1['fact_scale1'] = 30., 80.
+        self.assertEqual(list(self.npy_to_lhe._scalup(beam1)), [80.])
+        # e+ e-, or a run that dropped the systematics inputs
+        none = self.np.zeros(1, dtype=[('ren_scale', '<f8')])
+        none['ren_scale'] = 30.
+        self.assertEqual(list(self.npy_to_lhe._scalup(none)), [30.])
+
 
 @unittest.skipUnless(mg7_bootstrap.madspace_is_installed(),
                      'madspace is not installed')

@@ -170,14 +170,24 @@ _MG7_DEFAULT_CARDS = {
 
 def _mg7_tool_or_skip(test, cmd, *option_keys):
     """skipTest unless every configured tool path in *option_keys* (e.g.
-    'pythia8_path', 'delphes_path', 'rivet_path') is available; otherwise the
-    post-processing driver would silently skip the tool and the output-file
-    assertions would fail for an unrelated (missing-tool) reason."""
+    'pythia8_path', 'delphes_path', 'rivet_path', or 'fastjet' for the
+    fastjet-config executable) is available; otherwise the post-processing
+    driver would skip or fail on the tool and the output-file assertions would
+    fail for an unrelated (missing-tool) reason. Used by the madevent
+    post-processing tests too."""
     for key in option_keys:
         path = cmd.options.get(key)
+        if path and key == 'fastjet':
+            # fastjet-config may be given by name and found on the PATH
+            path = misc.which(path) or path
         if not path or path in ('None', 'NA') or not os.path.exists(path):
-            test.skipTest('mg7 post-processing tool %s not configured (%s)'
+            test.skipTest('post-processing tool %s not configured (%s)'
                           % (key, path))
+
+
+# Rivet runs need rivet, yoda and a full fastjet (fastjet-config) next to the
+# Pythia8 shower; contur adds its own installation on top.
+_RIVET_TOOLS = ('pythia8_path', 'rivet_path', 'yoda_path', 'fastjet')
 
 
 def _run_mg7_postproc(test, setup_cmds, run_dir, datadir, switch_lines=None,
@@ -2167,6 +2177,78 @@ class TestMECmdShell(unittest.TestCase):
             self.assertGreater(checked[3], 0, checked)
             self.assertGreater(checked[4], 0, checked)
 
+    def test_mlm_top_is_not_a_jet(self):
+        """With MLM (ickkw=1) a top is never a jet. cluster() mapped every
+        quark leg up to pdg 6 to the coupling class of the event, which is
+        1 on a leg that is not merged: the tops were clustered as d quarks
+        and got their own finite pt_clust in ~20% of the p p > t t~ + 0,1j
+        events (sigma of t t~ + 0,1,2j 6.7% low, 2-jet MLM acceptance 14.4%
+        instead of 12.1%).
+
+        A top that no clustering booked a scale onto gets pt_clust = sqrt(s)
+        from setclscales. With the default mlm_shower_start = hardest_scale,
+        unwgt.f (mlm_hardest_shower_scale) then rewrites it to the event's
+        hardest scale, max(SCALUP, pt_clust of the light partons below
+        sqrt(s)), the same value for both tops. A top clustered as a jet
+        keeps its own clustering scale (the rewrite only touches sqrt(s)),
+        so every top must carry exactly that hardest scale. With cluster.f
+        before the fix, 281 of the 1000 tops fail this, the same tops that
+        sit below sqrt(s) with mlm_shower_start = collider_energy."""
+
+        import gzip
+        mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
+        mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
+        mg_cmd.exec_cmd('import model sm')
+        mg_cmd.exec_cmd('generate p p > t t~ @0')
+        mg_cmd.exec_cmd('add process p p > t t~ j @1')
+        mg_cmd.exec_cmd('output madevent %s' % self.run_dir)
+
+        run_card = banner.RunCardLO(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+        run_card.set('nevents', 500, user=True)
+        run_card.set('iseed', 31337, user=True)
+        run_card.set('ickkw', 1, user=True)
+        run_card.set('xqcut', 20.0, user=True)
+        run_card.set('use_syst', False, user=True)
+        run_card.write(pjoin(self.run_dir, 'Cards', 'run_card.dat'))
+
+        self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
+        self.cmd_line.no_notification()
+        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.do('generate_events -f')
+
+        self.assertEqual(run_card['mlm_shower_start'], 'hardest_scale')
+        sqrts = run_card['ebeam1'] + run_card['ebeam2']
+        maxjetflavor = run_card['maxjetflavor']
+        path = pjoin(self.run_dir, 'Events', 'run_01', 'unweighted_events.lhe.gz')
+        text = gzip.open(path, 'rt').read()
+        ntops, njets, clustered_tops = 0, 0, []
+        for event in re.findall(r'<event[^>]*>(.*?)</event>', text, re.S):
+            body = event.split('<')[0].strip().splitlines()
+            scalup = float(body[0].split()[3])
+            pdgs = [int(l.split()[0]) for l in body[1:]]
+            scales = dict((int(i), float(v)) for i, v in
+                          re.findall(r'pt_clust_(\d+)="([^"]+)"', event))
+            self.assertEqual(sorted(scales), list(range(3, len(pdgs) + 1)), event)
+            light = [ptclust for i, ptclust in scales.items()
+                     if (pdgs[i-1] == 21 or 1 <= abs(pdgs[i-1]) <= maxjetflavor)
+                     and ptclust < 0.999 * sqrts]
+            njets += len(light)
+            hardest = max([scalup] + light)
+            for i, ptclust in scales.items():
+                if abs(pdgs[i-1]) == 6:
+                    ntops += 1
+                    if abs(ptclust - hardest) > 1e-5 * hardest:
+                        clustered_tops.append(event)
+        # the tops of every event, and some clustered jets
+        self.assertGreater(ntops, 900)
+        self.assertGreater(njets, 50)
+        self.assertEqual(len(clustered_tops), 0,
+            '%d tops (of %d) do not carry the hardest scale of the event '
+            '(clustered as a jet?), e.g.:\n%s'
+            % (len(clustered_tops), ntops,
+               clustered_tops[0] if clustered_tops else ''))
+
     def test_t_channel_survey_grid(self):
         """check that refining on the survey grid is not biased for
         u q > z u q (all channels pure t-channel chains). With the grid
@@ -4011,6 +4093,8 @@ class TestMEfromfile(unittest.TestCase):
     def test_contur_from_file(self):
         """check that contur runs as expected"""
 
+        _mg7_tool_or_skip(self, MGCmd.MasterCmd(),
+                          *(_RIVET_TOOLS + ('contur_path',)))
         cwd = os.getcwd()
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -4043,8 +4127,9 @@ class TestMEfromfile(unittest.TestCase):
 
 
     def test_rivet_from_file(self):
-        """check that contur runs as expected"""
+        """check that rivet runs as expected"""
 
+        _mg7_tool_or_skip(self, MGCmd.MasterCmd(), *_RIVET_TOOLS)
         cwd = os.getcwd()
         import subprocess
         if logging.getLogger('madgraph').level <= 20:
@@ -4226,7 +4311,7 @@ set draw_rivet_plots True
             pjoin(self.path, 'MG7_rivet'), datadir,
             switch_lines=['shower=Pythia8', 'analysis=Rivet'],
             precopy_cards=['pythia8', 'rivet'],
-            require_tools=('pythia8_path', 'rivet_path'),
+            require_tools=_RIVET_TOOLS,
             events=100)
 
         self.assertTrue(os.path.exists(pjoin(run, 'rivet_result.yoda')),

@@ -81,6 +81,19 @@ class AmplicolProcessTest(unittest.TestCase):
         self.cmd.exec_cmd('generate p p > e+ e-', printcmd=False, precmd=True)
         self.assertEqual(len(self.cmd._curr_amplicol_defs), 0)
 
+    def test_display_processes(self):
+        """display processes lists the [amplicol] processes, also when they
+        are the only ones; they have no diagrams to display"""
+        import contextlib, io
+        self.cmd.exec_cmd('generate g g > g g [amplicol]', printcmd=False,
+                          precmd=True)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.cmd.do_display('processes')
+        self.assertIn('g g > g g @1 [amplicol]', out.getvalue())
+        self.assertRaisesRegex(InvalidCmd, 'amplicol', self.cmd.do_display,
+                               'diagrams_text')
+
     def test_unsupported_options_are_refused(self):
         for line in ['p p > j j QED=0 [amplicol]',
                      'p p > z > e+ e- [amplicol]',

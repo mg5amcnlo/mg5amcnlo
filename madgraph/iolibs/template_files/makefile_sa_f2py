@@ -27,6 +27,11 @@ ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
 
+# name of the f2py python module. A caller importing a rebuild of this
+# directory in a python process that already imported the previous build has
+# to give it (and PROCNAME) a new value: a module cannot be imported twice.
+F2PYMOD= all_matrix$(MENUM)py
+
 #%$(MENUM)py.so: %/matrix.f
 #	$(F2PY) --f77exec=$(FC) $(LINKLIBS_ME) -c $^ -m $(patsubst %/matrix.f,%$(MENUM)py,$^) --include-paths=$(HERE)/$(patsubst %/matrix.f,%,$^)
 	
@@ -60,7 +65,7 @@ liball$(PROCNAME)_$(MENUM)me.$(dylibext): $(LIBDIR)/libdhelas.$(dylibext) $(LIBD
 shared: liball$(PROCNAME)_$(MENUM)me.$(dylibext)
 
 all_matrix$(MENUM)py.so:  liball$(PROCNAME)_$(MENUM)me.$(dylibext) f2py_wrapper.f makefile
-	LDFLAGS="-Wl,-rpath,$(HERE)" $(F2PY)  -c f2py_wrapper.f -L$(HERE) -lall$(PROCNAME)_$(MENUM)me $(LINKLIBS) -m                 all_matrix$(MENUM)py
+	LDFLAGS="-Wl,-rpath,$(HERE)" $(F2PY)  -c f2py_wrapper.f -L$(HERE) -lall$(PROCNAME)_$(MENUM)me $(LINKLIBS) -m $(F2PYMOD)
 	touch all_matrix$(MENUM)py.so
 
 f2py: all_matrix$(MENUM)py.so

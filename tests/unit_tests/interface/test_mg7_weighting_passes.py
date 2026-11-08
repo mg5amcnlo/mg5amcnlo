@@ -213,6 +213,9 @@ class CompileAmplicolTest(unittest.TestCase):
         os.makedirs(os.path.join(self.subproc, 'P1_gg_ttx'))
         self.process = object.__new__(madgraph_process.MadgraphProcess)
         self.process.run_path = self.tmp.name
+        # __init__ always reads Cards/run_card.toml; compile_amplicol takes
+        # the make jobs from cpu_thread_pool_size
+        self.process.run_card = {'run': {'cpu_thread_pool_size': 1}}
         self.process.subprocess_data = [{
             'backend': 'amplicol',
             'path': os.path.join(self.subproc, 'P1_gg_ttx'),

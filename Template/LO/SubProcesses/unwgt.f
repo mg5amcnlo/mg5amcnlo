@@ -143,44 +143,41 @@ c      write(*,*) 'storing Events'
 C**************************************************************************
 C      HELPING ROUTINE FOR PERFORMING THE Z BOOST OF THE EVENTS
 C**************************************************************************
-      double precision function get_betaz(pin,pout)
-C     compute the boost for the requested transformation
+      double precision function get_rapz(pin,pout)
+C     rapidity of the z boost taking pin to pout (same mass).
+C     The light-cone ratio stays accurate at small parton x,
+C     where beta -> 1 lost digits to the beam mass.
       implicit none
       double precision pin(0:3), pout(0:3)
-      double precision denom, control
+      double precision num, den
 
-      denom = pin(0)*pout(0) - pin(3)*pout(3)
-      if (denom.ne.0d0) then
-         control = pin(0)*pout(0) + pin(3)*pout(3)
-         if (denom/control.gt.1d-12)then
-            get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
-c        pass in massless case
-         else if (abs(pin(0)+pin(3)).gt.abs(pin(0))) then
-            get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
-         else
-            get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
-         endif
-      else if (pin(0).eq.pin(3)) then
-         get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
-      else if (pin(0).eq.abs(pin(3))) then
-         get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
+      if (pin(3)+pout(3).ge.0d0) then
+         num = pin(0) + pin(3)
+         den = pout(0) + pout(3)
       else
-         get_betaz = 0d0
+         num = pout(0) - pout(3)
+         den = pin(0) - pin(3)
+      endif
+      if (num.gt.0d0.and.den.gt.0d0) then
+         get_rapz = log(num/den)
+      else
+         get_rapz = 0d0
       endif
       return
       end
 
-      subroutine zboost_with_beta(pin, beta, pout)
-c     apply the boost
+      subroutine zboost_with_rap(pin, rap, pout)
+c     apply the boost on the light-cone components E+pz, E-pz
       implicit none
       double precision pin(0:3), pout(0:3)
-      double precision beta, gamma
+      double precision rap, pplus, pminus
 
-      gamma = 1d0/DSQRT(1-beta**2)
-      pout(0) = gamma * pin(0) - gamma * beta * pin(3)
+      pplus = (pin(0) + pin(3)) * exp(-rap)
+      pminus = (pin(0) - pin(3)) * exp(rap)
+      pout(0) = 0.5d0 * (pplus + pminus)
       pout(1) = pin(1)
       pout(2) = pin(2)
-      pout(3) = - gamma * beta * pin(0) + gamma * pin(3)
+      pout(3) = 0.5d0 * (pplus - pminus)
       return
       end
 
@@ -553,7 +550,7 @@ c
       integer iseed
       double precision beam_mass
       double precision pboost(0:3)
-      double precision beta, get_betaz
+      double precision rap, get_rapz
       double precision ebi(0:3), ebo(0:3)
       double precision ptcltmp(nexternal), pdum(0:3)
       integer beam_number
@@ -682,6 +679,11 @@ c   Fix ordering of ptclus
       do i=1,nexternal
         ptclus(i) = ptcltmp(i)
       enddo
+c     MLM: start the shower of the non-jet particles from the hardest
+c     scale of the event instead of sqrt(s) (run_card mlm_shower_start)
+      if (ickkw.gt.0 .and. mlm_hardest_shower) then
+         call mlm_hardest_shower_scale(jpart, ptclus)
+      endif
 
 c     Check if we have flipped particle 1 and 2, and flip back
       flip = .false.
@@ -701,6 +703,7 @@ c
       pboost(1)=0d0
       pboost(2)=0d0
       pboost(3)=0d0
+      rap=0d0
       if (nincoming.eq.2) then
          if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
      $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
@@ -718,7 +721,7 @@ c
                ebo(1) = 0
                ebo(2) = 0
                ebo(3) = DSQRT(ebo(0)**2-beam_mass**2)
-               beta = get_betaz(ebi, ebo)
+               rap = get_rapz(ebi, ebo)
                if (xbk(1).eq.1d0) then
                 pb(0,isym(1,jsym)) = ebo(0)
                 pb(1,isym(1,jsym)) = ebo(1)
@@ -728,7 +731,7 @@ c
                 endif
                do j=1,nexternal
                   if (j.eq.1.and.xbk(1).eq.1d0) cycle
-                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  call zboost_with_rap(p(0,j),rap,pb(0,isym(j,jsym)))
                   pb(4,isym(j,jsym))=pmass(j)
                enddo
 
@@ -746,7 +749,7 @@ c
                ebo(1) = 0
                ebo(2) = 0
                ebo(3) = -1d0*DSQRT(ebo(0)**2-beam_mass**2)
-               beta = get_betaz(ebi, ebo)
+               rap = get_rapz(ebi, ebo)
                if (xbk(2).eq.1d0) then
                 pb(0,isym(2,jsym)) = ebo(0)
                 pb(1,isym(2,jsym)) = ebo(1)
@@ -756,7 +759,7 @@ c
                endif
                do j=1,nexternal
                   if (j.eq.2.and.xbk(2).eq.1d0) cycle
-                  call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+                  call zboost_with_rap(p(0,j),rap,pb(0,isym(j,jsym)))
                   pb(4,isym(j,jsym))=pmass(j)
                enddo
                ! wrong boost if both parton are massive!
@@ -766,7 +769,7 @@ c
      $           xbk(1),xbk(2)
          endif
          do j=1,nexternal
-            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+            call zboost_with_rap(p(0,j),rap,pb(0,isym(j,jsym)))
             pb(4,isym(j,jsym))=pmass(j)
          enddo
 
@@ -938,6 +941,61 @@ c     Store weight for event
 
       end
       
+      subroutine mlm_hardest_shower_scale(jpart, ptclus)
+c************************************************************************
+c     setclscales writes ptclus = sqrt(s) for every outgoing particle that
+c     no QCD clustering booked a scale onto. With
+c     Beams:setProductionScalesFromLHEF, Pythia8 starts each particle's
+c     final-state shower from its pt_clust and the initial-state shower
+c     from the largest one, so leptons and heavy quarks at sqrt(s) start
+c     the shower at the collider energy. Give the outgoing particles that
+c     are not light partons the event's hardest scale instead:
+c     max(SCALUP, pt_clust of the light partons below sqrt(s)). Light
+c     partons at sqrt(s) (core partons) keep it: that value is Pythia8's
+c     do-not-match flag. Only the shower start changes, not the matching.
+c     The hardest scale also includes the core-process scale of the
+c     clustering (mlm_core_scale, cluster.inc), so it does not drop below the
+c     hard process when mu_F does. Same rule as apply_mlm_hardest_shower_scale
+c     in madspace.
+c************************************************************************
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'vector.inc'
+      include 'run.inc'
+      include 'cuts.inc'
+      integer jpart(7,-nexternal+3:2*nexternal-3)
+      double precision ptclus(nexternal)
+      double precision stot,m1,m2
+      common/to_stot/stot,m1,m2
+      integer i, id
+      double precision flag, hardest
+      logical light
+c     cluster.inc (not included: it also declares ptclus)
+      double precision mlm_core_scale
+      common/cl_core/mlm_core_scale
+
+      flag = 0.999d0*sqrt(stot)
+c     the core-process scale (setclscales) keeps the start at the hard
+c     process when mu_F is lower (scalefact < 1, a fixed scale)
+      hardest = 0d0
+      if (mlm_core_scale.lt.flag) hardest = max(hardest, mlm_core_scale)
+      if (q2fact(1).gt.0d0) hardest = max(hardest, sqrt(q2fact(1)))
+      if (q2fact(2).gt.0d0) hardest = max(hardest, sqrt(q2fact(2)))
+      do i=nincoming+1,nexternal
+         id = abs(jpart(1,i))
+         light = id.eq.21 .or. (id.ge.1 .and. id.le.maxjetflavor)
+         if (light .and. ptclus(i).lt.flag)
+     $        hardest = max(hardest, ptclus(i))
+      enddo
+      if (hardest.le.0d0) return
+      do i=nincoming+1,nexternal
+         id = abs(jpart(1,i))
+         light = id.eq.21 .or. (id.ge.1 .and. id.le.maxjetflavor)
+         if (.not.light .and. ptclus(i).ge.flag) ptclus(i) = hardest
+      enddo
+      end
+
       integer function n_unwgted()
 c************************************************************************
 c     Determines the number of unweighted events which have been written

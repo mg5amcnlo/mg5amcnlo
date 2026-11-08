@@ -36,6 +36,7 @@ import numpy as np
 from gridpack_setup import (
     SOURCE_HASH_MESSAGE,
     build_lhe_meta,
+    configure_mlm_shower_start,
     gridpack_path,
     load_channels,
     load_context_data,
@@ -68,7 +69,8 @@ class EventBatch:
     #: Event weight (XWGTUP), +-1 or larger in magnitude for overweight events, times
     #: the matrix-element ratio of a reweighting step. Not normalized.
     weight: Any
-    #: Renormalization scale in GeV (SCALUP).
+    #: Factorization scale in GeV, the larger of the two beams' (SCALUP); the
+    #: renormalization scale for an event without PDFs.
     scale: Any
     #: QED coupling (AQEDUP).
     alpha_qed: Any
@@ -212,6 +214,7 @@ class EventStream:
         config.max_cut_repetitions = pick(
             max_cut_repetitions, gen_args["max_cut_repetitions"]
         )
+        configure_mlm_shower_start(config, madspace_data)
 
         self.seed = resolve_seed(pick(seed, run_args.get("seed", -1)))
         load_context_data(

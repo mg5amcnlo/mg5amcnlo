@@ -710,6 +710,19 @@ class MadgraphProcess:
         if beam_args["dynamical_scale_choice"] == "mlm":
             self.mlm_clustering = True
             self.scale_kwargs = {}
+            if not self.is_decay:
+                # where the shower of the particles that are not light partons
+                # starts: the hardest scale of the event (max of the
+                # core-process scale the clustering gives them, mu_F and the
+                # light partons' pt_clust), or e_cm (the cm_energy of the
+                # MLMClustering) for "collider_energy"; as
+                # gridpack_setup.configure_mlm_shower_start does
+                cfg = self.event_generator_config
+                cfg.mlm_hardest_shower_scale = (
+                    beam_args["mlm_shower_start"] == "hardest_scale"
+                )
+                cfg.mlm_collider_energy = self.e_cm
+                cfg.mlm_max_jet_flavor = int(beam_args["max_jet_flavor"])
         elif beam_args["dynamical_scale_choice"] in dynamical_scales:
             self.mlm_clustering = False
             self.scale_kwargs = dict(
@@ -2355,6 +2368,12 @@ class MadgraphProcess:
             "custom_functions": gridpack_custom_paths,
             "me_parameters": me_parameters(self.run_card),
             "source_hash": ms.SOURCE_HASH,
+            # where the MLM shower of the non-jet particles starts (set in init_beam)
+            "mlm_shower_start": {
+                "hardest_scale": self.event_generator_config.mlm_hardest_shower_scale,
+                "collider_energy": self.event_generator_config.mlm_collider_energy,
+                "max_jet_flavor": self.event_generator_config.mlm_max_jet_flavor,
+            },
         }
         with open(os.path.join(data_path, "data.json"), "w") as f:
             json.dump(data, f)

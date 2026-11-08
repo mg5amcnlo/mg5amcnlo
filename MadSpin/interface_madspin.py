@@ -108,6 +108,13 @@ def decay_density_tensor(slot_identity, helicities, slot_densities):
     return density_dec
 
 
+def ren_scale2(event):
+    """mu_R**2 for the matrix element's SCALE2: the mur of the event's <scales>
+    tag (the mg7 output writes it), otherwise SCALUP, which holds mu_F."""
+    get_ren_scale = getattr(event, 'get_ren_scale', None)
+    return (get_ren_scale() if get_ren_scale else event.scale) ** 2
+
+
 
 class MadSpinDegenerateWeight(madspin.MadSpinError):
     """The accept/reject cannot ever accept: every trial weight is structurally
@@ -12988,7 +12995,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                                                   pos=position,
                                                   allow_hel=allow_hel,
                                                   alphas=event.aqcd,
-                                                  scale2=event.scale**2)
+                                                  scale2=ren_scale2(event))
 
 
         #print(f"density_array = {density_array}") 
@@ -13102,7 +13109,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 P[:, :, c] = np.asarray(momenta[k], dtype=float).T
                 all_pdgs[:, c] = pdgs[k]
                 alphas[c] = events[k].aqcd
-                scale2[c] = events[k].scale ** 2
+                scale2[c] = ren_scale2(events[k])
             # PY_GET_DENSITY_BATCH(PDGS, PROCID, P, POS, ALLOW_HEL, ALPHAS,
             #                      SCALE2, NBATCH, NEXT)
             inter = module.py_get_density_batch(pdgs=all_pdgs,
@@ -13280,7 +13287,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     # SCALE2 is the squared scale (MU_R = sqrt(SCALE2) in
                     # UPDATE_AS_PARAM2), as get_density and the reweighting pass it
-                    new_value = self.all_f2py[pdir](pdg_for_call, p, event.aqcd, event.scale**2)
+                    new_value = self.all_f2py[pdir](pdg_for_call, p, event.aqcd, ren_scale2(event))
                 #if the process is Loop-Induced, smatrixhel returns the tuple (value, returncode), we need to keep only the value
                 if isinstance(new_value, tuple):
                     new_value = new_value[0]

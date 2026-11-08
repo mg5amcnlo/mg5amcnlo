@@ -805,7 +805,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("syntax: output [" + "|".join(self._export_formats) + \
                     "] [path|.|auto] [options]",'$MG:color:BLUE')
         logger.info("-- Output any generated process(es) to file.",'$MG:BOLD')
-        logger.info("   Default mode is madevent. Default path is \'.\' or auto.")
+        logger.info("   Default mode is mg7. Default path is \'.\' or auto.")
         logger.info("   mode:",'$MG:BOLD')
         logger.info("   - For MadLoop and aMC@NLO runs, there is only one mode and")
         logger.info("     it is set by default.")
@@ -852,6 +852,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      --prefix=int|proc: [standalone_fortran] prefix matrix-element routine names (int: M<n>_, proc: process name); generates f2py python-linkable routines.")
         logger.info("      --zerowidth_tchannel=[True|False]: [standalone_fortran(default:False)|standalone_rw/msP/msF(default:True)] set the t-channel widths to zero as madevent (see option zerowidth_tchannel)")
         logger.info("      --zerowidth_decay=True|False|<pdg>,<pdg>: [standalone_fortran] write the propagators of the final-state particles (of the decaying particle in a 1>N decay) with a zero width; a pdg list restricts to those.")
+        logger.info("      --density=<i>[,<j>...]: [standalone_fortran, also for loop processes] keep the helicities of the external legs i, j, ... open and write their spin-density matrix (the other legs are summed over helicity). In the madevent, mg7 and NLO outputs it only selects the default me_frame of the run_card, as a polarized particle does.")
         logger.info("   Examples:",'$MG:color:GREEN')
         logger.info("       output",'$MG:color:GREEN')
         logger.info("       output standalone_fortran MYRUN -f",'$MG:color:GREEN')
@@ -872,7 +873,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   that the resulting matrix elements give the same value.")
         logger.info("o gauge:",'$MG:color:GREEN')
         logger.info("   Check that processes are gauge invariant by ")
-        logger.info("   comparing Feynman and unitary gauges.")
+        logger.info("   comparing Feynman and unitary gauges. For tree-level")
+        logger.info("   processes the axial gauge (and, if the model has a Feynman")
+        logger.info("   gauge, the Feynman-diagram (FD) gauge) are compared as well.")
         logger.info("   This check is, for now, not available for loop processes.")
         logger.info("o brs:",'$MG:color:GREEN')
         logger.info("   Check that the Ward identities are satisfied if the ")
@@ -1023,9 +1026,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")
         logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")
         logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")
-        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")
-        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")
-        logger.info("   can still handle these.")
+        logger.info("     noborn=: Loop-induced processes (no born amplitude, e.g. g g > h), see below.")
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > h), please use ")
+        logger.info("   the 'noborn=' mode: 'output madevent' then integrates them at LO, with MadLoop")
+        logger.info("   for the matrix element. aMC@NLO cannot integrate these processes. 'virt=' and")
+        logger.info("   'sqrvirt=' give the standalone MadLoop output of the loop amplitude, for checks.")
         self._log_interference_syntax()
         self._log_diagram_filter_syntax()
 
@@ -1104,9 +1109,11 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     all=   : Generate all the real-emission and loop diagrams, ready for aMC@NLO runs.")
         logger.info("     virt=  : Generate only the loop diagrams, read for MadLoop standalone checks/runs.")
         logger.info("     real=  : Generate only the real-emission diagrams, for use with alternative OLP. ")
-        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > z), please use ")
-        logger.info("   the 'virt=' NLO mode. aMC@NLO cannot integrate these processes, but standalone MadLoop5")
-        logger.info("   can still handle these.")
+        logger.info("     noborn=: Loop-induced processes (no born amplitude, e.g. g g > h), see below.")
+        logger.info(" > For processes without born amplitudes (i.e. loop-induced like g g > h), please use ")
+        logger.info("   the 'noborn=' mode: 'output madevent' then integrates them at LO, with MadLoop")
+        logger.info("   for the matrix element. aMC@NLO cannot integrate these processes. 'virt=' and")
+        logger.info("   'sqrvirt=' give the standalone MadLoop output of the loop amplitude, for checks.")
         self._log_interference_syntax()
         self._log_diagram_filter_syntax()
 
@@ -1142,7 +1149,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
         logger.info("        default: 4.0025")
         logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
-        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by five")
         logger.info("  --precision_channel=X: requested numerical precision for each channel")
         logger.info("        default: 0.01")
         logger.info("  --path=X: path for param_card")
@@ -1184,7 +1191,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
         logger.info("        default: 4.0025")
         logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
-        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by five")
         logger.info("  --precision_channel=X: requested numerical precision for each channel")
         logger.info("        default: 0.01")
         logger.info("  --path=X: path for param_card")
@@ -1212,7 +1219,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   '{++}' is refused, and so is '{+T}' -- 'T' already covers +1 and -1.")
         logger.info(" > '{G}','{H}','{Q}','{W}','{S}' select a piece of the *propagator* of a massive vector")
         logger.info("   and are only valid on a particle that is decayed further (an internal line).")
-        logger.info(" > At LO, users need to set 'group_subprocesses False'. 'me_frame' (run_card)")
+        logger.info(" > At LO, polarized processes work with any 'group_subprocesses' setting. 'me_frame' (run_card)")
         logger.info("   defaults to the rest frame of the massive final-state particles (or their")
         logger.info("   decay products) in p p collisions, [1,2] (the partonic c.m.) in e+ e-.")
         logger.info("   'nhel=1' is only a variance choice, not a requirement: it selects Monte-Carlo")
@@ -1521,7 +1528,13 @@ class CheckValidForCmd(cmd.CheckCmd):
         # process died with an AttributeError instead of saying so.
         if args[0] in ['processes', 'diagrams', 'diagrams_text'] and \
                 not self._curr_amps and not getattr(self, '_fks_multi_proc', None):
-            raise self.InvalidCmd("No process generated, please generate a process!")
+            # [amplicol] processes are kept without diagrams
+            if self._curr_amplicol_defs and args[0] != 'processes':
+                raise self.InvalidCmd("Only [amplicol] processes are defined: "
+                    "their matrix elements come from AmpliCol, without diagrams. "
+                    "Use 'display processes' to list them.")
+            elif not self._curr_amplicol_defs:
+                raise self.InvalidCmd("No process generated, please generate a process!")
         if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
 
@@ -4757,6 +4770,9 @@ This implies that with decay chains:
         elif args[0] == 'processes':
             for amp in self._curr_amps:
                 print(amp.nice_string_processes())
+            for procdef in self._curr_amplicol_defs:
+                print('Process: %s [amplicol] (no diagrams)'
+                      % procdef.nice_string(prefix=False).strip())
 
         elif args[0] == 'diagrams_text':
             dirpath, no_open, merge = self._parse_display_output_args(args[1:])
@@ -6262,7 +6278,6 @@ This implies that with decay chains:
         # Reset polarization-citation marker (a new process definition starts)
         self._uses_polarization = False
         self._uses_density_matrix = False
-        self._uses_quarkonia = False
         # Reset _done_export, since we have new process
         self._done_export = False
         # Also reset _export_format and _export_dir
@@ -12314,8 +12329,10 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
         logger.info(" > trace: the (n-1)! basis of traces of fundamental generators")
         logger.info(" > ddm:   the (n-2)! Del Duca-Dixon-Maltoni half-ladder basis")
         logger.info("          (n-1 times fewer JAMPs, (n-1)^2 times smaller color matrix)")
-        logger.info(" > auto:  ddm for the output formats which do not need a color")
-        logger.info("          flow decomposition (standalone), trace otherwise")
+        logger.info(" > auto:  ddm for the output formats which support it (madevent, mg7,")
+        logger.info("          standalone and standalone_fortran; the trace basis is still")
+        logger.info("          used next to it for the color flow of each event), trace")
+        logger.info("          otherwise (NLO, pythia8, matchbox, ...)")
 
     def set2_color_basis(self, args, log=True):
         """Set the color basis used for fully adjoint (multi-gluon) processes.
@@ -13463,13 +13480,14 @@ in the MadGraph7 option 'samurai' (instead of leaving it to its default 'auto').
         except Exception:
             pass
 
-        # quarkonium / leptonium (NRQCD/NRQED) models: detect from model name
+        # quarkonium / leptonium (NRQCD/NRQED): a bound state in the generated
+        # processes (e.g. with 'add model sm_onia'), or such a model by name
         _quarkonia_kws = ('nrqcd', 'nrqed', 'quarkon', 'leptonium')
         try:
             _mn = (self._curr_model.get('name') or '').lower() if self._curr_model else ''
         except Exception:
             _mn = ''
-        if getattr(self, '_uses_quarkonia', False) or any(k in _mn for k in _quarkonia_kws):
+        if self.has_onium_amplitude() or any(k in _mn for k in _quarkonia_kws):
             pairs.append(('ColpaniSerri:2025vdz',
                            'S-wave quarkonium/leptonium production (NRQCD/NRQED)'))
 

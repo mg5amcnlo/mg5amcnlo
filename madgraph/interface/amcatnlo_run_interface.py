@@ -132,7 +132,8 @@ def check_pythia8_fxfx_plugin(pythia8_path, reference_header):
         reference = stream.read()
     with open(plugin) as stream:
         contents = stream.read()
-    if contents != reference:
+    # Legacy installations may differ only in comments or layout.
+    if not misc.same_cpp_code(contents, reference):
         raise aMCatNLOError('FxFx requires a dedicated plugin to be installed '
                            'in Pythia8. Incorrect plugin detected. '
                            'See http://cern.ch/amcatnlo/FxFx_merging.htm')
