@@ -3125,7 +3125,7 @@ c it does not configure a physical photon beam.
       logical hadron_beam,lepton_beam,quark_mother,lepton_mother
       double precision, parameter :: charge_zero=1d-12
       hadron_beam=abs(beam_type).eq.1.or.abs(beam_type).eq.2
-      lepton_beam=beam_type.eq.0.or.beam_type.eq.3.or.beam_type.eq.4
+      lepton_beam=beam_type.eq.0.or.abs(beam_type).eq.3.or.abs(beam_type).eq.4
       py8_qed_isr_support=.false.
       if (.not.(hadron_beam.or.lepton_beam)) return
 c A photon mother -> fermion daughter is implemented only when the
