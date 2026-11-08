@@ -235,7 +235,7 @@ montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
 montecarlocounter.o : fks_powers.inc
 # Build the counterterm module before its callers need mc_counterterms.mod.
 fks_singular.o test_soft_col_limits.o driver_mintMC.o: montecarlocounter.o
-fks_singular.o : scale_module.o process_module.o
+fks_singular.o : scale_module.o process_module.o genps_fks_radiation.o
 add_write_info.o write_event.o test_soft_col_limits.o driver_mintMC.o: scale_module.o
 genps_fks.o: genps_fks_sampling.o genps_fks_radiation.o \
     genps_fks_helpers.o mc_native_context.o

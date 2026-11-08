@@ -15,7 +15,9 @@ c depending on the higher-level phase-space orchestration.
      $     generate_momenta_massive_final_inverse,
      $     generate_momenta_initial,generate_momenta_initial_inverse,
      $     generate_momenta_initial_noevpr,native_fsr_angle,
-     $     use_symmetric_isr_mapping
+     $     use_symmetric_isr_mapping,fsr_born_cutoff_factor
+
+      double precision,parameter :: fsr_stiny=1d-6,fsr_ctiny=5d-7
 
       contains
 
@@ -30,6 +32,19 @@ c identically for generation, inverse projection and the lepton chart.
       common /cMonteCarloType/shower_mc
       use_symmetric_isr_mapping=get_fks_isr_mapping(nlo_ps,shower_mc).eq.1
       end function use_symmetric_isr_mapping
+
+
+      double precision function fsr_born_cutoff_factor()
+c The Born uses the soft map as a normalized auxiliary measure. Remove
+c its finite sampling-volume reduction only from the n-body prefactor.
+      use mc_native_context, only: native_mapping
+      implicit none
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+      fsr_born_cutoff_factor=1d0
+      if(.not.(softtest.or.colltest.or.native_mapping))
+     $     fsr_born_cutoff_factor=(1d0-fsr_stiny)*(1d0-fsr_ctiny)
+      end function fsr_born_cutoff_factor
 
 
 
@@ -73,8 +88,8 @@ c parameters
       data y_ij_fks_matrix/-1.d0,-1.d0,-1.d8,1.d0,1.d0/
       double precision stiny,sstiny,ctiny,cctiny
       double complex ximag
-      parameter (stiny=1d-6)
-      parameter (ctiny=5d-7)
+      parameter (stiny=fsr_stiny)
+      parameter (ctiny=fsr_ctiny)
       parameter (ximag=(0d0,1d0))
 c
       pass=.true.
@@ -91,7 +106,7 @@ c
       if(abs(icountevts).eq.2.or.abs(icountevts).eq.1)then
          y_ij_fks=dble(sign(1,icountevts))
          if (.not. colltest) then
-            xjac=xjac*2d0*x(2)*2d0
+            xjac=xjac*2d0*x(2)*2d0*(1d0-cctiny)
          else
             continue ! do not include jacobian for y in tests
          endif
@@ -99,7 +114,7 @@ c
          y_ij_fks = y_ij_fks_fix
       else
          y_ij_fks = -2d0*(cctiny+(1-cctiny)*x(2)**2)+1d0
-         xjac=xjac*2d0*x(2)*2d0
+         xjac=xjac*2d0*x(2)*2d0*(1d0-cctiny)
       endif
 
       call getangles(p_born_imother,
@@ -115,7 +130,7 @@ c
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
          if (.not.softtest) then
-            xjac=xjac*2d0*x(1)
+            xjac=xjac*2d0*x(1)*(1d0-sstiny)
          else
             continue ! no jacobian for xi in tests
          endif
@@ -124,7 +139,7 @@ c
       else
          xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          xi_i_fks=xi_i_hat*xiimax
-         xjac=xjac*2d0*x(1)
+         xjac=xjac*2d0*x(1)*(1d0-sstiny)
       endif
 
 c Check that xii is in the allowed range
@@ -276,8 +291,8 @@ c
       integer i
       double precision rho,sstiny,cctiny
       external rho
-      sstiny=1d-6
-      cctiny=5d-7
+      sstiny=fsr_stiny
+      cctiny=fsr_ctiny
       if(softtest.or.colltest.or.native_mapping)then
          sstiny=0d0
          cctiny=0d0
@@ -335,7 +350,7 @@ c     Phase-space factor for (xii,yij,phii)
          return
       endif
       x(1)=sqrt(max(0d0,min(1d0,x(1))))
-      xjac=xjac*2d0*x(1)
+      xjac=xjac*2d0*x(1)*(1d0-sstiny)
 
 !     random number associated with y_ij_fks
       x(2)=((1d0-y_ij_fks)/2d0-cctiny)/(1d0-cctiny)
@@ -344,7 +359,7 @@ c     Phase-space factor for (xii,yij,phii)
          return
       endif
       x(2)=sqrt(max(0d0,min(1d0,x(2))))
-      xjac=xjac*2d0*x(2)*2d0
+      xjac=xjac*2d0*x(2)*2d0*(1d0-cctiny)
 
 !     random number associated with phi_i_fks
       x(3)=phi_i_fks/(2d0*pi)
@@ -406,8 +421,8 @@ c parameters
       real*8 pi
       parameter (pi=3.1415926535897932d0)
       double precision stiny,sstiny,ctiny,cctiny
-      parameter (stiny=1d-6)
-      parameter (ctiny=5d-7)
+      parameter (stiny=fsr_stiny)
+      parameter (ctiny=fsr_ctiny)
 c
       native_mapping=active_native_mapping
       if(colltest .or.
@@ -452,7 +467,7 @@ c to retain the transverse component near the antiparallel endpoint.
          sin_ij_fks=2d0*sqrt(max(0d0,
      $        (cctiny+(1d0-cctiny)*x(2)**2)*(1d0-cctiny)*
      $        (1d0-x(2))*(1d0+x(2))))
-         xjac=xjac*2d0*x(2)*2d0
+         xjac=xjac*2d0*x(2)*2d0*(1d0-cctiny)
       endif
 
       call getangles(p_born_imother,
@@ -524,7 +539,8 @@ c separately becomes singular at the boundary between the two solutions.
       elseif(icountevts.eq.0)then
          xi_i_fks=0d0
          isolsign=1
-         if (x(1).le.rat_xi .and. (.not.softtest)) xjac=xjac*2d0*x(1)/rat_xi
+         if (x(1).le.rat_xi .and. (.not.softtest))
+     $        xjac=xjac*2d0*x(1)/rat_xi*(1d0-sstiny)
       elseif (softtest) then
          if(xi_i_fks_fix.gt.xiimax)then
             xjac=-102
@@ -542,7 +558,8 @@ c convenient to choose A=rat_xi
      $           (x(1)/rat_xi)**2)
             xi_i_fks=xinorm*xi_i_hat
             isolsign=1
-            if (.not.softtest) xjac=xjac*2d0*x(1)/rat_xi
+            if (.not.softtest)
+     $           xjac=xjac*2d0*x(1)/rat_xi*(1d0-sstiny)
          else
             xi_i_hat=x(1)
             xi_i_fks=-xinorm*xi_i_hat+2*xiimax
@@ -718,8 +735,8 @@ c
       logical        softtest,colltest
       common/sctests/softtest,colltest
       native_mapping=active_native_mapping
-      sstiny=1d-6
-      cctiny=5d-7
+      sstiny=fsr_stiny
+      cctiny=fsr_ctiny
       if(softtest.or.colltest.or.native_mapping)then
          sstiny=0d0
          cctiny=0d0
@@ -735,7 +752,7 @@ c
          return
       endif
       x(2)=sqrt(max(0d0,min(1d0,x(2))))
-      xjac=xjac*2d0*x(2)*2d0
+      xjac=xjac*2d0*x(2)*2d0*(1d0-cctiny)
       endif
 
       ! x_i_fks
@@ -807,7 +824,7 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
             return
          endif
          x(1)=rat_xi*sqrt(max(0d0,min(1d0,x(1))))
-         xjac=xjac*2*x(1)/rat_xi
+         xjac=xjac*2*x(1)/rat_xi*(1d0-sstiny)
       else
          x(1)=(2*xiimax-xi_i_fks)/xinorm
          if (x(1).lt.rat_xi-1d-12.or.x(1).gt.1d0+1d-12) then

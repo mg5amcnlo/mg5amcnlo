@@ -2,8 +2,9 @@
 ! Jacobians at fixed Born kinematics, including the massive-emitter support.
 program check_born_measure
   use mint_module
+  use mc_native_context, only: native_mapping
   use fks_phase_space_data, only: xinorm_ev,xiimax_ev,tau_born_lower_bound, &
-       tau_lower_bound_resonance,tau_lower_bound
+       tau_lower_bound_resonance,tau_lower_bound,jac_cnt,active_shat=>shat
   use fks_radiation_maps, only: generate_momenta_initial, &
        generate_momenta_massless_final,generate_momenta_massive_final
   implicit none
@@ -17,10 +18,15 @@ program check_born_measure
   common /sctests/softtest,colltest
   double precision :: omx_ee(2)
   common /to_ee_omx1/omx_ee
-  integer :: ix,iy,kind,energy,isign
+  integer :: ix,iy,kind,energy,isign,limit
   double precision :: b(1),c(1),base,spread,weight,x(2),lo,hi,dy,ratio
   double precision :: xp(0:3,nexternal),pborn(0:3),p_i(0:3),mass,shat,sqrts,shat_born
   double precision :: xjac,xpswgt,y,xi,xi_hat,tau,ycm,xbj(2),xborn(2)
+  double precision :: f_b,f_nb,symmetry,symmetry_b,symmetry_d,xiScut_used,xiBSVcut_used
+  integer :: ngluons,nquarks(-6:6),nphotons
+  common/factor_nbody/f_b,f_nb
+  common/numberofparticles/symmetry,symmetry_b,symmetry_d,ngluons,nquarks,nphotons
+  common/cxiScut_used/xiScut_used,xiBSVcut_used
   character(len=16) :: arg
   logical :: pass
 
@@ -56,6 +62,11 @@ program check_born_measure
   tau_born_lower_bound=0d0
   tau_lower_bound_resonance=0d0
   tau_lower_bound=0d0
+  symmetry=1d0
+  symmetry_b=1d0
+  symmetry_d=1d0
+  xiScut_used=1d0
+  xiBSVcut_used=1d0
   i_fks=5
   do energy=1,2
      sqrts=370d0
@@ -83,8 +94,12 @@ program check_born_measure
               hi=ratio*sqrt(dble(ix)/born_spread_nxi)
               x(1)=(lo+hi)/2d0
               call radiation_map
-              ! compute_prefactors_nbody's radiation factor, including phi.
-              weight=2d0*pi*xjac*xpswgt*xinorm_ev/xiimax_ev*16d0*pi**2/shat
+              ! Exercise the production Born prefactor, including the exact
+              ! sampling Jacobian and removal of its auxiliary radiation volume.
+              active_shat=shat
+              jac_cnt(0)=2d0*pi*xjac*xpswgt
+              call compute_prefactors_nbody(1d0)
+              weight=f_b
               weight=weight*(hi-lo)*dy
               call set_born_spread_point(x(1),x(2),2)
               ! Restore the saved fold after a later map changed the bin.
@@ -94,12 +109,33 @@ program check_born_measure
               spread=spread+weight*born_spread_get_factor()
            enddo
         enddo
-        if (abs(base-1d0).gt.2d-6) stop 2 ! FKS endpoint offsets
+        if (kind.le.2)then
+           if (abs(base-1d0).gt.2d-6) stop 2 ! Existing ISR endpoint convention.
+        else
+           if (abs(base-1d0).gt.1d-11)then
+              write(*,*) 'FAIL FSR Born radiation volume',kind,sqrts,base
+              stop 2
+           endif
+        endif
         if (abs(spread/base-1d0).gt.1d-11) then
            write(*,*) 'FAIL Born radiation normalization',kind,sqrts,base,spread
            stop 3
         endif
      enddo
+  enddo
+  ! Native and explicit limit tests have no sampling cutoffs. Their Born
+  ! prefactor must leave an already normalized auxiliary volume untouched.
+  j_fks=3
+  xiimax_ev=1d0
+  xinorm_ev=1d0
+  active_shat=shat
+  jac_cnt(0)=shat/(16d0*pi**2)
+  do limit=1,3
+     native_mapping=limit.eq.1
+     softtest=limit.eq.2
+     colltest=limit.eq.3
+     call compute_prefactors_nbody(1d0)
+     if(abs(f_b-1d0).gt.1d-13)stop 5
   enddo
   write(*,*) 'PASS Born radiation normalization'
 

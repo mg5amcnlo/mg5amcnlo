@@ -80,6 +80,9 @@ ANNOUNCEMENT:
        inverse coordinates, including the initial-state recoil adapter.
    RF: Restore the lower-bound rejection for soft ISR counterevents in
        both mappings, avoiding endpoints that cannot pass the cuts.
+   RF: Include finite sampling-cutoff factors in final-state radiation
+       Jacobians, their inverses and counterevents. Preserve the normalized
+       auxiliary Born measure and its spreading coordinates.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.

@@ -49,6 +49,11 @@ program check_momentum_maps
      write(*,*) 'PASS massive_boundary'
      stop
   endif
+  if (mode.eq.'fsr_cutoff_jacobians') then
+     call check_fsr_cutoff_jacobians()
+     write(*,*) 'PASS fsr_cutoff_jacobians'
+     stop
+  endif
   if (mode.eq.'dijet_isr_boundary') then
      call check_dijet_isr_boundary()
      write(*,*) 'PASS dijet_isr_boundary'
@@ -568,6 +573,115 @@ program check_momentum_maps
   if(mode.eq.'native_massive'.and.nratios.eq.0)error stop 'no counterevent ratios tested'
   write(*,*) 'PASS ',trim(mode),nchecked,nplus,nminus
 contains
+  subroutine check_fsr_cutoff_jacobians()
+    double precision,parameter :: step=1d-5
+    double precision :: center(3),shifted(3),j0,jwork,coordinate0,coordinate_plus,coordinate_minus
+    double precision :: angle0,angle_plus,angle_minus,radial_derivative,angular_derivative,expected,ratio
+    double precision :: xi_fix,y_fix
+    common/cxiyfix/xi_fix,y_fix
+    integer :: mapping,mass_case,branch,slot
+    sqrtshat=1000d0
+    shat=sqrtshat**2
+    do mapping=0,1
+      native_mapping=mapping.eq.1
+      do mass_case=0,1
+        mass=173d0*mass_case
+        mrec=173d0
+        energy=(shat+mass**2-mrec**2)/(2d0*sqrtshat)
+        momentum=sqrt(energy**2-mass**2)
+        born(:,1)=[sqrtshat/2d0,0d0,0d0,sqrtshat/2d0]
+        born(:,2)=[sqrtshat/2d0,0d0,0d0,-sqrtshat/2d0]
+        born(:,3)=[energy,0.3d0*momentum,0.4d0*momentum,sqrt(0.75d0)*momentum]
+        born(:,4)=born(:,1)+born(:,2)-born(:,3)
+        do branch=1,1+mass_case
+          center=[.45d0,sqrt(((1d0+.805d0)/2d0-5d-7)/(1d0-5d-7)),.317d0]
+          call cutoff_point(-100,center,j0,coordinate0,angle0)
+          ratio=xiimax/xinorm
+          if(branch.eq.2)then
+            center(1)=(1d0+ratio)/2d0
+            if(native_mapping)center(1)=.99d0
+          endif
+          shifted=center
+          shifted(1)=center(1)+step
+          call cutoff_point(-100,shifted,jwork,coordinate_plus,angle0)
+          shifted(1)=center(1)-step
+          call cutoff_point(-100,shifted,jwork,coordinate_minus,angle0)
+          radial_derivative=(coordinate_plus-coordinate_minus)/(2d0*step)
+          shifted=center
+          shifted(2)=center(2)+step
+          call cutoff_point(-100,shifted,jwork,coordinate0,angle_plus)
+          shifted(2)=center(2)-step
+          call cutoff_point(-100,shifted,jwork,coordinate0,angle_minus)
+          angular_derivative=(angle_plus-angle_minus)/(2d0*step)
+          expected=2d0*pi*abs(radial_derivative*angular_derivative)
+          call cutoff_point(-100,center,j0,coordinate0,angle0)
+          if(abs(j0/expected-1d0).gt.2d-8)error stop 'FSR Jacobian differs from sampled-coordinate derivative'
+          if(mass_case.eq.1.and.mapping.eq.0.and.isign.ne.3-2*branch) &
+               error stop 'FSR Jacobian fixture missed massive branch'
+          invborn=0d0
+          jacinv=1d0
+          pswgtinv=1d0
+          if(mass_case.eq.0)then
+            call generate_momenta_massless_final_inverse(p,xi,yij,2d0*pi*center(3), &
+                 invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,3)
+          else
+            call generate_momenta_massive_final_inverse(p,xi,yij,2d0*pi*center(3), &
+                 invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,3,mass)
+          endif
+          if(jacinv.le.0d0.or.maxval(abs(inv-center)).gt.1d-9.or. &
+               abs(jacinv/expected-1d0).gt.2d-8)error stop 'FSR inverse cutoff Jacobian'
+          ! A projected endpoint retains the sampling measure of its real
+          ! coordinate; massive second solutions have no soft endpoint.
+          if(branch.eq.1)then
+            do slot=-2,2
+              if(mass_case.eq.1.and.slot.ne.0)cycle
+              call cutoff_point(slot,center,jwork,coordinate0,angle0)
+              if(abs(jwork/j0-1d0).gt.1d-12)error stop 'FSR endpoint cutoff Jacobian'
+            enddo
+          endif
+        enddo
+        if(mapping.ne.0)cycle
+        ! Diagnostic limit tests turn the cutoffs off and omit the Jacobian
+        ! for their fixed coordinate, independently of the endpoint slot.
+        softtest=.true.
+        xi_fix=.02d0
+        call cutoff_point(-100,center,jwork,coordinate0,angle0)
+        expected=2d0*pi*4d0*center(2)
+        if(abs(jwork/expected-1d0).gt.1d-12)error stop 'FSR soft-test Jacobian'
+        softtest=.false.
+        if(mass_case.ne.0)cycle
+        colltest=.true.
+        y_fix=.2d0
+        call cutoff_point(-100,center,jwork,coordinate0,angle0)
+        expected=2d0*pi*2d0*center(1)
+        if(abs(jwork/expected-1d0).gt.1d-12)error stop 'FSR collinear-test Jacobian'
+        colltest=.false.
+      enddo
+    enddo
+    native_mapping=.false.
+  end subroutine
+
+  subroutine cutoff_point(slot,coordinates,jacobian,radial,angle)
+    integer,intent(in) :: slot
+    double precision,intent(in) :: coordinates(3)
+    double precision,intent(out) :: jacobian,radial,angle
+    p=0d0
+    p(:,1:4)=born
+    jacobian=2d0*pi
+    pswgt=1d0
+    if(mass.eq.0d0)then
+      call generate_momenta_massless_final(slot,5,3,born(:,3),shat,sqrtshat,coordinates,mrec**2,p, &
+           2d0*pi*coordinates(3),xiimax,xinorm,xi,angle,xihat,pifks,jacobian,pswgt,pass)
+    else
+      call generate_momenta_massive_final(slot,isign,5,3,born(:,3),shat,sqrtshat,mass,coordinates,mrec**2,p, &
+           2d0*pi*coordinates(3),xiimax,xinorm,xi,angle,xihat,pifks,jacobian,pswgt,pass)
+    endif
+    if(.not.pass.or.jacobian.le.0d0)error stop 'invalid FSR cutoff-Jacobian fixture'
+    yij=angle
+    radial=xi/xinorm
+    if(native_mapping.and.mass.gt.0d0)radial=1d0-sqrt(sum(p(1:3,3)**2))/momentum
+  end subroutine
+
   subroutine check_massive_boundary()
     use fks_phase_space_helpers, only: get_massive_fsr_bounds
     integer,parameter :: qp=selected_real_kind(30)
@@ -669,6 +783,7 @@ contains
     ! measure for each emitter, including when their branch boundaries differ.
     use fks_phase_space_data, only: p1_cnt,jac_cnt, &
          xiimax_ev,xinorm_ev,nocntevents,isolsign
+    use fks_radiation_maps, only: fsr_born_cutoff_factor
     integer,parameter :: nx=16,ny=16
     double precision,parameter :: recoils(4)=[4.7d0,300d0,900d0,173d0]
     double precision :: mb(4),pmass(5)
@@ -727,7 +842,10 @@ contains
                            error stop 'first branch lost its soft counterevent'
                       if(maxval(abs(p1_cnt(:,1:4,0)-born)).gt.1d-9.or. &
                            any(p1_cnt(:,5,0).ne.0d0))error stop 'endpoint changed Born point'
-                      w=jac_cnt(0)/born_flux*xinorm_ev/(xiimax_ev*soft_volume)
+                      ! Use the same sampled auxiliary volume as the Born
+                      ! prefactor, keeping its integral exactly normalized.
+                      w=jac_cnt(0)/born_flux*xinorm_ev/ &
+                           (xiimax_ev*soft_volume*fsr_born_cutoff_factor())
                    endif
                    total=total+w*dx/ny
                 enddo

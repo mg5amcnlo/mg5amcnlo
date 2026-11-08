@@ -1501,6 +1501,7 @@ c Restore scales for the n+1-body FxFx terms
       
       subroutine compute_prefactors_nbody(vegas_wgt)
       use fks_phase_space_data,only: resonance_mass2,resonance_recoil,jac_cnt,xinorm_ev,xiimax_ev,shat
+      use fks_radiation_maps,only: fsr_born_cutoff_factor
 c Compute all the relevant prefactors for the Born and the soft-virtual,
 c i.e. all the nbody contributions. Also initialises the plots and
 c bpower.
@@ -1521,6 +1522,8 @@ c bpower.
      &                  fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
+      integer i_fks,j_fks
+      common /fks_indices/ i_fks,j_fks
 C
       call initialize_weight_analysis
       call set_cms_stuff(0)
@@ -1532,6 +1535,10 @@ c so the same local radiation normalization also removes that map.
       if(resonance_recoil)radiation_mass2=resonance_mass2
       f_b=jac_cnt(0)*xinorm_ev/(min(xiimax_ev,xiBSVcut_used)*radiation_mass2/(16
      $     *pi**2))*fkssymmetryfactorBorn*vegas_wgt
+c FSR sampling derivatives include the finite cutoff ranges. The Born
+c stage uses their full auxiliary domain (xiBSVcut_used=1), normalized
+c independently of the real/subtraction measure and spreading bins.
+      if(j_fks.gt.nincoming)f_b=f_b/fsr_born_cutoff_factor()
       f_nb=f_b
       return
       end
