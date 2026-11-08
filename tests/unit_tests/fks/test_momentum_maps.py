@@ -213,6 +213,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_symmetric_initial_state_restricted_and_empty_domains(self):
         self.check_map("isr_symmetric_bounds")
 
+    def test_initial_state_soft_endpoints_respect_lower_bound(self):
+        self.check_map("isr_lower_bound")
+
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")
 

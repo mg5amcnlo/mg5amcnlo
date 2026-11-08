@@ -960,6 +960,12 @@ c when the real invariant mass has a larger lower bound than the Born.
       endif
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
+c These endpoints cannot pass the cuts below the supplied lower bound.
+         if(xi_i_fks.lt.xiimin-1d-12)then
+            xjac=-34d0
+            pass=.false.
+            return
+         endif
       elseif(softtest)then
          xi_i_fks=xi_i_fks_fix
       else
@@ -1214,6 +1220,12 @@ c
 
       if(abs(icountevts).eq.2.or.icountevts.eq.0)then
          xi_i_fks=0d0
+c These endpoints cannot pass the cuts below the supplied lower bound.
+         if(xi_i_fks.lt.xiimin-1d-12)then
+            xjac=-34d0
+            pass=.false.
+            return
+         endif
          if (.not.softtest) then
             xjac=xjac*2d0*x(1)*(1d0-sstiny)
          else

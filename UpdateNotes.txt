@@ -78,6 +78,8 @@ ANNOUNCEMENT:
    RF: Restore the two-piece massive final-state radiation map so both
        solutions meet at xi_max without an overshoot or gap; align its
        inverse coordinates, including the initial-state recoil adapter.
+   RF: Restore the lower-bound rejection for soft ISR counterevents in
+       both mappings, avoiding endpoints that cannot pass the cuts.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.

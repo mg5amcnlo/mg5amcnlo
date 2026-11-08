@@ -90,6 +90,11 @@ subroutine check_isr_mapping(mode)
   max_replay=0d0
   max_inverse=0d0
 
+  if(mode.eq.'isr_lower_bound')then
+    call check_soft_lower_bound()
+    return
+  endif
+
   if(mode.eq.'isr_symmetric_bounds')then
     call check_symmetric_domains()
     return
@@ -271,7 +276,12 @@ subroutine check_isr_mapping(mode)
       bound_tau=bound_born
       x=0d0
       x(1:3)=[.6d0,.99d0,.4d0]
-      call generate()
+      pb=born
+      pbl=born
+      pbe=born
+      call generate_FKS_kinematics(x(1:3),nbody,1d0,1d0,stot,sb,mass,tb,yb,bx,mb,jac,p,pass)
+      if(.not.pass.or.jac.le.0d0.or.jc(1).le.0d0)error stop 'ISR real or collinear point rejected'
+      if(jc(0).ge.0d0.or.jc(2).ge.0d0)error stop 'ISR soft endpoints below threshold retained'
       if(xi.lt.1d0-tb/bound_tau)error stop 'ISR lost real mass threshold'
       bound_born=tb/bx(side)*1.1d0
       bound_res=bound_born
@@ -323,6 +333,35 @@ subroutine check_isr_mapping(mode)
   enddo
   write(*,*) 'ISR recoil and inverse maximum relative errors',max_replay,max_inverse
 contains
+  subroutine check_soft_lower_bound()
+    double precision,parameter :: ratios(4)=[.99d0,1d0,1d0+5d-13,1.01d0]
+    integer :: mapping,threshold,slot
+    do mapping=1,2
+      FKSISRMapping=mapping
+      do native=0,1
+        native_mapping=native.eq.1
+        do side=1,2
+          jfks=side
+          bx=[.2d0,.4d0]
+          call set_born()
+          x(1:3)=[.6d0,.6d0,.31d0]
+          do threshold=1,size(ratios)
+            bound_tau=tb*ratios(threshold)
+            do slot=-2,2,2
+              call generate_slot(slot)
+              if(threshold.eq.4)then
+                if(pass.or.tmp_jac.ne.-34d0)error stop 'ISR soft lower-bound rejection missing'
+              else
+                if(.not.pass.or.tmp_jac.le.0d0.or.tmp_xi.ne.0d0) &
+                     error stop 'ISR allowed soft endpoint rejected'
+              endif
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+  end subroutine
+
   subroutine check_symmetric_domains()
     double precision :: selected_angles(3),minimum
     selected_angles=[1d-4,.5d0,.9999d0]
