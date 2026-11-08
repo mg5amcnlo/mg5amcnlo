@@ -268,6 +268,9 @@ class HEPMC_EventFile(object):
         self.mode = mode
 
         self.zip_mode = False
+        # set when a .gz output had to be written plain; close()
+        # then gzips self.path
+        self.to_zip = False
         if not path.endswith(".gz"):
             self.file = open(path, mode, *args, **opt)
         elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
@@ -287,6 +290,7 @@ class HEPMC_EventFile(object):
                     self.to_zip = True
                 self.file = open(path[:-3], mode, *args, **opt)
                 path = path[:-3] 
+        self.path = path
 
         self.parsing = True # check if/when we need to parse the event.
         self.eventgroup  = False
