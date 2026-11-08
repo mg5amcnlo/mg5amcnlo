@@ -2168,13 +2168,22 @@ class TestMECmdShell(unittest.TestCase):
             self.assertGreater(checked[4], 0, checked)
 
     def test_mlm_top_is_not_a_jet(self):
-        """With MLM (ickkw=1) a top is never a jet: its pt_clust (the
-        <scales> tag) must be sqrt(s). cluster() mapped every quark leg up
-        to pdg 6 to the coupling class of the event, which is 1 on a leg
-        that is not merged: the tops were clustered as d quarks and got a
-        finite pt_clust in ~20% of the p p > t t~ + 0,1j events (sigma of
-        t t~ + 0,1,2j 6.7% low, 2-jet MLM acceptance 14.4% instead of
-        12.1%)."""
+        """With MLM (ickkw=1) a top is never a jet. cluster() mapped every
+        quark leg up to pdg 6 to the coupling class of the event, which is
+        1 on a leg that is not merged: the tops were clustered as d quarks
+        and got their own finite pt_clust in ~20% of the p p > t t~ + 0,1j
+        events (sigma of t t~ + 0,1,2j 6.7% low, 2-jet MLM acceptance 14.4%
+        instead of 12.1%).
+
+        A top that no clustering booked a scale onto gets pt_clust = sqrt(s)
+        from setclscales. With the default mlm_shower_start = hardest_scale,
+        unwgt.f (mlm_hardest_shower_scale) then rewrites it to the event's
+        hardest scale, max(SCALUP, pt_clust of the light partons below
+        sqrt(s)), the same value for both tops. A top clustered as a jet
+        keeps its own clustering scale (the rewrite only touches sqrt(s)),
+        so every top must carry exactly that hardest scale. With cluster.f
+        before the fix, 281 of the 1000 tops fail this, the same tops that
+        sit below sqrt(s) with mlm_shower_start = collider_energy."""
 
         import gzip
         mg_cmd = MGCmd.MasterCmd()
@@ -2198,28 +2207,35 @@ class TestMECmdShell(unittest.TestCase):
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         self.do('generate_events -f')
 
+        self.assertEqual(run_card['mlm_shower_start'], 'hardest_scale')
         sqrts = run_card['ebeam1'] + run_card['ebeam2']
+        maxjetflavor = run_card['maxjetflavor']
         path = pjoin(self.run_dir, 'Events', 'run_01', 'unweighted_events.lhe.gz')
         text = gzip.open(path, 'rt').read()
         ntops, njets, clustered_tops = 0, 0, []
         for event in re.findall(r'<event[^>]*>(.*?)</event>', text, re.S):
-            lines = event.split('<')[0].strip().splitlines()[1:]
-            pdgs = [int(l.split()[0]) for l in lines]
+            body = event.split('<')[0].strip().splitlines()
+            scalup = float(body[0].split()[3])
+            pdgs = [int(l.split()[0]) for l in body[1:]]
             scales = dict((int(i), float(v)) for i, v in
                           re.findall(r'pt_clust_(\d+)="([^"]+)"', event))
             self.assertEqual(sorted(scales), list(range(3, len(pdgs) + 1)), event)
+            light = [ptclust for i, ptclust in scales.items()
+                     if (pdgs[i-1] == 21 or 1 <= abs(pdgs[i-1]) <= maxjetflavor)
+                     and ptclust < 0.999 * sqrts]
+            njets += len(light)
+            hardest = max([scalup] + light)
             for i, ptclust in scales.items():
                 if abs(pdgs[i-1]) == 6:
                     ntops += 1
-                    if abs(ptclust - sqrts) > 1e-3 * sqrts:
+                    if abs(ptclust - hardest) > 1e-5 * hardest:
                         clustered_tops.append(event)
-                elif ptclust < sqrts:
-                    njets += 1
         # the tops of every event, and some clustered jets
         self.assertGreater(ntops, 900)
         self.assertGreater(njets, 50)
         self.assertEqual(len(clustered_tops), 0,
-            '%d tops (of %d) have a finite pt_clust, e.g.:\n%s'
+            '%d tops (of %d) do not carry the hardest scale of the event '
+            '(clustered as a jet?), e.g.:\n%s'
             % (len(clustered_tops), ntops,
                clustered_tops[0] if clustered_tops else ''))
 
