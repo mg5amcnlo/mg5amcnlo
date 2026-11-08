@@ -1521,7 +1521,7 @@ c     Keep the PDF flavour average and the order of Sudakov-table calls.
       type(delta_connections), intent(in) :: connections
       integer in_con,out_con,isudtype,ip,lp,id
       double precision deltanum,deltaden,delta(2,2),gl(2),Fk(2)
-      double precision pdfnum,pdfden,PIk
+      double precision pdfnum,pdfden,PIk,gl_sum
       double precision pdg2pdf
       external pdg2pdf
 
@@ -1564,6 +1564,13 @@ c     This can occur at an isolated PDF scale.
          Fk(out_con)=pdfnum/pdfden
 c     Loop over gamma in eq.3.34.
          do in_con=1,connections%count
+c     A live line does not imply that every cross interval is ordered.
+c     An empty interval has unit no-emission probability.
+            if(connections%stop(out_con).ge.
+     $           connections%start(in_con))then
+               delta(out_con,in_con)=1d0
+               cycle
+            endif
             isudtype=connections%sudakov_type(in_con)
             deltanum=pysudakov_safe(connections%stop(out_con),
      $           connections%mass(in_con),pdg,isudtype,mcmass)
@@ -1585,11 +1592,19 @@ c     Loop over gamma in eq.3.34.
             endif
          enddo
       enddo
+c     Equal scales or flat Sudakov tables can make both g weights zero.
+c     Keep the equal-weight convention of the original Delta calculation.
+      gl_sum=sum(gl(1:connections%count))
+      if(gl_sum.gt.0d0)then
+         gl(1:connections%count)=gl(1:connections%count)/gl_sum
+      else
+         gl(1:connections%count)=1d0/dble(connections%count)
+      endif
 c     Sum the colour-line contributions in eq.3.34 and bound the result
 c     to interpret it as a probability at the accuracy used here.
       PIk=0d0
       do out_con=1,connections%count
-         PIk=PIk+gl(out_con)/sum(gl(1:connections%count))*Fk(out_con)
+         PIk=PIk+gl(out_con)*Fk(out_con)
      $        *product(delta(out_con,1:connections%count))
       enddo
       delta_leg_probability=min(max(PIk,0d0),1d0)

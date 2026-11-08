@@ -99,6 +99,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
         cls.executable = work / 'check_delta_matching'
         result = subprocess.run([
             shutil.which('gfortran'), '-O2', '-std=legacy', '-fcheck=all',
+            '-ffpe-trap=invalid,zero,overflow',
             '-ffixed-line-length-none', '-ffunction-sections', '-fdata-sections',
             '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections',
             '-I', str(work), str(TEMPLATE / 'qed_shower_support.f90'),
@@ -125,6 +126,18 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
                                 capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('MC@NLO-Delta scale reconstruction failed', result.stdout)
+
+    def test_cross_connection_intervals_and_line_orderings(self):
+        result = subprocess.run([str(self.executable), 'cross'],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS cross-connection intervals', result.stdout)
+
+    def test_vanishing_weights_equal_scales_and_table_caps(self):
+        result = subprocess.run([str(self.executable), 'zero'],
+                                capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PASS zero connection weights', result.stdout)
 
 
 @unittest.skipUnless(shutil.which('gfortran'), 'requires gfortran')
