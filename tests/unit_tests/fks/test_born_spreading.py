@@ -129,6 +129,30 @@ class TestBornSpreading(unittest.TestCase):
                                      result.stdout + result.stderr)
                     self.assertIn('PASS MINT restart normalization', result.stdout)
 
+    def test_bad_iterations_recover_all_channels_after_calibration(self):
+        """A fresh grid scan must visit every channel even with a fitted table."""
+        with tempfile.TemporaryDirectory(prefix='mg5_born_recovery_') as tmp:
+            work = Path(tmp)
+            support = mint_support(work)
+            # Observe the iteration number to supply controlled outliers. The
+            # production driver and recovery routines themselves are unaltered.
+            source = TEMPLATE / 'mint_module.f90'
+            instrumented = work / 'mint_module.f90'
+            instrumented.write_text(source.read_text().replace('private', 'public'))
+            support[support.index(str(source))] = str(instrumented)
+            executable = work / 'check_recovery'
+            result = subprocess.run([
+                shutil.which('gfortran'), '-O2', '-fcheck=all',
+                '-ffpe-trap=invalid,zero,overflow'] + support + [
+                str(ROOT / 'tests/input_files/check_born_spreading_recovery.f90'),
+                '-o', str(executable)], cwd=work, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = subprocess.run([str(executable)], cwd=work, capture_output=True,
+                                    text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('2nd bad iteration in a row', result.stdout)
+            self.assertIn('PASS MINT calibrated-table recovery', result.stdout)
+
     def test_born_radiation_measure(self):
         """A fitted factor must preserve ISR and massless/massive FSR Born weights."""
         with tempfile.TemporaryDirectory(prefix='mg5_born_measure_') as tmp:

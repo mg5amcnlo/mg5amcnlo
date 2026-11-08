@@ -186,6 +186,7 @@ case('history')
 case('pilot')
  nit=1
  double_events=.true.
+ initial_channel_scan_pending=.true.
  channel_moment(1:2)=[0d0,100d0]
  call set_channel_probabilities
  do j=1,2

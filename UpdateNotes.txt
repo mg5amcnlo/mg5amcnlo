@@ -33,6 +33,9 @@ ANNOUNCEMENT:
        are validated before use and saved per FKS sector. Add the fitted
        virtual surrogate controlled by VirtTrickSurrogate: 0 retains the
        grid/polynomial, 1 uses colour dipoles and 2 also uses Born-pair logs.
+       Repeat the initial channel scan after bad-iteration recovery resets
+       the grids, including when a Born-spreading fit is already ready;
+       calibrated restarts retain their adapted channel weights.
    RF: Preserve MadGraph7 polarisation and me_frame choices through native Born
        and real evaluation. Born helicity masks follow the model, context and
        requested frame; shared real caches restore diagram weights as well as

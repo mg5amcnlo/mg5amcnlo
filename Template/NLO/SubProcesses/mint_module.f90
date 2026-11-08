@@ -184,6 +184,8 @@ module mint_module
   integer, dimension(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels), private :: nvirt,nvirt_acc
   integer, dimension(13), private :: gen_counters
   logical, private :: double_events,reset,even_rn,firsttime
+  ! Reset grids need a per-channel pilot even when a spreading fit is ready.
+  logical, private :: initial_channel_scan_pending=.false.
   logical, dimension(maxchannels), private :: regridded
   double precision, dimension(0:nintervals,ndimmax,maxchannels), private :: xgrid,xacc
   double precision, dimension(nintervals,ndimmax,maxchannels), private :: ymax,xmmm
@@ -263,11 +265,9 @@ contains
        enddo
        call get_amount_of_points(enough_points)
        if (.not.enough_points) goto 2
-       ! The special first-iteration loop requires the unit channel markers
-       ! from reset_mint_grids. After calibration we retain the adapted
-       ! channel weights, so use normal averaging on the restart instead.
-       if (imode.eq.0 .and. nit.eq.1 .and. double_events .and. &
-            .not.born_spread_ready) then
+       ! Only a grid reset installs the unit channel markers for this scan.
+       ! A calibrated restart retains its grids; bad-iteration recovery does not.
+       if (initial_channel_scan_pending) then
           call check_for_special_channels_loop(channel_loop_done)
           if (.not.channel_loop_done) goto 2
           call combine_results_channels_special_loop
@@ -931,6 +931,7 @@ contains
 
   subroutine initialise_mint
     implicit none
+    initial_channel_scan_pending=.false.
     channel_moment=0d0
     channel_moment_calls=0
     if (imode.ne.0) call read_grids_from_file
@@ -1352,6 +1353,7 @@ contains
     etot(1:nintegrals,0)=sum(etot(1:nintegrals,1:nchans)**2,dim=2)
     etot(1:nintegrals,0)=sqrt(etot(1:nintegrals,0))
     ncalls0=ncalls0*nchans
+    initial_channel_scan_pending=.false.
   end subroutine combine_results_channels_special_loop
   
 
@@ -1848,6 +1850,7 @@ contains
     virtual_fraction(1:nchans)=max(virt_fraction,min_virt_fraction)
     average_virtual(0:n_ave_virt,1:nchans)=0d0
     ans_chan(0:nchans)=0d0
+    initial_channel_scan_pending=double_events
     if (double_events) then
        ! when double events, start with the very first channel only. For the
        ! first iteration, we compute each channel separately.
@@ -2319,7 +2322,7 @@ contains
        iconfig=iconfigs(ichan)
        vol_chan=1d0
     elseif (nchans.gt.1) then
-       if (fixed_order.and..not.(imode.eq.0.and.nit.eq.1.and.double_events)) then
+       if (fixed_order.and..not.initial_channel_scan_pending) then
 ! Preserve the forced per-channel pilot loop in the first automatic
 ! iteration. All later selections use the RMS weights plus exploration.
           trgt=ran3(.false.)
