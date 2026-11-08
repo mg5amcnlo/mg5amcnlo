@@ -54,6 +54,11 @@ program check_momentum_maps
      write(*,*) 'PASS fsr_cutoff_jacobians'
      stop
   endif
+  if (mode.eq.'near_axis_angles') then
+     call check_near_axis_angles()
+     write(*,*) 'PASS near_axis_angles'
+     stop
+  endif
   if (mode.eq.'dijet_isr_boundary') then
      call check_dijet_isr_boundary()
      write(*,*) 'PASS dijet_isr_boundary'
@@ -573,6 +578,83 @@ program check_momentum_maps
   if(mode.eq.'native_massive'.and.nratios.eq.0)error stop 'no counterevent ratios tested'
   write(*,*) 'PASS ',trim(mode),nchecked,nplus,nminus
 contains
+  subroutine check_near_axis_angles()
+    use fks_phase_space_helpers, only: getangles
+    double precision,parameter :: scales(3)=[1d0,1d-200,1d200]
+    double precision :: vector(0:3),rotated(0:3),restored(0:3),axis(0:3)
+    double precision :: theta,ctheta,stheta,azimuth,cazimuth,sazimuth
+    double precision :: small,norm,direction(3),ux,uy,tol
+    integer :: pole,power,quadrant,scale_index
+    tol=16d0*epsilon(1d0)
+    ! Keep nonzero transverse components even when cos(theta) rounds to +/-1.
+    ! Their known 3:4 ratio also checks the azimuth in every quadrant.
+    do pole=-1,1,2
+      do power=2,12
+        small=10d0**(-power)
+        norm=sqrt(1d0+small**2)
+        do quadrant=0,3
+          ux=.6d0
+          uy=.8d0
+          if(btest(quadrant,0))ux=-ux
+          if(btest(quadrant,1))uy=-uy
+          direction=[small*ux,small*uy,dble(pole)]/norm
+          do scale_index=1,size(scales)
+            vector=[2d0,small*ux,small*uy,dble(pole)]*scales(scale_index)
+            call getangles(vector,theta,ctheta,stheta,azimuth,cazimuth,sazimuth)
+            if(.not.all(ieee_is_finite([theta,ctheta,stheta,azimuth,cazimuth,sazimuth]))) &
+                 error stop 'nonfinite near-axis angles'
+            if(abs(stheta/(small/norm)-1d0).gt.tol.or. &
+                 abs(ctheta-direction(3)).gt.tol)error stop 'near-axis polar direction lost'
+            if(abs(cazimuth-ux).gt.tol.or.abs(sazimuth-uy).gt.tol.or. &
+                 abs(azimuth-atan2(uy,ux)).gt.tol)error stop 'near-axis azimuth lost'
+            if(abs(theta-atan2(small,dble(pole))).gt.tol)error stop 'near-axis polar angle'
+            axis=[1d0,0d0,0d0,1d0]
+            call rotate_invar(axis,rotated,ctheta,stheta,cazimuth,sazimuth)
+            if(maxval(abs(rotated(1:2)/direction(1:2)-1d0)).gt.tol.or. &
+                 abs(rotated(3)-direction(3)).gt.tol)error stop 'near-axis rotation lost direction'
+            vector=[2d0,.31d0,-.27d0,.63d0]
+            call rotate_invar(vector,rotated,ctheta,stheta,cazimuth,sazimuth)
+            call trp_rotate_invar(rotated,restored,ctheta,stheta,cazimuth,sazimuth)
+            if(maxval(abs(restored-vector)).gt.tol)error stop 'near-axis inverse rotation'
+          enddo
+          ! The FSR map must retain the Born emitter's transverse momentum,
+          ! not merely pass an angle-reconstruction unit test.
+          native_mapping=.false.
+          sqrtshat=1000d0
+          shat=sqrtshat**2
+          mrec=173d0
+          energy=(shat-mrec**2)/(2d0*sqrtshat)
+          born(:,1)=[sqrtshat/2d0,0d0,0d0,sqrtshat/2d0]
+          born(:,2)=[sqrtshat/2d0,0d0,0d0,-sqrtshat/2d0]
+          born(:,3)=[energy,energy*direction]
+          born(:,4)=born(:,1)+born(:,2)-born(:,3)
+          p=0d0
+          p(:,1:4)=born
+          rnd=[.63d0,.42d0,.317d0]
+          jac=2d0*pi
+          pswgt=1d0
+          call generate_momenta_massless_final(-100,5,3,born(:,3),shat,sqrtshat,rnd,mrec**2,p, &
+               2d0*pi*rnd(3),xiimax,xinorm,xi,yij,xihat,pifks,jac,pswgt,pass)
+          if(.not.pass.or..not.all(ieee_is_finite(p)))error stop 'near-axis FSR map rejected'
+          remainder=sum(p(:,1:2),dim=2)-sum(p(:,3:5),dim=2)
+          if(maxval(abs(remainder))/sqrtshat.gt.tol)error stop 'near-axis map momentum conservation'
+        enddo
+      enddo
+      vector=[1d0,0d0,0d0,dble(pole)]
+      call getangles(vector,theta,ctheta,stheta,azimuth,cazimuth,sazimuth)
+      if(.not.all(ieee_is_finite([theta,ctheta,stheta,azimuth,cazimuth,sazimuth]))) &
+           error stop 'nonfinite exact-axis angles'
+      if(ctheta.ne.dble(pole).or.stheta.ne.0d0.or.abs(theta-acos(dble(pole))).gt.tol.or. &
+           azimuth.ne.0d0.or.cazimuth.ne.1d0.or.sazimuth.ne.0d0)error stop 'exact-axis angle convention'
+    enddo
+    vector=0d0
+    call getangles(vector,theta,ctheta,stheta,azimuth,cazimuth,sazimuth)
+    if(.not.all(ieee_is_finite([theta,ctheta,stheta,azimuth,cazimuth,sazimuth]))) &
+         error stop 'nonfinite zero-vector angles'
+    if(theta.ne.0d0.or.ctheta.ne.1d0.or.stheta.ne.0d0.or.azimuth.ne.0d0.or. &
+         cazimuth.ne.1d0.or.sazimuth.ne.0d0)error stop 'zero-vector angle convention'
+  end subroutine check_near_axis_angles
+
   subroutine check_fsr_cutoff_jacobians()
     double precision,parameter :: step=1d-5
     double precision :: center(3),shifted(3),j0,jwork,coordinate0,coordinate_plus,coordinate_minus

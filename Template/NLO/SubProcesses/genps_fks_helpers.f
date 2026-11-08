@@ -70,9 +70,10 @@ c threshold the generic discriminant loses precision by cancellation.
 
       subroutine getangles(pin,th,cth,sth,phi,cphi,sphi)
       implicit none
-      real*8 pin(0:3),th,cth,sth,phi,cphi,sphi,xlength
+      real*8 pin(0:3),th,cth,sth,phi,cphi,sphi,xlength,ptlen
 c
-      xlength=pin(1)**2+pin(2)**2+pin(3)**2
+      ptlen=hypot(pin(1),pin(2))
+      xlength=hypot(ptlen,pin(3))
       if(xlength.eq.0)then
         th=0.d0
         cth=1.d0
@@ -81,16 +82,15 @@ c
         cphi=1.d0
         sphi=0.d0
       else
-        xlength=sqrt(xlength)
         cth=pin(3)/xlength
-        th=acos(cth)
-        if(cth.ne.1.d0)then
-          sth=sqrt(1-cth**2)
+        sth=ptlen/xlength
+        th=atan2(ptlen,pin(3))
+c Retain the transverse direction even when cos(theta) rounds to +/-1.
+        if(ptlen.ne.0.d0)then
           phi=atan2(pin(2),pin(1))
-          cphi=cos(phi)
-          sphi=sin(phi)
+          cphi=pin(1)/ptlen
+          sphi=pin(2)/ptlen
         else
-          sth=0.d0
           phi=0.d0
           cphi=1.d0
           sphi=0.d0

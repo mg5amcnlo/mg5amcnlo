@@ -219,6 +219,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_asymmetric_beam_boost(self):
         self.check_map("boost")
 
+    def test_angles_and_momentum_maps_near_both_beam_axes(self):
+        self.check_map("near_axis_angles")
+
     def test_t_channel_bounds_with_soft_massless_recoil(self):
         self.check_map("born_threshold")
 

@@ -86,6 +86,8 @@ ANNOUNCEMENT:
    RF: The default ISR mapping is now asymmetric at fixed order as well.
        Set FKSISRMapping=1 to restore the previous symmetric default for
        fixed-order runs.
+   RF: Compute polar and azimuthal angles from transverse momentum
+       components, preserving near-beam directions and rotation precision.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.
