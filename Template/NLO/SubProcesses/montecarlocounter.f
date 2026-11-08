@@ -3696,16 +3696,15 @@ c   0 < delta <= 2.
       end function gfunction
 
       double precision function mc_shower_scale_mass()
-c Preserve the legacy massive-FSR bound from the prepared shower state.
-c Scale generation receives this value explicitly, avoiding a dependency
-c on the counterterm module. Other showers and Born-only paths do not
-c read the massive invariant, just as in the original scale prescription.
+c Use the emitter mass installed when selecting the current FKS sector.
+c Starting scales can be needed before the real MC invariants are prepared.
+c Keep the legacy shower and Born-only guards for the massive-FSR bound.
       use process_module, only: abrv_mod
       implicit none
       mc_shower_scale_mass=0d0
       if (abrv_mod.ne.'born'.and.
      $    shower_mc_mod(1:7).eq.'PYTHIA6') then
-         if (ileg.eq.3) mc_shower_scale_mass=sqrt(xm12)
+         if (ileg.eq.3) mc_shower_scale_mass=jmass
       endif
       end function mc_shower_scale_mass
 

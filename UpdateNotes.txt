@@ -100,6 +100,8 @@ ANNOUNCEMENT:
    RF: Use unit Sudakov ratios for empty MC@NLO-Delta cross-connection
        intervals and equal connection weights when their normalization
        vanishes, including equal-scale and flat-table limits.
+   RF: Use the current emitter mass for the PYTHIA6Q starting-scale bound,
+       avoiding stale kinematic invariants after a change of FKS sector.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.
