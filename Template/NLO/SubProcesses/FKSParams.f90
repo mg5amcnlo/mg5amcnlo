@@ -19,9 +19,9 @@ module FKSParams
   ! Native virtual surrogate: 0 = grid/polynomial, 1 = colour dipoles,
   ! 2 = colour dipoles and logarithms of all Born pairs (default).
   integer :: VirtTrickSurrogate=2
-  logical :: MCExplicitKLSum=.true.
+  logical :: MCExplicitKLSum=.false.
   logical :: MCSubtractionAtFixedFlow=.true.
-  logical :: FKSExplicitSum=.false.
+  logical :: FKSExplicitSum=.true.
   logical :: FxFxPythia8FiniteTerms=.false.
   logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
@@ -284,9 +284,9 @@ contains
     FKSFinalRecoil=0
     FKSISRMapping=0
     Pythia8MMaxGamma=10d0
-    MCExplicitKLSum=.true.
+    MCExplicitKLSum=.false.
     MCSubtractionAtFixedFlow=.true.
-    FKSExplicitSum=.false.
+    FKSExplicitSum=.true.
     FxFxPythia8FiniteTerms=.false.
     IncludeBornContributions=.true.
     SelectedContributionTypes(0)=0

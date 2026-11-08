@@ -34,6 +34,7 @@ program check_fks_sum_born_chart
   idup(:,1)=[2,1,2,23,21]
 
   ! Establish that ordinary ISR and FSR use different jet-cut thresholds.
+  FKSExplicitSum=.false.
   nFKSprocess=1
   call set_tau_min()
   bounds=[tau_Born_lower_bound,tau_lower_bound,tau_lower_bound_resonance]

@@ -33,8 +33,9 @@ class TestFKSExplicitSum(unittest.TestCase):
         (work / 'explicit.dat').write_text('#FKSExplicitSum\n.true.\n')
         (work / 'sampled.dat').write_text('#FKSExplicitSum\n.false.\n')
         (work / 'old.dat').write_text('#MCExplicitKLSum\n.true.\n')
-        (work / 'legacy_matching.dat').write_text(
-            '#FKSExplicitSum\n.true.\n#MCExplicitKLSum\n.false.\n')
+        (work / 'matching_override.dat').write_text(
+            '#FKSExplicitSum\n.false.\n#MCExplicitKLSum\n.true.\n')
+        (work / 'missing_keys.dat').write_text('! Both matching controls omitted.\n')
         # A stale multi-bin grid must never supply a nonunit explicit-sum weight.
         (work / 'grid.MC_integer').write_text('AVE 0 0.25 0.75 1\n' * 50)
         result = subprocess.run([

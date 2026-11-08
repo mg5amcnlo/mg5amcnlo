@@ -111,6 +111,7 @@ program check_tau_cut_cache
   character(32) :: mode
   integer :: i
   call get_command_argument(1,mode)
+  FKSExplicitSum=.false.
   call initialize()
   call verify(1)
   call verify(0)
