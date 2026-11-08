@@ -413,7 +413,9 @@ c local
       double precision native_u,native_uborn,native_eborn,native_ej,
      $     native_denom,native_radial,native_ps,native_sign,
      $     native_delta,native_onepy
-      double precision zero_recoil_delta,root_conjugate
+      double precision xi_gap,root_delta,root_distance,
+     $     stationary_distance,sampling_gap,sqrt_discriminant,
+     $     root_c,root_q1,root_q2
 c external
       double precision rho
       external rho
@@ -482,10 +484,10 @@ c
       xmhat=sqrt(xmrec2)/sqrtshat
       call get_massive_fsr_bounds(shat,sqrtshat,m_j_fks,xmrec2,
      $     y_ij_fks,xim,xiBm,ximax,cffA2,cffB2,cffC2,cffDEL2,
-     $     xiimax,xinorm)
-      if(xmrec2.eq.0d0)zero_recoil_delta=(shat-xmj2)/shat
+     $     xiimax,xinorm,xi_gap,root_delta)
       if(xiBm.lt.(xim-1.d-8).or.xim.lt.0.d0.or.xiBm.lt.0.d0.or.
-     &     xiBm.gt.(ximax+1.d-8).or.ximax.gt.1.or.ximax.lt.0.d0)then
+     &     xiBm.gt.(ximax+1.d-8).or.ximax.gt.1.or.ximax.lt.0.d0
+     &     .or.xinorm.le.0d0)then
          write(*,*)'WARNING #4 in one_tree',xim,xiBm,ximax
          xjac=-104d0
          pass=.false.
@@ -562,7 +564,11 @@ c convenient to choose A=rat_xi
      $           xjac=xjac*2d0*x(1)/rat_xi*(1d0-sstiny)
          else
             xi_i_hat=x(1)
-            xi_i_fks=-xinorm*xi_i_hat+2*xiimax
+            if(x(1)-rat_xi.le.1d0-x(1))then
+               xi_i_fks=xiimax-xinorm*(x(1)-rat_xi)
+            else
+               xi_i_fks=xim+xinorm*(1d0-x(1))
+            endif
             isolsign=-1
          endif
       endif
@@ -577,34 +583,57 @@ c
       E_i_fks=xi_i_fks*sqrtshat/2d0
       x3len_i_fks=E_i_fks
       if(.not.native_mapping)then
-      b2m4ac=xi_i_fks**2*cffA2 + xi_i_fks*cffB2 + cffC2
-      if(xmrec2.eq.0d0)b2m4ac=(zero_recoil_delta-xi_i_fks)**2
-     $     -xmjhat**2*xi_i_fks**2*(1d0-y_ij_fks**2)
-      if(b2m4ac.le.0.d0)then
-         if(abs(b2m4ac).lt.1.d-3)then
-            b2m4ac=0.d0
+c Retain distances to both endpoints through the sampled coordinate.
+c Subtracting the rounded xi from either endpoint loses these distances
+c near the turning point or the stationary-daughter limit.
+      if(icountevts.eq.0)then
+         root_distance=xim+xi_gap
+         stationary_distance=xim
+      elseif(softtest)then
+         stationary_distance=xim-xi_i_fks
+         root_distance=stationary_distance+xi_gap
+      elseif(isolsign.eq.1)then
+         sampling_gap=xiimax*(1d0-sstiny)*
+     $        ((rat_xi-x(1))/rat_xi)*((rat_xi+x(1))/rat_xi)
+         if(y_ij_fks.ge.0d0)then
+            stationary_distance=sampling_gap
+            root_distance=xi_gap+sampling_gap
          else
-            write(*,*)'Fatal error #6 in one_tree'
-            write(*,*)b2m4ac,xi_i_fks,cffA2,cffB2,cffC2
-            write(*,*)y_ij_fks,xim,xiBm
-            stop
+            root_distance=sampling_gap
+            stationary_distance=sampling_gap-xi_gap
+         endif
+      else
+         if(x(1)-rat_xi.le.1d0-x(1))then
+            root_distance=xinorm*(x(1)-rat_xi)
+            stationary_distance=root_distance-xi_gap
+         else
+c Near the stationary endpoint retain a small xi_gap independently of
+c the rounded ratio xi_max/xi_norm, particularly close to threshold.
+            stationary_distance=-xinorm*(1d0-x(1))
+            root_distance=xi_gap+stationary_distance
          endif
       endif
-      x3len_j_fks_num=-xi_i_fks*y_ij_fks*
-     &                (1-xmhat**2+xmjhat**2-xi_i_fks) +
-     &                (2-xi_i_fks)*sqrt(b2m4ac)*isolsign
+      b2m4ac=root_distance*(cffA2*root_distance+2d0*root_delta)
+      if(b2m4ac.lt.0d0)then
+         xjac=-105d0
+         pass=.false.
+         return
+      endif
+      sqrt_discriminant=sqrt(b2m4ac)
+      root_c=(2d0-xi_i_fks)*xmjhat+
+     $     (1d0-xmjhat)*stationary_distance
+      root_q1=-xi_i_fks*y_ij_fks*root_c
+      root_q2=(2d0-xi_i_fks)*sqrt_discriminant*isolsign
       x3len_j_fks_den=(2-xi_i_fks*(1-y_ij_fks))*
      &                (2-xi_i_fks*(1+y_ij_fks))
-      x3len_j_fks=sqrtshat*x3len_j_fks_num/x3len_j_fks_den
-      if(xmrec2.eq.0d0)then
-         root_conjugate=xi_i_fks*y_ij_fks*
-     $        (1d0+xmjhat**2-xi_i_fks)+
-     $        (2d0-xi_i_fks)*sqrt(b2m4ac)*isolsign
-         if(abs(x3len_j_fks_num).lt.0.01d0*
-     $        abs(root_conjugate))
-     $        x3len_j_fks=sqrtshat*zero_recoil_delta*
-     $        (xim-xi_i_fks)*(1d0+xmjhat-xi_i_fks)/
-     $        root_conjugate
+      if(root_q1*root_q2.ge.0d0)then
+         x3len_j_fks_num=root_q1+root_q2
+         x3len_j_fks=sqrtshat*x3len_j_fks_num/x3len_j_fks_den
+      else
+c Rationalize opposite-sign numerator terms for either recoil mass.
+         x3len_j_fks_num=(1d0-xmjhat)*stationary_distance*
+     $        (root_c+(2d0-xi_i_fks)*xmjhat)
+         x3len_j_fks=sqrtshat*x3len_j_fks_num/(root_q2-root_q1)
       endif
       if(x3len_j_fks.lt.0.d0)then
          write(*,*)'WARNING #7 in one_tree',
@@ -613,6 +642,16 @@ c
          pass=.false.
          return
       endif
+      endif
+c A nonzero daughter at D=0 is the singular junction of the two
+c solutions. Reject that measure-zero real point instead of dividing
+c by zero; soft endpoint generation remains independent of it.
+      if(.not.native_mapping)then
+         if(sqrt_discriminant.eq.0d0.and.x3len_j_fks.gt.0d0)then
+            xjac=-105d0
+            pass=.false.
+            return
+         endif
       endif
 c Keep both angular components when the two daughters nearly cancel.
 c Each map supplies the sine from its own sampling coordinate above.
@@ -638,7 +677,8 @@ c
          if(j.ne.3)then
             xp(j,j_fks)=-xp(j,i_fks)
          else
-            xp(j,j_fks)=x3len_fks_mother-xp(j,i_fks)
+            xp(j,j_fks)=x3len_j_fks*
+     $           (x3len_j_fks+x3len_i_fks*y_ij_fks)/x3len_fks_mother
          endif
       enddo
 c
@@ -702,9 +742,13 @@ c Qunatities to be passed to montecarlocounter (event kinematics)
 c
       if(native_mapping)then
          xpswgt=xpswgt*native_ps
+      elseif(x3len_j_fks.eq.0d0)then
+         xpswgt=0d0
       else
-      xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
-     &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+c |(2-xi)k_j+xi*E_j*y|=sqrt(shat)*sqrt(D) for dimensionful
+c momenta. This form avoids both cancellation and division by k_j.
+         xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*
+     $        x3len_j_fks**2/(veckbarn*sqrtshat*sqrt_discriminant)
       endif
       xpswgt=abs(xpswgt)
       return
@@ -814,9 +858,8 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
          xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*native_u**2/
      $        (xp(0,j_fks)*native_denom)
       else
-      branch_sign=rho(xp(0,j_fks))/sqrtshat*
-     $     (2-xi_i_fks*(1-y_ij_fks))*(2-xi_i_fks*(1+y_ij_fks))
-     $     +xi_i_fks*y_ij_fks*(1-xmhat**2+xmjhat**2-xi_i_fks)
+      branch_sign=(2d0-xi_i_fks)*rho(xp(:,j_fks))+
+     $     xi_i_fks*xp(0,j_fks)*y_ij_fks
       if (branch_sign.ge.0d0) then
          x(1)=(xi_i_fks/xiimax-sstiny)/(1d0-sstiny)
          if (x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12) then
@@ -873,8 +916,15 @@ c Phase-space factor for (xii,yij,phii)
       veckn=rho(xp(0,j_fks))
       veckbarn=rho(p_born(0,j_fks))
       if(.not.native_mapping)then
-      xpswgt=xpswgt*2*shat/(4*pi)**3*veckn/veckbarn/
-     &     ( 2-xi_i_fks*(1-xp(0,j_fks)/veckn*y_ij_fks) )
+         if(veckn.eq.0d0)then
+            xpswgt=0d0
+         elseif(branch_sign.ne.0d0)then
+            xpswgt=xpswgt*2d0*shat/(4d0*pi)**3*
+     $           veckn**2/(veckbarn*abs(branch_sign))
+         else
+            xjac=-105d0
+            return
+         endif
       endif
       xpswgt=abs(xpswgt)
       end subroutine generate_momenta_massive_final_inverse

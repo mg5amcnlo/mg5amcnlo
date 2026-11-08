@@ -260,6 +260,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_massive_branch_boundary_support_and_inverse(self):
         self.check_map("massive_boundary")
 
+    def test_massive_root_and_phase_space_precision(self):
+        self.check_map("massive_precision")
+
     def test_final_state_cutoff_jacobians_and_endpoints(self):
         self.check_map("fsr_cutoff_jacobians")
 

@@ -23,48 +23,71 @@ c Coefficients common to every hard momentum in one ISR recoil map.
 
       subroutine get_massive_fsr_bounds(shat,sqrtshat,m_j_fks,
      $     xmrec2,y,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
-     $     xiimax,xinorm)
+     $     xiimax,xinorm,xi_gap,sqrt_delta)
 c Shared radiation bounds for the massive final-state map and its
 c inverses, including a massless final or incoming recoil reservoir.
-c Keep the exact massless-recoil expressions: near the two-body
-c threshold the generic discriminant loses precision by cancellation.
+c Factor the physical threshold gaps before normalizing by sqrt(shat).
+c xi_gap is the distance from the stationary-daughter endpoint to the
+c first discriminant root; sqrt_delta=sqrt(B**2-4*A*C)/2.
       implicit none
       double precision shat,sqrtshat,m_j_fks,xmrec2,y,
      $     xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,
      $     xiimax,xinorm
-      double precision xmjhat,xmhat,zero_recoil_delta,xirplus,
-     $     xirminus
+      double precision,optional,intent(out) :: xi_gap,sqrt_delta
+      double precision xmjhat,xmhat,xmrec,delta_m,delta_r,
+     $     omy2,root_delta,gap,w,denom
 
       xmjhat=m_j_fks/sqrtshat
-      xmhat=sqrt(xmrec2)/sqrtshat
+      xmrec=sqrt(xmrec2)
+      xmhat=xmrec/sqrtshat
+      delta_m=((sqrtshat-m_j_fks)/sqrtshat)*
+     $     ((sqrtshat+m_j_fks)/sqrtshat)
+      omy2=max(0d0,(1d0-y)*(1d0+y))
+      cffa2=delta_m+xmjhat**2*y**2
       if(xmrec2.eq.0d0)then
-         zero_recoil_delta=(shat-m_j_fks**2)/shat
          xim=(sqrtshat-m_j_fks)/sqrtshat
-         cffa2=zero_recoil_delta+xmjhat**2*y**2
-         cffb2=-2d0*zero_recoil_delta
-         cffc2=zero_recoil_delta**2
-         cffdel2=4d0*xmjhat**2*cffc2*(1d0-y**2)
-         xibm=zero_recoil_delta/(1d0+xmjhat*
-     $        sqrt(max(0d0,1d0-y**2)))
-         ximax=zero_recoil_delta
+         cffb2=-2d0*delta_m
+         cffc2=delta_m**2
+         root_delta=xmjhat*delta_m*sqrt(omy2)
+         ximax=delta_m
       else
-         xim=(1-xmhat**2-2*xmjhat+xmjhat**2)/(1-xmjhat)
-         cffa2=1-xmjhat**2*(1-y**2)
-         cffb2=-2*(1-xmhat**2-xmjhat**2)
-         cffc2=(1-(xmhat-xmjhat)**2)*(1-(xmhat+xmjhat)**2)
-         cffdel2=cffb2**2-4*cffa2*cffc2
-         xibm=(-cffb2-sqrt(cffdel2))/(2*cffa2)
-         ximax=1-(xmhat+xmjhat)**2
+         xim=((sqrtshat-m_j_fks-xmrec)/sqrtshat)*
+     $        ((sqrtshat-m_j_fks+xmrec)/(sqrtshat-m_j_fks))
+         delta_r=((sqrtshat-xmrec)/sqrtshat)*
+     $        ((sqrtshat+xmrec)/sqrtshat)
+         if(m_j_fks.ge.xmrec)then
+            cffb2=-2d0*(delta_m-xmhat**2)
+         else
+            cffb2=-2d0*(delta_r-xmjhat**2)
+         endif
+         cffc2=((sqrtshat-m_j_fks-xmrec)/sqrtshat)*
+     $        ((sqrtshat+m_j_fks+xmrec)/sqrtshat)*
+     $        ((sqrtshat+m_j_fks-xmrec)/sqrtshat)*
+     $        ((sqrtshat-m_j_fks+xmrec)/sqrtshat)
+         root_delta=xmjhat*hypot(2d0*xmhat,
+     $        sqrt(omy2*max(0d0,cffc2)))
+         ximax=((sqrtshat-m_j_fks-xmrec)/sqrtshat)*
+     $        ((sqrtshat+m_j_fks+xmrec)/sqrtshat)
       endif
+      cffdel2=4d0*root_delta**2
+c Solve A*gap**2+2*sqrt_delta*gap=(m_j*xi_m*y)**2 by
+c rationalizing the small root, without subtracting the two endpoints.
+      w=xmjhat*xim*y
+      gap=0d0
+      if(w.ne.0d0)then
+         denom=root_delta+hypot(root_delta,sqrt(cffa2)*w)
+         gap=w*(w/denom)
+      endif
+      xibm=xim+gap
       if(y.ge.0d0)then
-         xirplus=xim
-         xirminus=0d0
+         xiimax=xim
+         xinorm=xim
       else
-         xirplus=xibm
-         xirminus=xibm-xim
+         xiimax=xibm
+         xinorm=xim+2d0*gap
       endif
-      xiimax=xirplus
-      xinorm=xirplus+xirminus
+      if(present(xi_gap))xi_gap=gap
+      if(present(sqrt_delta))sqrt_delta=root_delta
       end subroutine get_massive_fsr_bounds
 
 
