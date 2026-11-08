@@ -97,3 +97,217 @@ class TestMultiCoreFailure(unittest.TestCase):
 
     def test_executable_failure_with_queued_work(self):
         self.check_failure(True)
+
+
+class TestMultiCoreReuse(unittest.TestCase):
+    def check_reuse(self, failure):
+        # Keep a regression in worker shutdown or queue accounting bounded.
+        script = textwrap.dedent('''\
+            import pathlib
+            import sys
+            import tempfile
+            import threading
+            from madgraph.various.cluster import MultiCore
+
+            failure, keep, cores = sys.argv[1], bool(int(sys.argv[2])), int(sys.argv[3])
+            pool = MultiCore(cores, keep_thread=keep)
+            gates = [threading.Event() for _ in range(cores)]
+            started = [threading.Event() for _ in range(cores)]
+            forbidden = []
+            completed = []
+            simultaneous = threading.Barrier(cores + 1)
+
+            def occupy(index):
+                started[index].set()
+                assert gates[index].wait(5), 'worker release timed out'
+
+            def fail():
+                if failure == 'dual':
+                    simultaneous.wait(5)
+                if failure == 'system_exit':
+                    raise SystemExit('reuse failure sentinel')
+                if failure == 'keyboard_interrupt':
+                    raise KeyboardInterrupt('reuse failure sentinel')
+                raise RuntimeError('reuse failure sentinel')
+
+            def clean_batch():
+                assert pool.fail_msg is None, 'previous failure survived cleanup'
+                assert pool.nb_done == 0, 'previous completion count survived cleanup'
+                assert not pool.id_to_packet, 'previous packet mappings survived cleanup'
+                for name in ('queue', 'done', 'submitted', 'pids', 'done_pid_queue'):
+                    q = getattr(pool, name)
+                    assert q.empty(), name + ' retained previous work'
+                    assert q.unfinished_tasks == 0, name + ' retained unfinished tasks'
+
+            # Occupy every worker before submitting the failure and cancelled
+            # work. With two cores the second callable stays active until the
+            # failure occurs, exercising cleanup of a still-running worker.
+            for index in range(cores):
+                pool.submit(occupy, [index])
+            for event in started:
+                assert event.wait(5), 'worker did not start'
+            workers = list(pool.demons)
+            old_queue = pool.queue
+            with tempfile.TemporaryDirectory() as temp:
+                if failure in ('callable', 'dual', 'system_exit', 'keyboard_interrupt'):
+                    for _ in range(cores if failure == 'dual' else 1):
+                        pool.submit(fail)
+                    expected = 'reuse failure sentinel'
+                elif failure == 'executable':
+                    pool.submit(sys.executable, ['-c', 'import sys; sys.exit(17)'])
+                    expected = 'non zero status: 17'
+                else:
+                    pool.submit(str(pathlib.Path(temp) / 'missing-executable'))
+                    expected = 'missing-executable'
+                for index in range(3):
+                    pool.submit(forbidden.append, [index])
+
+                if failure == 'dual':
+                    # Both workers must be executing their failing callable
+                    # before either failure can cancel the other queued work.
+                    for gate in gates:
+                        gate.set()
+                    simultaneous.wait(5)
+                else:
+                    gates[0].set()
+                    assert pool.stoprequest.wait(5), 'failure was not detected'
+                    # A parent may still submit work before it calls wait().
+                    # That must not clear the worker failure or restart work.
+                    pool.submit(forbidden.append, ['late submission'])
+                    assert pool.stoprequest.is_set(), 'submission cleared failure'
+                    for gate in gates[1:]:
+                        gate.set()
+                try:
+                    pool.wait(None, lambda *args: None)
+                except BaseException as error:
+                    assert expected in str(error), str(error)
+                    if failure == 'system_exit':
+                        assert isinstance(error, SystemExit), type(error)
+                    elif failure == 'keyboard_interrupt':
+                        assert isinstance(error, KeyboardInterrupt), type(error)
+                else:
+                    raise AssertionError('original failure was not reported')
+                assert all(not worker.is_alive() for worker in workers), 'failed workers still running'
+                assert old_queue.unfinished_tasks == 0, 'aborted queue was not drained'
+                assert not forbidden, 'cancelled work ran after failure'
+                clean_batch()
+                # Existing launchers call remove() again in their error handler.
+                pool.remove()
+
+                # The same object must support subsequent successful batches,
+                # including the keep-thread path across a second wait().
+                for batch in range(3):
+                    if batch == 2:
+                        pool.remove()  # stopping an idle successful pool is safe too
+                    for index in range(3):
+                        pool.submit(completed.append, [3 * batch + index])
+                    pool.wait(None, lambda *args: None)
+                    assert sorted(completed) == list(range(3 * (batch + 1))), completed
+                    assert not forbidden, 'cancelled work leaked into a new batch'
+                    clean_batch()
+                pool.remove()
+            print('PASS failure and pool reuse')
+        ''')
+        for keep_thread in (False, True):
+            for cores in ((2,) if failure == 'dual' else (1, 2)):
+                with self.subTest(failure=failure, keep_thread=keep_thread, cores=cores):
+                    result = subprocess.run(
+                        [sys.executable, '-c', script, failure,
+                         str(int(keep_thread)), str(cores)],
+                        cwd=Path(__file__).resolve().parents[3],
+                        capture_output=True, text=True, timeout=15)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('PASS failure and pool reuse', result.stdout)
+
+    def test_callable_failure_then_pool_reuse(self):
+        self.check_reuse('callable')
+
+    def test_executable_failure_then_pool_reuse(self):
+        self.check_reuse('executable')
+
+    def test_launch_failure_then_pool_reuse(self):
+        self.check_reuse('launch')
+
+    def test_simultaneous_failures_then_pool_reuse(self):
+        self.check_reuse('dual')
+
+    def test_system_exit_then_pool_reuse(self):
+        self.check_reuse('system_exit')
+
+    def test_keyboard_interrupt_then_pool_reuse(self):
+        self.check_reuse('keyboard_interrupt')
+
+    def test_packet_failure_or_cancellation_then_pool_reuse(self):
+        script = textwrap.dedent('''\
+            import pathlib
+            import sys
+            import tempfile
+            import threading
+            from madgraph.various.cluster import MultiCore, Packet
+
+            fail, keep = bool(int(sys.argv[1])), bool(int(sys.argv[2]))
+            pool = MultiCore(1, keep_thread=keep)
+            gate = threading.Event()
+            started = threading.Event()
+            callbacks = []
+            packet = Packet('reuse packet', callbacks.append, ['completed'])
+
+            def occupy():
+                started.set()
+                assert gate.wait(5), 'worker release timed out'
+
+            with tempfile.TemporaryDirectory() as temp:
+                forbidden = pathlib.Path(temp) / 'cancelled-job-ran'
+                pool.submit(occupy)
+                assert started.wait(5), 'worker did not start'
+                workers = list(pool.demons)
+                old_queue = pool.queue
+                pool.cluster_submit(sys.executable,
+                    ['-c', 'import sys; sys.exit(19)' if fail else 'pass'],
+                    packet_member=packet)
+                pool.cluster_submit(sys.executable,
+                    ['-c', 'import pathlib,sys; pathlib.Path(sys.argv[1]).touch()',
+                     str(forbidden)], packet_member=packet)
+                assert packet.queue.unfinished_tasks == 2
+                if not fail:
+                    pool.remove()
+                gate.set()
+                try:
+                    pool.wait(None, lambda *args: None)
+                except Exception as error:
+                    assert fail and 'non zero status: 19' in str(error), str(error)
+                else:
+                    assert not fail, 'packet failure was not reported'
+                assert all(not worker.is_alive() for worker in workers)
+                assert old_queue.unfinished_tasks == 0
+                assert packet.queue.empty()
+                assert packet.queue.unfinished_tasks == 0
+                assert not callbacks, 'cancelled packet callback ran'
+                assert not forbidden.exists(), 'cancelled packet job ran'
+                assert not pool.id_to_packet
+
+                # Reuse the same Packet object through the public submission
+                # API: stale members would prevent its callback from running.
+                for index in range(2):
+                    pool.cluster_submit(sys.executable,
+                        ['-c', 'pass', str(index)], packet_member=packet)
+                pool.wait(None, lambda *args: None)
+                assert callbacks == ['completed'], callbacks
+                assert packet.queue.empty()
+                assert packet.queue.unfinished_tasks == 0
+                assert pool.queue.unfinished_tasks == 0
+                assert not pool.id_to_packet
+                pool.remove()
+                pool.wait(None, lambda *args: None)
+            print('PASS packet cleanup and reuse')
+        ''')
+        for failure in (False, True):
+            for keep_thread in (False, True):
+                with self.subTest(failure=failure, keep_thread=keep_thread):
+                    result = subprocess.run(
+                        [sys.executable, '-c', script,
+                         str(int(failure)), str(int(keep_thread))],
+                        cwd=Path(__file__).resolve().parents[3],
+                        capture_output=True, text=True, timeout=15)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('PASS packet cleanup and reuse', result.stdout)
