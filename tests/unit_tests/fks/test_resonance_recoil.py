@@ -50,7 +50,9 @@ class TestResonanceRecoil(unittest.TestCase):
             for name in ("dot", "rho", "threedot"):
                 routines.append(fortran_routine(
                     ROOT / "Template/NLO/Source/kin_functions.f", name))
+            routines.extend(spin_frame_routines())
             (work / "maps.f").write_text("\n".join(routines))
+            (work / "spin_check.f90").write_text(SPIN_CHECK)
             executable = work / "check_resonance_recoil"
             command = [shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy",
                        "-ffixed-line-length-none", "-fcheck=all",
@@ -63,6 +65,7 @@ class TestResonanceRecoil(unittest.TestCase):
                        str(TEMPLATE / "FKSParams.f90"),
                        str(TEMPLATE / "genps_fks_radiation.f"),
                        str(work / "fks_phase_space.f"), str(work / "maps.f"),
+                       str(work / "spin_check.f90"),
                        str(TEMPLATE / "resonance_recoil.f"),
                        str(TEMPLATE / "initial_recoil.f"),
                        str(TEMPLATE / "boostwdir2.f"),
@@ -144,3 +147,90 @@ class TestResonancePartition(unittest.TestCase):
             result = subprocess.run([str(executable)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("PASS resonance partitions and mixed Born orders", result.stdout)
+
+
+def spin_frame_routines():
+    """Keep the real frame/phase consumers; only generated masks are supplied."""
+    return [fortran_routine(TEMPLATE / "boost_to_frame.f", name) for name in
+            ("azifact_me_frame", "azifact_mc_frame", "azifact_from_kperp",
+             "get_me_frame_boost", "me_frame_apply", "snap_mother_at_rest")] + [
+        fortran_routine(TEMPLATE / "fks_singular.f", "getaziangles"),
+        fortran_routine(ROOT / "Template/Common/Source/impose_frame_rest.f",
+                        "get_me_frame_boosts")]
+
+
+SPIN_CHECK = """subroutine check_recoil_spin(pborn,imother,pi,pj,transported,check_pair)
+use fks_phase_space_data, only: xij_kperp,xij_aor
+use fks_phase_space, only: fks_phase_space_point,capture_fks_phase_space,restore_fks_phase_space
+use fks_phase_space_helpers, only: getangles
+implicit none
+include 'nexternal.inc'
+real(8) :: pborn(0:3,nexternal-1),pi(0:3),pj(0:3),transported(0:3)
+real(8) :: boosts(0:3,2),mother(0:3),kt(0:3),pib(0:3),pjb(0:3),pair(0:3),rot(0:3)
+real(8) :: th,cth,sth,ph,cph,sph
+complex(8) :: expected,actual,phase_save
+integer :: imother,ids(nexternal-1)
+common/test_spin_frame_mask/ids
+logical :: check_pair,trivial,boosted
+type(fks_phase_space_point) :: saved
+! The time component is essential: a second boost mixes it back into space.
+if(maxval(abs(xij_kperp-transported)).gt.2d-8)error stop 'local transverse vector not transported'
+if(abs(xij_kperp(0)*pborn(0,imother)-sum(xij_kperp(1:3)*pborn(1:3,imother))).gt.2d-7) &
+    error stop 'spin vector not orthogonal to Born mother'
+if(abs(xij_kperp(0)**2-sum(xij_kperp(1:3)**2)+1d0).gt.2d-8)error stop 'spin vector norm'
+phase_save=xij_aor
+call capture_fks_phase_space(saved)
+if(any(saved%spin_transverse.ne.xij_kperp))error stop 'spin vector capture'
+xij_kperp=13d0
+xij_aor=(0d0,0d0)
+call restore_fks_phase_space(saved)
+if(any(xij_kperp.ne.saved%spin_transverse))error stop 'spin vector restore'
+if(xij_aor.ne.phase_save)error stop 'spin phase restore'
+! Select a nontrivial timelike subsystem, using the same two-step boost
+! that the Born and its collinear spin contraction actually consume.
+ids=0
+ids(1)=1
+ids(imother)=1
+call get_me_frame_boost(pborn,nexternal-1,ids,boosts,trivial)
+if(trivial)error stop 'spin fixture requested a trivial me_frame'
+call me_frame_apply(pborn(:,imother),boosts,mother)
+call me_frame_apply(transported,boosts,kt)
+call azifact_from_kperp(mother,kt,expected)
+call azifact_me_frame(pborn,imother,pi,pj,1d0,actual,boosted)
+if(.not.boosted.or.abs(actual-expected).gt.1d-10)error stop 'local recoil me_frame phase'
+call getaziangles(mother,cph,sph)
+call azifact_mc_frame(pborn,imother,pi,pj,1d0,boosts,actual,cph,sph)
+if(abs(actual-expected*dcmplx(cph,sph)**2).gt.1d-10)error stop 'local recoil MC frame phase'
+if(check_pair)then
+  ! The azimuth of a finite nearly collinear physical pair is an
+  ! independent limit; no saved transverse vector enters this reference.
+  call me_frame_apply(pi,boosts,pib)
+  call me_frame_apply(pj,boosts,pjb)
+  pair=pib+pjb
+  call getangles(pair,th,cth,sth,ph,cph,sph)
+  call trp_rotate_invar(pib,rot,cth,sth,cph,sph)
+  actual=-dcmplx(rot(1),rot(2))**2/(rot(1)**2+rot(2)**2)
+  if(abs(actual-expected).gt.3d-3)then
+    write(*,*)'physical pair and saved vector',actual,expected,abs(actual-expected)
+    error stop 'local recoil physical collinear phase'
+  endif
+endif
+end subroutine
+
+subroutine get_frame_mask_born(mask)
+implicit none
+include 'nexternal.inc'
+integer :: mask(nexternal-1),ids(nexternal-1)
+common/test_spin_frame_mask/ids
+mask=ids
+end subroutine
+
+subroutine azifact_from_spinors(pi,pj,phase)
+! This fixture exercises exactly the collinear consumers; the finite
+! physical-pair reference is reconstructed geometrically above.
+implicit none
+real(8) :: pi(0:3),pj(0:3)
+complex(8) :: phase
+error stop 'unexpected finite-angle spinor branch'
+end subroutine
+"""

@@ -1,5 +1,5 @@
 program check_resonance_recoil
-  use fks_phase_space_data, only: spin => xij_aor
+  use fks_phase_space_data, only: spin => xij_aor,xij_kperp
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
   use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta
@@ -18,6 +18,7 @@ program check_resonance_recoil
   double precision :: gx(128),gw(128),sx(512),sw(512),upper
   double precision :: soft_scale,coll_scale,angular_scale,mismatch_log,scale0(4),scale1(4)
   double precision :: total(0:3),testboost(0:3),totalb(0:3),qb(0:3),pjb(0:3),phatb(0:3)
+  double precision :: kperp_save(0:3)
   complex*16 :: spin_save,expected,z
   logical :: mask(nexternal),aunts(nexternal),pass,softtest,colltest
   common/sctests/softtest,colltest
@@ -102,7 +103,7 @@ program check_resonance_recoil
                   rnd=[xs(ir),ys(iy),0.317d0]
                   if(mode.eq.'spin')then
                     colltest=.true.
-                    yfix=1d0-1d-7
+                    yfix=1d0-1d-9
                   endif
                   call forward(-100,p,jac,ps)
                   if(.not.pass)then
@@ -113,6 +114,7 @@ program check_resonance_recoil
                   if(isign.eq.1)nplus=nplus+1
                   if(isign.eq.-1)nminus=nminus+1
                   spin_save=spin
+                  kperp_save=xij_kperp
                   if(mode.eq.'production')then
                     call production_roundtrip()
                   elseif(mode.eq.'inverse')then
@@ -143,6 +145,8 @@ program check_resonance_recoil
                     endif
                     if(mj.eq.0d0.and.abs(spin-spin_save).gt.1d-8) &
                          error stop 'forward/inverse helicity phase'
+                    if(mj.eq.0d0.and.maxval(abs(xij_kperp-kperp_save)).gt.2d-7) &
+                         error stop 'forward/inverse spin vector'
                   elseif(mode.eq.'limits')then
                     call forward(0,again,j2,ps2)
                     if(.not.pass)error stop 'soft counterevent rejected'
@@ -208,6 +212,7 @@ program check_resonance_recoil
                     if(.not.pass.or.maxval(abs(scale1-scale0)).gt.1d-9) &
                          error stop 'soft scales not covariant'
                   elseif(mode.eq.'spin')then
+                    call check_spin_state(p,.true.)
                     ! Independently read the transverse relative direction
                     ! from a finite, nearly collinear physical pair.
                     pj=p(:,ifks)+p(:,jfks)
@@ -234,6 +239,37 @@ program check_resonance_recoil
   endif
   write(*,*)'PASS '//trim(mode)
 contains
+  subroutine check_spin_state(real_point,physical_pair)
+    double precision, intent(in) :: real_point(0:3,nexternal)
+    logical, intent(in) :: physical_pair
+    double precision :: restq(0:3),mother(0:3),unit(0:3),rotated(0:3),transported(0:3)
+    double precision :: born_short(0:3,nexternal-1),partition(0:3,nexternal-1),saved(0:3)
+    double precision :: th0,cth0,sth0,phi0,cph0,sph0
+    complex*16 :: phase0
+    logical :: valid
+    integer :: leg,b,jborn
+    restq=[q(0),-q(1:3)]
+    call boostx(born(:,jfks),restq,mother)
+    call getangles(mother,th0,cth0,sth0,phi0,cph0,sph0)
+    unit=[0d0,cos(2d0*pi*rnd(3)),sin(2d0*pi*rnd(3)),0d0]
+    call rotate_invar(unit,rotated,cth0,sth0,cph0,sph0)
+    call boostx(rotated,q,transported)
+    b=0
+    do leg=1,nexternal
+      if(leg.eq.ifks)cycle
+      b=b+1
+      born_short(:,b)=born(:,leg)
+      if(leg.eq.jfks)jborn=b
+    enddo
+    call check_recoil_spin(born_short,jborn,real_point(:,ifks),real_point(:,jfks),transported,physical_pair)
+    ! This auxiliary projection must not replace the active local spin data.
+    saved=xij_kperp
+    phase0=spin
+    call project_global_fsr_partition(real_point,ifks,jfks,mj,partition,valid)
+    if(.not.valid)error stop 'spin fixture global partition projection'
+    if(any(xij_kperp.ne.saved).or.spin.ne.phase0)error stop 'global projection replaced local spin state'
+  end subroutine
+
   subroutine production_roundtrip()
   use fks_phase_space_data,only: resq => resonance_momentum,resmass2 => resonance_mass2, &
        active => resonance_recoil,members => resonance_members,nocnt => nocntevents,pb => p_born, &
@@ -299,6 +335,7 @@ contains
     ps0=3d0
     call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production map rejected'
+    if(mj.eq.0d0)call check_spin_state(out,.false.)
     if(maxval(abs(out-p)).gt.2d-7*mr)error stop 'production map differs from local map'
     flux=1d0/(2d0*s)
     if(nincoming.eq.1)flux=1d0/(2d0*sqrts)
@@ -326,6 +363,7 @@ contains
       pbe=-33d0
       call generate_native_momenta(lab,out,outlab,outcms,jnew,valid)
       if(.not.valid)error stop 'native local projection rejected'
+      if(mj.eq.0d0)call check_spin_state(out,.false.)
       if(maxval(abs(pb-born_save)).gt.2d-6*mr)error stop 'native local Born differs'
       if(abs(jnew*21d0/jout-1d0).gt.2d-5)error stop 'native local real measure'
       do k=-2,2

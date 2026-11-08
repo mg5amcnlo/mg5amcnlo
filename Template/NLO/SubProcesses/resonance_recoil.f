@@ -119,6 +119,7 @@ c helicity phase must follow the boosted transverse direction as well.
       subroutine resonance_collinear_phase(mother,q,phi,phase)
 c Transport a unit transverse vector instead of using the resonance-
 c frame azimuth with a Born helicity amplitude in another frame.
+      use fks_phase_space_data, only: xij_kperp
       use fks_phase_space_helpers, only: getangles
       implicit none
       double precision mother(0:3),q(0:3),phi,r(0:3),rrot(0:3),
@@ -128,6 +129,8 @@ c frame azimuth with a Born helicity amplitude in another frame.
       r=(/0d0,cos(phi),sin(phi),0d0/)
       call rotate_invar(r,rrot,cth,sth,cph,sph)
       call boostx(rrot,q,rlab)
+c Keep the full four-vector in the Born frame for later me_frame boosts.
+      xij_kperp=rlab
       call boostx(mother,q,mlab)
       call getangles(mlab,th,cth,sth,ph,cph,sph)
       call trp_rotate_invar(rlab,rrot,cth,sth,cph,sph)
@@ -281,14 +284,15 @@ c the collinear limit. A short series avoids rounding 1+delta to 1.
 
       subroutine project_global_fsr_partition(p,i_fks,j_fks,m_j_fks,
      $     pborn,pass)
-      use fks_phase_space_data, only: xinorm_ev,xij_aor
+      use fks_phase_space_data, only: xinorm_ev,xij_aor,xij_kperp
 c A common reference point for the real-channel partition of unity.
 c This projection supplies channel weights only. The subtraction Born
 c and the physical recoil are still those of the local resonance map.
       use mc_native_context, only: native_mapping
       implicit none
       include 'nexternal.inc'
-      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),m_j_fks,x(3),jac,pswgt,q(0:3),mass2,xinorm_save
+      double precision p(0:3,nexternal),pborn(0:3,nexternal-1),m_j_fks,x(3),jac,pswgt,q(0:3),mass2,xinorm_save,
+     $     kperp_save(0:3)
       double complex phase_save
       integer i_fks,j_fks
       logical pass,members(nexternal),native_save
@@ -298,6 +302,7 @@ c and the physical recoil are still those of the local resonance map.
       native_mapping=.true.
       xinorm_save=xinorm_ev
       phase_save=xij_aor
+      kperp_save=xij_kperp
       jac=1d0
       pswgt=1d0
       call invert_momenta_resonance_final(p,members,i_fks,j_fks,
@@ -305,6 +310,7 @@ c and the physical recoil are still those of the local resonance map.
       native_mapping=native_save
       xinorm_ev=xinorm_save
       xij_aor=phase_save
+      xij_kperp=kperp_save
       end
 
 

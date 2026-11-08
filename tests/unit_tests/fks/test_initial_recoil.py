@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from tests.unit_tests.fks.test_momentum_maps import fortran_routine, fks_test_module
+from tests.unit_tests.fks.test_resonance_recoil import spin_frame_routines, SPIN_CHECK
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -53,7 +54,9 @@ class TestInitialRecoil(unittest.TestCase):
             routines.append(fortran_routine(TEMPLATE / "fks_singular.f", name))
         for name in ("dot", "rho", "threedot"):
             routines.append(fortran_routine(ROOT / "Template/NLO/Source/kin_functions.f", name))
+        routines.extend(spin_frame_routines())
         (work / "maps.f").write_text("\n".join(routines))
+        (work / "spin_check.f90").write_text(SPIN_CHECK)
         executable = work / "check_initial_recoil"
         result = subprocess.run([
             shutil.which("gfortran"), str(TEMPLATE.parent / 'Source/timing.f'), "-O2", "-std=legacy", "-fcheck=all",
@@ -66,6 +69,7 @@ class TestInitialRecoil(unittest.TestCase):
             str(TEMPLATE / "FKSParams.f90"),
             str(TEMPLATE / "genps_fks_radiation.f"),
             str(work / "fks_phase_space.f"), str(work / "maps.f"),
+            str(work / "spin_check.f90"),
             str(TEMPLATE / "resonance_recoil.f"),
             str(TEMPLATE / "initial_recoil.f"), str(TEMPLATE / "boostwdir2.f"),
             str(ROOT / "HELAS/boostx.F"), str(ROOT / "HELAS/rotxxx.F"),
@@ -85,6 +89,9 @@ class TestInitialRecoil(unittest.TestCase):
 
     def test_soft_collinear_counterevents_and_measure(self):
         self.check_map("limits")
+
+    def test_collinear_spin_phase_in_me_frame(self):
+        self.check_map("spin")
 
     def test_full_hadronic_phase_space_volume(self):
         self.check_map("volume")

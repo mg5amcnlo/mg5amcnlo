@@ -278,6 +278,7 @@ c momentum loses all Born precision for a large borrowed energy.
      $     phi,phase)
 c As for a resonance frame, transport the transverse helicity axis.
 c Supply the invariant mass explicitly: K is very boosted for small x.
+      use fks_phase_space_data, only: xij_kperp
       use fks_phase_space_helpers, only: getangles
       implicit none
       double precision mother(0:3),q(0:3),mass,phi,r(0:3),
@@ -288,6 +289,8 @@ c Supply the invariant mass explicitly: K is very boosted for small x.
       r=(/0d0,cos(phi),sin(phi),0d0/)
       call rotate_invar(r,rrot,cth,sth,cph,sph)
       call boostm(rrot,q,mass,rlab)
+c Keep the full four-vector in the Born frame for later me_frame boosts.
+      xij_kperp=rlab
       call boostm(mother,q,mass,mlab)
       call getangles(mlab,th,cth,sth,ph,cph,sph)
       call trp_rotate_invar(rlab,rrot,cth,sth,cph,sph)

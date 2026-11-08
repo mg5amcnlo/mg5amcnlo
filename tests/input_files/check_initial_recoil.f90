@@ -1,9 +1,10 @@
 program check_initial_recoil
-  use fks_phase_space_data, only: spin => xij_aor
+  use fks_phase_space_data, only: spin => xij_aor,xij_kperp
   use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
   use mc_native_context, only: native_mapping
   use fks_phase_space, only: generate_FKS_kinematics,generate_native_momenta, &
        invert_fks_radiation
+  use fks_phase_space_helpers, only: getangles
   implicit none
   include 'nexternal.inc'
   double precision, parameter :: pi=3.1415926535897932d0
@@ -17,6 +18,7 @@ program check_initial_recoil
   double precision :: gx(160),gw(160),volume,reference,r,ss,cs,angs,mlog,t
   double precision :: xifix,yfix
   common/cxiyfix/xifix,yfix
+  double precision :: kperp_save(0:3)
   complex*16 :: spinsave
   logical :: pass,softtest,colltest
   common/sctests/softtest,colltest
@@ -131,6 +133,7 @@ program check_initial_recoil
       native_mapping=native.eq.1
       do masscase=0,1
         mj=80d0*masscase
+        if(mode.eq.'spin'.and.masscase.ne.0)cycle
         do beam=1,2
           do ib=1,size(fractions)
             xbar=fractions(ib)
@@ -139,6 +142,10 @@ program check_initial_recoil
               do ir=1,size(xs)
                 do iy=1,size(ys)
                   rnd=[xs(ir),ys(iy),0.317d0]
+                  if(mode.eq.'spin')then
+                    colltest=.true.
+                    yfix=1d0-1d-9
+                  endif
                   call forward(-100,p,jac,ps)
                   if(.not.pass)then
                     write(*,*)'rejected',native,mj,beam,xbar,rnd
@@ -148,6 +155,7 @@ program check_initial_recoil
                   call invariants(p)
                   spinsave=spin
                   ratio0=ratio
+                  kperp_save=xij_kperp
                   if(mode.eq.'production')then
                     call production_roundtrip()
                   elseif(mode.eq.'inverse')then
@@ -172,6 +180,11 @@ program check_initial_recoil
                       error stop 'FI inverse radiation measure'
                     endif
                     if(mj.eq.0d0.and.abs(spin-spinsave).gt.1d-7)error stop 'FI inverse spin phase'
+                    if(mj.eq.0d0.and.maxval(abs(xij_kperp-kperp_save)).gt.2d-7) &
+                         error stop 'FI inverse spin vector'
+                  elseif(mode.eq.'spin')then
+                    call check_spin_state(p,.true.)
+                    colltest=.false.
                   elseif(mode.eq.'limits'.or.mode.eq.'endpoints')then
                     if(isign.eq.-1)cycle
                     call forward(0,again,j2,ps2)
@@ -213,11 +226,42 @@ program check_initial_recoil
         enddo
       enddo
     enddo
-    if(nminus.eq.0)error stop 'massive second branch untested'
+    if(mode.ne.'spin'.and.nminus.eq.0)error stop 'massive second branch untested'
   endif
   write(*,*)'PASS '//trim(mode)
 
 contains
+
+  subroutine check_spin_state(real_point,physical_pair)
+    double precision, intent(in) :: real_point(0:3,nexternal)
+    logical, intent(in) :: physical_pair
+    double precision :: restq(0:3),mother(0:3),unit(0:3),rotated(0:3),transported(0:3)
+    double precision :: born_short(0:3,nexternal-1),partition(0:3,nexternal-1),saved(0:3)
+    double precision :: th0,cth0,sth0,phi0,cph0,sph0
+    complex*16 :: phase0
+    logical :: valid
+    integer :: leg,b,jborn
+    restq=[q(0),-q(1:3)]
+    call boostx(born(:,jfks),restq,mother)
+    call getangles(mother,th0,cth0,sth0,phi0,cph0,sph0)
+    unit=[0d0,cos(2d0*pi*rnd(3)),sin(2d0*pi*rnd(3)),0d0]
+    call rotate_invar(unit,rotated,cth0,sth0,cph0,sph0)
+    call boostx(rotated,q,transported)
+    b=0
+    do leg=1,nexternal
+      if(leg.eq.ifks)cycle
+      b=b+1
+      born_short(:,b)=born(:,leg)
+      if(leg.eq.jfks)jborn=b
+    enddo
+    call check_recoil_spin(born_short,jborn,real_point(:,ifks),real_point(:,jfks),transported,physical_pair)
+    ! This auxiliary projection must not replace the active local spin data.
+    saved=xij_kperp
+    phase0=spin
+    call project_global_fsr_partition(real_point,ifks,jfks,mj,partition,valid)
+    if(.not.valid)error stop 'spin fixture global partition projection'
+    if(any(xij_kperp.ne.saved).or.spin.ne.phase0)error stop 'global projection replaced local spin state'
+  end subroutine
 
   subroutine production_roundtrip()
   use fks_phase_space_data,only: resq => resonance_momentum,resmass2 => resonance_mass2, &
@@ -288,6 +332,7 @@ contains
     ratio_save=ratio
     call generate_FKS_kinematics(xgen(1:3),nbody,j0,ps0,stot,s,sqrts,taub,yb,xb,mb,jout,out,valid)
     if(.not.valid.or.jout.le.0d0)error stop 'production FI map rejected'
+    if(mj.eq.0d0)call check_spin_state(out,.false.)
     if(maxval(abs(out-p)).gt.3d-5)error stop 'production FI map differs from direct map'
     if(maxval(abs(pbe-born_save)).gt.3d-5)error stop 'FI real partition projection differs from common Born'
     flux=1d0/(2d0*s*ratio_save*(2d0*pi)**(3*(nexternal-nincoming)-7))
@@ -329,6 +374,7 @@ contains
       pbe=-33d0
       call generate_native_momenta(lab,out,outlab,outcms,jnew,valid)
       if(.not.valid)error stop 'FI native replay rejected'
+      if(mj.eq.0d0)call check_spin_state(out,.false.)
       if(maxval(abs(pb-born_save)).gt.3d-5)error stop 'FI native replay Born CM'
       if(abs(jnew*21d0/jout-1d0).gt.5d-5)error stop 'FI native replay real measure'
       do k=-2,2
