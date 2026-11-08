@@ -251,6 +251,9 @@ class TestMomentumMaps(unittest.TestCase):
     def test_massive_final_inverse_both_solutions(self):
         self.check_map("massive")
 
+    def test_massive_branch_boundary_support_and_inverse(self):
+        self.check_map("massive_boundary")
+
     def test_native_maps_below_outer_sampling_cutoffs(self):
         self.check_map("native_massless")
         self.check_map("native_massive")

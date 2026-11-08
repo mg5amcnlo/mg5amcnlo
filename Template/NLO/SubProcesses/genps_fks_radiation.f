@@ -538,12 +538,13 @@ c Map regions (0,A) and (A,1) in x(1) onto (0,rat_xi) and (rat_xi,1)
 c in xi_i_hat respectively. The parameter A is free, but it appears to be
 c convenient to choose A=rat_xi
          if(x(1).le.rat_xi)then
-            xi_i_hat=(sstiny+(1-sstiny)*x(1)**2)/rat_xi
+            xi_i_hat=rat_xi*(sstiny+(1-sstiny)*
+     $           (x(1)/rat_xi)**2)
             xi_i_fks=xinorm*xi_i_hat
             isolsign=1
             if (.not.softtest) xjac=xjac*2d0*x(1)/rat_xi
          else
-            xi_i_hat=sstiny+(1-sstiny)*x(1)
+            xi_i_hat=x(1)
             xi_i_fks=-xinorm*xi_i_hat+2*xiimax
             isolsign=-1
          endif
@@ -800,15 +801,15 @@ c roundoff when the recoil is soft, spoiling the forward reconstruction.
      $     (2-xi_i_fks*(1-y_ij_fks))*(2-xi_i_fks*(1+y_ij_fks))
      $     +xi_i_fks*y_ij_fks*(1-xmhat**2+xmjhat**2-xi_i_fks)
       if (branch_sign.ge.0d0) then
-         x(1)=(xi_i_fks*rat_xi/xinorm-sstiny)/(1d0-sstiny)
-         if (x(1).lt.-1d-12.or.x(1).gt.rat_xi**2+1d-12) then
+         x(1)=(xi_i_fks/xiimax-sstiny)/(1d0-sstiny)
+         if (x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12) then
             xjac=-102d0
             return
          endif
-         x(1)=sqrt(max(0d0,min(rat_xi**2,x(1))))
+         x(1)=rat_xi*sqrt(max(0d0,min(1d0,x(1))))
          xjac=xjac*2*x(1)/rat_xi
       else
-         x(1)=((2*xiimax-xi_i_fks)/xinorm-sstiny)/(1d0-sstiny)
+         x(1)=(2*xiimax-xi_i_fks)/xinorm
          if (x(1).lt.rat_xi-1d-12.or.x(1).gt.1d0+1d-12) then
             xjac=-102d0
             return

@@ -75,6 +75,9 @@ ANNOUNCEMENT:
    RF: Transport the transverse spin four-vector to the Born frame for
        resonance and initial-state recoil, and preserve it during the
        auxiliary channel projection for consistent me_frame phases.
+   RF: Restore the two-piece massive final-state radiation map so both
+       solutions meet at xi_max without an overshoot or gap; align its
+       inverse coordinates, including the initial-state recoil adapter.
    OM: bin/madgraph, bin/madevent, bin/aMCatNLO and bin/generate_events (madevent, aMC@NLO
        and mg7 outputs) no longer read their commands, or the answers to the questions of
        a command given on the command line, from a pipe or a redirected file (e.g.

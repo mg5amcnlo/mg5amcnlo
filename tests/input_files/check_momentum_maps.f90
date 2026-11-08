@@ -44,6 +44,11 @@ program check_momentum_maps
      write(*,*) 'PASS native_projection'
      stop
   endif
+  if (mode.eq.'massive_boundary') then
+     call check_massive_boundary()
+     write(*,*) 'PASS massive_boundary'
+     stop
+  endif
   if (mode.eq.'dijet_isr_boundary') then
      call check_dijet_isr_boundary()
      write(*,*) 'PASS dijet_isr_boundary'
@@ -563,6 +568,101 @@ program check_momentum_maps
   if(mode.eq.'native_massive'.and.nratios.eq.0)error stop 'no counterevent ratios tested'
   write(*,*) 'PASS ',trim(mode),nchecked,nplus,nminus
 contains
+  subroutine check_massive_boundary()
+    use fks_phase_space_helpers, only: get_massive_fsr_bounds
+    integer,parameter :: qp=selected_real_kind(30)
+    double precision,parameter :: angles(3)=[-0.805d0,-0.4d0,-0.98d0]
+    double precision :: ratio,xim,xibm,ximax,a,b,c,d,offset,expected_xi
+    double precision :: emitted_xi,opening,azimuth,tolerance
+    real(qp) :: wq,eiq,mq,mrq,yq,aq,bq,cq,dq,uq,ejq,ubq,weightq
+    integer :: recoil_case,angle_case,power,side,expected_sign
+    native_mapping=.false.
+    mass=173d0
+    sqrtshat=1000d0
+    shat=sqrtshat**2
+    do recoil_case=0,1
+      mrec=173d0*recoil_case
+      energy=(shat+mass**2-mrec**2)/(2d0*sqrtshat)
+      momentum=sqrt(energy**2-mass**2)
+      born(:,1)=[sqrtshat/2d0,0d0,0d0,sqrtshat/2d0]
+      born(:,2)=[sqrtshat/2d0,0d0,0d0,-sqrtshat/2d0]
+      born(:,3)=[energy,0.3d0*momentum,0.4d0*momentum,sqrt(0.75d0)*momentum]
+      born(:,4)=born(:,1)+born(:,2)-born(:,3)
+      do angle_case=1,size(angles)
+        opening=angles(angle_case)
+        call get_massive_fsr_bounds(shat,sqrtshat,mass,mrec**2,opening, &
+             xim,xibm,ximax,a,b,c,d,xiimax,xinorm)
+        ratio=xiimax/xinorm
+        if(ratio.le.0d0.or.ratio.ge.1d0)error stop 'boundary fixture lacks two solutions'
+        do power=12,4,-1
+          offset=10d0**(-power)
+          do side=-1,1,2
+            opening=angles(angle_case)
+            rnd=[ratio+side*offset,sqrt(((1d0-opening)/2d0-5d-7)/(1d0-5d-7)),0.317d0]
+            phi=2d0*pi*rnd(3)
+            p=0d0
+            p(:,1:4)=born
+            jac=2d0*pi
+            pswgt=1d0
+            call generate_momenta_massive_final(-100,isign,5,3,born(:,3), &
+                 shat,sqrtshat,mass,rnd,mrec**2,p,phi,xiimax,xinorm,xi,yij, &
+                 xihat,pifks,jac,pswgt,pass)
+            expected_sign=-side
+            if(.not.pass.or.isign.ne.expected_sign)error stop 'wrong massive boundary branch'
+            ! The old map exceeded xi_max in a finite band and left a gap
+            ! on the other branch; neither is a rounding-sized effect.
+            if(xi.gt.xiimax+32d0*epsilon(xiimax).or.xi.lt.0d0) &
+                 error stop 'massive boundary outside physical support'
+            if(side.lt.0)then
+              expected_xi=xiimax*(1d-6+(1d0-1d-6)*(rnd(1)/ratio)**2)
+            else
+              expected_xi=2d0*xiimax-xinorm*rnd(1)
+            endif
+            if(abs(xi-expected_xi).gt.32d0*epsilon(xi))error stop 'massive branches leave a gap'
+            if(.not.all(ieee_is_finite(p)).or..not.ieee_is_finite(jac*pswgt)) &
+                 error stop 'nonfinite point beside massive branch boundary'
+            ! Independently solve energy conservation with higher precision:
+            ! (W-E_i)*sqrt(u**2+m**2)+E_i*y*u=(W**2+m**2-M**2)/2-W*E_i.
+            wq=real(sqrtshat,qp)
+            eiq=real(xi,qp)*wq/2
+            mq=real(mass,qp)
+            mrq=real(mrec,qp)
+            yq=real(yij,qp)
+            aq=(wq-eiq)**2-(eiq*yq)**2
+            bq=2*((wq*wq+mq*mq-mrq*mrq)/2-wq*eiq)*eiq*yq
+            cq=(wq-eiq)**2*mq*mq-((wq*wq+mq*mq-mrq*mrq)/2-wq*eiq)**2
+            dq=bq*bq-4*aq*cq
+            if(dq.le.0)error stop 'nonphysical massive boundary quadratic'
+            uq=(-bq+expected_sign*sqrt(dq))/(2*aq)
+            ejq=sqrt(uq*uq+mq*mq)
+            ubq=real(momentum,qp)
+            weightq=2*wq*wq/(4*acos(-1._qp))**3*(uq/ubq)/ &
+                 abs(2-real(xi,qp)*(1-ejq*yq/uq))
+            ! Resolving a turning point amplifies floating-point errors by
+            ! roughly epsilon/|x-ratio|; do not require a finite density at
+            ! the exactly singular point itself.
+            tolerance=2d-8+32d0*epsilon(xi)/offset
+            if(abs(pswgt/real(weightq,8)-1d0).gt.tolerance) &
+                 error stop 'massive boundary phase-space weight'
+            emitted_xi=get_xi_from_p(5,p)
+            opening=get_yij_from_p(5,3,p,saved_pi_cnt(:,0))
+            azimuth=get_phi_from_p(5,3,p)
+            jacinv=1d0
+            pswgtinv=1d0
+            call generate_momenta_massive_final_inverse(p,emitted_xi,opening,azimuth, &
+                 invborn,inv,jacinv,pswgtinv,shat,sqrtshat,5,3,mass)
+            if(jacinv.le.0d0.or.maxval(abs(inv-rnd)).gt.2d-8) &
+                 error stop 'massive boundary inverse coordinates'
+            if(maxval(abs(invborn(:,1:4)-born))/sqrtshat.gt.2d-9) &
+                 error stop 'massive boundary inverse Born'
+            if(abs(jacinv/jac-1d0).gt.2d-8.or. &
+                 abs(pswgtinv/pswgt-1d0).gt.tolerance)error stop 'massive boundary inverse measure'
+          enddo
+        enddo
+      enddo
+    enddo
+  end subroutine check_massive_boundary
+
   subroutine check_massive_born_measure()
     ! Integrate the actual endpoint measure over both massive branches.
     ! Removing the analytic soft radiation volume must leave one Born

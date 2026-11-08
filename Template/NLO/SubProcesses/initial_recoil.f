@@ -241,11 +241,11 @@ c momentum loses all Born precision for a large borrowed energy.
          branch_sign=u/mass*(2d0-xi*(1d0-y))*
      $        (2d0-xi*(1d0+y))+xi*y*(1d0+xmjhat**2-xi)
          if(branch_sign.ge.0d0)then
-            x(1)=(xi*rat/xinorm-sstiny)/(1d0-sstiny)
-            if(x(1).lt.-1d-12.or.x(1).gt.rat**2+1d-12)goto 900
-            x(1)=sqrt(max(0d0,min(rat**2,x(1))))
+            x(1)=(xi/xiimax-sstiny)/(1d0-sstiny)
+            if(x(1).lt.-1d-12.or.x(1).gt.1d0+1d-12)goto 900
+            x(1)=rat*sqrt(max(0d0,min(1d0,x(1))))
          else
-            x(1)=((2d0*xiimax-xi)/xinorm-sstiny)/(1d0-sstiny)
+            x(1)=(2d0*xiimax-xi)/xinorm
             if(x(1).lt.rat-1d-12.or.x(1).gt.1d0+1d-12)goto 900
             x(1)=max(rat,min(1d0,x(1)))
          endif

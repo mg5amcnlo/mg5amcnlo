@@ -87,6 +87,9 @@ class TestInitialRecoil(unittest.TestCase):
     def test_locality_masses_and_inverse_for_both_beams(self):
         self.check_map("inverse")
 
+    def test_massive_two_piece_boundary_and_inverse_for_both_beams(self):
+        self.check_map("massive_boundary")
+
     def test_soft_collinear_counterevents_and_measure(self):
         self.check_map("limits")
 

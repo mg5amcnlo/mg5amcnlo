@@ -60,6 +60,8 @@ program check_initial_recoil
         enddo
       enddo
     enddo
+  elseif(mode.eq.'massive_boundary')then
+    call check_massive_boundary()
   elseif(mode.eq.'minimal')then
     native_mapping=.true.
     mj=1000d0
@@ -231,6 +233,64 @@ program check_initial_recoil
   write(*,*)'PASS '//trim(mode)
 
 contains
+
+  subroutine check_massive_boundary()
+    double precision, parameter :: cutoff=1d-6
+    double precision :: boundary,expected,offsets(5)=[1d-4,1d-6,1d-8,1d-10,1d-12]
+    integer :: side,point
+    native_mapping=.false.
+    mj=173d0
+    xbar=0.6d0
+    do beam=1,2
+      do perm=1,2
+        call fixture(perm)
+        rnd=[0.5d0,sqrt(((1d0+0.805d0)/2d0-5d-7)/(1d0-5d-7)),0.317d0]
+        call forward(-100,p,jac,ps)
+        if(.not.pass)error stop 'FI massive boundary seed rejected'
+        boundary=xmax/xnorm
+        if(boundary.le.0.5d0.or.boundary.ge.1d0-1d-4)error stop 'FI fixture has no second branch'
+        do side=-1,1,2
+          do point=1,size(offsets)
+            rnd(1)=boundary+side*offsets(point)
+            call forward(-100,p,jac,ps)
+            if(.not.pass)error stop 'FI massive branch boundary rejected'
+            if(isign.ne.-side)error stop 'FI massive branch sign'
+            if(side.lt.0)then
+              expected=xmax*(cutoff+(1d0-cutoff)*(rnd(1)/boundary)**2)
+            else
+              expected=2d0*xmax-xnorm*rnd(1)
+            endif
+            if(xi.gt.xmax+1d-13.or.abs(xi-expected).gt.1d-13) &
+                 error stop 'FI massive xi outside two-piece support'
+            call invariants(p)
+            if(point.gt.2)cycle ! The turning point makes the inverse ill-conditioned.
+            call check_boundary_inverse()
+          enddo
+        enddo
+        ! Approach the stationary-daughter endpoint from within its support.
+        rnd(1)=1d0-1d-4
+        call forward(-100,p,jac,ps)
+        if(.not.pass.or.isign.ne.-1)error stop 'FI massive terminal branch rejected'
+        expected=2d0*xmax-xnorm*rnd(1)
+        if(abs(xi-expected).gt.1d-13)error stop 'FI massive terminal branch shifted'
+        call check_boundary_inverse()
+      enddo
+    enddo
+  end subroutine
+
+  subroutine check_boundary_inverse()
+    ratio0=ratio
+    jinv=1d0
+    psinv=1d0
+    call invert_momenta_initial_recoil(p,beam,xbar*ratio0,ifks,jfks,mj, &
+         projected,inv,jinv,psinv,qmap,m2,xback,pass)
+    if(.not.pass.or.maxval(abs(inv-rnd)).gt.2d-10.or.abs(xback/xbar-1d0).gt.2d-8)then
+      write(*,*)'FI branch inverse',beam,rnd,inv,xback
+      error stop 'FI massive boundary inverse coordinates'
+    endif
+    if(abs(jinv/jac-1d0).gt.5d-6.or.abs(psinv/ps-1d0).gt.5d-6) &
+         error stop 'FI massive boundary inverse measure'
+  end subroutine
 
   subroutine check_spin_state(real_point,physical_pair)
     double precision, intent(in) :: real_point(0:3,nexternal)
