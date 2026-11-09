@@ -4689,6 +4689,10 @@ This implies that with decay chains:
                     if index == 0:
                         first_amplitudes = amplitudes
                 self._curr_amps = first_amplitudes
+                self._curr_proc_defs = base_objects.ProcessDefinitionList()
+                self._curr_matrix_elements = helas_objects.HelasMultiProcess()
+                self._done_export = None
+                self._export_dir = None
             finally:
                 self._multiparticles = saved_multiparticles
 

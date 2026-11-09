@@ -234,6 +234,9 @@ generate mu+ mu- > mu+ mu-
                        for amplitude in self.cmd._curr_amps]
             self.assertTrue(any('e+ e- > e+ e-' in name for name in current))
             self.assertFalse(any('mu+ mu-' in name for name in current))
+            self.assertEqual(len(self.cmd._curr_proc_defs), 0)
+            self.assertIsNone(self.cmd._done_export)
+            self.assertIsNone(self.cmd._export_dir)
         finally:
             shutil.rmtree(tmpdir)
 
