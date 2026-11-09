@@ -4770,6 +4770,7 @@ This implies that with decay chains:
                     raise self.InvalidCmd(
                         'Could not create output directory %s: %s' % (output_dir, error))
                 temp_dir = tempfile.mkdtemp()
+                temp_pdf = None
                 eps_files = []
                 try:
                     ordered = sorted(shared, key=lambda item: descriptions[item][0])
@@ -4782,14 +4783,21 @@ This implies that with decay chains:
                             drawings, eps_file, model=self._curr_model, legend=legend)
                         plot.draw(opt=draw_lib.DrawOption())
                         eps_files.append(eps_file)
+                    handle, temp_pdf = tempfile.mkstemp(
+                        prefix='.repeated_', suffix='.pdf', dir=output_dir or None)
+                    os.close(handle)
                     subprocess.check_call(
                         ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
-                         '-sOutputFile=' + output_pdf] + eps_files)
+                         '-sOutputFile=' + temp_pdf] + eps_files)
+                    os.replace(temp_pdf, output_pdf)
+                    temp_pdf = None
                 except (OSError, subprocess.CalledProcessError) as error:
                     raise self.InvalidCmd(
                         'Could not save repeated diagrams to %s: %s' % (output_pdf, error))
                 finally:
                     shutil.rmtree(temp_dir, ignore_errors=True)
+                    if temp_pdf and os.path.exists(temp_pdf):
+                        os.remove(temp_pdf)
                 logger.info('Saved repeated diagrams to %s' % output_pdf)
         return shared
 

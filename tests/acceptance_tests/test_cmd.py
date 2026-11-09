@@ -15,6 +15,7 @@
 from __future__ import absolute_import
 import subprocess
 import unittest
+from unittest import mock
 import os
 import re
 import shutil
@@ -522,6 +523,27 @@ generate e+ e- > e+ e-
             self.assertTrue(os.path.isfile(path))
             with open(path, 'rb') as handle:
                 self.assertEqual(handle.read(4), b'%PDF')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_failure_keeps_old(self):
+        """a failed ghostscript run leaves the previous PDF untouched"""
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'repeated.pdf')
+        try:
+            with open(path, 'wb') as handle:
+                handle.write(b'old report')
+            with mock.patch(
+                    'madgraph.interface.madgraph_interface.subprocess.check_call',
+                    side_effect=OSError('ghostscript failed')):
+                with self.assertRaises(InvalidCmd):
+                    self.cmd.do_check_double_counting(
+                        'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                        '--save=' + path)
+            with open(path, 'rb') as handle:
+                self.assertEqual(handle.read(), b'old report')
         finally:
             shutil.rmtree(tmpdir)
 

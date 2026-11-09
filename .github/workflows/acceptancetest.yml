@@ -109,6 +109,7 @@ jobs:
             ./tests/test_manager.py test_check_double_counting_save_default -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_directory -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_non_pdf -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_save_failure_keeps_old -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_new_directory -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_existing_file -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_decay -pA -t0 -l INFO
