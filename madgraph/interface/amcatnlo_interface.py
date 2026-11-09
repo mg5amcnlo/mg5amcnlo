@@ -398,16 +398,17 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
                 typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
+                if typed:
+                    dtype = args[1]
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype)
+                    if not self._curr_amps:
+                        self._curr_amps = diagram_generation.AmplitudeList()
+                        return
                 rest = args[2:] if typed else args[1:]
                 dirpath, no_open, merge = self._parse_display_output_args(rest)
                 eps_files = []
                 if typed:
-                    get_amps = get_amps_dict[args[1]]
-                    self._curr_amps = get_amps()
-                    #check that if one requests the virt diagrams, there are virt_amplitudes
-                    if args[1] == 'loop' and len(self._curr_amps) == 0:
-                        raise self.InvalidCmd('No virtuals have been generated')
-                    eps_files += self.draw(' '.join(rest), Dtype=args[1], do_merge=False)
+                    eps_files += self.draw(' '.join(rest), Dtype=dtype, do_merge=False)
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
@@ -421,20 +422,21 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             if args[0] == 'diagrams_text':
                 typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
+                if typed:
+                    dtype = args[1]
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype)
+                    if not self._curr_amps:
+                        self._curr_amps = diagram_generation.AmplitudeList()
+                        return
                 rest = args[2:] if typed else args[1:]
                 dirpath, no_open, merge = self._parse_display_output_args(rest)
                 if dirpath is None and (no_open or merge):
                     raise self.InvalidCmd('--no_open and --merge require an explicit directory path, e.g. display diagrams_text ./ --no_open')
                 if typed:
-                    get_amps = get_amps_dict[args[1]]
-                    self._curr_amps = get_amps()
-                    #check that if one requests the virt diagrams, there are virt_amplitudes
-                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
-                        raise self.InvalidCmd('No virtuals have been generated')
                     text = "\n".join([amp.nice_string() for amp in self._curr_amps])
                     if dirpath:
                         self._write_diagrams_text_files(dirpath, merge=merge,
-                                                        prefix=args[1] + '_')
+                                                        prefix=dtype + '_')
                 else:
                     text = 'Born diagrams:\n' 
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
@@ -459,12 +461,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     
             elif args[0] == 'processes':
                 if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
-                    get_amps = get_amps_dict[args[1]]
-                    self._curr_amps = get_amps()
-                    #check that if one requests the virt diagrams, there are virt_amplitudes
-                    if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
-                        raise self.InvalidCmd('No virtuals have been generated')
-                    print('\n'.join(amp.nice_string_processes() for amp in self._curr_amps))
+                    dtype = args[1]
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype, 'processes')
+                    if self._curr_amps:
+                        print('\n'.join(amp.nice_string_processes() for amp in self._curr_amps))
                 else:
                     print('Born processes:')
                     print('\n'.join(amp.nice_string_processes() for amp in get_amps_dict['born']()))
@@ -477,6 +477,17 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         else:
             mg_interface.MadGraphCmd.do_display(self,line,output)
+
+    def _get_displayed_amps(self, get_amps, dtype, kind='diagrams'):
+        """Return the requested amplitudes, printing a skip message if there are none."""
+        amps = get_amps()
+        if not amps:
+            name = 'virt' if dtype == 'loop' else dtype
+            if kind == 'processes':
+                logger.info('No "%s" processes exist. Skipping ...' % name)
+            else:
+                logger.info('No "%s" diagrams exist for this process. Skipping ...' % name)
+        return amps
 
     @staticmethod
     def get_parameter_values(model):
