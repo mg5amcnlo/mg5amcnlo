@@ -4552,7 +4552,8 @@ This implies that with decay chains:
                     ensure_tree(decay)
                 return
             process = amplitude.get('process')
-            if process.get('has_born') is False:
+            if process.get('has_born') is False or \
+                    process.get('NLO_mode') not in (None, 'tree'):
                 raise self.InvalidCmd(
                     'check double_counting only supports LO tree diagrams')
             for diagram in (amplitude.get('diagrams') or []):

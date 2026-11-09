@@ -33,6 +33,7 @@ import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
 import madgraph.core.diagram_generation as diagram_generation
+import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -341,6 +342,26 @@ generate e+ e- > e+ e-
             self.assertEqual(self.cmd.history, saved_history)
         finally:
             shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_rejects_nlo(self):
+        """only LO tree amplitudes are accepted"""
+        self.do('import model sm')
+        process, _leftover = self.cmd.extract_decay_chain_process(
+            'e+ e- > e+ e-')
+        process.set('NLO_mode', 'virt')
+        amplitude = diagram_generation.Amplitude({
+            'process': process,
+            'diagrams': base_objects.DiagramList()})
+        previous = self.cmd._curr_amps
+        try:
+            self.cmd._curr_amps = diagram_generation.AmplitudeList([amplitude])
+            with self.assertRaises(InvalidCmd) as context:
+                self.cmd.do_check_double_counting(
+                    'double_counting { e+ e- > e+ e- }')
+            self.assertIn('only supports LO tree diagrams',
+                          str(context.exception))
+        finally:
+            self.cmd._curr_amps = previous
 
     def test_check_double_counting_decays(self):
         """check double_counting compares production and decay diagrams"""
