@@ -294,11 +294,34 @@ output foo
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_check_double_counting_or_multiparticle(self):
+        """OR-list multiparticles and their history survive a file check"""
+        self.do('import model sm')
+        self.do('define j = u | d')
+        saved = list(self.cmd.history)
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+define j = u | d
+set process_name A
+generate e+ e- > e+ e-
+set process_name B
+generate e+ e- > e+ e-
+""")
+            shared = self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertEqual(len(shared), 4)
+            self.assertEqual(self.cmd.history, saved)
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_check_double_counting_multiparticles(self):
         """file multiparticle definitions are announced and restored"""
         self.do('import model sm')
         self.do('define j = u d')
         saved = list(self.cmd._multiparticles['j'])
+        saved_history = list(self.cmd.history)
         tmpdir = tempfile.mkdtemp()
         path = os.path.join(tmpdir, 'sets.txt')
         try:
@@ -315,6 +338,7 @@ generate e+ e- > e+ e-
             self.assertTrue(any('redefined in the file' in message
                                 for message in captured.output))
             self.assertEqual(self.cmd._multiparticles['j'], saved)
+            self.assertEqual(self.cmd.history, saved_history)
         finally:
             shutil.rmtree(tmpdir)
 
@@ -375,6 +399,11 @@ generate e+ e- > e+ e-
         invalid = '\n'.join(captured.output)
         self.assertIn('Invalid --show value "bogus"', invalid)
         self.assertIn('Available options are: raw, chain, chain-all.', invalid)
+        self.assertIn('id:', invalid)
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show=bogus!')
+        invalid = '\n'.join(captured.output)
+        self.assertIn('Invalid --show value "bogus!"', invalid)
         self.assertIn('id:', invalid)
 
     def test_check_double_counting_bsm_names(self):

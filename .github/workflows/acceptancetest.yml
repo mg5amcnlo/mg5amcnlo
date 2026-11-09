@@ -100,6 +100,7 @@ jobs:
             ./tests/test_manager.py test_check_double_counting_file_current -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_file_errors -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_multiparticles -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_or_multiparticle -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_decays -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_decay_overlap -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_zz_overlap -pA -t0 -l INFO
