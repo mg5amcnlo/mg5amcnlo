@@ -399,6 +399,45 @@ generate e+ e- > e+ e-
             os.chdir(previous)
             shutil.rmtree(tmpdir)
 
+    def test_check_double_counting_save_directory(self):
+        """--save=DIR uses the default filename inside the directory"""
+        if not shutil.which('gs'):
+            self.skipTest('ghostscript not installed')
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        target_dir = os.path.join(tmpdir, 'diagrams', 'dc')
+        try:
+            os.makedirs(target_dir)
+            shared = self.cmd.do_check_double_counting(
+                'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                '--save=' + target_dir)
+            self.assertEqual(len(shared), 7)
+            path = os.path.join(target_dir, 'repeated_diagrams.pdf')
+            self.assertTrue(os.path.isfile(path))
+            with open(path, 'rb') as handle:
+                self.assertEqual(handle.read(4), b'%PDF')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_non_pdf(self):
+        """a non-pdf --save path warns and is ignored"""
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'repeated.txt')
+        try:
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                shared = self.cmd.do_check_double_counting(
+                    'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                    '--save=' + path)
+            self.assertEqual(len(shared), 7)
+            self.assertTrue(any('Only .pdf output is supported' in message
+                                for message in captured.output))
+            self.assertFalse(os.path.exists(path))
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_check_double_counting_model(self):
         """a model requested only by the file is reported, not imported"""
         self.do('import model MSSM_SLHA2')

@@ -106,6 +106,8 @@ jobs:
             ./tests/test_manager.py test_check_double_counting_bsm_names -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_save_default -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_save_directory -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_save_non_pdf -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_model -pA -t0 -l INFO
             ./tests/test_manager.py test_import_model -pA -t0 -l INFO
             ./tests/test_manager.py test_check_generate_optimize -pA -t0 -l INFO
