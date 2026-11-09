@@ -3888,6 +3888,12 @@ class PDLabelBlock(RunBlock):
     def post_set(card, value, change_userdefine, raiseerror, name="unknown", **opt):
         """call when change to pdlabel1 or pdlabel2 --do not know which one """
 
+        # only a user-defined pdlabel1/2 supersedes pdlabel. Internal
+        # assignments (e.g. get_default filling a hidden pdlabel1/2 while
+        # writing run_card.inc) must not drop pdlabel from user_set, otherwise
+        # the next write takes pdlabel from run_card_default.dat (issue 481)
+        if name not in card.user_set:
+            return
         if 'pdlabel' in card.user_set:
             card.user_set.remove('pdlabel')
 
