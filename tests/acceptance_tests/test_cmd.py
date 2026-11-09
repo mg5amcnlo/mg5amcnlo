@@ -215,6 +215,27 @@ generate e+ e- > e+ e-
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_check_double_counting_file_current(self):
+        """file check leaves the first process set as current"""
+        self.do('import model sm')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+set process_name B
+generate mu+ mu- > mu+ mu-
+""")
+            self.cmd.do_check_double_counting('double_counting ' + path)
+            current = [amplitude['process'].nice_string()
+                       for amplitude in self.cmd._curr_amps]
+            self.assertTrue(any('e+ e- > e+ e-' in name for name in current))
+            self.assertFalse(any('mu+ mu-' in name for name in current))
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_check_double_counting_file_errors(self):
         """check double_counting rejects malformed process-set files"""
         self.do('import model sm')
@@ -320,6 +341,8 @@ generate e+ e- > e+ e-
         with self.assertLogs('cmdprint', level='INFO') as captured:
             self.cmd.do_check_double_counting(command + '--show=raw')
         self.assertIn('id:', '\n'.join(captured.output))
+        self.assertIsNone(self.cmd.do_check(
+            'double_counting { p p > w+ w- b b~ }'))
         self.assertRaises(InvalidCmd, self.cmd.do_check_double_counting,
                           command + '--show=bogus')
 
