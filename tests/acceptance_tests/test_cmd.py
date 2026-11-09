@@ -147,6 +147,145 @@ class TestCmdShell1(unittest.TestCase):
         os.remove('diagrams_0_gg_gg.eps')
         self.do('set group_subprocesses True')
         
+    def test_check_double_counting_groups(self):
+        """check double_counting compares generated and requested diagram sets"""
+        self.do('import model sm')
+        self.do('generate e+ e- > e+ e-')
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > e+ e- }')
+        self.assertEqual(len(shared), 4)
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > e+ e- & e+ e- > mu+ mu- }')
+        self.assertEqual(len(shared), 4)
+
+        self.do('check double_counting { e+ e- > e+ e- }')
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > z > e+ e- }')
+        self.assertEqual(len(shared), 1)
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > mu+ mu- }')
+        self.assertEqual(len(shared), 0)
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > e+ e- } { e+ e- > z > e+ e- }')
+        self.assertEqual(len(shared), 1)
+        self.assertEqual(list(shared.values())[0], set(['A', 'B']))
+
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > z > e+ e- } { e+ e- > e+ e- }')
+        self.assertEqual(len(shared), 1)
+
+        self.do('add process e+ e- > z > e+ e-')
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > z > e+ e- }')
+        self.assertEqual(len(shared), 1)
+        self.assertEqual(list(shared.values())[0], set(['current', 'argument']))
+
+    def test_check_double_counting_standalone(self):
+        """check double_counting can compare two sets without generating"""
+        self.do('import model sm')
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { e+ e- > e+ e- } { e+ e- > z > e+ e- }')
+        self.assertEqual(len(shared), 1)
+        self.assertRaises(InvalidCmd, self.cmd.do_check_double_counting,
+                          'double_counting { e+ e- > e+ e- }')
+
+    def test_check_double_counting_file(self):
+        """check double_counting reads named sets from a file"""
+        self.do('import model sm')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+define j = g u c d s b u~ c~ d~ s~ b~
+set process_name A
+generate e+ e- > e+ e-
+add process e+ e- > z > e+ e-
+set process_name B
+generate e+ e- > e+ e-
+""")
+            shared = self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertEqual(len(shared), 4)
+            self.assertEqual(list(shared.values())[0], set(['A', 'B']))
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_file_errors(self):
+        """check double_counting rejects malformed process-set files"""
+        self.do('import model sm')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+
+        def assert_error(content, message):
+            with open(path, 'w') as output:
+                output.write(content)
+            with self.assertRaises(InvalidCmd) as context:
+                self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertIn(message, str(context.exception))
+
+        try:
+            assert_error("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+set process_name A
+generate e+ e- > mu+ mu-
+""", 'two different definitions')
+            assert_error("""import model sm
+generate e+ e- > e+ e-
+""", 'every generate must belong')
+            assert_error("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+generate e+ e- > mu+ mu-
+""", 'already has a generate')
+            assert_error("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+output foo
+""", 'unsupported command')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_multiparticles(self):
+        """file multiparticle definitions are announced and restored"""
+        self.do('import model sm')
+        self.do('define j = u d')
+        saved = list(self.cmd._multiparticles['j'])
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+define j = g u c d s b u~ c~ d~ s~ b~
+set process_name A
+generate e+ e- > e+ e-
+set process_name B
+generate e+ e- > e+ e-
+""")
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertTrue(any('redefined in the file' in message
+                                for message in captured.output))
+            self.assertEqual(self.cmd._multiparticles['j'], saved)
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_decays(self):
+        """check double_counting compares production and decay diagrams"""
+        self.do('import model sm')
+        self.do('generate p p > t t~, t > b w+, t~ > b~ w-')
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { p p > t t~, t > b w+, t~ > b~ w- }')
+        self.assertEqual(len(shared), 7)
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { p p > t t~, (t > b w+, w+ > e+ ve), t~ > b~ w- }')
+        self.assertEqual(len(shared), 0)
+
     def test_config(self):
         """check that configuration file is at default value"""
         self.maxDiff=None
