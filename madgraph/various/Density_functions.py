@@ -205,6 +205,38 @@ def plot_hist(x:list[float], y:list[float], z:list[float], limitx:list[float], l
 
     return Map, N_Map
 
+QUBIT_TYPES = ('fermion', 'massless_boson')
+
+def qubit_spin_matrix(qubit_type:str) -> list[float, float]:
+    """
+        Input:  qubit_type -> 'fermion' or 'massless_boson'
+        Output: M such that the spin of the qubit is S_i = sum_j M_ij sigma_j, so <S> = M.B and <S1_i S2_j> = (M1 C M2^T)_ij
+        Fermion (+1/2, -1/2): S = sigma/2.
+        Massless boson (+1, -1): S = (0, 0, sigma_3), since a massless particle only has its spin along its momentum.
+        sigma_1 and sigma_2 are then the linear polarisation (Stokes) parameters, not spin components.
+        Both assume the qubit is in its own helicity basis, in the order (+, -).
+    """
+    if qubit_type == 'fermion':
+        return np.diag([0.5, 0.5, 0.5])
+    if qubit_type == 'massless_boson':
+        return np.diag([0., 0., 1.])
+    raise ValueError("A qubit is either a 'fermion' or a 'massless_boson', got %s." % qubit_type)
+
+def get_qubit_types(particle_type, n:int) -> list[str]:
+    """
+        Input:  particle_type -> None (all fermions), a single type for all the qubits, or a list of n types
+                n -> number of qubits
+        Output: list of the n qubit types, each 'fermion' or 'massless_boson'
+    """
+    if particle_type is None:
+        return ['fermion'] * n
+    if isinstance(particle_type, str):
+        particle_type = [particle_type] * n
+    particle_type = list(particle_type)
+    if len(particle_type) != n or any(p not in QUBIT_TYPES for p in particle_type):
+        raise ValueError("particle_type %s should give %d qubit types among %s." % (particle_type, n, list(QUBIT_TYPES)))
+    return particle_type
+
 class DensityMatrixObservables(list):
     """
         This class represents a density matrix of any dimension.
@@ -407,7 +439,7 @@ class DensityMatrixObservables(list):
     @staticmethod
     def get_subsystem_dims(particle_type:list[str]=None, dims:list[int]=None, D:int=None) -> list[int]:
         """
-            Input:  particle_type -> list of type of the particles ('fermion' or 'boson')
+            Input:  particle_type -> list of type of the particles ('fermion' or 'boson' or 'massless_boson')
                     dims -> list of the dimension of each subspace (overrides particle_type)
                     D -> dimension of the full density matrix, used to check dims or to guess it
             Output: dims -> list of the dimension of each subspace
@@ -416,7 +448,7 @@ class DensityMatrixObservables(list):
         """
         if dims is None:
             if particle_type is not None:
-                dim_of_type = {'fermion': 2, 'boson': 3}
+                dim_of_type = {'fermion': 2, 'boson': 3, 'massless_boson': 2}
                 try:
                     dims = [dim_of_type[p] for p in particle_type]
                 except KeyError as error:
@@ -616,7 +648,7 @@ class DensityMatrixObservables(list):
         """
             Input: self -> density matrix in matrix format
                 index -> index of the subspace(s) to trace over, starting at 0 (int or list of int)
-                particle_type -> list of type of the particles in the density matrix ('fermion' or 'boson'),
+                particle_type -> list of type of the particles in the density matrix ('fermion' or 'boson' or 'massless_boson'),
                                  used to get the dimension of each subspace if dims is not given
                 dims -> list of the dimension of each subspace, e.g. [2, 3, 2] (overrides particle_type)
                 inplace -> if True, the instance is also changed: it then holds the traced density matrix (in square form)
@@ -659,7 +691,7 @@ class DensityMatrixObservables(list):
     def Negativity(self, particle_type:list[str]=None, epsilon=1e-10, dims:list[int]=None, index:Union[int, list[int]]=None) -> tuple[float, float]:
         """
         Input:  self -> density matrix
-                particle_type -> list of the particle type: "fermion" or "boson" (used to get dims if dims is not given)
+                particle_type -> list of the particle type: "fermion" or "boson" or "massless_boson" (used to get dims if dims is not given)
                 epsilon -> threshold under which the results are set to 0 to deal with numerical instabilities
                 dims -> list of the dimension of each subspace, e.g. [2, 3, 2] (overrides particle_type)
                 index -> subsystem(s) on one side of the bipartition, starting at 0 (int or list of int),
@@ -690,7 +722,7 @@ class DensityMatrixObservables(list):
     def PeresHorodecki_criterion(self, particle_type:list[str]=None, epsilon=1e-7, dims:list[int]=None, index:Union[int, list[int]]=None) -> tuple[bool, list[float]]:
         """
         Input:  rho -> density matrix
-                particle_type -> type of the particles in the density matrix ('fermion' or 'boson')
+                particle_type -> type of the particles in the density matrix ('fermion' or 'boson' or 'massless_boson')
                 epsilon -> treshold under which the eigenvalues are taken as 0 to deal with numerical instabilities
                 dims -> list of the dimension of each subspace (overrides particle_type)
                 index -> subsystem(s) on one side of the bipartition, starting at 0 (last subsystem by default)
@@ -879,10 +911,14 @@ class DensityMatrixObservables(list):
 
 class DensityMatrixObservables2(DensityMatrixObservables):
     """
-        Class reprensenting density matrices of a single qubit (spin-1/2 particle).
+        Class reprensenting density matrices of a single qubit: a spin-1/2 particle or a massless boson.
         It is a child of the generic class and thus inherits its methods.
-        The basis is the one of the helicities given by MadGraph: (+1/2, -1/2).
+        The basis is the one of the helicities given by MadGraph: (+1/2, -1/2), or (+1, -1) for a massless boson,
+        along the momentum of the particle (own helicity axes).
         The density matrix is rho = (1 + B.sigma)/2, with B the polarisation (Bloch) vector, B_i = <sigma_i>.
+        For a massless boson, B_3 is the helicity and B_1, B_2 the linear polarisation (Stokes) parameters: they depend on
+        the azimuthal phase convention of the HELAS polarisation vectors and turn by 2 phi under a rotation of angle phi
+        around the momentum. The spin is then S = (0, 0, sigma_3) (see qubit_spin_matrix).
     """
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
@@ -903,18 +939,21 @@ class DensityMatrixObservables2(DensityMatrixObservables):
                 Polarisation[i] = 0.
         return Polarisation
 
-    def spin_expectation(self, epsilon=1e-10) -> list[float]:
+    def spin_expectation(self, epsilon=1e-10, particle_type='fermion') -> list[float]:
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Spin expectation value <S_i> = B_i/2
+                    particle_type -> 'fermion' (default) or 'massless_boson'
+            Output: Spin expectation value <S_i> = B_i/2 for a fermion, (0, 0, B_3) for a massless boson
         """
-        return self.Get_Polarisations(epsilon)/2.
+        qubit_type = get_qubit_types(particle_type, 1)[0]
+        return np.dot(qubit_spin_matrix(qubit_type), self.Get_Polarisations(epsilon))
 
 
 class DensityMatrixObservables3(DensityMatrixObservables):
     """
         Class reprensenting density matrices of a single qutrit (massive spin-1 particle).
+        A massless boson only has 2 helicities (+1, -1) and is a qubit: see DensityMatrixObservables2.
         It is a child of the generic class and thus inherits its methods.
         The basis is the one of the helicities given by MadGraph: (+1, 0, -1).
         The density matrix is rho = 1/3 + P_a lambda_a, with lambda_a the Gell-Mann matrices and P_a = <lambda_a>/2,
@@ -957,6 +996,16 @@ class DensityMatrixObservables22(DensityMatrixObservables):
         Class reprensenting density matrices of qubit-qubit systems.
         It is a child of the generic class and thus inherits its methods.
         We define here the observables specific to qubit-qubit systems.
+        Each qubit is a fermion or a massless boson, in its own helicity basis (+, -) (along its own momentum, own axes).
+
+        For a massless boson, sigma_3 is the helicity but sigma_1 and sigma_2 are linear polarisation (Stokes) parameters,
+        which depend on the azimuthal phase convention of the HELAS polarisation vectors and turn by 2 phi under a rotation
+        of angle phi around the momentum: Get_Polarisations and Get_Correlations are then not spin quantities.
+        - spin_expectation and spinspin_expectation take particle_type to use the right spin operators (see qubit_spin_matrix).
+        - Get_Dcoef is defined from spin correlations on common axes, and refuses massless bosons.
+        - Get_Concurrence, Get_Entanglement_Formation, CHSH_inequality, Get_Discord, Get_Steering, Get_Local_Normal_Form,
+          Magic_Pure, Magic_Mixed and the methods of the parent class do not depend on the local basis, so they are valid
+          for massless bosons. For CHSH and steering, the measurements are then polarisation measurements, not spin ones.
     """
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
         """The initialisation is the same as the parent class because it needs to accept the same input"""
@@ -1003,25 +1052,30 @@ class DensityMatrixObservables22(DensityMatrixObservables):
 
         return Polarisation1, Polarisation2
 
-    def spin_expectation(self, epsilon=1e-10) -> tuple[list[float, float], list[float, float]]:
+    def spin_expectation(self, epsilon=1e-10, particle_type=None) -> tuple[list[float, float], list[float, float]]:
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Spin expectation value of the two particles of the system.
+                    particle_type -> list of the two qubit types ('fermion' or 'massless_boson'), all fermions if None
+            Output: Spin expectation value of the two particles of the system,
+                    <S_i> = B_i/2 for a fermion, (0, 0, B_3) for a massless boson.
         """
+        type1, type2 = get_qubit_types(particle_type, 2)
         Polarisation1, Polarisation2 = self.Get_Polarisations(epsilon)
-        spin_exp1 = np.array(Polarisation1)/2.
-        spin_exp2 = np.array(Polarisation2)/2.
+        spin_exp1 = np.dot(qubit_spin_matrix(type1), Polarisation1)
+        spin_exp2 = np.dot(qubit_spin_matrix(type2), Polarisation2)
         return np.real(spin_exp1), np.real(spin_exp2)
     
-    def spinspin_expectation(self, epsilon=1e-10) -> list[float, float]:
+    def spinspin_expectation(self, epsilon=1e-10, particle_type=None) -> list[float, float]:
         """
             Input:  self -> density matrix
                     epsilon -> threshold parameter
-            Output: Expectation value of the spin-spin correlations of the system
+                    particle_type -> list of the two qubit types ('fermion' or 'massless_boson'), all fermions if None
+            Output: Expectation value of the spin-spin correlations <S1_i S2_j> of the system,
+                    C/4 for two fermions, with S = (0, 0, sigma_3) for a massless boson.
         """
-        spin_spin_exp = np.zeros((3,3), dtype=np.complex128)
-        spin_spin_exp = np.array(self.Get_Correlations(epsilon)[0]) / 4.
+        type1, type2 = get_qubit_types(particle_type, 2)
+        spin_spin_exp = qubit_spin_matrix(type1) @ np.array(self.Get_Correlations(epsilon)[0]) @ qubit_spin_matrix(type2).T
         return np.real(spin_spin_exp)
     
     def add_phase_density(self, phases, epsilon=1e-10) -> list[complex, complex]:
@@ -1097,9 +1151,12 @@ class DensityMatrixObservables22(DensityMatrixObservables):
 
         return Concurrence
 
-    def Get_Dcoef(self) -> tuple[float, float, float, float, bool]:
+    def Get_Dcoef(self, particle_type=None) -> tuple[float, float, float, float, bool]:
             """
             Input:  self -> density matrix
+                    particle_type -> list of the two qubit types, all fermions if None. Only fermions are accepted:
+                                     for a massless boson sigma_1, sigma_2 are not spin components and the common axes
+                                     are not defined, use Get_Concurrence or Negativity to test the entanglement instead.
             Output: D1, Dn, Dr, Dk -> the 4 D-coefficients
                     boolD -> True if there entanglement
             In MadGraph we use the momenta referential as: {n, r, k} with:
@@ -1109,6 +1166,8 @@ class DensityMatrixObservables22(DensityMatrixObservables):
             In the MadGraph basis the second particle, a spin-1/2 particle moving along -k, has its own axes (-n, r, -k):
             C_common = C_MG . diag(-1, 1, -1) is used here, e.g. D1 = -1 for a spin singlet.
             """
+            if any(p != 'fermion' for p in get_qubit_types(particle_type, 2)):
+                raise ValueError('The D-coefficients are only defined for two spin-1/2 particles, got %s. For massless bosons, use Get_Concurrence or Negativity to test the entanglement.' % list(particle_type))
             Correlations = np.dot(self.Get_Correlations()[0], np.diag([-1., 1., -1.])) #second particle on the common axes
             if len(Correlations) != 3:
                     raise ValueError('The length of the correlation matrix is not correct. This function only handles systems of 2 qubits!')
@@ -1293,6 +1352,22 @@ class DensityMatrixObservables23(DensityMatrixObservables):
         Class reprensenting density matrices of qubit-qutrit systems.
         It is a child of the generic class and thus inherits its methods.
         We define here the observables specific to qubit-qutrit systems.
+        The qubit is a fermion or a massless boson, the qutrit a massive boson.
+
+        Assumptions (true for the density matrices computed by the MadGraph density mode):
+        - Each particle is in its own helicity basis, i.e. quantised along its own momentum, ordered (+1/2, -1/2) or
+          (+1, -1) for the qubit and (+1, 0, -1) for the qutrit. A density matrix computed with another order_helicities
+          must be built with DensityMatrixObservables(rho, order_helicities=allowed_helicities) to be put back in this
+          basis, otherwise sigma_3 (qubit helicity) changes sign and the J_i of the qutrit are wrong.
+        - The spin components are given in the own helicity axes of each particle, not in common axes: a particle moving
+          along -k has S_z along -k. Going to common axes (n, r, k) needs spin-dependent sign flips
+          (see the conventions of Get_Dcoef for spin-1/2).
+        - Massless boson: S = (0, 0, sigma_3) holds in any frame, since a massless particle has no rest frame and its
+          helicity is boost invariant, so spin_expectation and spinspin_expectation do not depend on the frame choice
+          (helicity_direction, momenta_boost) beyond the axes above. sigma_1 and sigma_2 are linear polarisation (Stokes)
+          parameters: they depend on the azimuthal phase convention of the HELAS polarisation vectors (x axis after
+          ROTATIONP) and turn by 2 phi under a rotation of angle phi around the momentum, so the corresponding entries of
+          Get_Polarisations and Get_Correlations are convention dependent.
     """
 
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
@@ -1301,13 +1376,49 @@ class DensityMatrixObservables23(DensityMatrixObservables):
         if self.density_matrix_dimension != 6:
             raise ValueError("The dimension of a qubit-qutrit density matrix should be 6.")
     
+    @staticmethod
+    def qubit_qutrit_order(particle_type:list[str]) -> tuple[bool, str]:
+        """
+            Input:  particle_type -> list of the two particle types, e.g. ['fermion', 'boson'] or ['boson', 'massless_boson']
+            Output: qubit_first -> True if the qubit is the first particle of the density matrix
+                    qubit_type -> 'fermion' or 'massless_boson'
+            The qubit is a fermion or a massless boson (helicities (+1, -1)), the qutrit a massive boson ('boson').
+        """
+        particle_type = list(particle_type)
+        if len(particle_type) == 2 and particle_type[0] in QUBIT_TYPES and particle_type[1] == 'boson':
+            return True, particle_type[0]
+        if len(particle_type) == 2 and particle_type[0] == 'boson' and particle_type[1] in QUBIT_TYPES:
+            return False, particle_type[1]
+        raise ValueError("particle_type %s is not a qubit-qutrit system: it should contain one 'boson' (qutrit) and one 'fermion' or 'massless_boson' (qubit)." % particle_type)
+
+    @staticmethod
+    def qubit_spin_from_polarisation(B:list[float], qubit_type:str) -> list[float]:
+        """
+            Input:  B -> qubit polarisation vector B_i = Tr(rho_qubit sigma_i)
+                    qubit_type -> 'fermion' or 'massless_boson'
+            Output: spin expectation value <S_i> of the qubit
+            Fermion: S_i = sigma_i/2.
+            Massless boson in the (+1, -1) basis: S_z = sigma_3 and S_x = S_y = 0
+            (sigma_1 and sigma_2 are linear polarisations, not spin components).
+        """
+        return np.dot(qubit_spin_matrix(qubit_type), np.array(B, dtype=float))
+
     def Get_Correlations(self, particle_type: list[str], epsilon=1e-10) -> tuple[list[float, float], list[float, float]]:
         """
             Input:  self -> density matrix
+                    particle_type -> list of the two particle types, one 'boson' (qutrit) and one 'fermion' or 'massless_boson' (qubit),
+                                     in the order of the density matrix
                     epsilon -> threshold parameter
             Output: Correlations matrix C and the square C^T . C
+            C_ia = Tr(rho sigma_i x lambda_a)/2 (or lambda_a x sigma_i if the qutrit is first): the shape is (3, 8) if the
+            qubit is the first particle, (8, 3) otherwise.
+            For a massless boson, sigma_3 is the helicity, but sigma_1 and sigma_2 are not spin components: they are the
+            linear polarisation (Stokes) parameters, which turn by 2 phi under a rotation of angle phi around its momentum.
+            See the class docstring for the basis and axis assumptions.
         """
-        if particle_type[0] == 'fermion':
+        qubit_first, _ = self.qubit_qutrit_order(particle_type)
+
+        if qubit_first:
             Correlations = np.zeros((3, 8), dtype=float)
             for i in range(3):
                 for j in range(8):
@@ -1315,7 +1426,7 @@ class DensityMatrixObservables23(DensityMatrixObservables):
                     Correlations[i][j] = np.real(np.trace(np.dot(tensorprod, self.square_matrix()))/2.)
                     if np.abs(Correlations[i][j]) < epsilon:
                         Correlations[i][j] = 0.
-        elif particle_type[0] == 'boson':
+        else:
             Correlations = np.zeros((8, 3), dtype=float)
             for i in range(8):
                 for j in range(3):
@@ -1323,20 +1434,23 @@ class DensityMatrixObservables23(DensityMatrixObservables):
                     Correlations[i][j] = np.real(np.trace(np.dot(tensorprod, self.square_matrix()))/2.)
                     if np.abs(Correlations[i][j]) < epsilon:
                         Correlations[i][j] = 0.
-        else:
-            raise ValueError("particle_type only accepts elements that are 'fermion' or 'boson'.")
-        
+
         Correlations_squared = np.dot(np.transpose(Correlations),Correlations)
         return Correlations, Correlations_squared
 
     def Get_Polarisations(self, particle_type: list[str], epsilon=1e-10) -> tuple[list[float], list[float]]:
         """
             Input:  self -> density matrix
+                    particle_type -> list of the two particle types, one 'boson' (qutrit) and one 'fermion' or 'massless_boson' (qubit)
                     epsilon -> threshold parameter
-            Output: Polarisation vectors of the two particles of the system,
+            Output: Polarisation vectors of the two particles of the system, in the order of the density matrix,
                     B_i = Tr(rho_qubit sigma_i) for the qubit and P_a = Tr(rho_qutrit lambda_a)/2 for the qutrit
+            For a massless boson, B_3 is the helicity and B_1, B_2 the linear polarisation (Stokes) parameters.
+            See the class docstring for the basis and axis assumptions.
         """
-        if particle_type[0] == 'boson':
+        qubit_first, _ = self.qubit_qutrit_order(particle_type)
+
+        if not qubit_first:
             Polarisation1 = np.zeros(8, dtype=float)
             Polarisation2 = np.zeros(3, dtype=float)
 
@@ -1352,7 +1466,7 @@ class DensityMatrixObservables23(DensityMatrixObservables):
                 if np.abs(Polarisation2[j]) < epsilon:
                     Polarisation2[j] = 0.
 
-        elif particle_type[0] == 'fermion':
+        else:
             Polarisation1 = np.zeros(3, dtype=float)
             Polarisation2 = np.zeros(8, dtype=float)
 
@@ -1367,82 +1481,71 @@ class DensityMatrixObservables23(DensityMatrixObservables):
                 Polarisation2[j] = np.real(np.trace(np.dot(tensorprod2, self.square_matrix())))/2.
                 if np.abs(Polarisation2[j]) < epsilon:
                     Polarisation2[j] = 0.
-        else:
-            raise ValueError("particle_type only accepts elements that are 'fermion' or 'boson'.")
 
         return Polarisation1, Polarisation2
 
     def spin_expectation(self, particle_type:list[str]) -> tuple[list[float], list[float]]:
         """
             Input:  self -> density matrix
-                    epsilon -> threshold parameter
-            Output: Spin expectation value of the two particles of the system.
+                    particle_type -> list of the two particle types, one 'boson' (qutrit) and one 'fermion' or 'massless_boson' (qubit)
+            Output: Spin expectation value of the two particles of the system, in the order of the density matrix.
+                    Qutrit: <J_i> with J_x = (lambda_1 + lambda_6)/sqrt(2), J_y = (lambda_2 + lambda_7)/sqrt(2),
+                    J_z = lambda_3/2 + sqrt(3) lambda_8/2.
+                    Qubit: <S_i> = B_i/2 for a fermion, (0, 0, B_3) for a massless boson.
+            See the class docstring for the basis and axis assumptions.
         """
-        spin_exp1 = np.zeros(3, dtype=np.complex128)
-        spin_exp2 = np.zeros(3, dtype=np.complex128)
+        qubit_first, qubit_type = self.qubit_qutrit_order(particle_type)
         Polarisation1, Polarisation2 = self.Get_Polarisations(particle_type)
+        P_qubit, P_qutrit = (Polarisation1, Polarisation2) if qubit_first else (Polarisation2, Polarisation1)
 
-        if particle_type[0] == 'boson':
-            spin_exp1[0] = np.sqrt(2) * (Polarisation1[0] + Polarisation1[5])
-            spin_exp1[1] = np.sqrt(2) * (Polarisation1[1] + Polarisation1[6])
-            spin_exp1[2] = Polarisation1[2] + np.sqrt(3) * Polarisation1[7]
-            spin_exp2 = np.array(Polarisation2)/2.
-        elif particle_type[0] == 'fermion':
-            spin_exp1 = np.array(Polarisation1)/2.
-            spin_exp2[0] = np.sqrt(2) * (Polarisation2[0] + Polarisation2[5])
-            spin_exp2[1] = np.sqrt(2) * (Polarisation2[1] + Polarisation2[6])
-            spin_exp2[2] = Polarisation2[2] + np.sqrt(3) * Polarisation2[7]
-        else:
-            raise ValueError("particle_type only accepts elements that are 'fermion' or 'boson'.")
-        
-        return np.real(spin_exp1), np.real(spin_exp2)
+        spin_qubit = self.qubit_spin_from_polarisation(P_qubit, qubit_type)
+        spin_qutrit = np.zeros(3, dtype=float)
+        spin_qutrit[0] = np.sqrt(2) * (P_qutrit[0] + P_qutrit[5])
+        spin_qutrit[1] = np.sqrt(2) * (P_qutrit[1] + P_qutrit[6])
+        spin_qutrit[2] = P_qutrit[2] + np.sqrt(3) * P_qutrit[7]
+
+        if qubit_first:
+            return np.real(spin_qubit), np.real(spin_qutrit)
+        return np.real(spin_qutrit), np.real(spin_qubit)
 
     def spinspin_expectation(self, particle_type:list[str]) -> list[float, float]:
         """
             Input:  self -> density matrix
-                    epsilon -> threshold parameter
-            Output: Expectation value of the spin-spin correlations of the system
+                    particle_type -> list of the two particle types, one 'boson' (qutrit) and one 'fermion' or 'massless_boson' (qubit)
+            Output: Expectation value of the spin-spin correlations <S1_i S2_j> of the system (3x3),
+                    the first index being the first particle of the density matrix.
+                    Qubit spin: S_i = sigma_i/2 for a fermion, S = (0, 0, sigma_3) for a massless boson.
+            See the class docstring for the basis and axis assumptions.
         """
-        spin_spin_exp = np.zeros((3,3), dtype=np.complex128)
+        qubit_first, qubit_type = self.qubit_qutrit_order(particle_type)
         Corr = self.Get_Correlations(particle_type)[0]
+        if not qubit_first:
+            Corr = np.transpose(Corr) #(3, 8): qubit index first
 
-        if particle_type[0] == 'boson':
-            spin_spin_exp[0][0] = (Corr[0][0] + Corr[5][0]) / np.sqrt(2)
-            spin_spin_exp[0][1] = (Corr[0][1] + Corr[5][1]) / np.sqrt(2)
-            spin_spin_exp[0][2] = (Corr[0][2] + Corr[5][2]) / np.sqrt(2)
+        # <(sigma_i/2) J_j>, with C_ia = Tr(rho sigma_i x lambda_a)/2
+        spin_spin_exp = np.zeros((3, 3), dtype=float)
+        for i in range(3):
+            spin_spin_exp[i][0] = (Corr[i][0] + Corr[i][5]) / np.sqrt(2)
+            spin_spin_exp[i][1] = (Corr[i][1] + Corr[i][6]) / np.sqrt(2)
+            spin_spin_exp[i][2] = (Corr[i][2] + np.sqrt(3) * Corr[i][7]) / 2.
 
-            spin_spin_exp[1][0] = (Corr[1][0] + Corr[6][0]) / np.sqrt(2)
-            spin_spin_exp[1][1] = (Corr[1][1] + Corr[6][1]) / np.sqrt(2)
-            spin_spin_exp[1][2] = (Corr[1][2] +  Corr[6][2]) / np.sqrt(2)
+        if qubit_type == 'massless_boson': #S = (0, 0, sigma_3) instead of sigma/2
+            spin_spin_exp[0] = 0.
+            spin_spin_exp[1] = 0.
+            spin_spin_exp[2] *= 2.
 
-            spin_spin_exp[2][0] = (Corr[2][0] + np.sqrt(3) * Corr[7][0]) / 2.
-            spin_spin_exp[2][1] = (Corr[2][1] + np.sqrt(3) * Corr[7][1]) / 2.
-            spin_spin_exp[2][2] = (Corr[2][2] + np.sqrt(3) * Corr[7][2]) / 2.
-
-        elif particle_type[0] == 'fermion':
-            spin_spin_exp[0][0] = (Corr[0][0] + Corr[0][5]) / np.sqrt(2)
-            spin_spin_exp[0][1] = (Corr[0][1] + Corr[0][6]) / np.sqrt(2)
-            spin_spin_exp[0][2] = (Corr[0][2] + np.sqrt(3) * Corr[0][7]) / 2.
-
-            spin_spin_exp[1][0] = (Corr[1][0] + Corr[1][5]) / np.sqrt(2)
-            spin_spin_exp[1][1] = (Corr[1][1] + Corr[1][6]) / np.sqrt(2)
-            spin_spin_exp[1][2] = (Corr[1][2] + np.sqrt(3) * Corr[1][7]) / 2.
-
-            spin_spin_exp[2][0] = (Corr[2][0] + Corr[2][5]) / np.sqrt(2)
-            spin_spin_exp[2][1] = (Corr[2][1] + Corr[2][6]) / np.sqrt(2)
-            spin_spin_exp[2][2] = (Corr[2][2] + np.sqrt(3) * Corr[2][7]) / 2.
-
-        else:
-            raise ValueError("particle_type only accepts elements that are 'fermion' or 'boson'.")
-        
+        if not qubit_first:
+            spin_spin_exp = np.transpose(spin_spin_exp)
         return np.real(spin_spin_exp)
-    
+
 
 class DensityMatrixObservables33(DensityMatrixObservables):
     """
         Class reprensenting density matrices of qutrit-qutrit systems.
         It is a child of the generic class and thus inherits its methods.
         We define here the observables specific to qutrit-qutrit systems.
+        Both particles are massive spin-1 particles: a massless boson only has 2 helicities (+1, -1) and is a qubit
+        (see DensityMatrixObservables23 for a massless boson with a massive one).
     """
     
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
@@ -1615,6 +1718,10 @@ class DensityMatrixObservables222(DensityMatrixObservables):
         Class reprensenting density matrices of qubit-qubit-qubit systems.
         It is a child of the generic class and thus inherits its methods.
         We define here the observables specific to qubit-qubit-qubit systems.
+        The qubits can be fermions or massless bosons, in their own helicity basis (+, -). For a massless boson, sigma_3 is
+        the helicity but sigma_1 and sigma_2 are linear polarisation (Stokes) parameters, which depend on the azimuthal
+        phase convention of the HELAS polarisation vectors: the polarisations and correlations below are then not spin
+        quantities (its spin is S = (0, 0, sigma_3), see qubit_spin_matrix).
     """
 
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:
@@ -1704,6 +1811,10 @@ class DensityMatrixObservables223(DensityMatrixObservables):
         We define here the observables specific to qubit-qubit-qutrit systems.
         The two qubits are assumed to be the first two particles of the density matrix and the qutrit the last one.
         As for the qubit-qutrit and qutrit-qutrit classes, each Gell-Mann matrix in an expectation value comes with a factor 1/2.
+        The qubits can be fermions or massless bosons, in their own helicity basis (+, -). For a massless boson, sigma_3 is
+        the helicity but sigma_1 and sigma_2 are linear polarisation (Stokes) parameters, which depend on the azimuthal
+        phase convention of the HELAS polarisation vectors: the polarisations and correlations below are then not spin
+        quantities (its spin is S = (0, 0, sigma_3), see qubit_spin_matrix).
     """
 
     def __init__(self, user_input:Union[list[complex, complex], list[complex], str], len_user_input=None, order_helicities=None) -> None:

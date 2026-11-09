@@ -2936,7 +2936,7 @@ class DensityInterface(ReweightInterface):
         for particle_id in pdg_codes: #list on the pdg-code of the particles that we study
             for n_particles_model in range(len(particles)):
                 if particles[n_particles_model]['pdg_code'] == particle_id or particles[n_particles_model]['pdg_code'] == -particle_id:
-                    if particles[n_particles_model]['spin'] == 3 and particles[n_particles_model]['mass'] == 'ZERO': #if the particle is a massless boson, we set the spin d.o.f. to 2. Can it be problemtaic for some gauges ?
+                    if particles[n_particles_model]['spin'] == 3 and particles[n_particles_model]['mass'].lower() == 'zero': #if the particle is a massless boson, we set the spin d.o.f. to 2.
                         self.spins.append(particles[n_particles_model]['spin'] - 1)
                     else: #if the boson has a mass, we keep the 3 spin d.o.f.
                         self.spins.append(particles[n_particles_model]['spin'])
