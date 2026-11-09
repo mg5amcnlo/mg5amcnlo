@@ -4650,8 +4650,13 @@ This implies that with decay chains:
                             set(old_definition) != set(new_definition or []):
                         logger.warning('multiparticle "%s" is redefined in the file; '
                                        'using the file definition for this check.' % name)
-                for block in named_sets:
-                    add_set(block['name'], generate_set(block['processes']))
+                first_amplitudes = None
+                for index, block in enumerate(named_sets):
+                    amplitudes = generate_set(block['processes'])
+                    add_set(block['name'], amplitudes)
+                    if index == 0:
+                        first_amplitudes = amplitudes
+                self._curr_amps = first_amplitudes
             finally:
                 self._multiparticles = saved_multiparticles
 
@@ -4740,7 +4745,8 @@ This implies that with decay chains:
 
         args = self.split_arg(line)
         if args and args[0] == 'double_counting':
-            return self.do_check_double_counting(line)
+            self.do_check_double_counting(line)
+            return None
         # Check args validity
         param_card = self.check_check(args)
 
