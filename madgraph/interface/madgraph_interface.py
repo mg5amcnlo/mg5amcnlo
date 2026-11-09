@@ -4421,15 +4421,21 @@ This implies that with decay chains:
             return ' > '.join(parts)
 
         def remove_fake_root(vertices, process):
-            initial_numbers = [leg.get('number') for leg in process.get('legs')
-                               if not leg.get('state')]
+            initial_ids = set(abs(leg.get('id')) for leg in process.get('legs')
+                              if not leg.get('state'))
             for index, vertex in enumerate(vertices):
-                for leg in vertex.get('legs'):
-                    if leg.get('number') not in initial_numbers:
-                        continue
-                    if len(vertex.get('legs')) == 2:
-                        other = [other for other in vertex.get('legs')
-                                 if other is not leg][0]
+                candidates = [leg for leg in vertex.get('legs')
+                              if not leg.get('state') and abs(leg.get('id')) in initial_ids]
+                if not candidates:
+                    continue
+                if len(candidates) > 1:
+                    raise self.InvalidCmd(
+                        'check double_counting found an ambiguous decay root')
+                leg = candidates[0]
+                if len(vertex.get('legs')) == 2:
+                    other = [other for other in vertex.get('legs')
+                             if other is not leg][0]
+                    if abs(other.get('id')) == abs(leg.get('id')):
                         del vertices[index]
                         for vertex_index, remaining in enumerate(vertices):
                             for leg_index, candidate in enumerate(remaining.get('legs')):
@@ -4437,12 +4443,12 @@ This implies that with decay chains:
                                     return vertices, (vertex_index, leg_index)
                         raise self.InvalidCmd(
                             'check double_counting failed to find the decaying leg')
-                    for vertex_index, remaining in enumerate(vertices):
-                        for leg_index, candidate in enumerate(remaining.get('legs')):
-                            if candidate is leg:
-                                return vertices, (vertex_index, leg_index)
-                    raise self.InvalidCmd(
-                        'check double_counting failed to find the decaying leg')
+                for vertex_index, remaining in enumerate(vertices):
+                    for leg_index, candidate in enumerate(remaining.get('legs')):
+                        if candidate is leg:
+                            return vertices, (vertex_index, leg_index)
+                raise self.InvalidCmd(
+                    'check double_counting failed to find the decaying leg')
             raise self.InvalidCmd('check double_counting failed to find the decaying leg')
 
         def combine_graphs(production, production_occurrence, decay, decay_occurrence):
