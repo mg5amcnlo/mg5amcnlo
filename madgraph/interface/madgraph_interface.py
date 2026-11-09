@@ -4084,7 +4084,7 @@ This implies that with decay chains:
 
 
 
-    def draw(self, line,selection='all',Dtype=''):
+    def draw(self, line,selection='all',Dtype='',do_merge=True):
         """ draw the Feynman diagram for the given process.
         Dtype refers to born, real or loop"""
 
@@ -4098,7 +4098,7 @@ This implies that with decay chains:
         # the (optional) output directory afterwards.
         (parsed_opts, args) = _draw_parser.parse_args(args)
         no_open = parsed_opts.no_open
-        merge = parsed_opts.merge
+        merge = do_merge and parsed_opts.merge
 
         if not args:
             if no_open:
@@ -4140,8 +4140,11 @@ This implies that with decay chains:
             amplitudes.extend(amp.get_amplitudes())
 
         eps_files = []
+        # the loop amplitudes carry the born process: keep the diagram type in
+        # the name so that born and loop files do not overwrite each other
+        prefix = (Dtype + '_') if Dtype else ''
         for amp in amplitudes:
-            filename = pjoin(args[0], 'diagrams_' + \
+            filename = pjoin(args[0], 'diagrams_' + prefix + \
                                     amp.get('process').shell_string() + ".eps")
             eps_files.append(filename)
 
@@ -4172,23 +4175,28 @@ This implies that with decay chains:
                 self.exec_cmd('open %s' % filename)
 
         if merge and eps_files:
-            output_pdf = pjoin(args[0], 'all_diagrams.pdf')
-            output_pdf_abs = os.path.abspath(output_pdf)
-            eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
-            gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
-                      '-sOutputFile=' + output_pdf_abs] + eps_files_sorted_abs
-            try:
-                subprocess.check_call(gs_cmd, shell=False)
-            except (subprocess.CalledProcessError, OSError) as e:
-                logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
-                logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
-            else:
-                logger.info("Merged diagrams into " + output_pdf)
-                if not no_open:
-                    self.exec_cmd('open %s' % output_pdf)
+            self._merge_diagrams_eps(args[0], eps_files, no_open)
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start))
+        return eps_files
+
+    def _merge_diagrams_eps(self, dirpath, eps_files, no_open=False):
+        """Merge the eps files into DIRPATH/all_diagrams.pdf with ghostscript."""
+        output_pdf = pjoin(dirpath, 'all_diagrams.pdf')
+        output_pdf_abs = os.path.abspath(output_pdf)
+        eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
+        gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
+                  '-sOutputFile=' + output_pdf_abs] + eps_files_sorted_abs
+        try:
+            subprocess.check_call(gs_cmd, shell=False)
+        except (subprocess.CalledProcessError, OSError) as e:
+            logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
+            logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
+        else:
+            logger.info("Merged diagrams into " + output_pdf)
+            if not no_open:
+                self.exec_cmd('open %s' % output_pdf)
 
     def _parse_display_output_args(self, line_args):
         """Extract the optional output directory, --no_open and --merge flags.

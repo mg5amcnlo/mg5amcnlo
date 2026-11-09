@@ -108,24 +108,13 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_display(self,args)
 
-        # The output options of the LO 'display diagrams' are not supported here:
-        # the born, real and loop amplitudes are handled by separate calls, so
-        # --merge would have each diagram type overwrite the previous one, and
-        # 'diagrams_text' has its own (pager only) implementation which would
-        # silently ignore both the directory and the flags.
-        forbidden = [a for a in args[1:] \
-                     if a in ['--no_open','-no_open','--merge','-merge']]
-        if forbidden and args[0] in ['diagrams', 'diagrams_text']:
-            raise self.InvalidCmd("%s: option not supported for NLO processes."%\
-                                                          ' '.join(forbidden))
+        # options (--no_open, --merge) must not be mistaken for a diagram type
+        positional = [a for a in args[1:] if not a.startswith('-')]
 
-        if args[0] == 'diagrams_text' and len(args)>=2 \
-                and args[1] not in ['born','loop','virt','real']:
-            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
-
-        if args[0] in ['diagrams', 'processes'] and len(args)>=3 \
-                and args[1] not in ['born','loop','virt','real']:
-            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%args[1])
+        if args[0] in ['diagrams', 'processes', 'diagrams_text'] \
+                and len(positional)>=2 \
+                and positional[0] not in ['born','loop','virt','real']:
+            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%positional[0])
         # rename args[1] if it is 'virt'
         if len(args) > 1:
             if args[1] == 'virt':
@@ -408,30 +397,44 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              'born': self._fks_multi_proc.get_born_amplitudes,
                              'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
-                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
+                typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
+                rest = args[2:] if typed else args[1:]
+                dirpath, no_open, merge = self._parse_display_output_args(rest)
+                eps_files = []
+                if typed:
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
                     if args[1] == 'loop' and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
-                    self.draw(' '.join(args[2:]), Dtype = args[1])
+                    eps_files += self.draw(' '.join(rest), Dtype=args[1], do_merge=False)
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
                         if self._curr_amps:
-                            self.draw(' '.join(args[1:]), Dtype=diag_type)
+                            eps_files += self.draw(' '.join(rest), Dtype=diag_type, do_merge=False)
+                if merge and eps_files:
+                    self._merge_diagrams_eps(dirpath, eps_files, no_open)
 
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
 
             if args[0] == 'diagrams_text':
-                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
+                typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
+                rest = args[2:] if typed else args[1:]
+                dirpath, no_open, merge = self._parse_display_output_args(rest)
+                if dirpath is None and (no_open or merge):
+                    raise self.InvalidCmd('--no_open and --merge require an explicit directory path, e.g. display diagrams_text ./ --no_open')
+                if typed:
                     get_amps = get_amps_dict[args[1]]
                     self._curr_amps = get_amps()
                     #check that if one requests the virt diagrams, there are virt_amplitudes
                     if args[1] in ['virt', 'loop'] and len(self._curr_amps) == 0:
                         raise self.InvalidCmd('No virtuals have been generated')
                     text = "\n".join([amp.nice_string() for amp in self._curr_amps])
+                    if dirpath:
+                        self._write_diagrams_text_files(dirpath, merge=merge,
+                                                        prefix=args[1] + '_')
                 else:
                     text = 'Born diagrams:\n' 
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
