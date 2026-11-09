@@ -41,6 +41,8 @@ runs:
 
     - run: |
         echo "PYTHONPATH=$PYTHONPATH:$HOME/.cache/UFOMODEL" >> $GITHUB_ENV
-        cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        if [ -d "$HOME/.cache/UFOMODEL" ]; then
+          cp -r $HOME/.cache/UFOMODEL/* $GITHUB_WORKSPACE/models
+        fi
         ls $GITHUB_WORKSPACE/models
       shell: bash
