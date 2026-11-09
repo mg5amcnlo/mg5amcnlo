@@ -2365,3 +2365,53 @@ jobs:
         run: |
             cd $GITHUB_WORKSPACE
             ./tests/test_manager.py test_pythia8_delphes_parallel -pA -t0 -l INFO
+
+
+  acceptancetest_check_double_counting:
+    # Minimal job for the check double_counting tests: the bundled sm and
+    # MSSM_SLHA2 models are enough, so no UFO or HEPTools cache is needed.
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == true
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/checkout_mg5
+      - uses: ./.github/actions/restore-pip-cache
+
+      - name: install ghostscript
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ghostscript
+
+      - name: test check double_counting
+        run: |
+          cd $GITHUB_WORKSPACE
+          tests=(
+            test_check_double_counting_groups
+            test_check_double_counting_standalone
+            test_check_double_counting_file
+            test_check_double_counting_file_requires_model
+            test_check_double_counting_file_current
+            test_check_double_counting_file_errors
+            test_check_double_counting_multiparticles
+            test_check_double_counting_or_multiparticle
+            test_check_double_counting_decays
+            test_check_double_counting_rejects_nlo
+            test_check_double_counting_decay_overlap
+            test_check_double_counting_zz_overlap
+            test_check_double_counting_show
+            test_check_double_counting_bsm_names
+            test_check_double_counting_save
+            test_check_double_counting_save_default
+            test_check_double_counting_save_directory
+            test_check_double_counting_save_non_pdf
+            test_check_double_counting_save_failure_keeps_old
+            test_check_double_counting_save_new_directory
+            test_check_double_counting_save_existing_file
+            test_check_double_counting_save_decay
+            test_check_double_counting_save_with_show
+            test_check_double_counting_model
+          )
+          for test in "${tests[@]}"; do
+            ./tests/test_manager.py "$test" -pA -t0 -l INFO || exit 1
+          done
