@@ -365,7 +365,7 @@ generate e+ e- > e+ e-
         self.do('import model sm')
         self.do('generate p p > w+ w- b b~')
         tmpdir = tempfile.mkdtemp()
-        path = os.path.join(tmpdir, 'repeated.pdf')
+        path = os.path.join(tmpdir, 'diagrams', 'dc', 'repeated.pdf')
         try:
             shared = self.cmd.do_check_double_counting(
                 'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
@@ -376,6 +376,27 @@ generate e+ e- > e+ e-
                 self.assertEqual(handle.read(4), b'%PDF')
             self.assertGreater(os.path.getsize(path), 1000)
         finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_default(self):
+        """bare --save writes repeated_diagrams.pdf in the current directory"""
+        if not shutil.which('gs'):
+            self.skipTest('ghostscript not installed')
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        previous = os.getcwd()
+        try:
+            os.chdir(tmpdir)
+            shared = self.cmd.do_check_double_counting(
+                'double_counting { p p > t t~, t > b w+, t~ > b~ w- } --save')
+            self.assertEqual(len(shared), 7)
+            path = os.path.join(tmpdir, 'repeated_diagrams.pdf')
+            self.assertTrue(os.path.isfile(path))
+            with open(path, 'rb') as handle:
+                self.assertEqual(handle.read(4), b'%PDF')
+        finally:
+            os.chdir(previous)
             shutil.rmtree(tmpdir)
 
     def test_check_double_counting_model(self):
