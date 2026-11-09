@@ -3636,7 +3636,8 @@ This implies that with decay chains:
             if dtype and dtype != self._available_diagram_type():
                 logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
             else:
-                self.draw(' '.join(rest))
+                selection = 'loop' if dtype == 'virt' else 'all'
+                self.draw(' '.join(rest), selection)
 
         if args[0] == 'particles' and len(args) == 1:
             propagating_particle = []
