@@ -4236,17 +4236,21 @@ This implies that with decay chains:
             txt_files.append(filename)
 
         if merge and txt_files:
-            merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
-            try:
-                with open(merged_file, 'w') as out_fs:
-                    for f in sorted(txt_files):
-                        with open(f, 'r') as in_fs:
-                            out_fs.write(in_fs.read())
-                            out_fs.write('\n\n')
-                logger.info("Merged diagrams text into " + merged_file)
-            except IOError as e:
-                logger.warning("Failed to merge text files: %s" % str(e))
+            self._merge_diagrams_text_files(dirpath, txt_files)
         return txt_files
+
+    def _merge_diagrams_text_files(self, dirpath, txt_files):
+        """Concatenate the text files into DIRPATH/all_diagrams_text.txt."""
+        merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
+        try:
+            with open(merged_file, 'w') as out_fs:
+                for f in sorted(txt_files):
+                    with open(f, 'r') as in_fs:
+                        out_fs.write(in_fs.read())
+                        out_fs.write('\n\n')
+            logger.info("Merged diagrams text into " + merged_file)
+        except IOError as e:
+            logger.warning("Failed to merge text files: %s" % str(e))
 
     # Perform checks
     def do_check(self, line):
