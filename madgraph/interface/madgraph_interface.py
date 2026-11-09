@@ -39,7 +39,6 @@ import tempfile
 import traceback
 import time
 import inspect
-import itertools
 import urllib.request, urllib.parse, urllib.error
 import random
 import io
@@ -4263,42 +4262,193 @@ This implies that with decay chains:
                 return tuple(freeze(val) for val in value)
             return value
 
-        def diagram_key(diagram, ninitial):
-            def link_key(link):
-                if link.end_link:
-                    return ('e', freeze(link.links[0][0]))
-                return ('v', freeze(link.vertex_id[0]),
-                        tuple(link_key(sub_link) for sub_link in link.links))
-            tag = diagram_generation.DiagramTag(diagram, model=self._curr_model,
-                                                ninitial=ninitial)
-            return link_key(tag.tag)
+        def build_graph(vertices, dangling=None):
+            last = len(vertices) - 1
+            records = []
+            for vertex_index, vertex in enumerate(vertices):
+                for leg_index, leg in enumerate(vertex.get('legs')):
+                    role = 'out' if (vertex_index < last and
+                                     leg_index == len(vertex.get('legs')) - 1) else 'in'
+                    records.append((vertex_index, leg_index, leg, role))
+            edges = {}
+            used = set()
+            for vertex_index, leg_index, leg, role in records:
+                if role != 'out' or (vertex_index, leg_index) == dangling:
+                    continue
+                triple = (leg.get('number'), leg.get('id'), leg.get('state'))
+                match = None
+                for other_index, other_leg_index, other, other_role in records:
+                    if other_role != 'in' or \
+                            (other_index, other_leg_index) in used or \
+                            (other_index, other_leg_index) == dangling or \
+                            other_index <= vertex_index:
+                        continue
+                    if (other.get('number'), other.get('id'), other.get('state')) == triple:
+                        match = (other_index, other_leg_index)
+                        break
+                if match is None:
+                    continue
+                used.add(match)
+                edges[(vertex_index, leg_index)] = match
+                edges[match] = (vertex_index, leg_index)
+            external = [(vertex_index, leg_index)
+                        for vertex_index, leg_index, _leg, role in records
+                        if role == 'in' and (vertex_index, leg_index) not in used
+                        and (vertex_index, leg_index) != dangling]
+            return {'vertices': vertices, 'edges': edges,
+                    'external': external, 'conn': dangling}
+
+        def graph_key(graph):
+            vertices = graph['vertices']
+            edges = graph['edges']
+
+            def encode(index, parent_leg, seen):
+                children = []
+                for leg_index, leg in enumerate(vertices[index].get('legs')):
+                    if leg_index == parent_leg:
+                        continue
+                    if (index, leg_index) in edges:
+                        other, other_leg = edges[(index, leg_index)]
+                        if other in seen:
+                            continue
+                        children.append(('v', leg.get('id'),
+                                         encode(other, other_leg, seen | set([other]))))
+                    else:
+                        children.append(('e', leg.get('state'), leg.get('id'),
+                                         freeze(leg.get('polarization')),
+                                         freeze(leg.get('onium'))))
+                return (vertices[index].get('id'), tuple(sorted(children)))
+
+            keys = []
+            for index, leg_index in graph['external']:
+                leg = vertices[index].get('legs')[leg_index]
+                keys.append(('r', leg.get('state'), leg.get('id'),
+                             freeze(leg.get('polarization')), freeze(leg.get('onium')),
+                             encode(index, leg_index, set([index]))))
+            if not keys:
+                raise self.InvalidCmd('check double_counting found an empty diagram')
+            return min(keys)
+
+        def remove_fake_root(vertices, process):
+            initial_numbers = [leg.get('number') for leg in process.get('legs')
+                               if not leg.get('state')]
+            for index, vertex in enumerate(vertices):
+                for leg in vertex.get('legs'):
+                    if leg.get('number') not in initial_numbers:
+                        continue
+                    if len(vertex.get('legs')) == 2:
+                        other = [other for other in vertex.get('legs')
+                                 if other is not leg][0]
+                        del vertices[index]
+                        for vertex_index, remaining in enumerate(vertices):
+                            for leg_index, candidate in enumerate(remaining.get('legs')):
+                                if candidate is other:
+                                    return vertices, (vertex_index, leg_index)
+                        raise self.InvalidCmd(
+                            'check double_counting failed to find the decaying leg')
+                    for vertex_index, remaining in enumerate(vertices):
+                        for leg_index, candidate in enumerate(remaining.get('legs')):
+                            if candidate is leg:
+                                return vertices, (vertex_index, leg_index)
+                    raise self.InvalidCmd(
+                        'check double_counting failed to find the decaying leg')
+            raise self.InvalidCmd('check double_counting failed to find the decaying leg')
+
+        def combine_graphs(production, production_occurrence, decay, decay_occurrence):
+            shift = len(production['vertices'])
+            vertices = production['vertices'] + decay['vertices']
+            edges = dict(production['edges'])
+            for (index, leg_index), (other, other_leg) in decay['edges'].items():
+                edges[(index + shift, leg_index)] = (other + shift, other_leg)
+            external = [occurrence for occurrence in production['external']
+                        if occurrence != production_occurrence]
+            external += [(index + shift, leg_index)
+                         for index, leg_index in decay['external']]
+            production_index, production_leg = production_occurrence
+            decay_index, decay_leg = decay_occurrence
+            decay_index += shift
+            edges[(production_index, production_leg)] = (decay_index, decay_leg)
+            edges[(decay_index, decay_leg)] = (production_index, production_leg)
+            return {'vertices': vertices, 'edges': edges,
+                    'external': external, 'conn': None}
+
+        def decay_id(decay_amplitude):
+            for sub_amplitude in decay_amplitude.get('amplitudes'):
+                for leg in sub_amplitude.get('process').get('legs'):
+                    if not leg.get('state'):
+                        return leg.get('id')
+            raise self.InvalidCmd('check double_counting failed to identify a decaying particle')
+
+        def expand_decay(decay_amplitude):
+            expanded = []
+            for sub_amplitude in decay_amplitude.get('amplitudes'):
+                for diagram in (sub_amplitude.get('diagrams') or []):
+                    vertices = copy.deepcopy(diagram.get('vertices'))
+                    vertices, conn = remove_fake_root(vertices,
+                                                      sub_amplitude.get('process'))
+                    graphs = [build_graph(vertices, dangling=conn)]
+                    for nested in decay_amplitude.get('decay_chains'):
+                        nested_id = decay_id(nested)
+                        nested_graphs = expand_decay(nested)
+                        new_graphs = []
+                        for graph in graphs:
+                            for occurrence in list(graph['external']):
+                                vertex_index, leg_index = occurrence
+                                leg = graph['vertices'][vertex_index].get('legs')[leg_index]
+                                if leg.get('id') != nested_id:
+                                    continue
+                                for nested_graph in nested_graphs:
+                                    new_graphs.append(combine_graphs(
+                                        copy.deepcopy(graph), occurrence,
+                                        copy.deepcopy(nested_graph),
+                                        nested_graph['conn']))
+                        graphs = new_graphs
+                    for graph in graphs:
+                        graph['conn'] = conn
+                        expanded.append(graph)
+            return expanded
+
+        def decay_full_graphs(decay_chain):
+            graphs = []
+            for sub_amplitude in decay_chain.get('amplitudes'):
+                for diagram in (sub_amplitude.get('diagrams') or []):
+                    productions = [build_graph(copy.deepcopy(diagram.get('vertices')))]
+                    for decay in decay_chain.get('decay_chains'):
+                        particle_id = decay_id(decay)
+                        expanded = expand_decay(decay)
+                        new_productions = []
+                        for production in productions:
+                            for occurrence in list(production['external']):
+                                vertex_index, leg_index = occurrence
+                                leg = production['vertices'][vertex_index].get('legs')[leg_index]
+                                if leg.get('id') != particle_id:
+                                    continue
+                                for decay_graph in expanded:
+                                    new_productions.append(combine_graphs(
+                                        copy.deepcopy(production), occurrence,
+                                        copy.deepcopy(decay_graph),
+                                        decay_graph['conn']))
+                        productions = new_productions
+                    graphs.extend(productions)
+            return graphs
 
         def amplitude_keys(amplitude):
             if isinstance(amplitude, diagram_generation.DecayChainAmplitude):
-                productions = {}
-                for sub_amplitude in amplitude.get('amplitudes'):
-                    productions.update(amplitude_keys(sub_amplitude))
-                chains = [amplitude_keys(decay) for decay in
-                          amplitude.get('decay_chains')]
-                result = {}
-                for prod_key, prod_desc in productions.items():
-                    if not chains:
-                        result[(prod_key, ())] = prod_desc
-                        continue
-                    combinations = itertools.product(*[list(chain) for chain in chains])
-                    for combination in combinations:
-                        key = (prod_key, tuple(sorted(combination)))
-                        decay_desc = ' ; '.join(chains[index][single]
-                                                for index, single in enumerate(combination))
-                        result[key] = prod_desc + '  [decays: ' + decay_desc + ']'
-                return result
+                names = ' ; '.join(sub.get('process').nice_string()
+                                   for sub in amplitude.get('amplitudes'))
+                keys = {}
+                for graph in decay_full_graphs(amplitude):
+                    keys[graph_key(graph)] = names + '  [with decays]'
+                return keys
 
             process = amplitude.get('process')
             if process.get('has_born') is False:
                 raise self.InvalidCmd('check double_counting only supports LO tree diagrams')
-            ninitial = process.get_ninitial()
-            return {(diagram_key(diagram, ninitial), ()): diagram.nice_string()
-                    for diagram in (amplitude.get('diagrams') or [])}
+            keys = {}
+            for diagram in (amplitude.get('diagrams') or []):
+                graph = build_graph(copy.deepcopy(diagram.get('vertices')))
+                keys[graph_key(graph)] = diagram.nice_string()
+            return keys
 
         def generate_set(processes):
             amplitudes = diagram_generation.AmplitudeList()
