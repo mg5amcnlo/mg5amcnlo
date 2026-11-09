@@ -523,7 +523,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("     raw       vertex-level Diagram.nice_string() (default)")
         logger.info("     chain     initial > resonant intermediates > final")
         logger.info("     chain-all initial > all intermediates > final")
-        logger.info("   --save=FILE.pdf writes the repeated diagrams to a PDF, labelling the sets where they appear.")
+        logger.info("   --save[=FILE.pdf] writes the repeated diagrams to a PDF (default: repeated_diagrams.pdf).")
         logger.info("o full:",'$MG:color:GREEN')
         logger.info("   Perform all four checks described below:")
         logger.info("   permutation, brs, gauge and lorentz_invariance.")
@@ -4265,12 +4265,21 @@ This implies that with decay chains:
                 raise self.InvalidCmd(
                     'check double_counting accepts --show=raw, --show=chain or --show=chain-all')
         save_path = None
-        save_option = re.search(r'--save=(?:"([^"]+)"|\'([^\']+)\'|(\S+))', text)
-        if save_option:
+        if re.search(r'--save\s*=\s*', text):
+            save_option = re.search(
+                r'--save\s*=\s*(?:"([^"]+)"|\'([^\']+)\'|(\S+))', text)
+            if not save_option:
+                raise self.InvalidCmd('check double_counting requires --save=PATH')
             save_path = next(group for group in save_option.groups() if group)
             text = (text[:save_option.start()] + text[save_option.end():]).strip()
-        elif re.search(r'--save\b', text):
-            raise self.InvalidCmd('check double_counting requires --save=PATH')
+        else:
+            save_option = re.search(r'--save\b', text)
+            if save_option:
+                tail = text[save_option.end():].strip()
+                if tail and not tail.startswith(('{', '--')):
+                    raise self.InvalidCmd('check double_counting requires --save=PATH')
+                save_path = 'repeated_diagrams.pdf'
+                text = (text[:save_option.start()] + text[save_option.end():]).strip()
         if not text:
             self.help_check()
             raise self.InvalidCmd('check double_counting requires at least one process set')
