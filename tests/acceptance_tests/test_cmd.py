@@ -447,6 +447,92 @@ generate e+ e- > e+ e-
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_check_double_counting_save_new_directory(self):
+        """--save=DIR/ creates the directory and uses the default filename"""
+        if not shutil.which('gs'):
+            self.skipTest('ghostscript not installed')
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        target_dir = os.path.join(tmpdir, 'diagrams', 'dc') + os.sep
+        try:
+            shared = self.cmd.do_check_double_counting(
+                'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                '--save=' + target_dir)
+            self.assertEqual(len(shared), 7)
+            path = os.path.join(target_dir, 'repeated_diagrams.pdf')
+            self.assertTrue(os.path.isfile(path))
+            with open(path, 'rb') as handle:
+                self.assertEqual(handle.read(4), b'%PDF')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_existing_file(self):
+        """an extensionless existing file warns and is left untouched"""
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'dc')
+        try:
+            with open(path, 'w') as handle:
+                handle.write('keep')
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                shared = self.cmd.do_check_double_counting(
+                    'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                    '--save=' + path)
+            self.assertEqual(len(shared), 7)
+            self.assertTrue(any('Only .pdf output is supported' in message
+                                for message in captured.output))
+            with open(path) as handle:
+                self.assertEqual(handle.read(), 'keep')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_decay(self):
+        """decay-only matches can be saved as a PDF"""
+        if not shutil.which('gs'):
+            self.skipTest('ghostscript not installed')
+        self.do('import model sm')
+        self.do('generate p p > t t~, t > b w+, t~ > b~ w-')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'decay.pdf')
+        try:
+            shared = self.cmd.do_check_double_counting(
+                'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+                '--save=' + path)
+            self.assertEqual(len(shared), 7)
+            self.assertTrue(os.path.isfile(path))
+            with open(path, 'rb') as handle:
+                self.assertEqual(handle.read(4), b'%PDF')
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_check_double_counting_save_with_show(self):
+        """--save works with --show, including an empty --show value"""
+        if not shutil.which('gs'):
+            self.skipTest('ghostscript not installed')
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'chain.pdf')
+        command = 'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+        try:
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                shared = self.cmd.do_check_double_counting(
+                    command + '--show=chain --save=' + path)
+            output = '\n'.join(captured.output)
+            self.assertEqual(len(shared), 7)
+            self.assertIn(' > t t~ > ', output)
+            self.assertNotIn('id:', output)
+            self.assertTrue(os.path.isfile(path))
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                self.cmd.do_check_double_counting(command + '--show=')
+            output = '\n'.join(captured.output)
+            self.assertIn('No value was provided for --show', output)
+            self.assertIn('id:', output)
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_check_double_counting_model(self):
         """a model requested only by the file is reported, not imported"""
         self.do('import model MSSM_SLHA2')
