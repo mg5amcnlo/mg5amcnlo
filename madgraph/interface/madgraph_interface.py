@@ -3632,7 +3632,11 @@ This implies that with decay chains:
         self.check_display(args)
 
         if args[0] == 'diagrams':
-            self.draw(' '.join(args[1:]))
+            dtype, rest = self._split_diagram_type(args)
+            if dtype and dtype != self._available_diagram_type():
+                logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
+            else:
+                self.draw(' '.join(rest))
 
         if args[0] == 'particles' and len(args) == 1:
             propagating_particle = []
@@ -3766,7 +3770,11 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
-            dirpath, no_open, merge = self._parse_display_output_args(args[1:])
+            dtype, rest = self._split_diagram_type(args)
+            if dtype and dtype != self._available_diagram_type():
+                logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
+                return
+            dirpath, no_open, merge = self._parse_display_output_args(rest)
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
             if dirpath:
                 self._write_diagrams_text_files(dirpath, merge=merge)
@@ -4083,6 +4091,19 @@ This implies that with decay chains:
                        "\n\t         valid MG_ME directory.")
 
 
+
+    def _split_diagram_type(self, args):
+        """Split an optional born/real/virt selector from the display arguments."""
+        if len(args) >= 2 and args[1] in ['born', 'real', 'virt', 'loop']:
+            return ('virt' if args[1] == 'loop' else args[1]), args[2:]
+        return None, args[1:]
+
+    def _available_diagram_type(self):
+        """LO processes have born diagrams; loop-induced processes have virt."""
+        if all([amp['process'].get('has_born') is False
+                for amp in self._curr_amps]):
+            return 'virt'
+        return 'born'
 
     def draw(self, line,selection='all',Dtype='',do_merge=True):
         """ draw the Feynman diagram for the given process.
