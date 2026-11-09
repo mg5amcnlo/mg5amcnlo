@@ -236,6 +236,24 @@ generate mu+ mu- > mu+ mu-
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_check_double_counting_file_requires_model(self):
+        """file mode does not import a model named by the file"""
+        self.cmd._curr_model = None
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+""")
+            with self.assertRaises(InvalidCmd) as context:
+                self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertIn('No model active', str(context.exception))
+        finally:
+            shutil.rmtree(tmpdir)
+            self.do('import model sm')
+
     def test_check_double_counting_file_errors(self):
         """check double_counting rejects malformed process-set files"""
         self.do('import model sm')

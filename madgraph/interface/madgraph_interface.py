@@ -4661,11 +4661,9 @@ This implies that with decay chains:
                 raise self.InvalidCmd('No process set found in %s.' % text)
 
             if not self._curr_model:
-                if not header_import:
-                    raise self.InvalidCmd(
-                        'No model active. Import a model first or add "import model ..." to %s.' % text)
-                self.exec_cmd(header_import)
-            elif header_import:
+                raise self.InvalidCmd(
+                    'No model active. Import a model before running check double_counting.')
+            if header_import:
                 file_model = header_import.split()[2] if len(header_import.split()) > 2 else ''
                 session_model = self._curr_model.get('name')
                 if file_model and file_model != session_model:
@@ -4826,6 +4824,8 @@ This implies that with decay chains:
 
         args = self.split_arg(line)
         if args and args[0] == 'double_counting':
+            if isinstance(self, CheckValidForCmdWeb):
+                raise self.WebRestriction('Check call is forbidden on the web')
             self.do_check_double_counting(line)
             return None
         # Check args validity
