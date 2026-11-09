@@ -341,10 +341,19 @@ generate e+ e- > e+ e-
         with self.assertLogs('cmdprint', level='INFO') as captured:
             self.cmd.do_check_double_counting(command + '--show=raw')
         self.assertIn('id:', '\n'.join(captured.output))
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show')
+        missing = '\n'.join(captured.output)
+        self.assertIn('No value was provided for --show', missing)
+        self.assertIn('id:', missing)
         self.assertIsNone(self.cmd.do_check(
             'double_counting { p p > w+ w- b b~ }'))
-        self.assertRaises(InvalidCmd, self.cmd.do_check_double_counting,
-                          command + '--show=bogus')
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show=bogus')
+        invalid = '\n'.join(captured.output)
+        self.assertIn('Invalid --show value "bogus"', invalid)
+        self.assertIn('Available options are: raw, chain, chain-all.', invalid)
+        self.assertIn('id:', invalid)
 
     def test_check_double_counting_bsm_names(self):
         """particle names in the chain come from the active BSM model"""

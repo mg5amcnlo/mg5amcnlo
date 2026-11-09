@@ -4257,13 +4257,19 @@ This implies that with decay chains:
         if text.startswith('double_counting'):
             text = text[len('double_counting'):].strip()
         show = 'raw'
-        option = re.search(r'--show(?:=([-\w]+))?', text)
+        option = re.search(r'--show(?:=([-\w]*))?', text)
         if option:
-            show = option.group(1)
+            value = option.group(1)
             text = (text[:option.start()] + text[option.end():]).strip()
-            if show not in ('raw', 'chain', 'chain-all'):
-                raise self.InvalidCmd(
-                    'check double_counting accepts --show=raw, --show=chain or --show=chain-all')
+            if value is None or value == '':
+                logger.warning(
+                    'No value was provided for --show; using the default "raw".')
+            elif value not in ('raw', 'chain', 'chain-all'):
+                logger.error(
+                    'Invalid --show value "%s". Available options are: raw, chain, chain-all. Using "raw".' % value)
+                show = 'raw'
+            else:
+                show = value
         save_path = None
         if re.search(r'--save\s*=\s*', text):
             save_option = re.search(
