@@ -286,6 +286,46 @@ generate e+ e- > e+ e-
             'double_counting { p p > t t~, (t > b w+, w+ > e+ ve), t~ > b~ w- }')
         self.assertEqual(len(shared), 0)
 
+    def test_check_double_counting_decay_overlap(self):
+        """a decay chain matches the plain diagrams it represents"""
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { p p > t t~, t > b w+, t~ > b~ w- }')
+        self.assertEqual(len(shared), 7)
+
+    def test_check_double_counting_zz_overlap(self):
+        """double-Z diagrams match when the generated set contains them"""
+        self.do('import model sm')
+        self.do('generate p p > l+ l- u u~ QED<=4 QCD<=2')
+        shared = self.cmd.do_check_double_counting(
+            'double_counting { p p > z z, z > l+ l-, z > u u~ }')
+        self.assertTrue(len(shared) > 0)
+        self.assertEqual(list(shared.values())[0], set(['current', 'argument']))
+
+    def test_check_double_counting_model(self):
+        """a model requested only by the file is reported, not imported"""
+        self.do('import model MSSM_SLHA2')
+        tmpdir = tempfile.mkdtemp()
+        path = os.path.join(tmpdir, 'sets.txt')
+        try:
+            with open(path, 'w') as output:
+                output.write("""import model sm
+set process_name A
+generate e+ e- > e+ e-
+set process_name B
+generate e+ e- > e+ e-
+""")
+            with self.assertLogs('cmdprint', level='INFO') as captured:
+                shared = self.cmd.do_check_double_counting('double_counting ' + path)
+            self.assertTrue(any('File requests model "sm"' in message
+                                for message in captured.output))
+            self.assertTrue(any('MSSM_SLHA2' in message
+                                for message in captured.output))
+            self.assertTrue(len(shared) > 0)
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_config(self):
         """check that configuration file is at default value"""
         self.maxDiff=None
