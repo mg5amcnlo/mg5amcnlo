@@ -4221,7 +4221,7 @@ This implies that with decay chains:
                     "Cannot create output directory %s: %s" % (args[0], str(e)))
         return args[0], options.no_open, options.merge
 
-    def _write_diagrams_text_files(self, dirpath, merge=False):
+    def _write_diagrams_text_files(self, dirpath, merge=False, prefix=''):
         """Write one text file per process diagram. If merge=True, also concatenate all into all_diagrams_text.txt."""
         amplitudes = diagram_generation.AmplitudeList()
         for amp in self._curr_amps:
@@ -4229,7 +4229,7 @@ This implies that with decay chains:
 
         txt_files = []
         for amp in amplitudes:
-            filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
+            filename = pjoin(dirpath, 'diagrams_' + prefix + amp.get('process').shell_string() + '.txt')
             with open(filename, 'w') as fs:
                 fs.write(amp.nice_string())
             logger.info('Wrote file ' + filename)
@@ -4246,6 +4246,7 @@ This implies that with decay chains:
                 logger.info("Merged diagrams text into " + merged_file)
             except IOError as e:
                 logger.warning("Failed to merge text files: %s" % str(e))
+        return txt_files
 
     # Perform checks
     def do_check(self, line):

@@ -442,7 +442,19 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['real']())
                     text += '\n\nLoop diagrams:\n'
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['loop']())
-                pydoc.pager(text)
+                    if dirpath:
+                        for diag_type, get_amps in get_amps_dict.items():
+                            self._curr_amps = get_amps()
+                            if self._curr_amps:
+                                self._write_diagrams_text_files(dirpath,
+                                                                prefix=diag_type + '_')
+                        if merge:
+                            merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
+                            with open(merged_file, 'w') as fs:
+                                fs.write(text)
+                            logger.info('Merged diagrams text into ' + merged_file)
+                if not no_open:
+                    pydoc.pager(text)
 
                 # set _curr_amps back to empty
                 self._curr_amps = diagram_generation.AmplitudeList()
