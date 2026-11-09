@@ -4469,12 +4469,16 @@ This implies that with decay chains:
             return {'vertices': vertices, 'edges': edges,
                     'external': external, 'conn': None}
 
-        def decay_id(decay_amplitude):
+        def decay_ids(decay_amplitude):
+            ids = set()
             for sub_amplitude in decay_amplitude.get('amplitudes'):
                 for leg in sub_amplitude.get('process').get('legs'):
                     if not leg.get('state'):
-                        return leg.get('id')
-            raise self.InvalidCmd('check double_counting failed to identify a decaying particle')
+                        ids.add(leg.get('id'))
+            if not ids:
+                raise self.InvalidCmd(
+                    'check double_counting failed to identify a decaying particle')
+            return ids
 
         def expand_decay(decay_amplitude):
             expanded = []
@@ -4483,48 +4487,51 @@ This implies that with decay chains:
                     vertices = copy.deepcopy(diagram.get('vertices'))
                     vertices, conn = remove_fake_root(vertices,
                                                       sub_amplitude.get('process'))
-                    graphs = [build_graph(vertices, dangling=conn)]
+                    graphs = [(build_graph(vertices, dangling=conn), [diagram])]
                     for nested in decay_amplitude.get('decay_chains'):
-                        nested_id = decay_id(nested)
+                        nested_ids = decay_ids(nested)
                         nested_graphs = expand_decay(nested)
                         new_graphs = []
-                        for graph in graphs:
+                        for graph, drawings in graphs:
                             for occurrence in list(graph['external']):
                                 vertex_index, leg_index = occurrence
                                 leg = graph['vertices'][vertex_index].get('legs')[leg_index]
-                                if leg.get('id') != nested_id:
+                                if leg.get('id') not in nested_ids:
                                     continue
-                                for nested_graph in nested_graphs:
-                                    new_graphs.append(combine_graphs(
-                                        copy.deepcopy(graph), occurrence,
-                                        copy.deepcopy(nested_graph),
-                                        nested_graph['conn']))
+                                for nested_graph, nested_conn, nested_drawings in nested_graphs:
+                                    new_graphs.append((
+                                        combine_graphs(
+                                            copy.deepcopy(graph), occurrence,
+                                            copy.deepcopy(nested_graph), nested_conn),
+                                        drawings + nested_drawings))
                         graphs = new_graphs
-                    for graph in graphs:
+                    for graph, drawings in graphs:
                         graph['conn'] = conn
-                        expanded.append(graph)
+                        expanded.append((graph, conn, drawings))
             return expanded
 
         def decay_full_graphs(decay_chain):
             graphs = []
             for sub_amplitude in decay_chain.get('amplitudes'):
                 for diagram in (sub_amplitude.get('diagrams') or []):
-                    productions = [build_graph(copy.deepcopy(diagram.get('vertices')))]
+                    productions = [(build_graph(copy.deepcopy(diagram.get('vertices'))),
+                                    [diagram])]
                     for decay in decay_chain.get('decay_chains'):
-                        particle_id = decay_id(decay)
+                        particle_ids = decay_ids(decay)
                         expanded = expand_decay(decay)
                         new_productions = []
-                        for production in productions:
+                        for production, drawings in productions:
                             for occurrence in list(production['external']):
                                 vertex_index, leg_index = occurrence
                                 leg = production['vertices'][vertex_index].get('legs')[leg_index]
-                                if leg.get('id') != particle_id:
+                                if leg.get('id') not in particle_ids:
                                     continue
-                                for decay_graph in expanded:
-                                    new_productions.append(combine_graphs(
-                                        copy.deepcopy(production), occurrence,
-                                        copy.deepcopy(decay_graph),
-                                        decay_graph['conn']))
+                                for decay_graph, decay_conn, decay_drawings in expanded:
+                                    new_productions.append((
+                                        combine_graphs(
+                                            copy.deepcopy(production), occurrence,
+                                            copy.deepcopy(decay_graph), decay_conn),
+                                        drawings + decay_drawings))
                         productions = new_productions
                     graphs.extend(productions)
             return graphs
@@ -4551,13 +4558,7 @@ This implies that with decay chains:
                 names = ' ; '.join(sub.get('process').nice_string()
                                    for sub in amplitude.get('amplitudes'))
                 keys = {}
-                drawings = []
-                for sub_amplitude in amplitude.get('amplitudes'):
-                    drawings.extend(sub_amplitude.get('diagrams') or [])
-                for decay in amplitude.get('decay_chains'):
-                    for sub_amplitude in decay.get('amplitudes'):
-                        drawings.extend(sub_amplitude.get('diagrams') or [])
-                for graph in decay_full_graphs(amplitude):
+                for graph, drawings in decay_full_graphs(amplitude):
                     keys[graph_key(graph)] = (names + '  [with decays]',
                                               chain_description(graph),
                                               chain_description(graph, True),
