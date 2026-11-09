@@ -4801,6 +4801,8 @@ This implies that with decay chains:
             else:
                 output_pdf = os.path.abspath(save_path)
                 output_dir = os.path.dirname(output_pdf)
+                if any(char in output_pdf for char in ('\0', '\n', '\r')):
+                    raise self.InvalidCmd('Invalid output path for --save: %s' % save_path)
                 try:
                     if output_dir:
                         os.makedirs(output_dir, exist_ok=True)
@@ -4824,9 +4826,12 @@ This implies that with decay chains:
                     handle, temp_pdf = tempfile.mkstemp(
                         prefix='.repeated_', suffix='.pdf', dir=output_dir or None)
                     os.close(handle)
+                    # Argument list, no shell; output_pdf is validated above.
+                    # nosec B603
+                    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
                     subprocess.check_call(
                         ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
-                         '-sOutputFile=' + temp_pdf] + eps_files)
+                         '-sOutputFile=' + temp_pdf] + eps_files, shell=False)
                     os.replace(temp_pdf, output_pdf)
                     temp_pdf = None
                 except (OSError, subprocess.CalledProcessError) as error:
