@@ -108,17 +108,22 @@ class CheckFKS(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_display(self,args)
 
-        # options (--no_open, --merge) must not be mistaken for a diagram type
-        positional = [a for a in args[1:] if not a.startswith('-')]
+        # options (--no_open, --merge, drawing controls, ...) must not be
+        # mistaken for a diagram type or for the output directory
+        alias = {'-no_open': '--no_open', '-merge': '--merge'}
+        if args[0] == 'diagrams':
+            positional = mg_interface._draw_parser.parse_args(
+                [alias.get(a, a) for a in args[1:]])[1]
+        elif args[0] == 'diagrams_text':
+            positional = mg_interface._display_text_parser.parse_args(
+                [alias.get(a, a) for a in args[1:]])[1]
+        else:
+            positional = args[1:]
 
         if args[0] in ['diagrams', 'processes', 'diagrams_text'] \
                 and len(positional)>=2 \
                 and positional[0] not in ['born','loop','virt','real']:
             raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%positional[0])
-        # rename args[1] if it is 'virt'
-        if len(args) > 1:
-            if args[1] == 'virt':
-                args[1] = 'loop' 
 
     def check_add(self, args):
 
@@ -397,18 +402,20 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              'born': self._fks_multi_proc.get_born_amplitudes,
                              'loop': self._fks_multi_proc.get_virt_amplitudes}
             if args[0] == 'diagrams':
-                typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
-                if typed:
-                    dtype = args[1]
-                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype)
+                dtype, rest = self._split_diagram_type(args)
+                if dtype:
+                    key = 'loop' if dtype == 'virt' else dtype
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[key], key)
                     if not self._curr_amps:
                         self._curr_amps = diagram_generation.AmplitudeList()
                         return
-                rest = args[2:] if typed else args[1:]
-                dirpath, no_open, merge = self._parse_display_output_args(rest)
+                dirpath, no_open, merge = self._parse_display_output_args(
+                    rest, mg_interface._draw_parser)
+                if merge and dirpath is None:
+                    raise self.InvalidCmd('--merge requires an explicit directory path, e.g. display diagrams ./ --merge')
                 eps_files = []
-                if typed:
-                    eps_files += self.draw(' '.join(rest), Dtype=dtype, do_merge=False)
+                if dtype:
+                    eps_files += self.draw(' '.join(rest), Dtype=key, do_merge=False)
                 else:
                     for diag_type, get_amps in get_amps_dict.items():
                         self._curr_amps = get_amps()
@@ -421,22 +428,21 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self._curr_amps = diagram_generation.AmplitudeList()
 
             if args[0] == 'diagrams_text':
-                typed = len(args)>=2 and args[1] in list(get_amps_dict.keys())
-                if typed:
-                    dtype = args[1]
-                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype)
+                dtype, rest = self._split_diagram_type(args)
+                if dtype:
+                    key = 'loop' if dtype == 'virt' else dtype
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[key], key)
                     if not self._curr_amps:
                         self._curr_amps = diagram_generation.AmplitudeList()
                         return
-                rest = args[2:] if typed else args[1:]
                 dirpath, no_open, merge = self._parse_display_output_args(rest)
                 if dirpath is None and (no_open or merge):
                     raise self.InvalidCmd('--no_open and --merge require an explicit directory path, e.g. display diagrams_text ./ --no_open')
-                if typed:
+                if dtype:
                     text = "\n".join([amp.nice_string() for amp in self._curr_amps])
                     if dirpath:
                         self._write_diagrams_text_files(dirpath, merge=merge,
-                                                        prefix=dtype + '_')
+                                                        prefix=key + '_')
                 else:
                     text = 'Born diagrams:\n' 
                     text += '\n'.join(amp.nice_string() for amp in get_amps_dict['born']())
@@ -460,9 +466,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 self._curr_amps = diagram_generation.AmplitudeList()
                     
             elif args[0] == 'processes':
-                if len(args)>=2 and args[1] in list(get_amps_dict.keys()):
-                    dtype = args[1]
-                    self._curr_amps = self._get_displayed_amps(get_amps_dict[dtype], dtype, 'processes')
+                dtype, rest = self._split_diagram_type(args)
+                if dtype:
+                    key = 'loop' if dtype == 'virt' else dtype
+                    self._curr_amps = self._get_displayed_amps(get_amps_dict[key], key, 'processes')
                     if self._curr_amps:
                         print('\n'.join(amp.nice_string_processes() for amp in self._curr_amps))
                 else:

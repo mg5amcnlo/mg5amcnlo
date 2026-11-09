@@ -4093,9 +4093,10 @@ This implies that with decay chains:
 
 
     def _split_diagram_type(self, args):
-        """Split an optional born/real/virt selector from the display arguments."""
-        if len(args) >= 2 and args[1] in ['born', 'real', 'virt', 'loop']:
-            return ('virt' if args[1] == 'loop' else args[1]), args[2:]
+        """Remove an optional born/real/virt selector from the display arguments."""
+        for i, arg in enumerate(args[1:], 1):
+            if arg in ['born', 'real', 'virt', 'loop']:
+                return ('virt' if arg == 'loop' else arg), args[1:i] + args[i+1:]
         return None, args[1:]
 
     def _available_diagram_type(self):
@@ -4219,14 +4220,15 @@ This implies that with decay chains:
             if not no_open:
                 self.exec_cmd('open %s' % output_pdf)
 
-    def _parse_display_output_args(self, line_args):
+    def _parse_display_output_args(self, line_args, parser=None):
         """Extract the optional output directory, --no_open and --merge flags.
         The directory is created if it does not exist yet, like for 'draw'."""
 
+        parser = parser or _display_text_parser
         # accept the single dash form of the flags. This has to be done before
         # optparse sees them, since it would read '-no_open' as short options.
         alias = {'-no_open': '--no_open', '-merge': '--merge'}
-        (options, args) = _display_text_parser.parse_args(
+        (options, args) = parser.parse_args(
                                           [alias.get(a, a) for a in line_args])
 
         if len(args) > 1:
