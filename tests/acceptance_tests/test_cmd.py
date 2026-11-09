@@ -303,6 +303,38 @@ generate e+ e- > e+ e-
         self.assertTrue(len(shared) > 0)
         self.assertEqual(list(shared.values())[0], set(['current', 'argument']))
 
+    def test_check_double_counting_show(self):
+        """--show selects raw, chain or chain-all output"""
+        self.do('import model sm')
+        self.do('generate p p > w+ w- b b~')
+        command = 'double_counting { p p > t t~, t > b w+, t~ > b~ w- } '
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show=chain')
+        chain = '\n'.join(captured.output)
+        self.assertIn(' > t t~ > ', chain)
+        self.assertNotIn('id:', chain)
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show=chain-all')
+        chain_all = '\n'.join(captured.output)
+        self.assertIn(' > g t t~ > ', chain_all)
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            self.cmd.do_check_double_counting(command + '--show=raw')
+        self.assertIn('id:', '\n'.join(captured.output))
+        self.assertRaises(InvalidCmd, self.cmd.do_check_double_counting,
+                          command + '--show=bogus')
+
+    def test_check_double_counting_bsm_names(self):
+        """particle names in the chain come from the active BSM model"""
+        self.do('import model MSSM_SLHA2')
+        self.do('generate p p > go go')
+        with self.assertLogs('cmdprint', level='INFO') as captured:
+            shared = self.cmd.do_check_double_counting(
+                'double_counting { p p > go go } --show=chain')
+        chain = '\n'.join(captured.output)
+        self.assertTrue(len(shared) > 0)
+        self.assertIn('go', chain)
+        self.assertNotIn('1000021', chain)
+
     def test_check_double_counting_model(self):
         """a model requested only by the file is reported, not imported"""
         self.do('import model MSSM_SLHA2')

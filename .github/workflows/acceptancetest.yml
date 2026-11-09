@@ -101,6 +101,8 @@ jobs:
             ./tests/test_manager.py test_check_double_counting_decays -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_decay_overlap -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_zz_overlap -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_show -pA -t0 -l INFO
+            ./tests/test_manager.py test_check_double_counting_bsm_names -pA -t0 -l INFO
             ./tests/test_manager.py test_check_double_counting_model -pA -t0 -l INFO
             ./tests/test_manager.py test_import_model -pA -t0 -l INFO
             ./tests/test_manager.py test_check_generate_optimize -pA -t0 -l INFO
