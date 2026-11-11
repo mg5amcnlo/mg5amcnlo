@@ -21,6 +21,7 @@ C
     Include 'maxconfigs.inc'
     Include 'nexternal.inc'
     Include 'maxamps.inc'
+    Include '../../Source/vector.inc' ! defines VECSIZE_MEMMAX (needed by run.inc)
     include 'run.inc'
     INTEGER                 NCOMB         
     PARAMETER (             NCOMB=%(ncomb)d)
@@ -304,7 +305,8 @@ c           Include the Jacobian from helicity sampling
        ENDIF
     ENDIF
 
-   call select_color(rcol, jamp2, iconfig,%(proc_id)s,  icol, ivec)
+C   no grouping: a single matrix element per directory, so iproc=1
+   call select_color(rcol, jamp2, iconfig, 1,  icol, ivec)
 
    IF (MULTI_CHANNEL) THEN
         XTOT=0D0
