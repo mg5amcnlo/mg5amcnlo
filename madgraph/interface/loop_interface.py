@@ -58,16 +58,18 @@ class CheckLoop(mg_interface.CheckValidForCmd):
         
         mg_interface.MadGraphCmd.check_display(self,args)
 
-        # 'display diagrams' also accepts options (--no_open, --merge, ...) which
-        # must not be mistaken for a diagram type or for the output directory
-        positional = [a for a in args[1:] if not a.startswith('-')]
+        # options (--no_open, --merge, drawing controls, ...) must not be
+        # mistaken for a diagram type or for the output directory
+        alias = {'-no_open': '--no_open', '-merge': '--merge'}
+        if args[0] == 'diagrams':
+            positional = mg_interface._draw_parser.parse_args(
+                [alias.get(a, a) for a in args[1:]])[1]
+        else:
+            positional = args[1:]
 
-        if all([not amp['process']['has_born'] for amp in self._curr_amps]):
-            if args[0]=='diagrams' and positional and positional[0]=='born':
-                raise self.InvalidCmd("Processes generated do not have born diagrams.")
-
-        if args[0]=='diagrams' and len(positional)>=2 and positional[0] not in ['born','loop']:
-            raise self.InvalidCmd("Can only display born or loop diagrams, not %s."%positional[0])
+        if args[0]=='diagrams' and len(positional)>=2 \
+                and positional[0] not in ['born','loop','virt','real']:
+            raise self.InvalidCmd("Can only display born, loop (virt) or real diagrams, not %s."%positional[0])
 
     def check_tutorial(self, args):
         """check the validity of the line"""
@@ -424,10 +426,18 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         self.check_display(args)
         
         if args[0]=='diagrams':
-            if len(args)>=2 and args[1] in ['loop','born']:
-                self.draw(' '.join(args[2:]),args[1])
+            dtype, rest = self._split_diagram_type(args)
+            if dtype:
+                loop_induced = all([amp['process'].get('has_born') is False
+                                    for amp in self._curr_amps])
+                available = ['virt'] if loop_induced else ['born', 'virt']
+                if dtype not in available:
+                    logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
+                    return
+                selection = 'loop' if dtype == 'virt' else 'born'
             else:
-                self.draw(' '.join(args[1:]),'all')
+                selection = 'all'
+            self.draw(' '.join(rest), selection)
         else:
             mg_interface.MadGraphCmd.do_display(self,line,*argss,**opt)
 

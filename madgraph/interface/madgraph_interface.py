@@ -3632,7 +3632,12 @@ This implies that with decay chains:
         self.check_display(args)
 
         if args[0] == 'diagrams':
-            self.draw(' '.join(args[1:]))
+            dtype, rest = self._split_diagram_type(args)
+            if dtype and dtype != self._available_diagram_type():
+                logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
+            else:
+                selection = 'loop' if dtype == 'virt' else 'all'
+                self.draw(' '.join(rest), selection)
 
         if args[0] == 'particles' and len(args) == 1:
             propagating_particle = []
@@ -3766,7 +3771,11 @@ This implies that with decay chains:
                 print(amp.nice_string_processes())
 
         elif args[0] == 'diagrams_text':
-            dirpath, no_open, merge = self._parse_display_output_args(args[1:])
+            dtype, rest = self._split_diagram_type(args)
+            if dtype and dtype != self._available_diagram_type():
+                logger.info('No "%s" diagrams exist for this process. Skipping ...' % dtype)
+                return
+            dirpath, no_open, merge = self._parse_display_output_args(rest)
             text = "\n".join([amp.nice_string() for amp in self._curr_amps])
             if dirpath:
                 self._write_diagrams_text_files(dirpath, merge=merge)
@@ -4084,7 +4093,21 @@ This implies that with decay chains:
 
 
 
-    def draw(self, line,selection='all',Dtype=''):
+    def _split_diagram_type(self, args):
+        """Remove an optional born/real/virt selector from the display arguments."""
+        for i, arg in enumerate(args[1:], 1):
+            if arg in ['born', 'real', 'virt', 'loop']:
+                return ('virt' if arg == 'loop' else arg), args[1:i] + args[i+1:]
+        return None, args[1:]
+
+    def _available_diagram_type(self):
+        """LO processes have born diagrams; loop-induced processes have virt."""
+        if all([amp['process'].get('has_born') is False
+                for amp in self._curr_amps]):
+            return 'virt'
+        return 'born'
+
+    def draw(self, line,selection='all',Dtype='',do_merge=True):
         """ draw the Feynman diagram for the given process.
         Dtype refers to born, real or loop"""
 
@@ -4098,7 +4121,7 @@ This implies that with decay chains:
         # the (optional) output directory afterwards.
         (parsed_opts, args) = _draw_parser.parse_args(args)
         no_open = parsed_opts.no_open
-        merge = parsed_opts.merge
+        merge = do_merge and parsed_opts.merge
 
         if not args:
             if no_open:
@@ -4140,8 +4163,11 @@ This implies that with decay chains:
             amplitudes.extend(amp.get_amplitudes())
 
         eps_files = []
+        # the loop amplitudes carry the born process: keep the diagram type in
+        # the name so that born and loop files do not overwrite each other
+        prefix = (Dtype + '_') if Dtype else ''
         for amp in amplitudes:
-            filename = pjoin(args[0], 'diagrams_' + \
+            filename = pjoin(args[0], 'diagrams_' + prefix + \
                                     amp.get('process').shell_string() + ".eps")
             eps_files.append(filename)
 
@@ -4172,32 +4198,43 @@ This implies that with decay chains:
                 self.exec_cmd('open %s' % filename)
 
         if merge and eps_files:
-            output_pdf = pjoin(args[0], 'all_diagrams.pdf')
-            output_pdf_abs = os.path.abspath(output_pdf)
-            eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
-            gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
-                      '-sOutputFile=' + output_pdf_abs] + eps_files_sorted_abs
-            try:
-                subprocess.check_call(gs_cmd, shell=False)
-            except (subprocess.CalledProcessError, OSError) as e:
-                logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
-                logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
-            else:
-                logger.info("Merged diagrams into " + output_pdf)
-                if not no_open:
-                    self.exec_cmd('open %s' % output_pdf)
+            self._merge_diagrams_eps(args[0], eps_files, no_open)
 
         stop = time.time()
         logger.info('time to draw %s' % (stop - start))
+        return eps_files
 
-    def _parse_display_output_args(self, line_args):
+    def _merge_diagrams_eps(self, dirpath, eps_files, no_open=False):
+        """Merge the eps files into DIRPATH/all_diagrams.pdf with ghostscript."""
+        output_pdf = pjoin(dirpath, 'all_diagrams.pdf')
+        fd, tmp_pdf = tempfile.mkstemp(prefix='.all_diagrams', suffix='.pdf',
+                                       dir=dirpath)
+        os.close(fd)
+        eps_files_sorted_abs = sorted(os.path.abspath(f) for f in eps_files)
+        gs_cmd = ['gs', '-dBATCH', '-dNOPAUSE', '-q', '-sDEVICE=pdfwrite',
+                  '-sOutputFile=' + os.path.abspath(tmp_pdf)] + eps_files_sorted_abs
+        try:
+            subprocess.check_call(gs_cmd, shell=False)
+            os.replace(tmp_pdf, output_pdf)
+        except (subprocess.CalledProcessError, OSError) as e:
+            if os.path.exists(tmp_pdf):
+                os.remove(tmp_pdf)
+            logger.warning("Failed to merge diagrams into PDF with ghostscript: %s" % str(e))
+            logger.warning("Make sure 'gs' (ghostscript) is installed and available in PATH.")
+        else:
+            logger.info("Merged diagrams into " + output_pdf)
+            if not no_open:
+                self.exec_cmd('open %s' % output_pdf)
+
+    def _parse_display_output_args(self, line_args, parser=None):
         """Extract the optional output directory, --no_open and --merge flags.
         The directory is created if it does not exist yet, like for 'draw'."""
 
+        parser = parser or _display_text_parser
         # accept the single dash form of the flags. This has to be done before
         # optparse sees them, since it would read '-no_open' as short options.
         alias = {'-no_open': '--no_open', '-merge': '--merge'}
-        (options, args) = _display_text_parser.parse_args(
+        (options, args) = parser.parse_args(
                                           [alias.get(a, a) for a in line_args])
 
         if len(args) > 1:
@@ -4213,7 +4250,7 @@ This implies that with decay chains:
                     "Cannot create output directory %s: %s" % (args[0], str(e)))
         return args[0], options.no_open, options.merge
 
-    def _write_diagrams_text_files(self, dirpath, merge=False):
+    def _write_diagrams_text_files(self, dirpath, merge=False, prefix=''):
         """Write one text file per process diagram. If merge=True, also concatenate all into all_diagrams_text.txt."""
         amplitudes = diagram_generation.AmplitudeList()
         for amp in self._curr_amps:
@@ -4221,23 +4258,34 @@ This implies that with decay chains:
 
         txt_files = []
         for amp in amplitudes:
-            filename = pjoin(dirpath, 'diagrams_' + amp.get('process').shell_string() + '.txt')
+            filename = pjoin(dirpath, 'diagrams_' + prefix + amp.get('process').shell_string() + '.txt')
             with open(filename, 'w') as fs:
                 fs.write(amp.nice_string())
             logger.info('Wrote file ' + filename)
             txt_files.append(filename)
 
         if merge and txt_files:
-            merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
-            try:
-                with open(merged_file, 'w') as out_fs:
-                    for f in sorted(txt_files):
-                        with open(f, 'r') as in_fs:
-                            out_fs.write(in_fs.read())
-                            out_fs.write('\n\n')
-                logger.info("Merged diagrams text into " + merged_file)
-            except IOError as e:
-                logger.warning("Failed to merge text files: %s" % str(e))
+            self._merge_diagrams_text_files(dirpath, txt_files)
+        return txt_files
+
+    def _merge_diagrams_text_files(self, dirpath, txt_files):
+        """Concatenate the text files into DIRPATH/all_diagrams_text.txt."""
+        merged_file = pjoin(dirpath, 'all_diagrams_text.txt')
+        fd, tmp_file = tempfile.mkstemp(prefix='.all_diagrams_text',
+                                        suffix='.txt', dir=dirpath)
+        os.close(fd)
+        try:
+            with open(tmp_file, 'w') as out_fs:
+                for f in sorted(txt_files):
+                    with open(f, 'r') as in_fs:
+                        out_fs.write(in_fs.read())
+                        out_fs.write('\n\n')
+            os.replace(tmp_file, merged_file)
+            logger.info("Merged diagrams text into " + merged_file)
+        except IOError as e:
+            if os.path.exists(tmp_file):
+                os.remove(tmp_file)
+            logger.warning("Failed to merge text files: %s" % str(e))
 
     # Perform checks
     def do_check(self, line):
