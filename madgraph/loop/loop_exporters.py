@@ -3627,11 +3627,15 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize(self, *args, **opts)
 
-    def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
+    def generate_subprocess_directory(self, matrix_element, fortran_model, me_number,
+                                      second_exporter=None, second_helas=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-        
+        # export_processes always forwards these; no second exporter is
+        # supported for the loop-induced output (same as the grouped case)
+        assert second_exporter is None
+
         self.unique_id += 1
         # Then generate the MadLoop files
         calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
