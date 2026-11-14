@@ -7914,8 +7914,38 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         allowed_hel_pairs, allowed_hel = self.get_allowed_hel(helicities)
 
+        # Full-interference mode: W_offdiag = W_full - sum(W_diagonal).
+        # The diagonal blocks are the cartesian product, over decaying
+        # slots, of the two helicity groups the pure_interference card
+        # names. A slot with no card entry stays unrestricted. This needs
+        # no per-leg label, so it works for identical particles.
+        pi_diagonals = None
+        if getattr(self, 'options', {}).get('pure_interference_full'):
+            pure = self._pure_interference()
+            slots = []
+            for k, pdg in enumerate(decaying_pdg):
+                spec = pure.get(pdg)
+                if spec is None:
+                    slots.append([None])
+                    continue
+                prod, dec = spec
+                if set(prod) | set(dec) != set(helicities[k]):
+                    raise self.InvalidCmd(
+                        "MadSpin: pure_interference_full needs the two sides "
+                        "of the pure_interference entry for particle %s to "
+                        "cover its whole helicity basis %s; %s and %s do not. "
+                        "Use 'z = 0 T' for a vector boson."
+                        % (pdg, sorted(helicities[k]), list(prod), list(dec)))
+                slots.append([tuple(prod), tuple(dec)])
+            pi_diagonals = []
+            for combo in itertools.product(*slots):
+                r = madspin.DensityMatrix.normalize_hel_restriction(combo)
+                if r is not None:
+                    pi_diagonals.append(r)
+
         return {
             'decays_key': decays_key,
+            'pi_full_diagonals': pi_diagonals,
             'iden_p': iden_p,
             'sym_factor_prod_ident': sym_factor_prod_ident,
             'init_part': init_part,
@@ -11172,6 +11202,16 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Contract production and decay density matrices
         # ------------------------------------------------------------------
         me = density_dec.scalar_multiplication(density_prod)
+        if prod_static.get('pi_full_diagonals'):
+            full = self._pi_unrestricted_contraction(density_prod, density_dec)
+            saved = density_prod.hel_restriction
+            try:
+                for diag in prod_static['pi_full_diagonals']:
+                    density_prod.hel_restriction = diag
+                    full -= density_dec.scalar_multiplication(density_prod)
+            finally:
+                density_prod.hel_restriction = saved
+            me = full
         # keep_weight_for_polarization_*: the same contraction with a tighter
         # row mask, once per combination. Done here, on the matrices that are
         # still alive, and stashed on self rather than added to the return tuple
