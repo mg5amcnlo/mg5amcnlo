@@ -5890,6 +5890,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         for pdg, (prod, dec) in sorted(self._pure_interference().items()):
             note.append('#  interference  pdg %-6s : production %s  x  decay %s'
                         % (pdg, list(prod), list(dec)))
+        if self.options['pure_interference_full']:
+            note.append('#  full interference: ALL off-diagonal helicity blocks')
         note += [
             '#  Reference normalisation (pb) : %+.8e' % reference,
             '#     (the parent sample cross-section times the branching ratio,',
