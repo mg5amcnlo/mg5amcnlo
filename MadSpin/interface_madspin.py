@@ -306,6 +306,13 @@ class MadSpinOptions(banner.ConfigFile):
                        "leg). The sample then has zero total cross-section by construction, and "
                        "its event weights are SIGNED; see decay_output for their "
                        "value and doc/madspin_sequential_plan.md section 13.")
+        self.add_param('pure_interference_full', False,
+                       comment="pure_interference: sum every off-diagonal helicity "
+                       "block instead of only the doubly off-diagonal (I,I) one, "
+                       "i.e. the complete unpolarised minus polarised "
+                       "interference. Needs a pure_interference entry whose two "
+                       "sides partition the whole helicity basis of each named "
+                       "particle, as 0 and T do for a vector boson.")
         self.add_param('keep_weight_for_polarization_vector', [], typelist=str,
                        comment="density spin modes only. Polarisations (0, +, -, T; "
                        "L/R accepted as aliases of -/+) offered to each decaying "
@@ -8373,6 +8380,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         """Card-level checks for the pure-interference mode, run once at launch
         rather than on the first event inside a worker process."""
         pure = self._pure_interference()
+        if getattr(self, 'options', {}).get('pure_interference_full') and not pure:
+            raise self.InvalidCmd(
+                "MadSpin: pure_interference_full needs a pure_interference "
+                "entry. The two sides of that entry define the helicity "
+                "groups whose off-diagonal blocks are summed.")
         if not pure:
             return
         if not self._density_spinmode():
