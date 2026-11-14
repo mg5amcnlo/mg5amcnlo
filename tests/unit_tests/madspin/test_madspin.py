@@ -2436,6 +2436,42 @@ class TestPureInterferenceRestriction(unittest.TestCase):
 
     # -- pure_interference_full: the complete off-diagonal remainder -------
 
+    def test_the_event_loop_helper_subtracts_the_diagonal_blocks(self):
+        """Exercise the method the event loop calls, not only the identity, so
+        a regression that dropped the subtraction would fail here."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 171),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 172).tensor_product(
+              self._density(hels[1], 173))
+
+        diagonals = [
+            madspin.DensityMatrix.normalize_hel_restriction([ga, gb])
+            for ga in ((0,), (-1, 1)) for gb in ((0,), (-1, 1))]
+
+        interface = interface_madspin.MadSpinInterface
+
+        class _Self(object):
+            _pi_unrestricted_contraction = staticmethod(
+                interface._pi_unrestricted_contraction)
+
+        got = interface._pi_full_interference_contraction(
+            _Self(), prod, dec, diagonals)
+
+        expected = 0j
+        table = {tuple(int(x) for x in lab): complex(val)
+                 for lab, val in zip(prod.helicities, prod.values)}
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            if any((lab[2 * k] == 0) != (lab[2 * k + 1] == 0)
+                   for k in range(2)):
+                expected += complex(val) * table[lab]
+        self.assertTrue(np.allclose(complex(got), expected, atol=1e-4))
+
     def test_full_offdiagonal_equals_unrestricted_minus_diagonals(self):
         """W_offdiag = W_full - sum(W_diag) selects exactly the rows where at
         least one particle has bra and ket in different helicity groups. This

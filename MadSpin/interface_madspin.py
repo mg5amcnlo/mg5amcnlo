@@ -7023,15 +7023,18 @@ class MadSpinInterface(extended_cmd.Cmd):
 
     def _write_pi_c_cache(self, path):
         """Persist the c and <|W|> measurements beside ``max_wgt`` in
-        ``ms_dir``. Five fields; a three-field file is one written before
-        <|W|> existed and is rejected by the reader when the run needs it."""
+        ``ms_dir``. Six fields; a three-field file is one written before
+        <|W|> existed and a five-field one before pure_interference_full, both
+        rejected by the reader when they do not describe this run."""
         try:
             with open(path, 'w') as fsock:
-                fsock.write('%r %r %r %r %r\n' % (
+                fsock.write('%r %r %r %r %r %r\n' % (
                     self._pi_c, self._pi_c_err,
                     getattr(self, '_pi_analytic_c', 0.0) or 0.0,
                     getattr(self, '_pi_absw', 0.0) or 0.0,
-                    getattr(self, '_pi_absw_err', 0.0) or 0.0))
+                    getattr(self, '_pi_absw_err', 0.0) or 0.0,
+                    int(bool(getattr(self, 'options', {}).get(
+                        'pure_interference_full')))))
         except Exception as exc:
             logger.warning('MadSpin: could not cache the pure-interference '
                            'constant c in %s (%s)', path, exc)
@@ -7041,6 +7044,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         cache predates ``<|W|>`` and this run needs it, so the caller can fall
         through to a fresh scan rather than run on a missing normalisation."""
         values = open(path).read().split()
+        # a cache without the field predates the option, i.e. full mode off
+        cached_full = bool(int(values[5])) if len(values) > 5 else False
+        if cached_full != bool(getattr(self, 'options', {}).get(
+                'pure_interference_full')):
+            logger.info("MadSpin pure_interference: the cached constants in %s "
+                        "were measured with pure_interference_full = %s; "
+                        "re-running the maximum-weight scan.",
+                        path, cached_full)
+            return False
         self._pi_c = float(values[0])
         self._pi_c_err = float(values[1]) if len(values) > 1 else 0.0
         if len(values) > 2 and float(values[2]):
@@ -7919,16 +7931,21 @@ class MadSpinInterface(extended_cmd.Cmd):
         # Full-interference mode: W_offdiag = W_full - sum(W_diagonal).
         # The diagonal blocks are the cartesian product, over decaying
         # slots, of the two helicity groups the pure_interference card
-        # names. A slot with no card entry stays unrestricted. This needs
-        # no per-leg label, so it works for identical particles.
+        # names. A slot the card does not name keeps the restriction its
+        # production brace imposes, and a slot with two identical sides
+        # keeps that one block instead of counting it twice. This needs no
+        # per-leg label, so it works for identical particles.
         pi_diagonals = None
         if getattr(self, 'options', {}).get('pure_interference_full'):
             pure = self._pure_interference()
+            # the restriction an ordinary run contracts over: the production
+            # braces, with the cross entries taken back out
+            trace = hel_restriction_trace or (None,) * len(decaying_pdg)
             slots = []
             for k, pdg in enumerate(decaying_pdg):
                 spec = pure.get(pdg)
                 if spec is None:
-                    slots.append([None])
+                    slots.append([trace[k]])
                     continue
                 prod, dec = spec
                 if set(prod) | set(dec) != set(helicities[k]):
@@ -7938,7 +7955,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                         "cover its whole helicity basis %s; %s and %s do not. "
                         "Use 'z = 0 T' for a vector boson."
                         % (pdg, sorted(helicities[k]), list(prod), list(dec)))
-                slots.append([tuple(prod), tuple(dec)])
+                slots.append(sorted({tuple(prod), tuple(dec)}))
             pi_diagonals = []
             for combo in itertools.product(*slots):
                 r = madspin.DensityMatrix.normalize_hel_restriction(combo)
@@ -8426,6 +8443,25 @@ class MadSpinInterface(extended_cmd.Cmd):
                 "spin-density matrix to restrict."
                 % self.options['spinmode'])
 
+        # full mode needs the two sides to partition each named particle's
+        # helicity basis, otherwise W_full minus the diagonal blocks is not the
+        # off-diagonal remainder. Checked here, at launch, so a bad card fails
+        # before the output file has been opened and partly written.
+        if getattr(self, 'options', {}).get('pure_interference_full'):
+            hel_dict = {1: [0], 2: [1, -1], 3: [-1, 0, 1]}
+            for pdg, (prod, dec) in sorted(pure.items()):
+                try:
+                    basis = hel_dict[self.model.get_particle(pdg).get('spin')]
+                except (AttributeError, KeyError, TypeError):
+                    continue
+                if set(prod) | set(dec) != set(basis):
+                    raise self.InvalidCmd(
+                        "MadSpin: pure_interference_full needs the two sides of "
+                        "the pure_interference entry for particle %s to cover "
+                        "its whole helicity basis %s; %s and %s do not. Use "
+                        "'z = 0 T' for a vector boson."
+                        % (pdg, basis, list(prod), list(dec)))
+
         # keep_weight_for_polarization_*: refused, not repaired.
         #
         # _polarization_ratios writes ``nominal * restricted/full`` into the
@@ -8605,6 +8641,26 @@ class MadSpinInterface(extended_cmd.Cmd):
             return density_dec.scalar_multiplication(density_prod)
         finally:
             density_prod.hel_restriction = saved
+
+    def _pi_full_interference_contraction(self, density_prod, density_dec,
+                                          diagonals):
+        """``W_full - sum(W_diagonal)``, the complete off-diagonal helicity
+        remainder.
+
+        ``diagonals`` are the per-particle symmetric restrictions
+        ``_density_basis`` builds for the topology. Subtracting their
+        contractions from the unrestricted one needs no mask that names a leg,
+        which is what makes the result reachable for identical particles.
+        """
+        full = self._pi_unrestricted_contraction(density_prod, density_dec)
+        saved = density_prod.hel_restriction
+        try:
+            for diag in diagonals:
+                density_prod.hel_restriction = diag
+                full -= density_dec.scalar_multiplication(density_prod)
+        finally:
+            density_prod.hel_restriction = saved
+        return full
 
     # ------------------------------------------------------------------
     # keep_weight_for_polarization_vector / _fermion:
@@ -11205,15 +11261,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         # ------------------------------------------------------------------
         me = density_dec.scalar_multiplication(density_prod)
         if prod_static.get('pi_full_diagonals'):
-            full = self._pi_unrestricted_contraction(density_prod, density_dec)
-            saved = density_prod.hel_restriction
-            try:
-                for diag in prod_static['pi_full_diagonals']:
-                    density_prod.hel_restriction = diag
-                    full -= density_dec.scalar_multiplication(density_prod)
-            finally:
-                density_prod.hel_restriction = saved
-            me = full
+            me = self._pi_full_interference_contraction(
+                density_prod, density_dec, prod_static['pi_full_diagonals'])
         # keep_weight_for_polarization_*: the same contraction with a tighter
         # row mask, once per combination. Done here, on the matrices that are
         # still alive, and stashed on self rather than added to the return tuple
