@@ -2434,6 +2434,92 @@ class TestPureInterferenceRestriction(unittest.TestCase):
                         None if spec == [None] else spec[0]])))
 
 
+    # -- pure_interference_full: the complete off-diagonal remainder -------
+
+    def test_the_event_loop_helper_subtracts_the_diagonal_blocks(self):
+        """Exercise the method the event loop calls, not only the identity, so
+        a regression that dropped the subtraction would fail here."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 171),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 172).tensor_product(
+              self._density(hels[1], 173))
+
+        diagonals = [
+            madspin.DensityMatrix.normalize_hel_restriction([ga, gb])
+            for ga in ((0,), (-1, 1)) for gb in ((0,), (-1, 1))]
+
+        interface = interface_madspin.MadSpinInterface
+
+        class _Self(object):
+            _pi_unrestricted_contraction = staticmethod(
+                interface._pi_unrestricted_contraction)
+
+        got = interface._pi_full_interference_contraction(
+            _Self(), prod, dec, diagonals)
+
+        expected = 0j
+        table = {tuple(int(x) for x in lab): complex(val)
+                 for lab, val in zip(prod.helicities, prod.values)}
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            if any((lab[2 * k] == 0) != (lab[2 * k + 1] == 0)
+                   for k in range(2)):
+                expected += complex(val) * table[lab]
+        self.assertTrue(np.allclose(complex(got), expected, atol=1e-4))
+
+    def test_full_offdiagonal_equals_unrestricted_minus_diagonals(self):
+        """W_offdiag = W_full - sum(W_diag) selects exactly the rows where at
+        least one particle has bra and ket in different helicity groups. This
+        is the identity the identical-particle fix relies on."""
+        import numpy as np
+        import itertools
+        hels = [self.VECTOR, self.VECTOR]
+        dim = len(hels[0]) * len(hels[1])
+        allowed_hel = [h for combo in itertools.product(*hels) for h in combo]
+        prod = madspin.DensityMatrix(self._packed(list(range(dim)), 161),
+                                     2, allowed_hel, dim)
+        dec = self._density(hels[0], 162).tensor_product(
+              self._density(hels[1], 163))
+
+        groups_a, groups_b = ((0,), (-1, 1)), ((0,), (-1, 1))
+        diagonals = []
+        for ga, gb in itertools.product(groups_a, groups_b):
+            diagonals.append(madspin.DensityMatrix.normalize_hel_restriction(
+                [ga, gb]))
+
+        saved = prod.hel_restriction
+        try:
+            prod.hel_restriction = None
+            full = dec.scalar_multiplication(prod)
+            diag_sum = 0j
+            for diag in diagonals:
+                prod.hel_restriction = diag
+                diag_sum += dec.scalar_multiplication(prod)
+            remainder = full - diag_sum
+        finally:
+            prod.hel_restriction = saved
+
+        # Independent brute force: a row survives iff at least one particle's
+        # (bra, ket) crosses the 0 / T boundary.
+        expected = 0j
+        table = {tuple(int(x) for x in lab): complex(val)
+                 for lab, val in zip(prod.helicities, prod.values)}
+        for lab, val in zip(dec.helicities, dec.values):
+            lab = tuple(int(x) for x in lab)
+            cross = any(((lab[2 * k] == 0) != (lab[2 * k + 1] == 0))
+                        for k in range(2))
+            if cross:
+                expected += complex(val) * table[lab]
+        self.assertTrue(np.allclose(complex(remainder), expected, atol=1e-4))
+        self.assertLess(abs(complex(remainder).imag),
+                        1e-4 * max(abs(complex(remainder).real), 1e-6))
+
+
 class TestPureInterferenceMode(unittest.TestCase):
     """The mode itself: card syntax, validation, and the two restrictions it
     hands the density matrices."""
@@ -12031,3 +12117,23 @@ class TestSlotOrderAgreement(unittest.TestCase):
 
 def _mom(part):
     return (part.E, part.px, part.py, part.pz)
+
+
+class TestPureInterferenceFullOption(unittest.TestCase):
+    """The new option exists, defaults off, and is refused without a card."""
+
+    def test_option_defaults_to_false(self):
+        opts = interface_madspin.MadSpinOptions()
+        self.assertIn('pure_interference_full', opts)
+        self.assertFalse(opts['pure_interference_full'])
+
+    def test_bool_spelling_is_parsed(self):
+        opts = interface_madspin.MadSpinOptions()
+        opts['pure_interference_full'] = 'True'
+        self.assertIs(opts['pure_interference_full'], True)
+
+    def test_guard_refuses_full_without_an_entry(self):
+        stub = TestPureInterferenceMode._Stub('z = 0 T', branches=('z',))
+        stub.options['pure_interference_full'] = True
+        stub.options['pure_interference'] = ''
+        self.assertRaises(stub.InvalidCmd, stub._validate_pure_interference)
