@@ -1288,7 +1288,6 @@ C goldstones, they behave like left handed leptons (charged); neutrals mix
           sdk_ia_diag= sdk_ia_diag / (-1d0)
           
           if (abs(pdg).eq.251) sdk_ia_diag= sdk_ia_diag / CMPLX(0d0,1d0)
-          write(*,*) 'here', abs(pdg)
 
         endif
 
