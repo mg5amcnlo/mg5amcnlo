@@ -4,10 +4,17 @@
 
 
 from __future__ import absolute_import
-from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
-from . import particles as P
-from . import CT_couplings as C
-from . import lorentz as L
+try:
+    from .object_library import all_vertices, all_CTvertices, Vertex, CTVertex
+    from . import particles as P
+    from . import CT_couplings as C
+    from . import lorentz as L
+except ImportError:
+    # no parent package: module run as a standalone script (write_param_card.py)
+    from object_library import all_vertices, all_CTvertices, Vertex, CTVertex
+    import particles as P
+    import CT_couplings as C
+    import lorentz as L
 
 ################
 # R2 vertices  #

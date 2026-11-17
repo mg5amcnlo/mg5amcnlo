@@ -15,9 +15,9 @@ __author__ = "claude.duhr@durham.ac.uk"
 import cmath
 try:
     from .object_library import all_functions, Function
-except:
-    from . import object_library
-    all_functions, Function = object_library.all_functions , object_library.Function
+except ImportError:
+    # no parent package: module run as a standalone script (write_param_card.py)
+    from object_library import all_functions, Function
 #
 # shortcuts for functions from cmath
 #
