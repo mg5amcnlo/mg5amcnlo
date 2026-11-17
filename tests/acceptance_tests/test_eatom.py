@@ -97,9 +97,9 @@ class TestEatomMadEvent(unittest.TestCase):
         self.cmd_line.run_cmd('generate_events -f')
         val = self.cmd_line.results.current['cross']
         err = self.cmd_line.results.current['error']
-        # EAtom_PS benchmark (10k events): 4.98850e6 +- 1.0e3 pb; 6 x free
-        # fixed target = 4.98684e6 pb
-        target = 4.9885e6
+        # EAtom_PS benchmark (10k events, after the sgn(kappa) fix of ftilde):
+        # 4.98630e6 +- 0.9e3 pb; 6 x free fixed target = 4.98684e6 pb
+        target = 4.9863e6
         self.assertLess(abs(val - target) / (err + 1.0e3), 4.,
                         'cross section %s +- %s, expected %s' % (val, err, target))
         lhe = pjoin(self.run_dir, 'Events', 'run_01', 'unweighted_events.lhe.gz')

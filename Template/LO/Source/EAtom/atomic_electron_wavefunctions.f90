@@ -283,7 +283,13 @@ CONTAINS
     ENDIF
     nume=eatom_nume(ish)
     gtilde=eatom_column(2*ish-1,p)
-    ftilde=eatom_column(2*ish,p)
+    ! The DBSR tables store ftilde = sqrt(2/pi)/p Int Q(r) S_{l'}(p r) dr without
+    ! the factor sgn(kappa) of the momentum-space small component,
+    !   f(p) = sgn(kappa) Int f(x) S_{l-sgn(kappa)}(p x) dx ,
+    ! which makes U = (gtilde, ftilde sigma.phat) Y_{kappa m} tend to u(p)/sqrt(2E)
+    ! (ftilde/gtilde -> +p/(2 m_e) for every shell in the non-relativistic limit).
+    ! ishell = sgn(kappa)*(100n+|kappa|) carries that sign.
+    ftilde=SIGN(1d0,DBLE(ishell))*eatom_column(2*ish,p)
     RETURN
   END SUBROUTINE Get_atomic_electron_gftilde
 

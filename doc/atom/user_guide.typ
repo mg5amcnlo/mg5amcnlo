@@ -105,7 +105,7 @@ set nevents 10000
 - `output madevent epeC12_mumu` writes the process directory `epeC12_mumu`; `launch` runs it.
 - `set ebeam1 100`: positron energy 100 GeV. The atom is at rest, so the energy of beam 2 is not used. No PDFs, no default cuts and fixed scales are set automatically for atom processes.
 
-The run takes well under a minute on a laptop, most of it compilation. The result is printed at the end, σ = 4.989×10⁶ ± 1.0×10³ pb per atom, and the events are written to `epeC12_mumu/Events/run_01/unweighted_events.lhe.gz`. For comparison, six free electrons at rest would give 4.987×10⁶ pb: at this energy the electron motion only changes the total at the 10#super[−3] level, but it spreads √s around its free value by a few per cent.
+The run takes well under a minute on a laptop, most of it compilation. The result is printed at the end, σ = 4.986×10⁶ ± 0.9×10³ pb per atom, and the events are written to `epeC12_mumu/Events/run_01/unweighted_events.lhe.gz`. For comparison, six free electrons at rest would give 4.987×10⁶ pb: at this energy the electron motion only changes the total at the 10#super[−4] level, but it spreads √s around its free value by a few per cent.
 
 == Muon–electron scattering on carbon
 
@@ -120,7 +120,7 @@ set el 1.0
 set nevents 10000
 ```
 
-Photon exchange in the t-channel makes the cross section diverge for soft electron recoils, so a cut is needed: `set el 1.0` keeps events with an outgoing electron energy above 1 GeV (in the lab, i.e. the atom rest frame). Result: σ = 1.573×10⁹ ± 1.9×10⁶ pb per atom (six free electrons at rest: 1.571×10⁹ pb).
+Photon exchange in the t-channel makes the cross section diverge for soft electron recoils, so a cut is needed: `set el 1.0` keeps events with an outgoing electron energy above 1 GeV (in the lab, i.e. the atom rest frame). Result: σ = 1.572×10⁹ ± 2.6×10⁶ pb per atom (six free electrons at rest: 1.569×10⁹ pb).
 
 == Matrix elements only
 
