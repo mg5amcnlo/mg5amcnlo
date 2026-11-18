@@ -4,7 +4,11 @@
 
 
 from __future__ import absolute_import
-from .object_library import all_orders, CouplingOrder
+try:
+    from .object_library import all_orders, CouplingOrder
+except ImportError:
+    # no parent package: module run as a standalone script (write_param_card.py)
+    from object_library import all_orders, CouplingOrder
 
 QCD = CouplingOrder(name = 'QCD',
                     hierarchy = 1,

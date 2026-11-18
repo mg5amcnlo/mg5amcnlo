@@ -4,8 +4,13 @@
 
 
 from __future__ import absolute_import
-from .object_library import all_lorentz, Lorentz
-from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
+try:
+    from .object_library import all_lorentz, Lorentz
+    from .function_library import complexconjugate, re, im, csc, sec, acsc, asec
+except ImportError:
+    # no parent package: module run as a standalone script (write_param_card.py)
+    from object_library import all_lorentz, Lorentz
+    from function_library import complexconjugate, re, im, csc, sec, acsc, asec
 
 ###################################
 # CounterTerms Lorentz structures #

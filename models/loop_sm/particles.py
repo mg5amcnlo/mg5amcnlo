@@ -5,9 +5,15 @@
 
 from __future__ import division
 from __future__ import absolute_import
-from .object_library import all_particles, Particle
-from . import parameters as Param
-from . import CT_parameters as CTParam
+try:
+    from .object_library import all_particles, Particle
+    from . import parameters as Param
+    from . import CT_parameters as CTParam
+except ImportError:
+    # no parent package: module run as a standalone script (write_param_card.py)
+    from object_library import all_particles, Particle
+    import parameters as Param
+    import CT_parameters as CTParam
 
 # ======================================================================
 # QCD particles
