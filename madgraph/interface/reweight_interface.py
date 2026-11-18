@@ -2119,7 +2119,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     data['model_name'] = self.second_model
             else:
-                data['model_name'] = None
+                # The 'set' and 'define' lines of the proc_card are executed
+                # again below: 'set gauge unitary' unloads a model supporting
+                # only the Feynman gauge (e.g. loop_qcd_qed_sm*) and 'define'
+                # then imports sm. Reload the original model explicitly.
+                info = self.banner.get('proc_card', 'full_model_line')
+                data['mg_names'] = '-modelname' not in info
+                data['model_name'] = self.banner.get('proc_card', 'model')
             #processes
             if self.second_process:
                 data['processes'] = self.second_process
