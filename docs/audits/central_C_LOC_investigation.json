@@ -1,0 +1,131 @@
+{
+  "date_utc": "2026-10-25T08:42:20.676138+00:00",
+  "task": "Investigate the C_LOC warning/error logs without changing production physics or samples",
+  "status": {
+    "C_LOC": "Integration completed; event generation interrupted by user (KeyboardInterrupt), 22 completed generation jobs out of 103. No combined events file, no shower yet.",
+    "C_GLB": "One million events generated; comparison covers integration and generation logs only.",
+    "production_or_source_modifications_performed_by_this_audit": false
+  },
+  "conclusion": "Confirmed floating-point bugs in phase-space geometry and soft-sector angular factors; further ill-conditioned native maps. These are integration diagnostics before Pythia, and whole folded points are discarded. Production accuracy is not established by their rejection frequency.",
+  "completed_generation": {
+    "jobs": 22,
+    "integration_points": 26211187,
+    "rejections": {
+      "invalid MC kinematics": 22911,
+      "nonfinite weights": 18832
+    },
+    "generation": {
+      "calls": 26211187,
+      "novi": 204844,
+      "virt": 13162,
+      "vetoed": 25993181,
+      "failed_generation_cuts": 41743,
+      "generated": 218006,
+      "efficiency": 0.008317288339517016
+    },
+    "rejection_fraction_per_integration_point": {
+      "invalid MC kinematics": 0.0008740924247345228,
+      "nonfinite weights": 0.000718471849443522
+    }
+  },
+  "global_comparison": {
+    "jobs": 103,
+    "integration_points": 27704784,
+    "rejections": {
+      "nonfinite weights": 3
+    },
+    "generation": {
+      "calls": 27704784,
+      "novi": 949612,
+      "virt": 50388,
+      "vetoed": 26704784,
+      "failed_generation_cuts": 3733,
+      "generated": 1000000,
+      "efficiency": 0.0360948491783946
+    },
+    "rejection_fraction_per_integration_point": {
+      "nonfinite weights": 1.0828454753518381e-07
+    }
+  },
+  "findings": {
+    "azimuth_lost_near_beam": {
+      "source": "Template/NLO/SubProcesses/genps_fks_helpers.f:71",
+      "mechanism": "getangles sets sin(theta)=0 and phi=0 when pz/|p| rounds to +1 even though pT is nonzero; inverse and forward frames then disagree.",
+      "candidate": "Use atan2(pT,pz), sin(theta)=pT/|p| and the actual transverse azimuth for every nonzero pT; retain exact zero-axis convention.",
+      "replay_result": {
+        "points": 15049,
+        "passed": 15049,
+        "failed": 0,
+        "max_relative_error_passed": 9.270576957188422e-10
+      },
+      "tolerance": "Original reconstruction tolerance 1e-4; candidate max relative error 9.270576957188422e-10.",
+      "patch_applied_to_production": false,
+      "existing_map_tests_with_isolated_candidate": {
+        "tests": 46,
+        "passed": true,
+        "evidence": "central_C_LOC_map_candidate_tests.json"
+      }
+    },
+    "nonfinite_soft_G_weight": {
+      "source": [
+        "Template/NLO/SubProcesses/fks_Sij.f:386",
+        "Template/NLO/SubProcesses/fks_singular.f:621",
+        "Template/NLO/SubProcesses/driver_mintMC.f:1111"
+      ],
+      "mechanism": "Near the top-at-rest limit, sqrt(1-(mt/E)^2) loses precision or has a negative argument because a stored counterevent top energy is a few 1e-12 GeV below mt. NaN enters fks_Sij, then the type-8 soft G replacement. This is not a zero prefactor multiplying an irrelevant NaN.",
+      "replayed_example": {
+        "mt_GeV": 173.0,
+        "top_E_GeV": 172.99999999999616,
+        "top_three_momentum_norm_GeV": 3.639e-06,
+        "amp_split": 4.900579283049805e-14,
+        "G_replacement": 0.999606287798115,
+        "f_s_MC_H": 248.94719104157622,
+        "original_fks_Sij": "NaN",
+        "candidate_fks_Sij": 8.726749783541881e-14,
+        "candidate_type8_weight": -7.0595e-25
+      },
+      "candidate": "Use spatial momenta explicitly transformed to the relevant CM frame for velocities and angular dot products; validate threshold limits rather than clamping a negative square-root argument.",
+      "scope": "One full-physics replay confirms the mechanism, not the rate impact or that all nonfinite weights share it.",
+      "patch_applied_to_production": false
+    },
+    "remaining_light_FSR_ISR": {
+      "unique_logged_light_FSR_mismatches_after_angle_candidate": 3375,
+      "unique_logged_ISR_mismatches_after_angle_candidate": 5,
+      "mechanism": "Near-collinear dipoles with both inverse coordinates close to their boundaries amplify tiny off-shell/conservation errors already present in the double-precision outer vectors. In a light-FSR example E+pz has about 8% relative error although the energy error is O(1e-11 GeV).",
+      "high_precision_probe": "Quadruple-precision inverse/forward still fails on the stored off-shell vector; restoring on-shell final energies and consistent incoming light-cone sums in the isolated high-precision fixture makes the example pass.",
+      "required_work": "Stabilize on-shell/light-cone arithmetic consistently in outer generation and native replay, including counterevent endpoint comparisons and invariant-mass checks; validate all histories.",
+      "status": "Concrete light-FSR example diagnosed; no general production fix or bias estimate claimed.",
+      "quad_example": {
+        "maximum_component_repair_GeV": 8.88562e-12,
+        "relative_reconstruction_error_after_repair": 3.35e-22,
+        "evidence": "central_C_LOC_map_quad_corner.json"
+      }
+    },
+    "generic_messages": {
+      "maxjetflavor": "Run-card value 4 is automatically replaced by 5 for the massless-bottom model; also happens in the global sample.",
+      "OneLOop": "Rare all-zero c0 and d0 permutation diagnostics occur in both global and local runs; they are separate from the dominant local reconstruction problem and not demonstrated harmless for every point.",
+      "555555": "Summary of failed counterevent momentum comparisons, not a fatal exit code.",
+      "fatal_termination": "The final run error is the user KeyboardInterrupt, not a Pythia crash."
+    }
+  },
+  "recommended_next_steps": [
+    "Promote the validated stable-angle candidate to a proper regression-tested fix.",
+    "Implement and validate stable CM velocity/angular evaluation for the soft sector factors.",
+    "Repair the remaining endpoint/on-shell/light-cone reconstruction failures, keeping complete S/H sums and meaningful validity checks.",
+    "Repeat a controlled local integration and inclusive closure comparison with the fixes before restarting local production; assess weighted shifts and shapes, not just rejection counts.",
+    "Record the affected helper/radiation/sector-function sources in campaign provenance when deploying the physics fixes."
+  ],
+  "production_modified": false,
+  "evidence_files": {
+    "central_C_LOC_log_inventory.json": "6518f581866a4d821e1c887098844ede47097a1ac2ce0de1e1185db6673180e3",
+    "central_C_LOC_map_replay.json": "6c74029ecf2c3687fefba2352f9cc34dda692e1cbe26a10587dd70830f360c41",
+    "central_C_LOC_map_replay.py": "ec51723eb584b0200fda0ed5d90217828644f8a2eb285c350d4702e9f2108df5",
+    "central_C_LOC_map_getangles.patch": "fe9dc01b01ba3fc9ff7eb55104705234ea406beabf57b8fcf40107e0b7de5abd",
+    "central_C_LOC_nonfinite_diagnostic.json": "b3cb7fca0dd2340a18f400efdb7c054396a7d961a56f2ad9b619afe8809c3a0c",
+    "central_C_LOC_nonfinite_replay.py": "afbf3a538bfe1ac5cc010a782a2dcf04804f3df762d09eead7994a4d59daaef6",
+    "central_C_LOC_map_quad_corner.json": "1e013605759bf663a3bcf9d890e4c642b7fc444994fb4ec7ecccc0bb621ef560",
+    "central_C_LOC_map_quad_corner.py": "044e5de6dd6c4d711f2ec100bf94dafed1f0d805adf728e9ecd00e06eaa63e04",
+    "central_C_LOC_map_candidate_tests.json": "854b17c0023282bd806dd700bfc664d16cd7ef5680cae84709bd24f520118fb7",
+    "central_C_LOC_map_candidate_tests.py": "6e9888261c7b54010c7dbd56f8e6c63ad7755c959f098c6568789d903b0fed54"
+  }
+}

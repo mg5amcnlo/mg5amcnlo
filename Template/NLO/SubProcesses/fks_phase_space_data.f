@@ -36,6 +36,8 @@ c their existing owners. This module still describes one active point.
       public tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
       public resonance_momentum,resonance_mass2,resonance_recoil,resonance_members
       public initial_recoil_leg
+      public pythia_recoil_pair,pythia_isr_coordinate,
+     $     pythia_isr_soft_scale
 
 c Former /pborn/ fields.
       double precision :: p_born(0:3,nexternal-1)=0d0
@@ -137,4 +139,9 @@ c Former /c_resonance_recoil/ fields.
 
 c Former /c_initial_recoil/ fields.
       integer :: initial_recoil_leg=0
+      integer :: pythia_recoil_pair(2)=0
+c ISR samples w=1-xBorn/xReal. xi remains the physical FKS energy.
+c Their soft ratio needs a finite conversion to the integrated operator.
+      double precision :: pythia_isr_coordinate=0d0,
+     $     pythia_isr_soft_scale=1d0
       end module fks_phase_space_data

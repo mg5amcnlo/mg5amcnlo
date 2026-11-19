@@ -1,0 +1,107 @@
+{
+  "point": [
+    0.14521121978759766,
+    0.21933037042617798,
+    0.004197567701339722,
+    0.33865121006965637,
+    0.6644719839096069,
+    0.5507960617542267,
+    0.274375319480896
+  ],
+  "scratch": "/tmp/central_C_LOC_nonfinite_repro_verified",
+  "process": "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_LOC",
+  "source_sha256": {
+    "fks_Sij.f": "8ce2d529ee22297b24e12995dbda7329fff4197e20245ecccf5ca4bdf5243fdd",
+    "fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+    "driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3"
+  },
+  "legacy": {
+    "returncode": 133,
+    "log": "/tmp/central_C_LOC_nonfinite_repro_verified/work/legacy.log",
+    "factors": [
+      4.900579283049805e-14,
+      "NaN",
+      1.5075188657951302,
+      0.999606287798115,
+      248.94719104157622,
+      248.94719104157622
+    ],
+    "log_sha256": "23a05c1244acfc45a461015ba0ababacdf5e3eb42450fc96f7c005c59f2c379e",
+    "type8_weight": "NaN",
+    "excerpt": " REAL 1: keeping split order            1\n REAL 2: keeping split order            1\n Warning in get_cms_costh_fks  -1.0000013066150095     \n Warning in get_cms_costh_fks  -1.0000013066150095     \n Warning in get_cms_costh_fks  -1.0000013066150095     \n DIAGNOSTIC_SOFT_HISTORY          15           5           3\n DIAGNOSTIC_FACTORS   4.9005792830498048E-014                       NaN   1.5075188657951302       0.99960628779811500        248.94719104157622        248.94719104157622     \n DIAGNOSTIC_TYPE8                       NaN\n DIAGNOSTIC_KINEMATICS   1.6643114198326668E-004  0.99887813689195559        1.6643114198326668E-004\n DIAGNOSTIC_SOFT_MOMENTA   86.500001944766794        0.0000000000000000        0.0000000000000000        86.500001944766794        86.500001944766822       -0.0000000000000000       -0.0000000000000000       -86.500001944766822        172.99999999999616        1.1946661016943396E-008   7.8067171224111410E-008   3.6385847579367692E-006   3.8895335714465199E-006  -2.0791375990462636E-007  -1.3586423077798258E-006  -3.6385896067115220E-006   0.0000000000000000        0.0000000000000000        0.0000000000000000        0.0000000000000000     "
+  },
+  "prototype": {
+    "returncode": 133,
+    "log": "/tmp/central_C_LOC_nonfinite_repro_verified/work/prototype.log",
+    "factors": [
+      4.900579283049805e-14,
+      8.726749783541881e-14,
+      1.5075188657951302,
+      0.999606287798115,
+      248.94719104157622,
+      248.94719104157622
+    ],
+    "log_sha256": "3a7500919e30aa7430df1db3baedf9a15dfa15988062d8adb3800ecc86d7ddf4",
+    "type8_weight": "-7.0594911393322601E-025",
+    "excerpt": " ndnq_run             -1\n w_run                 1\n PDFscheme           0\n REAL 1: keeping split order            1\n REAL 2: keeping split order            1\n DIAGNOSTIC_SOFT_HISTORY          15           5           3\n DIAGNOSTIC_FACTORS   4.9005792830498048E-014   8.7267497835418813E-014   1.5075188657951302       0.99960628779811500        248.94719104157622        248.94719104157622     \n DIAGNOSTIC_TYPE8  -7.0594911393322601E-025\n DIAGNOSTIC_KINEMATICS   1.6643114198326668E-004  0.99887813689195559        1.6643114198326668E-004\n DIAGNOSTIC_SOFT_MOMENTA   86.500001944766794        0.0000000000000000        0.0000000000000000        86.500001944766794        86.500001944766822       -0.0000000000000000       -0.0000000000000000       -86.500001944766822        172.99999999999616        1.1946661016943396E-008   7.8067171224111410E-008   3.6385847579367692E-006   3.8895335714465199E-006  -2.0791375990462636E-007  -1.3586423077798258E-006  -3.6385896067115220E-006   0.0000000000000000        0.0000000000000000        0.0000000000000000        0.0000000000000000     "
+  },
+  "created_utc": "2026-10-25T08:41:57.511329+00:00",
+  "scope": "One fixed production-log point replayed in an isolated scratch copy. Both programs deliberately STOP 901 at the target history. No physical integration result or production event change.",
+  "production_log": "central_runs_fixed/C_LOC/SubProcesses/P0_bdx_tux/GF1.0/log_MINT0.txt:422",
+  "diagnostic_history": 15,
+  "diagnostic_native_FKS_sector": 3,
+  "diagnostic_emitted_parton": 5,
+  "diagnostic_sister_parton": 3,
+  "weight_formula": "type8 = -amp_split * fks_Sij / g22 * replace_MC_subt * f_s_MC_H",
+  "factor_order": [
+    "amp_split",
+    "fks_Sij",
+    "g22",
+    "replace_MC_subt",
+    "f_s_MC_S",
+    "f_s_MC_H"
+  ],
+  "soft_counterevent_vectors_E_px_py_pz": [
+    [
+      86.5000019447668,
+      0.0,
+      0.0,
+      86.5000019447668
+    ],
+    [
+      86.50000194476682,
+      -0.0,
+      -0.0,
+      -86.50000194476682
+    ],
+    [
+      172.99999999999616,
+      1.1946661016943396e-08,
+      7.806717122411141e-08,
+      3.638584757936769e-06
+    ],
+    [
+      3.88953357144652e-06,
+      -2.0791375990462636e-07,
+      -1.3586423077798258e-06,
+      -3.638589606711522e-06
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  ],
+  "top_mass_GeV": 173.0,
+  "top_energy_minus_mass_GeV": -3.836930773104541e-12,
+  "legacy_beta_squared": -4.440892098500626e-14,
+  "momentum_norm_GeV": 3.6394417493102105e-06,
+  "norm_over_energy_beta": 2.1037235545146193e-08,
+  "root_cause": "FKS partition uses get_cms_costh_fks. A near-rest top has E<m by roundoff; sqrt(1-(m/E)^2) is NaN and contaminates fks_Sij and a nonzero soft G-completion contribution. This is not zero times NaN. Existing add_wgt protection discards the complete outer folded point.",
+  "prototype_prescription": "Explicit boost of each four-vector to the incoming pair rest frame, Euclidean three-vector angle, and |p|/E for massive velocities. The massless velocity remains exactly 1. The angle at |p|=0 may be set to 1 because the associated beta vanishes.",
+  "physical_equivalence": "On shell, |p|/E = sqrt(1-m^2/E^2). Direct spatial norms avoid subtracting two numbers close to 1. The prototype is algebraically equivalent in exact arithmetic and restores the beta->0 rest limit without setting a numerical cutoff on a nonzero physical velocity.",
+  "limitations": "This establishes one exact production-log failure and a finite local prototype. It does not establish a bound on the bias from all currently rejected points, nor validate a production fix over complete phase space. The separate native inverse-map issue and rare OneLOop diagnostics are not addressed here.",
+  "replay_command": "python3 docs/audits/central_C_LOC_nonfinite_replay.py",
+  "production_files_modified": false
+}

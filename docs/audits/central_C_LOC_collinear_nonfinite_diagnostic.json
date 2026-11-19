@@ -1,0 +1,56 @@
+{
+  "created_utc": "2026-10-25T09:18:36.602258+00:00",
+  "scope": "Exact first residual type-5 point from the geometry-only physics probe. Forced-coordinate diagnostic in isolated copy; no production events or integration estimate.",
+  "point": [
+    5.6640427146566815e-05,
+    0.1334572751105008,
+    0.1260303896165017,
+    0.5398978511374164,
+    0.5586654225927471,
+    0.6730337017984538,
+    0.7985322223975657
+  ],
+  "source_log": "/tmp/C_LOC_numerical_fix_20261025/geometry_probe/export_fixed/SubProcesses/P0_bdx_tux/numerical_validation/validation.log:422",
+  "residual_before_fix": {
+    "type": 5,
+    "FKS_sector": 4,
+    "native_history": 0,
+    "emitted_energy_in_dipole_frame": 0.5093440592177706,
+    "quark_energy_in_dipole_frame": 0.0,
+    "z": 0.0,
+    "quark_energy_stored": 6.684615308500982e-07
+  },
+  "root_cause": "sborncol_fsr used the legacy external dot, which snaps |p.q|<1e-6 to zero. In a boosted local dipole this erases a resolved positive quark energy. Its AP variable t=z*Q^2/4 vanishes and the local collinear counterterm becomes nonfinite. Separately, forming z by subtracting the gluon fraction from 1 loses smaller positive fractions even with a nonzero quark energy.",
+  "fix": [
+    "Use the unrounded fks_phase_space_helpers dot in sborncol_fsr.",
+    "Compute z=E_j/(E_i+E_j) instead of 1-E_i/(E_i+E_j). Both are algebraically equivalent in exact arithmetic."
+  ],
+  "fixed_point": {
+    "emitted_energy": 0.5093440592177706,
+    "quark_energy": 6.754060752128764e-07,
+    "z": 1.3260293653799483e-06,
+    "stored_quark_energy": 6.684615308500982e-07,
+    "radiation_mass_squared": 1.0377282701938384,
+    "dipole_momentum": [
+      9086.53034301127,
+      -0.005072698972037142,
+      -0.005642633573320355,
+      -9086.530285905545
+    ],
+    "dipole_dot_quark": 6.880290680331275e-07,
+    "nonfinite_rejection_messages": 0,
+    "process_returncode": 0
+  },
+  "validation": "test_fsr_collinear_stability.py: actual sborncol_fsr, AP and Q-term routines with a unit Born stub; captured dipole and daughter vectors, 1e-6 and 1e-12 daughter rescalings, positive fractions down to 1e-100, and ordinary kernels. All 3 tests passed with floating invalid/zero/overflow traps enabled.",
+  "full_fixed_probe_pending": true,
+  "source_sha256": {
+    "fks_singular.f": "af64287eeaa425c7b9444c09a7890c026ef85737d26a79aebcc42d523377f3e2",
+    "genps_fks_helpers.f": "691b2c46b7084406115c6af02a606ae2fa1e969bf4e493b54db14629ffd52abb",
+    "fks_Sij.f": "2ca691ef24b4bc27efbec51825e14664a38ce0b2d3b6eb9cdc75e0beb62a83a2"
+  },
+  "diagnostic_logs": {
+    "legacy": "/tmp/C_LOC_remaining_nonfinite/work/legacy.log",
+    "fixed": "/tmp/C_LOC_remaining_nonfinite/work/fixed.log"
+  },
+  "production_files_modified_by_replay": false
+}

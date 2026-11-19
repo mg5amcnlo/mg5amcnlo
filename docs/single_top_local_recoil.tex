@@ -1,0 +1,1809 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=23mm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{graphicx,pdfpages}
+\usepackage{xcolor,listings,enumitem}
+\usepackage{microtype}
+\usepackage[unicode,colorlinks=true,linkcolor=blue!55!black,
+ citecolor=blue!55!black,urlcolor=blue!55!black]{hyperref}
+\usepackage{bookmark}
+\hypersetup{pdftitle={Single-top production with local recoil: physics, implementation and results},
+ pdfsubject={MC@NLO, FKS, Pythia 8.318, stable-top t-channel production}}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+\setcounter{tocdepth}{2}
+\setlist{nosep,leftmargin=*}
+\lstset{basicstyle=\ttfamily\small,breaklines=true,columns=fullflexible,
+ keepspaces=true,showstringspaces=false,frame=single,framerule=.3pt,
+ rulecolor=\color{black!25},aboveskip=7pt,belowskip=7pt}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\as}{\alpha_{\mathrm{s}}}
+\newcommand{\gs}{g_{\mathrm{s}}}
+\newcommand{\CF}{C_{\mathrm{F}}}
+\newcommand{\TR}{T_{\mathrm{R}}}
+\newcommand{\pt}{p_{\perp}}
+\newcommand{\zI}{z_{\mathrm{I}}}
+\newcommand{\kt}{k_{\perp}}
+\newcommand{\Born}{\Phi_{\mathrm{B}}}
+\newcommand{\Real}{\Phi_{\mathrm{R}}}
+\newcommand{\Dps}{\mathcal{D}_{\mathrm{PS}}}
+\newcommand{\DG}{\mathcal{D}_{G}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\file}[1]{\path{#1}}
+\newcommand{\pb}{\,\mathrm{pb}}
+\newcommand{\GeV}{\,\mathrm{GeV}}
+\newcommand{\sampA}{default}
+\newcommand{\sampB}{local}
+\newcommand{\sampC}{local + collinear patch}
+\newcommand{\sampD}{local + both patches}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Single-top production with local recoil\\
+\large Physics, FKS maps, MC@NLO counterterms, Pythia patches,\\
+analysis, validation, and production plots}
+\author{SingleTopLocal development record}
+\date{24 October 2026}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+This document records the development of local-recoil MC@NLO matching for
+five-flavour, stable-top, $t$-channel single-top production in this workspace.
+It gives the invariant recoil map and its measure, the combined initial--final
+counterterms, the two singular-limit mismatches in stock Pythia 8.318, and the
+implemented G-function and patched-shower alternatives. It also describes the
+four process directories, their run settings, the 75-histogram analysis, the
+shower-record truncation fix, and the numerical checks. The current four
+million-event samples are compared quantitatively. The complete 73-panel
+comparison atlas is embedded at the end, so this PDF contains the physics,
+operational instructions, and plots in one place. Mathematical limits,
+numerical evidence, and remaining accuracy qualifications are distinguished
+throughout.
+\end{abstract}
+\tableofcontents
+\clearpage
+
+\section{Scope, outcome, and development decisions}\label{sec:scope}
+
+The process is
+\begin{equation}
+ p p\longrightarrow t+j+X,
+\end{equation}
+with a stable on-shell top and NLO QCD corrections to electroweak $t$-channel
+production. NLO subtraction uses FKS~\cite{FKS}, and shower matching uses
+MC@NLO~\cite{MCatNLO,MG5}. The generation command is
+\begin{lstlisting}
+import model loop_sm-no_b_mass
+define p = g u c d s b u~ c~ d~ s~ b~
+define j = p
+generate p p > t j $$ w+ w- [QCD]
+\end{lstlisting}
+The top sample is generated explicitly; a separate antitop production sample
+is not included in the plotted results. Beam crossings and antiquark lines
+are nevertheless included in the implementation tests. The process exclusion
+in the command is part of the definition of this $t$-channel sample.
+
+At Born level the colour flow contains two separate initial--final quark
+connections: a light-quark line and the line connecting the incoming bottom
+quark to the top. The colourless exchanged weak boson makes a local-recoil
+study particularly natural. The implementation relies on this simple Born
+structure and does not claim general-process support.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabularx}{\linewidth}{@{}lXXX@{}}
+\toprule
+Process directory & Recoil / shower & Quark IF numerator & Local G replacement\\
+\midrule
+\code{pp_tj_default} & Ordinary MG5 MC@NLO / stock & Ordinary matching kernels & Ordinary global prescription\\
+\code{pp_tj_local} & Local / stock & $1+\zI^2$ & Soft and outgoing-collinear\\
+\code{pp_tj_local_patch} & Local / private one-patch build & $\zI^2+\zeta^2$ & Soft, with its collinear overlap\\
+\code{pp_tj_local_2patch} & Local / private two-patch build & $(\zI^2+\zeta^2)r_t$ on top line & None of the special local replacements\\
+\bottomrule
+\end{tabularx}
+\caption{The four implemented predictions. The common factor $\CF/(1-\zI)$
+is suppressed in the numerator column. The two-patch light line uses
+$\zI^2+\zeta^2$, without $r_t$. All samples retain ordinary FKS NLO subtraction.}
+\label{tab:variants}
+\end{table}
+
+The work proceeded through the following substantive decisions.
+\begin{enumerate}
+\item Implement the shower's recoil map in FKS first, including forward and
+inverse mappings, massive-top kinematics, phase-space Jacobians and finite
+soft-endpoint terms. A correct map alone does not specify a matching kernel.
+\item Treat the two ends of each Born IF colour line as one shower antenna,
+then distribute its density over the two FKS orientations. Adding independent
+ISR and FSR copies would double count the gluon-emission singularities.
+\item Establish the stock-shower kernel before constructing subtraction.
+Its outgoing massless-quark collinear coefficient and massive-top soft
+current differ from exact QCD. These are kernel issues, not recoil-map issues.
+\item Provide a stock-Pythia solution using local G replacements in MG5.
+This restores finite event weights without silently changing Pythia.
+\item Subsequently introduce two explicitly requested, opt-in alternatives:
+a quark-collinear numerator patch, and then the additional top-soft patch.
+Each has counterterms for the same modified shower rate.
+\item Keep these alternatives in private Pythia installations. Shared stock
+Pythia is never patched during a run, so no restoration race is introduced.
+\item Use identical perturbative analysis and plotting definitions in all
+four samples, and repair the independent HEPEVT history-capacity problem.
+\end{enumerate}
+
+An earlier development build modified a shower trial envelope, including
+extra headroom. That implementation was withdrawn. Its results survive only
+in the historical part of an audit JSON; they are not evidence for the
+current stock-G or opt-in patch prescriptions. The current two kernel patches
+are bounded suppressions and contain no such envelope enlargement.
+
+The supported matching mode is ordinary MC@NLO for stable-top production,
+without merging, resonance decays, QED corrections, or MC@NLO-Delta. Incoming
+partons are massless in the analytic five-flavour calculation. The outgoing
+top mass is retained. Pythia's own light/charm/bottom masses are not changed
+to make the analytic approximation artificially exact.
+
+\section{Notation and the common local recoil map}\label{sec:map}
+
+\subsection{Invariant variables and the paper's notation}
+
+Use the metric $p\cdot q=p^0q^0-\boldsymbol p\cdot\boldsymbol q$ and
+future-directed physical incoming momenta. A tilde denotes the projected
+Born state. For one selected colour connection, let
+\begin{align}
+ p_a^2&=0,& p_f^2&=m_f^2,& k^2&=0,\\
+ \widetilde p_a^2&=0,& \widetilde p_f^2&=m_f^2.
+\end{align}
+Here $p_a$ is the real incoming quark, $p_f$ its real outgoing colour partner,
+and $k$ the emitted gluon. The partner is either a massless light quark or
+the top. Define
+\begin{align}
+ \zI&=1-\frac{p_f\cdot k}{p_a\cdot(p_f+k)},&
+ w&=1-\zI,\label{eq:z}\\
+ Q^2&=2p_a\cdot k,&
+ D&=2\widetilde p_a\cdot\widetilde p_f,\label{eq:QD}\\
+ \zeta&=\frac{p_a\cdot p_f}{p_a\cdot(p_f+k)}
+       =1-\frac{\zI Q^2}{D},&
+ \delta&=\frac{\zI Q^2}{D}=1-\zeta.\label{eq:zeta}
+\end{align}
+$D$ has mass dimension two; it is not a subtraction density. Densities are
+denoted by calligraphic $\mathcal D$ below. The Bjorken relation is
+$x_a^{\mathrm B}=\zI x_a^{\mathrm R}$.
+
+The relation to Cabouat--Sj\"ostrand's notation~\cite{Cabouat} is
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Here & Paper / Pythia interpretation\\
+\midrule
+$\widetilde p_a$ & $p_b$, incoming before backward branching\\
+$p_a$ & $p'_a$, incoming after backward branching\\
+$\widetilde p_f$, $p_f$, $k$ & $p_f$, $p'_f$, $p'_c$ of the paper\\
+$\zI$ & Backward fraction $z$; equal to $x$ in the massless DIS example\\
+$\zeta$ & $z_1$ of that DIS example; the final-quark momentum fraction in its collinear limit\\
+$D$ & $m_{\rm dip}^2-m_f^2$, with $m_{\rm dip}^2=(\widetilde p_a+\widetilde p_f)^2$\\
+$wQ^2$ & Pythia evolution variable $p_{\perp\mathrm{evol}}^2$\\
+$\kt^2$ & Physical transverse momentum, called \code{pT2corr} in the source\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The identification with DIS $x,z_1$ is used only where the massless DIS
+comparison applies; the invariant definitions above are used for the massive
+top as well.
+
+\subsection{Projection, mass preservation, and an explicit inverse}
+
+Both FKS emitter orientations use the same real-to-Born projection:
+\begin{equation}
+ \boxed{\widetilde p_a=\zI p_a,\qquad
+ \widetilde p_f=p_f+k-wp_a.}\label{eq:projection}
+\end{equation}
+All other physical momenta, including the other incoming parton, are fixed.
+Equation~\eqref{eq:z} gives
+\begin{equation}
+ \widetilde p_f^2=m_f^2+2p_f\cdot k
+             -2w p_a\cdot(p_f+k)=m_f^2,
+\end{equation}
+and momentum conservation follows from
+$p_a-\widetilde p_a=p_f+k-\widetilde p_f$.
+The top's recoil therefore changes its momentum while preserving its mass.
+
+An invariant forward construction is also useful. Set
+\begin{equation}
+ n_f=\widetilde p_f-\frac{m_f^2}{D}\widetilde p_a,
+ \qquad n_f^2=0,\qquad 2\widetilde p_a\cdot n_f=D.
+\end{equation}
+For a spacelike vector $k_\perp$ orthogonal to both basis vectors and with
+$k_\perp^2=-\kt^2$, define
+\begin{align}
+ \kt^2&=wQ^2\zeta-m_f^2\delta^2,\label{eq:kt}\\
+ A_k&=\frac{w}{\zI}(1-\delta)-\frac{m_f^2}{D}\delta,\\
+ p_a&=\frac{\widetilde p_a}{\zI},&
+ k&=A_k\widetilde p_a+\delta n_f+k_\perp,\\
+ p_f&=\widetilde p_f+\frac{w}{\zI}\widetilde p_a-k.
+\end{align}
+The azimuth of $k_\perp$ fixes the remaining degree of freedom. These
+relations imply $k^2=0$, $p_f^2=m_f^2$, and $2p_a\cdot k=Q^2$.
+They express the same IF construction that the production generator
+implements in its appropriate frames.
+
+The physical interior satisfies
+\begin{align}
+ x_a^{\mathrm B}<\zI<1,\qquad
+ 0<\delta<\frac{wD}{wD+\zI m_f^2},\qquad
+ \kt^2>0.\label{eq:support}
+\end{align}
+These are kinematic conditions. The fixed-order radiation map does not apply
+a shower cutoff, SCALUP veto, or splitting probability to the real phase
+space. In particular, shower termination must not remove the unresolved
+region needed for NLO subtraction.
+
+\subsection{Why the ISR generator samples \texorpdfstring{$w$}{w}, not the physical FKS energy}
+
+The physical FKS variables retain their meaning in the real partonic centre
+of mass: $\xi=2E_k/\sqrt{\hat s_{\mathrm R}}$ and $y$ is the cosine of the
+gluon angle relative to the emitting beam. In general $\xi\ne w$. Solving for
+the incoming rescaling at fixed $\xi$ can produce two solutions and a
+turning-point Jacobian. Sampling $w$ directly covers the two solutions
+continuously.
+
+The implemented ISR measure can be stated explicitly. In the Born centre of
+mass, write $e=\sqrt{\hat s_{\mathrm B}}/2$,
+$f=\widetilde p_f$, $\eta=+1$ for beam 1 and $-1$ for beam 2,
+$f_-=f^0-\eta f^3$, and $\lambda=1/(1-w)$. For the unit gluon direction
+\begin{equation}
+ n=(1,\sqrt{1-y^2}\cos\varphi,
+        \sqrt{1-y^2}\sin\varphi,\eta y),
+\end{equation}
+define
+\begin{align}
+ A&=f_-(1+y)+2e(1-y),\\
+ B_\varphi&=2(f^1\cos\varphi+f^2\sin\varphi)\sqrt{1-y^2},\\
+ T_0&=2f\cdot n,\\
+ T&=T_0+(\lambda-1)
+             \left(A-\frac{B_\varphi}{\sqrt\lambda+1}\right),\\
+ \xi&=\frac{2f_-\lambda w}{T}.
+\end{align}
+Here $B_\varphi$ is a geometric quantity, not the Born matrix element $B$.
+With the PDFs and full-process flux supplied consistently by the caller,
+the four-dimensional hadronic radiation measure is
+\begin{equation}
+ \dd\mu_{\mathrm{rad}}=
+ \frac{\hat s_{\mathrm R}}{(4\pi)^3}\,
+ \xi\,\frac{2f_-\lambda^2}{T}\,
+ \dd w\,\dd y\,\dd\varphi.\label{eq:isrmeasure}
+\end{equation}
+The generator factors out the explicit $\xi$, as in the other FKS maps.
+The real prefactor uses the physical $\xi$; the soft counterevent represents
+the coefficient of $\dd w/w$ and uses $w$ instead. At the incoming-collinear
+endpoint $y\to1$, $\xi=w$, and the ordinary ISR splitting fraction, PDF
+remnants, and factorization scheme are retained.
+
+Small scalar products are evaluated with rationalized masses and squared
+direction differences. For example,
+\begin{equation}
+ f\cdot k=k^0\left[
+ \frac{m_f^2}{f^0+|\boldsymbol f|}
+ +\frac{|\boldsymbol f|}{2}
+ \left|\frac{\boldsymbol f}{|\boldsymbol f|}
+       -\frac{\boldsymbol k}{k^0}\right|^2\right].
+\end{equation}
+Using a model mass instead of subtracting $E^2-|\boldsymbol p|^2$ also avoids
+inventing a small mass for a nearly beam-collinear massless partner.
+
+\subsection{The finite soft-endpoint conversion}
+
+For $w\to0$,
+\begin{equation}
+ \xi=a w+O(w^2),\qquad a=\frac{2f_-}{T_0}.
+\end{equation}
+In $4-2\epsilon$ dimensions the energy measure and reduced soft matrix
+element bring a factor $a^{-2\epsilon}$. With an energy cutoff $h_s$,
+\begin{equation}
+ -\frac{(a h_s)^{-2\epsilon}}{2\epsilon}
+ =-\frac1{2\epsilon}+\log h_s+\log a+O(\epsilon).
+\end{equation}
+The finite endpoint must therefore contain $\log a$. The implementation
+uses \code{soft_cut=xicut/a} in the finite soft prefactor. The numerical
+soft subtraction cutoff acts on $w$. Since $a\to1$ in the incoming-collinear
+limit, the conversion is collinearly integrable and does not require a new
+integrated pole operator or PDF counterterm.
+
+\subsection{A common soft point for the combined S-event subtraction}
+
+Different native FKS histories have different radiation frames, energy upper
+bounds, and soft-energy slopes. Summing their subtraction terms at unrelated
+soft gluon directions or slopes would leave a finite mismatch even if each
+individual endpoint looked correct.
+
+For local MC@NLO S events, the implementation uses one soft direction in the
+Born centre of mass and converts it to each native frame, including the
+aberration Jacobian. It also makes the physical soft energy agree. If a
+native chart has relative soft slope $c>0$, the energy sampling variables
+are related by the bijection
+\begin{equation}
+ u=r_E^2,\qquad
+ v=\frac{u}{c(1-u)+u},\qquad
+ r_E^{\mathrm{native}}=\frac{r_E}{\sqrt{c(1-u)+u}},\qquad
+ \frac{\dd r_E^{\mathrm{native}}}{\dd r_E}
+ =\frac{c}{[c(1-u)+u]^{3/2}}.\label{eq:commonsoft}
+\end{equation}
+$r_E$ is a unit-interval integration coordinate, not the top-soft factor
+$r_t$ introduced later. This coordinate change preserves the real domain
+and removes the residual finite logarithm from unequal soft slopes. Native
+H-event inversions retain their own recovered coordinates and Born measure.
+Selected colour pairs, frame information, sampled coordinates, and soft
+conversion factors are saved and restored with the phase-space point.
+
+\section{The combined IF shower density and its singular limits}\label{sec:kernels}
+
+\subsection{One antenna, two FKS orientations}
+
+For the Born quark--quark IF connections, Pythia's local-recoil ISR machinery
+describes both incoming and outgoing gluon-emission endpoints. Corresponding
+FI contributions in TimeShower are suppressed to avoid duplication. Thus
+``ISR and FSR matching'' here means reproducing both physical endpoints of
+the combined antenna, not adding two independent shower kernels.
+
+Let $B$ denote the appropriate Born squared matrix element, with its native
+flavour and colour-flow information. For the massless-incoming analytic
+approximation, the local radiation measure, including the relevant flux
+conversion, is
+\begin{equation}
+ \dd\mu_{\mathrm{IF}}=
+ \frac{\dd\zI\,\dd Q^2\,\dd\varphi}{32\pi^3}.
+\end{equation}
+The raw stock density used for gluon emission is
+\begin{equation}
+ \boxed{\frac{\mathcal D_0}{B}
+ =\frac{2\gs^2}{\zI Q^2}
+   \CF\frac{1+\zI^2}{1-\zI},\qquad \CF=\frac43,
+ \quad\gs^2=4\pi\as.}\label{eq:stockdensity}
+\end{equation}
+It is multiplied by the real-state luminosity in the actual counterterm.
+The backward incoming rescaling is already represented by the map and
+luminosity convention. One must not multiply a second PDF factor $1/\zI$,
+the global-recoil shower Jacobian, or a global-recoil \code{xfact} onto
+Eq.~\eqref{eq:stockdensity}.
+
+The two FKS orientations divide the same gluon antenna with
+\begin{equation}
+ \chi_{\mathrm I}=\frac{p_f\cdot k}{p_f\cdot k+p_a\cdot k},
+ \qquad
+ \chi_{\mathrm F}=\frac{p_a\cdot k}{p_f\cdot k+p_a\cdot k},
+ \qquad \chi_{\mathrm I}+\chi_{\mathrm F}=1.
+\end{equation}
+These partition factors assign a connection to a sector; they do not double
+its colour factor. The density summed over the two orientations remains
+Eq.~\eqref{eq:stockdensity}.
+
+Backward gluon conversion, $g\to q\bar q$ with a Born incoming quark, uses
+\begin{equation}
+ \frac{\mathcal D_{g\to q\bar q}}{B}
+ =\frac{2\gs^2}{\zI Q^2}\,
+ \TR[\zI^2+(1-\zI)^2],\qquad \TR=\frac12.
+\end{equation}
+It belongs only to the incoming orientation, has no soft-gluon pole, and
+requires neither of the local soft/outgoing-collinear G repairs discussed
+below. This Born-flavour channel should not be confused with a later shower
+state whose current incoming colour end is a gluon.
+
+\subsection{The final-quark collinear numerator}
+
+For $k\parallel p_a$ at fixed $\zI$, $Q^2\to0$ and $\zeta\to1$.
+The stock incoming Altarelli--Parisi coefficient is correct.
+For a massless outgoing partner, set
+\begin{equation}
+ s_{fk}=2p_f\cdot k=\frac{wD}{\zI}.
+\end{equation}
+At the hard final-collinear endpoint $s_{fk}\to0$, $\zI\to1$ while $\zeta$
+can remain away from one. The coefficient of $2\gs^2/s_{fk}$ becomes
+\begin{align}
+ \text{stock:}&\quad \frac{2\CF}{1-\zeta},&
+ \text{QCD:}&\quad \CF\frac{1+\zeta^2}{1-\zeta}.\label{eq:finalcol}
+\end{align}
+The difference is a final-collinear singularity in $\mathcal D_0$, even
+though the numerator change looks modest when viewed as a function of two
+DIS variables. A matching calculation cannot use bare $R-\mathcal D_0$ and
+assume that this difference is integrable.
+
+\subsection{What the paper says about this choice}
+
+Cabouat--Sj\"ostrand, section 3.2, Eq.~(23), keep the usual backward-DGLAP
+kernel. They note its two DIS pole locations and the numerator difference
+$1+x^2$ versus $x^2+z_1^2$. Their stated motivation for using only the IF
+description is that a separate FI description would require a cumbersome
+variable transformation and Jacobian, with little benefit for the good
+overall description already obtained~\cite{Cabouat}. This is a practical
+approximation, not a proof of the exact hard final-quark collinear
+coefficient. The proposed numerator patch addresses that specific
+coefficient while retaining the common map.
+
+\subsection{The massive-top soft self term}
+
+On the heavy line, the stock soft limit contains the pair eikonal,
+\begin{equation}
+ \frac{\mathcal D_{0,\mathrm{soft}}}{B}
+ =2\gs^2\CF\frac{p_a\cdot p_f}
+                    {(p_a\cdot k)(p_f\cdot k)}.
+\end{equation}
+For $p_f^2=m_t^2$, the required quark-line current is
+\begin{equation}
+ \boxed{\frac{\mathcal D_{\mathrm{QCD,soft}}}{B}
+ =2\gs^2\CF\frac{p_a\cdot p_f}
+                    {(p_a\cdot k)(p_f\cdot k)}
+  -\gs^2\CF\frac{m_t^2}{(p_f\cdot k)^2}.}\label{eq:softcurrent}
+\end{equation}
+The second term is the massive quark self-eikonal~\cite{MassiveDipoles}.
+The mass in the recoil map and the positivity constraint~\eqref{eq:kt} do
+not generate this term automatically in the branching probability.
+
+No massive suppression is applied to the massless light-line shower
+density. Exact FKS soft counterterms are sector partitions of the full
+Born soft current and can contain information about the massive top even
+when inspected in a light-line sector. That is different from dressing a
+massless shower line with an ad hoc top-mass factor.
+
+\section{G-function matching with stock Pythia}\label{sec:G}
+
+\subsection{The local effective subtraction}
+
+Let $S$, $C$ and $SC$ denote the exact native FKS soft, collinear and
+soft-collinear overlap counterterms. Their definitions include sector
+functions, the correct Born projection, and endpoint-to-real measure ratios.
+They are not scalar kernels evaluated indiscriminately at one real-state
+Born point. For a transition width $h=\code{PythiaLocalGWidth}$, define
+\begin{equation}
+ g_h(v)=\begin{cases}
+ 0,&v\leq0,\\
+ \displaystyle\frac{u^2}{u^2+(1-u)^2},\quad u=v/h,&0<v<h,\\
+ 1,&v\geq h.
+ \end{cases}\label{eq:Gprofile}
+\end{equation}
+The default is $h=0.01$. This document uses $g_h$ as the shower multiplier;
+the G convention in Eq.~(2.117) of Ref.~\cite{MG5} is complementary.
+
+Suppressing the necessary native measure labels, the implemented stock
+prescription is
+\begin{equation}
+ \boxed{\DG=d(q)\left\{
+ g_h(w)\mathcal D_0+
+ [1-g_h(w)]\left[S+[1-g_h(1-y_{\mathrm{FKS}})](C-SC)\right]\right\}.}
+ \label{eq:DG}
+\end{equation}
+The angular profile is local to the forward collinear endpoint of each FKS
+history. The same effective subtraction is added to S events and subtracted
+from H events. The exact overlap subtraction is essential: a pure soft
+replacement can itself spoil a collinear limit in its transition region.
+
+The choice $w=1-\zI$ is essential for the stock case. It vanishes both for a
+soft gluon and for hard outgoing-collinear radiation. A profile based only on
+the real gluon energy would leave the second limit in
+Eq.~\eqref{eq:finalcol} unrepaired. The compact profile approaches zero
+quadratically, and is exactly one outside the transition region. Gluon
+conversion has zero replacement complements.
+
+The starting-scale factor uses $q=\sqrt{wQ^2}$, the shower evolution scale,
+not the massive physical $\kt$:
+\begin{equation}
+ d(q)=1-f\left(\frac{q-\mu_{\min}}{\mu_{\max}-\mu_{\min}}\right),
+ \quad
+ f(u)=\begin{cases}0&u\leq0,\\
+ u^2/[u^2+(1-u)^2]&0<u<1,\\1&u\geq1.
+ \end{cases}
+\end{equation}
+$\mu_{\min},\mu_{\max}$ are the native Born dipole shower-starting-scale
+bounds. The raw density and the exact replacement have the same damping.
+In the code the returned replacement complement is
+$[1-g_h(w)]d(q)$; applying the damping to the raw term alone would leave an
+unphysical exact replacement above the shower starting scale.
+
+\subsection{S/H construction and the finite-width accuracy qualification}
+
+For explanation, let $C_{\mathrm{NLO}}$ denote the ordinary NLO subtraction,
+$I_C$ its integrated part, and $V$ the renormalized virtual contribution.
+Suppressing sums over native maps and their Jacobians, the MC@NLO structure is
+\begin{align}
+ \overline B_{\mathrm{MC}}
+ &=B+V+I_C+\int\dd\Phi_{\mathrm{rad}}
+                     (\DG-C_{\mathrm{NLO}}),\\
+ H&=R-\DG.
+\end{align}
+These definitions explain the opposite signs of the MC counterterms and
+the cancellation in the inclusive rate. The implementation retains the full
+native-history construction of Refs.~\cite{MCatNLO,MG5}; it does not use this
+schematic expression to discard history or sector factors.
+
+If the shower actually evolves with $\Dps$ while matching uses $\DG$, the
+first nontrivial expansion of an infrared-safe observable contains the
+residual term
+\begin{equation}
+ \delta\sigma[O]=\int\dd\Real\,
+  (\Dps-\DG)\,[O(\Real)-O(\Born)]+\cdots.\label{eq:Gpower}
+\end{equation}
+For stock Pythia this is restricted to the unresolved transition region and
+is power suppressed as that region shrinks. At finite $h$ it is not
+automatically an extra power of $\as$. A finite-width G repair makes event
+weights locally integrable; it does not replace the shower's actual
+singular kernels by exact QCD. Width variation is therefore part of the
+physics assessment, as emphasized by the general G-function discussion in
+Ref.~\cite{MG5}. Reducing $h$ also increases cancellations and can worsen
+statistical efficiency.
+
+At the implementation level, complete native contributions are formed
+before H-event repartitioning. Native Born amplitudes, luminosities,
+sector functions, endpoint measures, and starting scales belong to their
+own history. S events use the common soft point of
+Eq.~\eqref{eq:commonsoft}. This is why both explicit FKS summation and
+explicit MC history summation are required in the local matching mode.
+The ordinary local MC@NLO no-emission multiplier is one; the separate Delta
+matching machinery is not active.
+
+\section{The two opt-in Pythia patches}\label{sec:patches}
+
+\subsection{Quark IF numerator correction}
+
+The first patch replaces
+\begin{equation}
+ \CF\frac{1+\zI^2}{w}
+ \quad\longrightarrow\quad
+ \CF\frac{\zI^2+\zeta^2}{w}.\label{eq:colpatch}
+\end{equation}
+It is implemented as an additional branching-veto weight
+\begin{equation}
+ r_q=\frac{\zI^2+\zeta^2}{1+\zI^2}.
+\end{equation}
+Since $0\leq\zeta\leq1$ on the physical support, $0\leq r_q\leq1$.
+The incoming-collinear and soft limits give $r_q\to1$. At the massless
+outgoing-collinear limit the numerator becomes $1+\zeta^2$, as required.
+The correction is restricted to a current quark $q\to qg$ IF branching
+with a final quark or antiquark colour partner. It does not modify II
+recoil, incoming-gluon kernels, flavour conversion, masses, or thresholds.
+
+The new setting is
+\begin{lstlisting}
+SpaceShower:IFquarkCollinearCorrection = on
+\end{lstlisting}
+and is \emph{off} by default. The corresponding patch file is
+\file{Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-local-quark-collinear.patch}.
+
+For the one-patch matching prescription, Eq.~\eqref{eq:DG} uses the corrected
+density and replaces $g_h(w)$ by $g_h(\xi_E)$, where
+\begin{equation}
+ \xi_E=\frac{2P\cdot k}{P^2}
+      =\frac{2E_k}{\sqrt{\hat s_{\mathrm R}}},\qquad
+ P=p_1+p_2.
+\end{equation}
+$\xi_E$ is the true energy fraction in the real partonic centre of mass,
+independent of which native orientation describes the point. Hard
+final-collinear radiation therefore uses the patched density directly.
+The top-soft G correction and its $C-SC$ overlap remain necessary.
+
+\subsection{Massive-top soft correction}
+
+The second patch multiplies the corrected heavy-line kernel by
+\begin{align}
+ \boxed{r_t
+ =1-\frac{m_t^2\,p_a\cdot k}
+             {2(p_a\cdot p_f)(p_f\cdot k)}
+ =1-\frac{m_t^2\zI^2Q^2}{w\zeta D^2}
+ =\frac{\kt^2}{wQ^2\zeta}.}\label{eq:rt}
+\end{align}
+Taking the soft limit of the pair eikonal times $r_t$ gives exactly
+Eq.~\eqref{eq:softcurrent}. Physical transverse-momentum support gives
+$0\leq r_t\leq1$, and $r_t\to1$ in the incoming-collinear limit.
+In the top rest frame the same ratio is $(1+\cos\theta_{ak})/2$, with
+$\theta_{ak}$ the angle between the incoming-quark direction and the gluon.
+This also makes its positivity transparent.
+
+The added Pythia factor is
+\begin{lstlisting}[language=C++]
+double z1 = 1. - z * Q2 / (m2ColPair - m2ColPartner);
+wt *= pT2corr / (pT2 * z1);
+\end{lstlisting}
+with $z=\zI$, $z1=\zeta$, $pT2=wQ^2$, and $pT2corr=\kt^2$.
+The actual guarded branch requires a current incoming quark with the same
+quark flavour before and after the branching, an emitted gluon, and an
+outgoing top/antitop colour partner. The new setting is
+\begin{lstlisting}
+SpaceShower:IFtopSoftCorrection = on
+\end{lstlisting}
+and is also off by default. The patch file is
+\file{Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-local-top-soft.patch}.
+It is applied after the numerator patch.
+
+Both factors act inside the branching veto, before an emission is accepted.
+Consequently the accepted rate and the no-emission probability are changed
+consistently:
+\begin{equation}
+ \Delta(q_1,q_0)=\exp\left[-\int_{q_0}^{q_1}\dd\Phi_{\mathrm{rad}}
+                   K_{\mathrm{modified}}\right].
+\end{equation}
+Reweighting accepted events alone would not make this Sudakov change.
+Because both factors are suppressions, they do not require a larger trial
+envelope. Existing stock-Pythia weight-above-unity warnings are a separate
+issue and are not hidden by changing that envelope.
+
+With both patches the MG5 raw top-line density is
+\begin{equation}
+ \frac{\mathcal D_2}{B}=
+ \frac{2\gs^2}{\zI Q^2}\,
+ \CF\frac{\zI^2+\zeta^2}{w}\,r_t.
+\end{equation}
+The light line uses the same expression without $r_t$. The required Born
+soft and massless collinear limits now agree with QCD within the stated
+incoming-mass approximation. Thus the special local G complements are
+zero, \code{gfactsf=gfactcl=1}, and \code{PythiaLocalGWidth} is inactive.
+Ordinary FKS subtraction and starting-scale damping remain.
+
+\subsection{Subsequent emissions and possible side effects}\label{sec:later}
+
+The top-soft factor follows the \emph{current} colour connection. It is
+not limited to the first event emission: radiation on the light line can
+leave the incoming-quark--top connection intact. Using that connection's
+current momenta keeps the ratio physical when it is encountered later.
+
+After a heavy-line emission creates a final--final gluon--top dipole, this
+patch does not act on it. Pythia's existing TimeShower treatment already
+includes massive-quark effects and, for a gluon radiating with a massive
+quark recoiler, an additional recoil dead-cone suppression~\cite{PythiaTime}.
+Multiplying a Born IF factor onto that final--final dipole could double count
+mass suppression. \code{SimpleTimeShower.cc} is unchanged, and
+\code{TimeShower:recoilDeadCone=on} is retained.
+
+A later incoming-gluon--top IF configuration, for example after backward
+flavour conversion, is outside this quark patch's scope. Neither the colour
+factor nor the finite splitting function of that configuration should be
+inferred from Eq.~\eqref{eq:rt}. No universal repair of every massive shower
+topology is claimed.
+
+The bounds on $r_q,r_t$ and the consistent Sudakov establish useful
+properties: no negative rate is introduced by these factors, no new
+overestimate larger than the original is needed, and the specified Born
+singular limits are repaired. They do not prove unchanged logarithmic
+accuracy at all orders. Finite hard-emission probabilities and higher-order
+shower histories change by design. Matrix-element corrections are kept off;
+an existing MEC could otherwise compensate, conflict with, or duplicate
+the deliberately modified base rate. Phenomenological effects of the two
+patches should be assessed with the matched samples, not dismissed as
+automatically negligible.
+
+\subsection{Isolation, input parameters, and unmodified effects}
+
+The private source changes touch \code{SimpleSpaceShower.cc} and the XML
+settings declaration only. They do not change recoil kinematics or quark
+masses. A private build with the flags off reproduces the reference shower
+at the checked points. The installed prefixes are
+\begin{lstlisting}
+stock:       /tmp/singletop_local_matching_pythia
+one patch:   HEPTools/pythia8_local_collinear_patch
+two patches: HEPTools/pythia8_local_2patch
+\end{lstlisting}
+The shared stock installation is never patched and rebuilt around a run.
+The selected library search path is local to the shower subprocess. Thus
+success, failure, interruption, and concurrent runs do not require a
+shared-library restoration step. Source and library hashes record this.
+
+Several separate effects remain distinct from the kernel repairs:
+\begin{itemize}
+\item Shower masses and heavy-flavour thresholds differ from a massless
+five-flavour incoming calculation. These familiar mass/threshold effects
+are retained in Pythia; no blanket zero-mass override is used.
+\item Smooth ISR screening, shower cutoffs, couplings, PDFs, MEC switches,
+and recoil options are steering choices. The chosen settings are documented
+below. Changing a numerator or adding the massive self term is a source-level
+kernel change, not just another existing input value.
+\item The extra ISR screening is disabled for this comparison. The ordinary
+shower termination cutoff remains; the analytic subtraction stays
+unregularized in the unresolved region.
+\item Pythia's azimuthal/coherence models are not promoted to exact
+fixed-order spin correlations by these scalar kernel patches. Small effects
+ordinarily neglected in MC@NLO remain under that qualification.
+\end{itemize}
+
+\section{Implementation structure and runtime contract}\label{sec:implementation}
+
+\subsection{Maps, native states, and subtraction}
+
+The main implementation responsibilities are as follows; all paths are
+relative to the repository root.
+\begin{description}[style=nextline]
+\item[\file{Template/NLO/SubProcesses/FKSParams.f90}]
+Declares, reads, prints and validates the local-map and paired-patch flags.
+The collinear patch requires local recoil; the soft patch requires the
+collinear patch. Local matching requires the explicit sums and Pythia8.
+\item[\file{Template/NLO/SubProcesses/mc_native_runtime.f}]
+\code{mc_select_pythia_pair} selects the unique IF partner from immutable
+native Born IDs and colour metadata. It supports the two beam orderings,
+antiquarks and crossed real channels, including an incoming gluon with a
+quark Born projection. It does not guess a recoil partner from a real-state
+particle number alone.
+\item[\file{Template/NLO/SubProcesses/genps_fks_radiation.f}]
+\code{generate_momenta_pythia_initial} and
+\code{invert_momenta_pythia_initial} implement ISR generation and inversion.
+\code{pythia_local_radiation_coordinates} supplies the common S-event soft
+point and its Jacobian. Final-state orientations reuse the incoming-reservoir
+FSR construction, including massive solutions and frame conversions.
+\item[\file{Template/NLO/SubProcesses/recoil_selection.f}]
+Selects the local policy and rejects combinations with explicit recoil
+requests or resonance recoil.
+\item[\file{Template/NLO/SubProcesses/fks_phase_space_data.f}]
+Carries the selected pair, local ISR coordinate and soft conversion with the
+complete point state. Born reuse checks the chosen pair as well as the
+usual kinematic context.
+\item[\file{Template/NLO/SubProcesses/fks_singular.f}]
+Implements the real and endpoint prefactors, including the finite soft
+conversion and the native FKS contributions used in the G replacement.
+\item[\file{Template/NLO/SubProcesses/montecarlocounter.f}]
+\file{prepare_pythia_local_kinematics} computes stable invariants;
+\file{compute_pythia_local_counterterm} selects the stock, one-patch or
+two-patch kernel and the relevant G profile. It keeps the selected Born
+weights, orientation partition, luminosity convention and scale damping
+together.
+\end{description}
+Supporting native-history, event-colour and starting-scale code carries the
+same Born context through S and H contributions. The changes were kept in
+the phase-space and matching owners rather than made as a correction to
+an already generated event file.
+
+Unsupported Born structures fail explicitly: the present selector expects
+two massless incoming quarks in the Born channel, one massive outgoing top,
+one massless outgoing quark, and one colour flow containing the two distinct
+IF connections. The process need not have the same real-channel incoming
+flavours as its Born projection. Hadron beam and QCD-only requirements are
+also checked.
+
+\subsection{FKS flags and launcher checks}
+
+For local matching, the common settings in \file{Cards/FKS_params.dat} are
+\begin{lstlisting}
+#FKSPythiaLocalRecoil
+1
+#FKSISRMapping
+0
+#FKSFinalRecoil
+0
+#FKSExplicitSum
+.true.
+#MCExplicitKLSum
+.true.
+#PythiaLocalGWidth
+0.01d0
+\end{lstlisting}
+The one-patch process additionally sets
+\code{PythiaLocalCollinearPatch=.true.}; the two-patch process also sets
+\code{PythiaLocalSoftPatch=.true.}. An absent flag in an older process card
+uses its compiled default, false. The default-recoil process does not turn
+on the local mode and keeps its ordinary summation settings.
+
+The shower launcher is
+\file{Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script}.
+It reads the paired FKS flags, checks that the selected XML declares the
+required shower setting, and writes the matching flag into
+\file{Pythia8.cmd}. It writes a declared optional flag off when the paired
+matching prescription is off, and avoids passing an unknown flag to stock
+Pythia. The selected build is given by \code{pythia8_path} in
+\file{Cards/amcatnlo_configuration.txt}. The process-local shower template
+puts the selected private library ahead of inherited library paths.
+
+Set \code{parton_shower=PYTHIA8}, \code{ickkw=0}, and
+\code{mcatnlo_delta=False}. Separate initial-only/final-only matching jobs
+are not a substitute for the combined IF prescription. Do not combine the
+local mode with nonzero generic ISR/final recoil overrides. Regenerate
+integration grids and LHE events after changing the map, kernel-patch flags,
+or G width. Showering an old LHE sample with a newly patched kernel is not
+the corresponding matched prediction.
+
+\section{The common production and shower setup}\label{sec:setup}
+
+The current four run cards and parameter cards are byte-identical.
+They request $10^6$ events each at $\sqrt s=13$ TeV with $m_t=173\GeV$,
+\code{pdlabel=nn23nlo}, and dynamic scales
+\begin{equation}
+ \mu_R=\mu_F=H_T/2,
+ \qquad H_T=\sum_{i\in\mathrm{final}}
+                  \sqrt{m_i^2+p_{\perp i}^2}.
+\end{equation}
+The card value is \code{dynamical_scale_choice=-1}; this scale definition is
+given by the generated \code{setscales.f}. Scale/PDF reweighting and merging
+are off. The listed \code{lhaid} is not an active LHAPDF request when the
+built-in \code{nn23nlo} label is selected.
+
+\textbf{Current versus historical cuts.} The current cards set
+\code{ptj=-1} and \code{etaj=-1}: the generation jet cuts are disabled.
+The card's generation jet algorithm/radius are not the analysis definition.
+Older fixed-order and G-width validation examples used \code{ptj=10} GeV.
+Their cross sections are reported below as historical checks, not directly
+compared with the current unrestricted-generation rates.
+
+The common shower choices are
+\begin{center}\small
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Item & Value / interpretation\\
+\midrule
+QCD ISR and FSR & On\\
+Hadronisation and hadron-level processing & Off\\
+MPI, remnants, primordial transverse momentum & Off\\
+Colour reconnection & Off\\
+QED showers from quarks, leptons, photons and other particles & Off\\
+Weak showers and top decays & Off; \code{6:mayDecay=off}\\
+ISR/FSR matrix-element corrections & Off, including extended / after-first options\\
+Shower $\as(M_Z)$ & 0.118, one-loop running, CMW rescaling off\\
+Shower PDFs & Internal \code{PDF:pSet=15}, NNPDF2.3 NLO QCD+QED grid\\
+Extra ISR screening & \code{pT0parametrization=0}, \code{pT0Ref force=0.}\\
+FSR gluon-to-quark weight & \code{TimeShower:weightGluonToQuark=1}\\
+FSR recoil dead cone & On\\
+QED conversion upper mass & \code{TimeShower:mMaxGamma=10}; inactive when QED showers are off\\
+Shower card events / jobs & All available events, one shower job, seed 172925\\
+\bottomrule
+\end{tabularx}
+\end{center}
+The PDF grid's fitted coupling and the chosen shower coupling are distinct
+inputs; the latter is the standard MG5 shower value used consistently in
+the comparison. No LHAPDF installation is needed for the internal shower
+grid.
+
+Both showers use \code{pTmaxMatch=1} and unit \code{pTmaxFudge}, with
+\code{shower_scale_factor=1.0} in the run card. The card's SCALUP/start-scale
+prescription is retained. The common options also include
+\code{SpaceShower:pTdampMatch=0}, \code{SpaceShower:samePTasMPI=off}, and
+\code{TimeShower:allowBeamRecoil=on}. Event normalization is
+\code{event_norm=average}; \code{nsplit_jobs=1} and \code{nevents=-1} in the
+shower card request the whole generated sample in one job.
+
+The recoil switches distinguish the samples:
+\begin{lstlisting}
+# pp_tj_default
+SpaceShower:dipoleRecoil = off
+TimeShower:globalRecoil = on
+
+# all three local samples
+SpaceShower:dipoleRecoil = on
+TimeShower:globalRecoil = off
+\end{lstlisting}
+The default sample retains the usual MG5 first-emission global-recoil
+steering, including its S/H-related options. This is not a statement that
+every subsequent FSR branching uses global recoil. Pythia's ordinary
+later shower machinery remains in use.
+
+The final event is an open partonic subsystem because beam remnants are
+off. Its full-proton charge and momentum check is therefore disabled with
+\code{Check:event=off}. This is a specific event-record choice; successful
+acceptance in these production runs is not a full-event momentum-check
+validation. Closed-record tests with remnants on are discussed separately.
+
+The extra screening assignment uses \code{DM_1} so that Pythia's
+case-sensitive lower-case \code{force} survives MG5's handling of the
+\code{pythia8_options} dictionary. \code{DM_2} supplies an absolute XML path,
+which also makes the sibling PDF-data directory available from a shower run
+directory. If installations move, update the Pythia prefix, this XML/data
+path, and the HepMC include/library paths together.
+
+\section{Analysis definitions and the purpose of every plot family}\label{sec:analysis}
+
+\subsection{Objects and selections}
+
+The common analysis is
+\file{Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f}, copied to
+each process. It runs through the normal MG5--Pythia8 interface and fills
+HwU histograms. Final-state quarks, including bottom, and gluons are
+clustered with anti-$k_T$, $R=0.4$, using FastJet or the bundled fjcore.
+The stable top is excluded. The analysis requires exactly one final stable
+top and rejects final hadrons, photons, or leptons.
+
+Accepted jets satisfy $p_{\perp j}>20\GeV$ and $|y_j|<4.5$.
+$j_1,j_2,\ldots$ are the accepted jets ordered by transverse momentum.
+$j_1$ is a kinematic proxy for the spectator jet, not an ancestry or flavour
+tag; hard radiation can become $j_1$. No infrared-unsafe light-parton flavour
+assignment is used.
+
+There are three selections:
+\begin{align}
+ \mathrm{ALL}:&\quad\text{no accepted-jet requirement},\\
+ \mathrm{TAG}:&\quad p_{\perp j_1}>30\GeV,\\
+ \mathrm{GAP}:&\quad\mathrm{TAG},\quad
+            |y_t-y_{j_1}|>3,\quad m(t,j_1)>500\GeV.
+\end{align}
+These are analysis cuts, not generation cuts. A plot requiring $j_2$ is
+filled only when at least two accepted jets are present. Events failing
+TAG or GAP still count towards the inclusive event normalization.
+
+True rapidity and pseudorapidity are
+\begin{equation}
+ y(p)=\frac12\log\frac{E+p_z}{E-p_z},\qquad
+ \eta(p)=\operatorname{arsinh}\frac{p_z}{p_\perp}.
+\end{equation}
+The top is massive, and clustered jets can also have nonzero mass; $y$ and
+$\eta$ should not be interchanged in the gap definitions.
+
+\subsection{Standard single-top distributions}
+
+The ALL selection contains the total rate, top transverse momentum and
+rapidity, $|y_t|$, a wider top-$p_\perp$ spectrum, jet multiplicity, jet
+$H_T$, top-plus-jets $H_T$, and leading-jet $p_\perp$ when a jet exists.
+TAG and GAP contain their fiducial rates, top and leading-jet $p_\perp/y$,
+leading-jet $\eta$ and $|\eta|$, and the following standard correlation
+observables:
+\begin{align}
+ \Delta y_{t1}&=y_t-y_{j_1},&
+ \Delta\phi_{t1}&=\arccos\frac{\boldsymbol p_{\perp t}\cdot
+                  \boldsymbol p_{\perp j_1}}{p_{\perp t}p_{\perp j_1}},\\
+ m_{t1}&=\sqrt{(p_t+p_{j_1})^2},&
+ y_{t1}&=y(p_t+p_{j_1}).
+\end{align}
+The azimuthal difference lies in $[0,\pi]$. These plots test inclusive
+production and migration across fiducial cuts, rather than only a special
+recoil-sensitive corner. Multiplicity histograms put all $N_{\rm jets}\geq8$
+in the last bin.
+
+\subsection{Recoil and additional-jet observables}
+
+At Born level the top and its light recoil are balanced. The spectra of
+\begin{equation}
+ p_\perp(t+j_1),\qquad
+ p_\perp(t+j_1+j_2)
+\end{equation}
+measure recoil from radiation not included in those reconstructed systems.
+The first is also booked with fine bins below $50\GeV$. The second requires
+$j_2$ and probes additional shower radiation and radiation outside accepted
+jets. The low-imbalance region is sensitive to Sudakov evolution, jet
+clustering and recoil; a hard tail can also reflect which jet is leading.
+
+The analogy to Higgs VBF concerns the \emph{first additional jet}: $j_2$
+here corresponds to VBF's $j_3$ when the two VBF tagging jets are treated
+as the Born visible system. VBF studies motivate rapidity centrality and
+gap activity as probes of coherence and recoil~\cite{VBFJager,VBFHoche}.
+The massive coloured top makes the present process different; neither the
+size nor the sign of an effect is inferred from the analogy alone.
+
+Define
+\begin{equation}
+ Y=|y_{j_1}-y_t|,\quad
+ y_m=\frac{y_t+y_{j_1}}2,\quad
+ s=\operatorname{sign}(y_{j_1}-y_t).
+\end{equation}
+The analysis fills $j_2$ $p_\perp,y,\eta$, the unscaled displacement
+$y_{j_2}-y_m$, and the oriented Zeppenfeld coordinate
+\begin{equation}
+ z^*_{j_2}=s\frac{y_{j_2}-y_m}{Y}.\label{eq:zstar}
+\end{equation}
+The top and leading jet are at $-1/2$ and $+1/2$, respectively, independent
+of beam reversal. $|z^*|<1/2$ puts $j_2$ in the rapidity interval between
+them; $z^*=0$ is its midpoint. The $z^*$ histograms require $Y>1$ to avoid
+unstable small denominators. A second version requires
+$p_{\perp j_2}>30\GeV$. These conditions are in addition to TAG or GAP.
+
+The oriented distances
+\begin{equation}
+ s(y_{j_2}-y_{j_1}),\qquad s(y_{j_2}-y_t)
+\end{equation}
+separate activity near the light and heavy ends without averaging them away
+under beam reversal. The signed distance to the nearest gap edge is
+\begin{equation}
+ d_{\rm edge}=\begin{cases}
+ +\min(|y_{j_2}-y_t|,|y_{j_2}-y_{j_1}|),&j_2\text{ inside the gap},\\
+ -\min(|y_{j_2}-y_t|,|y_{j_2}-y_{j_1}|),&j_2\text{ outside the gap}.
+ \end{cases}
+\end{equation}
+This distinguishes central in-gap radiation from radiation just beyond a
+tagging object without division by $Y$.
+
+\subsection{Gap activity and veto efficiency}
+
+Extra jets are $j_2,j_3,\ldots$. The open interval between $y_t$ and
+$y_{j_1}$ defines gap membership. The analysis measures the number of gap
+jets, their scalar transverse-momentum sum, their hardest transverse
+momentum, and extra-jet $H_T$ in $|y_j-y_m|<0.5$. Events with no such activity
+contribute at zero. The last gap multiplicity bin includes $N_{\rm gap}\geq5$.
+
+For a veto threshold $Q_0$, define
+\begin{equation}
+ \epsilon_{\rm gap}(Q_0)
+ =\frac{\sigma(\text{selection and no extra gap jet with }p_\perp\geq Q_0)}
+        {\sigma(\text{selection})}.
+\end{equation}
+The code tests the hardest extra gap jet with a strict $p_\perp<Q_0$
+condition and fills cumulative numerator and reference scans at
+$Q_0=21,23,\ldots,99\GeV$. The normal plots turn these four raw scan
+histograms into two efficiencies, one for TAG and one for GAP. They are
+not differential cross sections in the threshold.
+
+The complete catalogue in Appendix~\ref{app:catalogue} lists all binning and
+ranges. There are nine ALL histograms and 33 each for TAG and GAP: 75 raw
+histograms. The normal process PDF has 37 pages because identical titles
+overlay selections. The four-sample comparison has 73 panels:
+$75-4+2$, replacing the four raw veto scans with two efficiencies.
+
+\subsection{Weights, normalization, and uncertainty propagation}\label{sec:statistics}
+
+Signed MC@NLO weights are retained. The central contribution uses the
+HepMC event weight; variations are normalized relatively to the central
+LHE weight. The analysis calls \code{HwU_add_points} once per analysed event,
+including cut failures. It counts actual analysis calls for normalization,
+not the event serial number. The HwU error mode is explicitly Poisson:
+the squared signed weights are accumulated. Thus a negative weight reduces
+the bin content while increasing its variance.
+
+For a numerator $N$ that is a weighted subset of a denominator $D$, the
+Poisson convention gives $\operatorname{Cov}(N,D)=\operatorname{Var}(N)$.
+The comparison helper propagates
+\begin{equation}
+ f=\frac ND,\qquad
+ (\delta f)^2=\frac{(1-f)^2\operatorname{Var}(N)
+              +f^2[\operatorname{Var}(D)-\operatorname{Var}(N)]}{D^2}.
+\end{equation}
+The variance difference is floored at zero against roundoff. This is used
+for gap efficiencies and for bin fractions in shape-normalized spectra.
+Between separately generated samples, ratios use the independent-sample
+formula
+\begin{equation}
+ R=\frac AB,\qquad
+ \delta R=\sqrt{\frac{(\delta A)^2}{B^2}
+                   +\frac{A^2(\delta B)^2}{B^4}}.
+\end{equation}
+Nonpositive denominators are masked. A tiny positive denominator can still
+produce an enormous, meaningless ratio in a sparsely populated or strongly
+cancelling tail. Some automatically scaled atlas ratio panels consequently
+have very large ranges. Those tails should be rebinned or restricted before
+quantitative interpretation; the displayed ratio scale is not evidence of
+a huge physical effect.
+
+Absolute HwU contents are bin-integrated cross sections. Comparison plots
+divide by bin width for a differential density. With \code{--shape}, each
+distribution is normalized over its displayed range, including the subset
+correlation above. One-bin rates and gap efficiencies are not shape
+normalized. Histogram statistical errors are not scale/PDF uncertainties,
+integration errors, or a theory-error estimate.
+
+The existing Pythia driver checks its selected-event limit before analysing
+the last selected event. Thus the 1000-, 10000- and million-event runs
+normally contain 999, 9999 and 999999 analysis calls. The analysis
+normalizes with its own call count. This pre-existing one-event effect was
+documented; it is not the HEPEVT truncation failure.
+
+\section{Current production results and how to read them}\label{sec:results}
+
+\textbf{Correction of 25 October 2026.}
+The MC@NLO samples in this section and the comparison atlas must be
+regenerated. The final clustering vertex stored its daughter momenta but
+omitted the mother's momentum. For a coloured core mother, as in
+$Wb\to t$, the two-coloured-leg scale
+$q^2=2|p_b\cdot p_t|$ therefore used uninitialized data. Different S and H
+evaluations could then use different shower damping scales, preventing
+their MC subtraction terms from cancelling. Initializing
+\file{p_inter(:,0,0)=pcl(:,3)} in \file{cluster.f} fixes the defect.
+Compiled tests cover the $Wb\to t$ core and $bu\to td$ clustering with
+both beam orientations; independent integrations verify inclusive
+subtraction closure. The prepared MC@NLO sources and executables have
+been updated. Saved events and plots are preserved as historical
+diagnostics, not validated predictions. Fixed-order and POWHEG results
+are unaffected. Numerical checks are recorded under
+\file{docs/audits/singletop_normalization_mcexplicit.json}.
+
+The following values are taken from the four current
+\file{Events/run_01/plot_PYTHIA8_1_0.HwU} files, as summarized in
+\file{Analyses/pp_tj_recoil.json}. Each corresponding shower log reports
+one million accepted events. These are the superseded production samples,
+subsequent to the short validation runs described later.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Observable & Default & Local & 1 patch & 2 patches\\
+\midrule
+ALL: total & $138.452\pm0.342$ & $138.424\pm0.291$ & $137.508\pm0.254$ & $138.283\pm0.233$ \\
+TAG: fiducial & $104.592\pm0.285$ & $102.857\pm0.233$ & $102.198\pm0.203$ & $102.777\pm0.184$ \\
+GAP: fiducial & $19.101\pm0.127$ & $18.806\pm0.104$ & $18.698\pm0.091$ & $18.748\pm0.084$ \\
+TAG: at least two jets & $51.649\pm0.196$ & $49.152\pm0.146$ & $48.646\pm0.126$ & $47.222\pm0.116$ \\
+GAP: at least two jets & $8.111\pm0.084$ & $7.205\pm0.056$ & $7.028\pm0.048$ & $6.774\pm0.045$ \\
+\bottomrule
+\end{tabular}
+\caption{Current shower-analysis rates in pb. Errors are Poisson histogram statistical errors. All four production samples contain one million selected shower events.}\label{tab:production}
+\end{table}
+
+
+The inclusive predictions are close on the percent scale, while the
+additional-jet selections show larger differences. The rates must not be
+interpreted as a precision estimate of a recoil systematic: the samples
+have different matched maps/counterterms, the stock local case has a finite
+G width, and the patched cases deliberately change the shower. The quoted
+errors in this table are histogram sampling errors only.
+
+Equal generated event counts do not give equal signed-weight precision.
+For the inclusive Poisson histogram, define
+\begin{equation}
+ N_{\rm eff}=\frac{(\sum_i w_i)^2}{\sum_i w_i^2}
+            =\left(\frac{\sigma_{\rm ALL}}
+                         {\delta\sigma_{\rm ALL}}\right)^2.
+\end{equation}
+The current inclusive bins give approximately 164000, 226000, 292000 and
+353000 effective events for default, local, one patch and two patches,
+respectively. These are measures of signed-weight sampling precision, not
+counts of positive events; the effective count depends on the observable.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Observable & Default & Local & 1 patch & 2 patches\\
+\midrule
+TAG: central j2 & $10.094\pm0.103$ & $8.168\pm0.059$ & $8.012\pm0.050$ & $7.910\pm0.046$ \\
+GAP: central j2 & $3.426\pm0.060$ & $2.459\pm0.032$ & $2.378\pm0.027$ & $2.374\pm0.025$ \\
+\bottomrule
+\end{tabular}
+\caption{Cross section in pb for $|z^*_{j_2}|<1/2$, from the displayed centrality histogram. TAG also requires $Y>1$; GAP already has $Y>3$. At least two accepted jets are required.}\label{tab:central}
+\end{table}
+
+
+In the GAP selection the central-$j_2$ rate is about $28$--$31\%$ lower in
+the three local predictions than in the default prediction. This is an
+observed difference in these samples, not a deduction from the VBF papers.
+The extra top-soft patch leaves this particular central-$j_2$ rate close
+to the one-patch value while changing the total two-jet rate. A full shape
+comparison is therefore more informative than one number.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Observable & Default & Local & 1 patch & 2 patches\\
+\midrule
+TAG: Q0=21 GeV & $0.8565\pm0.0010$ & $0.8897\pm0.0006$ & $0.8923\pm0.0005$ & $0.8940\pm0.0005$ \\
+TAG: Q0=41 GeV & $0.9443\pm0.0006$ & $0.9564\pm0.0004$ & $0.9570\pm0.0003$ & $0.9575\pm0.0003$ \\
+TAG: Q0=61 GeV & $0.9745\pm0.0004$ & $0.9807\pm0.0003$ & $0.9805\pm0.0002$ & $0.9807\pm0.0002$ \\
+GAP: Q0=21 GeV & $0.7890\pm0.0029$ & $0.8564\pm0.0017$ & $0.8614\pm0.0014$ & $0.8610\pm0.0013$ \\
+GAP: Q0=41 GeV & $0.9251\pm0.0017$ & $0.9413\pm0.0011$ & $0.9434\pm0.0009$ & $0.9447\pm0.0008$ \\
+GAP: Q0=61 GeV & $0.9680\pm0.0010$ & $0.9759\pm0.0007$ & $0.9757\pm0.0006$ & $0.9761\pm0.0006$ \\
+\bottomrule
+\end{tabular}
+\caption{Gap-veto efficiencies at three thresholds, with the subset covariance included.}\label{tab:veto}
+\end{table}
+
+
+At $Q_0=21\GeV$, the GAP veto efficiency rises from about $0.789$ in the
+default prediction to $0.856$--$0.861$ in the local predictions. At larger
+thresholds the difference decreases. This is consistent with reduced
+accepted in-gap activity for these local setups, and complements the
+rapidity-centrality plots.
+
+The following reading order is useful.
+\begin{enumerate}
+\item Check the total, TAG and GAP rates, top $p_\perp/y$, leading-jet
+$p_\perp/\eta$, and $m(t,j_1)$. These establish the usual single-top
+production and acceptance changes.
+\item Compare $|\Delta y_{t1}|$, the $j_2$ displacement from the midpoint,
+and $z^*_{j_2}$, especially in GAP. The signed coordinates distinguish
+activity near the two different colour lines.
+\item Use gap multiplicity, hardest gap-jet $p_\perp$, gap/midpoint $H_T$
+and veto efficiencies to determine whether a centrality change comes with
+more or less gap radiation.
+\item Compare absolute and shape-normalized spectra. A lower $j_2$ rate
+and a changed normalized centrality distribution are separate effects.
+\item Inspect pair/system transverse momentum and $\Delta\phi$ for recoil
+balance, with appropriate caution in low-statistics tails.
+\end{enumerate}
+
+Top-plus-leading-jet observables have the usual nominal NLO+PS status,
+subject to the explicit finite-width and shower-model qualifications above.
+One additional resolved jet is supplied by the NLO real term and shower,
+and has lower fixed-order accuracy. More additional jets are shower
+dominated. There is no multijet merging. Neither the atlas nor these
+central values establishes a preferred shower without uncertainty studies.
+
+\section{Validation evidence and its limits}\label{sec:validation}
+
+\subsection{Fixed-order map validation}
+
+The local-map tests compare forward/inverse closure, preserved masses and
+spectators, allowed support, Bjorken fractions and independent Cartesian
+phase-space determinants. They include both beam orders, antiquarks,
+emitted-leg permutations, native replay, state restoration, massive
+solutions and invalid-configuration rejection. Invalid arithmetic,
+division by zero and overflow are trapped in the relevant numerical tests.
+The finite soft conversion is checked against the dimensionally regulated
+energy integral, and the incoming-collinear/PDF prefactors against the
+ordinary ISR map.
+
+The earlier independent-seed fixed-order production check used the same
+13 TeV process but the earlier validation cuts, including $p_{\perp j}>10$
+GeV at generation. It gave
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Map & Seed & $(\xi_S^{\rm cut},\delta_S)$ & NLO cross section [pb]\\
+\midrule
+Default & 7251 & $(0.5,1)$ & $130.7\pm0.46$\\
+Local & 8313 & $(0.5,1)$ & $129.0\pm0.55$\\
+Local, varied subtraction cutoffs & 9301 & $(0.25,0.5)$ & $129.9\pm0.70$\\
+\bottomrule
+\end{tabular}
+\end{center}
+The default/local difference is 2.37 combined standard errors; the local
+cutoff variation is 1.01. The differential comparison had 406 tested bin
+differences across the two comparisons, with maximum marginal pulls 2.92
+and 3.11, below the stated 3.84 Bonferroni threshold. These are scoped
+numerical consistency checks, not a proof from inclusive agreement alone.
+
+\subsection{Stock-G matching and width variation}
+
+All four generated subprocess groups pass the production ME and MC
+soft/collinear tests and 20/20 pole checks. Additional checks compare the
+soft-collinear overlap in common coordinates. One apparent soft offset
+was traced to diagnostic limit flags being cleared during inversion and
+not restored for amplitude evaluation: one side used a $10^{-6}$ shortcut
+while the reference used the diagnostic $10^{-12}$ threshold. That
+diagnostic inconsistency was corrected; it was not cured with a physics
+factor.
+
+The historical stock-G study with the earlier generation cuts found
+\begin{center}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+$h$ & Integration [pb] & Showered events & Negative-weight events\\
+\midrule
+0.005 & $132.1\pm2.5$ & 1000 & 247\\
+0.010 & $134.7\pm1.6$ & 1000 & 267\\
+0.020 & $134.9\pm1.7$ & 1000 & 238\\
+\bottomrule
+\end{tabular}
+\end{center}
+All LHE weights and scales were finite. The widths were statistically
+compatible at that limited precision; this does not measure a precise
+differential G-width uncertainty. Stock Pythia completed the samples but
+reported retries, momentum-check, threshold, dipole-mass and occasional
+weight-above-unity messages. G functions do not repair shower evolution
+or trial-envelope problems.
+
+The stock audit covers 1200 accepted first emissions across both beams and
+quarks/antiquarks, and compares 100 accepted gluon-emission points with the
+Fortran raw density. It establishes the checked map, routing and analytic
+massless-incoming density. It is not a full audit of every finite
+acceptance factor or every heavy-flavour threshold branch.
+
+\subsection{Patch and complete-history checks}
+
+The one-patch audit compares 100 accepted patched points with the Fortran
+density and 100 disabled-flag points bit for bit against stock. The
+two-patch audit verifies corresponding opt-out equivalence with both stock
+and the one-patch build, 100 two-patch density points, invariant bounds,
+Lorentz invariance, and the intended flavour/topology restrictions.
+Complete histories include later quark--top IF branchings and final--final
+gluon--top emissions, retaining the ordinary recoil dead-cone setting.
+The generated one- and two-patch 1000-event validation runs both pass the
+four subprocess ME/MC checks and pole checks, shower all 1000 events, and
+write all 75 histograms.
+
+The two-patch kernel/launcher test batch had 31 passing tests and its
+map/matching regression batch 46. The subsequent record-fix batch had 15
+passing tests, including the long-history regression. These are recorded
+batches at development checkpoints, with overlapping tests; the counts
+should not be added as independent evidence. The earlier stock-G audit
+also records a broader 155-test batch.
+
+Closed proton-record diagnostics enable beam remnants, keep primordial
+$k_\perp$ off, and turn \code{Check:event} on. Their event-check rejections
+must be reported as failures of that check:
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Fixture & Stock & Collinear patch & Both patches\\
+\midrule
+Four beam/flavour cases, 1200 attempts per variant & 21 & 33 & 22\\
+One case, 1000 attempts per variant & 10 & 19 & 20\\
+\bottomrule
+\end{tabular}
+\end{center}
+No top-soft-factor bound or stable-top-mass violations were found in those
+checks. This is not equivalent to every complete event passing momentum
+conservation. Failures also occur in the references; these finite samples
+neither prove equal rejection probabilities nor identify a new failure
+specific to the top-soft factor. The production open-record setup has
+different checks and cannot settle this question by its acceptance count.
+
+\section{The default-shower failure and the HEPEVT fix}\label{sec:hepevt}
+
+The first full default shower stopped at event 2866 with
+\code{Expected exactly one stable final top}. Replaying that event with
+the original settings gave
+\begin{center}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+ & Pythia & HepMC & Fortran HEPEVT\\
+\midrule
+Stable final tops & 1 & 1 & 0\\
+History entries & 5174 & 5173 & 4000\\
+\bottomrule
+\end{tabular}
+\end{center}
+Pythia's entry zero accounts for its extra entry. Global recoil stores many
+intermediate spectator copies, so the full history can be much longer than
+the final partonic state. HepMC's \code{IO_HEPEVT} silently truncated the
+history at the configured 4000 entries and lost the final top. Pythia had
+not decayed or removed it.
+
+The stable-top analysis now uses
+\file{Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC} with 100000 entries.
+At \code{PYABEG} it calls \code{hepmc_set_max_number_entries}, defined in
+\file{Template/NLO/MCatNLO/include/HEPEVTSize.h}, so HepMC uses the same
+array strides as the Fortran common block. Increasing only one side would
+misalign the record. The helper validates the declared capacity against
+the allocation supported by the HepMC headers. The analysis also refuses
+a record at the capacity limit, instead of using a possibly truncated state.
+
+This analysis and interface fix are installed in all four process
+directories and the export template. Ordinary other analyses keep the
+generic 4000-entry layout unless they opt in. HepMC-output-only drivers do
+not use this Fortran analysis transfer. Pythia source/library kernels,
+analysis cuts and original LHE events are unchanged.
+
+The first 10000 original events were replayed successfully. Event 2866 now
+retains all 5173 HepMC entries and one final top in each representation;
+the largest replayed record has 5177 entries. The usual MG5 shower command
+also accepted all 10000 events and produced 75 histograms and a 37-page
+PDF. A regression places the stable top beyond history entry 4000 and
+checks unchanged histogram results. The later completed default production
+shower reports one million accepted events; its result is the default
+curve in the current atlas. Earlier audit text saying the million-event
+rerun had not yet happened describes the earlier fix checkpoint.
+
+\section{Running, rebuilding, reproducing, and extending the study}\label{sec:running}
+
+From the default or stock-local process directory, shower existing events
+with
+\begin{lstlisting}
+./bin/shower run_01 -f
+\end{lstlisting}
+From either patched process, a fresh matched generation and automatic
+shower are requested by
+\begin{lstlisting}
+./bin/generate_events -f
+\end{lstlisting}
+The first available run name is chosen. For existing events in a patched
+process, \code{./bin/shower run_01 -f} also selects its private shower.
+Outputs have the form
+\begin{lstlisting}
+Events/run_01/plot_PYTHIA8_<shower-index>_0.HwU
+Events/run_01/plot_PYTHIA8_<shower-index>_0.pdf
+Events/run_01/plot_PYTHIA8_<shower-index>_0.html
+\end{lstlisting}
+Plotting scripts for Matplotlib and GnuPlot are also saved. The comparison
+helper accepts process directories or explicit HwU files and selects the
+latest shower by modification time when given a process directory.
+
+From the repository root:
+\begin{lstlisting}
+python3 Analyses/compare_pp_tj_recoil.py
+python3 Analyses/compare_pp_tj_recoil.py --patched
+python3 Analyses/compare_pp_tj_recoil.py --two-patches
+python3 Analyses/compare_pp_tj_recoil.py --two-patches --shape
+\end{lstlisting}
+The last option includes all four samples. Without \code{--shape}, the
+default outputs are \file{Analyses/pp_tj_recoil.pdf} and its JSON rate table;
+shape outputs have the suffix \code{_shapes}. The standard colours are blue
+for default, orange for local stock, green for the collinear patch and purple
+for both patches. Ratios are always to default. \code{--run} and
+\code{--out} select another run or output prefix. Explicit HwU files are
+useful when short validation runs have different names in each process.
+
+Private builds can be reproduced in \emph{new} prefixes outside the stock
+source tree:
+\begin{lstlisting}
+python3 docs/audits/build_pythia8_local_collinear.py STOCK NEW_ONE_PATCH
+python3 docs/audits/build_pythia8_local_collinear.py STOCK NEW_TWO_PATCHES --top-soft
+\end{lstlisting}
+The builder verifies reference 8.318 source hashes, copies files without
+hard-linking mutable sources, applies patches in order, rebuilds the static
+and shared libraries, and records commands and SHA256 values in
+\code{local_collinear_patch.json}. Its final stock-hash check also runs on
+failure. A differently patched or differently versioned reference is not
+silently accepted.
+
+The main focused checks can be run with
+\begin{lstlisting}
+python3 -m unittest \
+ tests.unit_tests.fks.test_pythia_local_recoil \
+ tests.unit_tests.fks.test_pythia_local_matching \
+ tests.unit_tests.fks.test_recoil_selection \
+ tests.unit_tests.various.test_pythia8 \
+ tests.unit_tests.various.test_single_top_recoil_analysis -v
+
+python3 docs/audits/check_pythia8_singletop_local.py STOCK
+python3 docs/audits/check_pythia8_local_collinear_patch.py STOCK ONE_PATCH
+python3 docs/audits/check_pythia8_local_soft_patch.py STOCK ONE_PATCH TWO_PATCHES
+\end{lstlisting}
+The C++/Fortran checks require the appropriate compilers and installed
+Pythia/HepMC dependencies. The read-only stock audit can additionally take
+an LHE file and steering file for complete-shower checks.
+
+The most useful next physics studies are systematic G-width variations
+for the stock local and one-patch prescriptions, shower starting-scale and
+coupling variations, robustly rebinned shape comparisons, and a dedicated
+analysis of later massive gluon--top IF configurations. A separate study
+would be needed for top decays, resonance matching, antitop phenomenology,
+four-flavour production, merging, or general colour flows. None is implied
+by the present stable-top validation.
+
+To rebuild this report from the repository root, use
+\begin{lstlisting}
+cd docs
+pdflatex -interaction=nonstopmode -halt-on-error single_top_local_recoil.tex
+pdflatex -interaction=nonstopmode -halt-on-error single_top_local_recoil.tex
+\end{lstlisting}
+The source contains the prose, equations, numerical tables, bibliography,
+histogram catalogue and plot index. It imports the existing comparison PDF
+for the atlas; the compiled report embeds those pages and is self-contained
+for reading. Recompiling against changed plot files without updating the
+numerical snapshot tables would make the report inconsistent; regenerate
+or review those tables together with the atlas.
+
+\begin{thebibliography}{9}
+\addcontentsline{toc}{section}{References}
+\bibitem{Cabouat}
+B. Cabouat and T. Sj\"ostrand,
+\emph{Some Dipole Shower Studies}, Eur. Phys. J. C 78 (2018) 226,
+\href{https://arxiv.org/abs/1710.00391}{arXiv:1710.00391};
+especially sections 3.1--3.4 and Eq.~(23).
+\bibitem{FKS}
+S. Frixione, Z. Kunszt and A. Signer,
+\emph{Three-jet cross sections to next-to-leading order},
+Nucl. Phys. B467 (1996) 399--442,
+\href{https://arxiv.org/abs/hep-ph/9512328}{hep-ph/9512328}.
+\bibitem{MCatNLO}
+S. Frixione and B. R. Webber,
+\emph{Matching NLO QCD computations and parton shower simulations},
+JHEP 06 (2002) 029,
+\href{https://arxiv.org/abs/hep-ph/0204244}{hep-ph/0204244}.
+\bibitem{MG5}
+J. Alwall et al.,
+\emph{The automated computation of tree-level and next-to-leading order
+differential cross sections, and their matching to parton shower simulations},
+JHEP 07 (2014) 079,
+\href{https://arxiv.org/abs/1405.0301}{arXiv:1405.0301};
+especially Eq.~(2.117) and the G-function discussion on pp.~48--49.
+\bibitem{MassiveDipoles}
+S. Catani, S. Dittmaier, M. H. Seymour and Z. Tr\'ocs\'anyi,
+\emph{The Dipole Formalism for Next-to-Leading Order QCD Calculations with
+Massive Partons}, Nucl. Phys. B627 (2002) 189--265,
+\href{https://arxiv.org/abs/hep-ph/0201036}{hep-ph/0201036}.
+\bibitem{PythiaTime}
+Pythia manual, \emph{Timelike Showers}, sections on global recoil and
+\code{TimeShower:recoilDeadCone},
+\url{https://pythia.org/latest-manual/TimelikeShowers.html}.
+The implementation used here is specifically Pythia 8.318, whose local
+source/XML is the versioned reference.
+\bibitem{VBFJager}
+B. J\"ager, A. Karlberg, S. Pl\"atzer, J. Scheller and M. Zaro,
+\emph{Parton-shower effects in Higgs production via Vector-Boson Fusion},
+Eur. Phys. J. C 80 (2020) 756,
+\href{https://arxiv.org/abs/2003.12435}{arXiv:2003.12435}.
+\bibitem{VBFHoche}
+S. H\"oche, S. Mrenna, S. Payne, C. T. Preuss and P. Skands,
+\emph{A Study of QCD Radiation in VBF Higgs Production with Vincia and Pythia},
+\href{https://arxiv.org/abs/2106.10987}{arXiv:2106.10987}.
+\end{thebibliography}
+
+\clearpage\appendix
+\section{Source, test, and data provenance}\label{app:provenance}
+
+This report consolidates the implementation and evidence in the following
+records; their essential content is reproduced in the body, so they need
+not be read to understand the report.
+\begin{itemize}
+\item \file{docs/native_fks_projection.md}: map, measure, finite endpoint,
+native replay, and the earlier fixed-order numerical comparisons.
+\item \file{docs/audits/pythia8318_singletop_local.md} and
+\file{docs/audits/pythia8318_singletop_local_validation.json}: stock-G
+prescription, current checks, width samples, and explicitly historical
+withdrawn-shower results.
+\item \file{docs/audits/pythia8318_local_collinear_patch.txt} and
+\file{docs/audits/pythia8318_singletop_local_patch_validation.json}:
+one-patch construction and validation.
+\item \file{docs/audits/pythia8318_local_2patch.txt} and
+\file{docs/audits/pythia8318_singletop_local_2patch_validation.json}:
+top-soft factor, complete-history counts and two-patch checks.
+\item \file{docs/audits/pp_tj_default_hepevt_fix.txt} and
+\file{docs/audits/pp_tj_default_hepevt_validation.json}: the record-transfer
+failure and its 10000-event regression checkpoint.
+\item \file{Analyses/README.single_top_recoil},
+\file{Analyses/compare_pp_tj_recoil.py}, and the common Fortran analysis:
+plot definitions, error treatment and comparison commands.
+\end{itemize}
+
+The principal numerical fixture sources are
+\begin{lstlisting}
+tests/input_files/check_pythia_local_recoil.f90
+tests/input_files/check_pythia_local_matching.f90
+tests/input_files/check_pythia8_singletop_local.cc
+tests/input_files/check_pythia8_local_soft_history.cc
+tests/input_files/check_pythia8_singletop_lhe.cc
+tests/unit_tests/fks/test_pythia_local_recoil.py
+tests/unit_tests/fks/test_pythia_local_matching.py
+tests/unit_tests/various/test_pythia8.py
+tests/unit_tests/various/test_single_top_recoil_analysis.py
+\end{lstlisting}
+The production plot inputs and their fingerprints at the document snapshot
+are listed below. All four process directories use the same run and
+parameter card contents; their FKS prescriptions and Pythia build selections
+differ as described in Table~\ref{tab:variants}.
+
+\begin{lstlisting}
+pp_tj_default/Events/run_01/plot_PYTHIA8_1_0.HwU
+SHA256 b6285ce6ec3f79074fdbf009f5029d3f8d802d78f84ff383a08b79da1ca66cdc
+pp_tj_local/Events/run_01/plot_PYTHIA8_1_0.HwU
+SHA256 d8ab24388950604abb4d49d6c44fe53fdb7c4891b1d377ce2f65e33e14db5058
+pp_tj_local_patch/Events/run_01/plot_PYTHIA8_1_0.HwU
+SHA256 a250298c45d0075560d626ee394bb2e882f2dee044c838879f3b8dd2e6087992
+pp_tj_local_2patch/Events/run_01/plot_PYTHIA8_1_0.HwU
+SHA256 8ae580ebe6fbe130d70fb57b695f90260543599e7633db92fda8551614826061
+Analyses/pp_tj_recoil.pdf
+SHA256 d44ee8022815b89e48e019eb10f264b86ed9f5335f7978f96e3ea52ddb3984bc
+common Cards/run_card.dat
+SHA256 4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc
+common Cards/param_card.dat
+SHA256 bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f
+\end{lstlisting}
+
+
+\clearpage
+\section{Complete histogram catalogue}\label{app:catalogue}
+
+The labels below are the exact HwU titles, with the selection suffix omitted.
+Each ALL row is one histogram. Every row in the TAG/GAP table is booked
+twice, once for each selection. Bounds are histogram edges; out-of-range
+entries do not define an extrapolation beyond the displayed spectrum.
+The multiplicity plots explicitly clamp their overflow categories to
+the last booked bin. The upper azimuth edge is $\pi+10^{-10}$ in the code
+to include the endpoint safely.
+
+\subsection*{ALL: nine histograms}
+\begin{longtable}{@{}L{88mm}rrr@{}}
+\toprule
+Title & Bins & Lower edge & Upper edge\\
+\midrule
+\endfirsthead
+\toprule
+Title & Bins & Lower edge & Upper edge\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+total rate [pb] & 1 & 0 & 1 \\
+top pT [GeV] & 60 & 0 & 600 \\
+top y & 50 & -5 & 5 \\
+top abs y & 25 & 0 & 5 \\
+Njets20 (last >=8) & 9 & -0.5 & 8.5 \\
+jets HT [GeV] & 50 & 0 & 1000 \\
+top plus jets HT [GeV] & 50 & 0 & 1200 \\
+top pT high [GeV] & 50 & 0 & 1500 \\
+j1 pT [GeV] & 60 & 0 & 600 \\
+\end{longtable}
+\subsection*{TAG and GAP: 33 histograms per selection}
+\begin{longtable}{@{}L{88mm}rrr@{}}
+\toprule
+Title & Bins & Lower edge & Upper edge\\
+\midrule
+\endfirsthead
+\toprule
+Title & Bins & Lower edge & Upper edge\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+top pT [GeV] & 60 & 0 & 600 \\
+top y & 50 & -5 & 5 \\
+top abs y & 25 & 0 & 5 \\
+Njets20 (last >=8) & 9 & -0.5 & 8.5 \\
+j1 pT [GeV] & 60 & 0 & 600 \\
+fiducial rate [pb] & 1 & 0 & 1 \\
+j1 y & 50 & -5 & 5 \\
+j1 eta & 50 & -5 & 5 \\
+j1 abs eta & 25 & 0 & 5 \\
+abs dy(t,j1) & 40 & 0 & 10 \\
+dy(t,j1) & 50 & -10 & 10 \\
+dphi(t,j1) [rad] & 32 & 0 & $\pi+10^{-10}$ \\
+pT(t+j1) [GeV] & 60 & 0 & 300 \\
+pT(t+j1) low [GeV] & 50 & 0 & 50 \\
+m(t,j1) [GeV] & 60 & 150 & 1650 \\
+y(t+j1) & 50 & -5 & 5 \\
+j2 pT [GeV] & 50 & 0 & 300 \\
+j2 y & 50 & -5 & 5 \\
+j2 eta & 50 & -5 & 5 \\
+j2 y minus midpoint & 50 & -5 & 5 \\
+j2 zstar (dy>1) & 40 & -2 & 2 \\
+j2 zstar pT>30 (dy>1) & 40 & -2 & 2 \\
+j2 signed gap distance & 50 & -5 & 5 \\
+j2 dy from j1 (oriented) & 50 & -6 & 6 \\
+j2 dy from top (oriented) & 50 & -6 & 6 \\
+pT(t+j1+j2) [GeV] & 60 & 0 & 300 \\
+Ngap jets20 (last >=5) & 6 & -0.5 & 5.5 \\
+hardest gap jet pT [GeV] & 50 & 0 & 200 \\
+gap jets HT [GeV] & 50 & 0 & 300 \\
+midpoint extra jets HT [GeV] & 50 & 0 & 300 \\
+gap veto survived Q0 [GeV] & 40 & 20 & 100 \\
+gap veto reference Q0 [GeV] & 40 & 20 & 100 \\
+at least two jets rate [pb] & 1 & 0 & 1 \\
+\end{longtable}
+
+
+\clearpage
+\section{Comparison atlas: index and complete figures}\label{app:atlas}
+
+Every panel below compares all four million-event matched predictions.
+The upper panel shows an absolute cross section or density (or a veto
+efficiency); the lower panel shows ratios to default. Colours are blue,
+orange, green and purple in the order of Table~\ref{tab:variants}.
+Error bars are the statistical errors described in
+section~\ref{sec:statistics}. No scale/PDF band is included. Very small
+positive denominators can dominate the automatic ratio-axis range in
+tails; consult the absolute distribution and statistical errors before
+interpreting them. The index provides links to each embedded panel.
+
+\begin{longtable}{@{}rL{112mm}r@{}}
+\toprule
+Panel & Selection and observable & Report page\\
+\midrule
+\endfirsthead
+\toprule
+Panel & Selection and observable & Report page\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \hyperref[atlas:p01]{ALL: total rate [pb]} & \pageref{atlas:p01}\\
+2 & \hyperref[atlas:p02]{ALL: top pT [GeV]} & \pageref{atlas:p02}\\
+3 & \hyperref[atlas:p03]{TAG: top pT [GeV]} & \pageref{atlas:p03}\\
+4 & \hyperref[atlas:p04]{GAP: top pT [GeV]} & \pageref{atlas:p04}\\
+5 & \hyperref[atlas:p05]{ALL: top y} & \pageref{atlas:p05}\\
+6 & \hyperref[atlas:p06]{TAG: top y} & \pageref{atlas:p06}\\
+7 & \hyperref[atlas:p07]{GAP: top y} & \pageref{atlas:p07}\\
+8 & \hyperref[atlas:p08]{ALL: top abs y} & \pageref{atlas:p08}\\
+9 & \hyperref[atlas:p09]{TAG: top abs y} & \pageref{atlas:p09}\\
+10 & \hyperref[atlas:p10]{GAP: top abs y} & \pageref{atlas:p10}\\
+11 & \hyperref[atlas:p11]{ALL: Njets20 (last >=8)} & \pageref{atlas:p11}\\
+12 & \hyperref[atlas:p12]{TAG: Njets20 (last >=8)} & \pageref{atlas:p12}\\
+13 & \hyperref[atlas:p13]{GAP: Njets20 (last >=8)} & \pageref{atlas:p13}\\
+14 & \hyperref[atlas:p14]{ALL: jets HT [GeV]} & \pageref{atlas:p14}\\
+15 & \hyperref[atlas:p15]{ALL: top plus jets HT [GeV]} & \pageref{atlas:p15}\\
+16 & \hyperref[atlas:p16]{ALL: top pT high [GeV]} & \pageref{atlas:p16}\\
+17 & \hyperref[atlas:p17]{ALL: j1 pT [GeV]} & \pageref{atlas:p17}\\
+18 & \hyperref[atlas:p18]{TAG: j1 pT [GeV]} & \pageref{atlas:p18}\\
+19 & \hyperref[atlas:p19]{GAP: j1 pT [GeV]} & \pageref{atlas:p19}\\
+20 & \hyperref[atlas:p20]{TAG: fiducial rate [pb]} & \pageref{atlas:p20}\\
+21 & \hyperref[atlas:p21]{GAP: fiducial rate [pb]} & \pageref{atlas:p21}\\
+22 & \hyperref[atlas:p22]{TAG: j1 y} & \pageref{atlas:p22}\\
+23 & \hyperref[atlas:p23]{GAP: j1 y} & \pageref{atlas:p23}\\
+24 & \hyperref[atlas:p24]{TAG: j1 eta} & \pageref{atlas:p24}\\
+25 & \hyperref[atlas:p25]{GAP: j1 eta} & \pageref{atlas:p25}\\
+26 & \hyperref[atlas:p26]{TAG: j1 abs eta} & \pageref{atlas:p26}\\
+27 & \hyperref[atlas:p27]{GAP: j1 abs eta} & \pageref{atlas:p27}\\
+28 & \hyperref[atlas:p28]{TAG: abs dy(t,j1)} & \pageref{atlas:p28}\\
+29 & \hyperref[atlas:p29]{GAP: abs dy(t,j1)} & \pageref{atlas:p29}\\
+30 & \hyperref[atlas:p30]{TAG: dy(t,j1)} & \pageref{atlas:p30}\\
+31 & \hyperref[atlas:p31]{GAP: dy(t,j1)} & \pageref{atlas:p31}\\
+32 & \hyperref[atlas:p32]{TAG: dphi(t,j1) [rad]} & \pageref{atlas:p32}\\
+33 & \hyperref[atlas:p33]{GAP: dphi(t,j1) [rad]} & \pageref{atlas:p33}\\
+34 & \hyperref[atlas:p34]{TAG: pT(t+j1) [GeV]} & \pageref{atlas:p34}\\
+35 & \hyperref[atlas:p35]{GAP: pT(t+j1) [GeV]} & \pageref{atlas:p35}\\
+36 & \hyperref[atlas:p36]{TAG: pT(t+j1) low [GeV]} & \pageref{atlas:p36}\\
+37 & \hyperref[atlas:p37]{GAP: pT(t+j1) low [GeV]} & \pageref{atlas:p37}\\
+38 & \hyperref[atlas:p38]{TAG: m(t,j1) [GeV]} & \pageref{atlas:p38}\\
+39 & \hyperref[atlas:p39]{GAP: m(t,j1) [GeV]} & \pageref{atlas:p39}\\
+40 & \hyperref[atlas:p40]{TAG: y(t+j1)} & \pageref{atlas:p40}\\
+41 & \hyperref[atlas:p41]{GAP: y(t+j1)} & \pageref{atlas:p41}\\
+42 & \hyperref[atlas:p42]{TAG: j2 pT [GeV]} & \pageref{atlas:p42}\\
+43 & \hyperref[atlas:p43]{GAP: j2 pT [GeV]} & \pageref{atlas:p43}\\
+44 & \hyperref[atlas:p44]{TAG: j2 y} & \pageref{atlas:p44}\\
+45 & \hyperref[atlas:p45]{GAP: j2 y} & \pageref{atlas:p45}\\
+46 & \hyperref[atlas:p46]{TAG: j2 eta} & \pageref{atlas:p46}\\
+47 & \hyperref[atlas:p47]{GAP: j2 eta} & \pageref{atlas:p47}\\
+48 & \hyperref[atlas:p48]{TAG: j2 y minus midpoint} & \pageref{atlas:p48}\\
+49 & \hyperref[atlas:p49]{GAP: j2 y minus midpoint} & \pageref{atlas:p49}\\
+50 & \hyperref[atlas:p50]{TAG: j2 zstar (dy>1)} & \pageref{atlas:p50}\\
+51 & \hyperref[atlas:p51]{GAP: j2 zstar (dy>1)} & \pageref{atlas:p51}\\
+52 & \hyperref[atlas:p52]{TAG: j2 zstar pT>30 (dy>1)} & \pageref{atlas:p52}\\
+53 & \hyperref[atlas:p53]{GAP: j2 zstar pT>30 (dy>1)} & \pageref{atlas:p53}\\
+54 & \hyperref[atlas:p54]{TAG: j2 signed gap distance} & \pageref{atlas:p54}\\
+55 & \hyperref[atlas:p55]{GAP: j2 signed gap distance} & \pageref{atlas:p55}\\
+56 & \hyperref[atlas:p56]{TAG: j2 dy from j1 (oriented)} & \pageref{atlas:p56}\\
+57 & \hyperref[atlas:p57]{GAP: j2 dy from j1 (oriented)} & \pageref{atlas:p57}\\
+58 & \hyperref[atlas:p58]{TAG: j2 dy from top (oriented)} & \pageref{atlas:p58}\\
+59 & \hyperref[atlas:p59]{GAP: j2 dy from top (oriented)} & \pageref{atlas:p59}\\
+60 & \hyperref[atlas:p60]{TAG: pT(t+j1+j2) [GeV]} & \pageref{atlas:p60}\\
+61 & \hyperref[atlas:p61]{GAP: pT(t+j1+j2) [GeV]} & \pageref{atlas:p61}\\
+62 & \hyperref[atlas:p62]{TAG: Ngap jets20 (last >=5)} & \pageref{atlas:p62}\\
+63 & \hyperref[atlas:p63]{GAP: Ngap jets20 (last >=5)} & \pageref{atlas:p63}\\
+64 & \hyperref[atlas:p64]{TAG: hardest gap jet pT [GeV]} & \pageref{atlas:p64}\\
+65 & \hyperref[atlas:p65]{GAP: hardest gap jet pT [GeV]} & \pageref{atlas:p65}\\
+66 & \hyperref[atlas:p66]{TAG: gap jets HT [GeV]} & \pageref{atlas:p66}\\
+67 & \hyperref[atlas:p67]{GAP: gap jets HT [GeV]} & \pageref{atlas:p67}\\
+68 & \hyperref[atlas:p68]{TAG: midpoint extra jets HT [GeV]} & \pageref{atlas:p68}\\
+69 & \hyperref[atlas:p69]{GAP: midpoint extra jets HT [GeV]} & \pageref{atlas:p69}\\
+70 & \hyperref[atlas:p70]{TAG: at least two jets rate [pb]} & \pageref{atlas:p70}\\
+71 & \hyperref[atlas:p71]{GAP: at least two jets rate [pb]} & \pageref{atlas:p71}\\
+72 & \hyperref[atlas:p72]{TAG: gap veto efficiency} & \pageref{atlas:p72}\\
+73 & \hyperref[atlas:p73]{GAP: gap veto efficiency} & \pageref{atlas:p73}\\
+\end{longtable}
+
+
+\clearpage
+\includepdf[pages={1},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p01}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={2},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p02}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={3},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p03}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={4},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p04}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={5},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p05}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={6},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p06}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={7},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p07}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={8},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p08}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={9},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p09}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={10},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p10}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={11},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p11}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={12},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p12}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={13},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p13}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={14},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p14}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={15},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p15}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={16},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p16}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={17},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p17}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={18},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p18}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={19},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p19}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={20},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p20}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={21},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p21}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={22},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p22}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={23},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p23}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={24},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p24}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={25},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p25}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={26},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p26}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={27},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p27}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={28},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p28}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={29},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p29}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={30},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p30}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={31},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p31}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={32},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p32}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={33},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p33}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={34},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p34}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={35},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p35}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={36},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p36}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={37},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p37}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={38},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p38}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={39},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p39}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={40},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p40}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={41},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p41}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={42},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p42}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={43},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p43}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={44},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p44}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={45},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p45}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={46},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p46}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={47},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p47}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={48},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p48}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={49},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p49}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={50},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p50}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={51},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p51}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={52},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p52}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={53},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p53}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={54},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p54}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={55},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p55}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={56},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p56}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={57},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p57}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={58},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p58}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={59},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p59}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={60},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p60}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={61},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p61}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={62},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p62}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={63},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p63}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={64},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p64}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={65},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p65}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={66},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p66}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={67},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p67}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={68},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p68}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={69},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p69}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={70},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p70}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={71},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p71}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={72},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p72}}]{../Analyses/pp_tj_recoil.pdf}
+\includepdf[pages={73},pagecommand={\thispagestyle{plain}\phantomsection\label{atlas:p73}}]{../Analyses/pp_tj_recoil.pdf}
+
+
+\end{document}

@@ -96,6 +96,7 @@ class TestFKSExplicitSum(unittest.TestCase):
                 'logical :: nlo_ps=.true.\nend module\n'
                 'module mc_native_context\n'
                 'integer :: native_epoch=1,active_context=1,native_context_ids(3)=[1,1,2]\n'
+                'integer :: active_history=0\n'
                 'logical :: native_mapping=.false.\nend module\n')
             (work / 'chart.f').write_text(fortran_routine(TEMPLATE / 'setcuts.f', 'set_tau_min'))
             result = subprocess.run([

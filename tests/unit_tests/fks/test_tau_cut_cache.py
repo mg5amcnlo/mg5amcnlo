@@ -42,6 +42,7 @@ class TestTauCutCache(unittest.TestCase):
             'logical :: nlo_ps=.true.\nend module\n'
             'module mc_native_context\n'
             'integer :: native_epoch=1,active_context=1,native_context_ids(4)=[1,1,2,2]\n'
+            'integer :: active_history=0\n'
             'logical :: native_mapping=.false.\nend module\n')
         cached = fortran_routine(TEMPLATE / 'setcuts.f', 'set_tau_min')
         # The reference takes the production calculation on every call. Only

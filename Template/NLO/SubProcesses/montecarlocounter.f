@@ -19,6 +19,10 @@ c remain in fks_phase_space_helpers, independent of subtraction and matching.
       double precision :: xp1(0:3),xp2(0:3),xk1(0:3),xk2(0:3),
      $     xk3(0:3),pp_rec(0:3),jmass
       double precision,parameter :: tiny=1d-5
+c Invariant variables of the combined initial-final quark dipole. Both
+c FKS orientations describe the same SpaceShower emission.
+      double precision :: local_z,local_w,local_q2,local_d,
+     $     local_zeta,local_mass2,local_pt2,local_chi,local_soft_energy
 
       include 'nexternal.inc'
       include 'born_nhel.inc'
@@ -415,6 +419,7 @@ c G replacement: Hhat_ij = S_ij sum_kl P_kl (S_kl R - M_kl).
      $     ,include_gfun,z,n_connect,amp_split_xmcxsec)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
       use scale_module, only: born_flow_picked
+      use FKSParams, only: FKSPythiaLocalRecoil
       implicit none
       include 'orders.inc'
       integer k_fks,l_fks,kernel_index
@@ -449,6 +454,11 @@ c Born amplitudes and the splitting order belong to the history and do
 c not depend on its colour connection. Prepare them once per history.
       call prepare_MCsubtraction_born(p,xi,y,p_born,kernel_index,
      $     born_weights,born_spin_weights)
+      if(FKSPythiaLocalRecoil.eq.1)then
+         call compute_pythia_local_counterterm(born_weights,
+     $        z,n_connect,amp_split_xmcxsec,include_gfun,y)
+         return
+      endif
       if (kernel_index.eq.2) then
          call find_qed_connector(p_born,fksfather,n_connect,i_connect)
       else
@@ -501,6 +511,182 @@ c connected twice to the same partner, including their multiplicity.
          amp_split_xmcxsec(1:amp_split_size,1:2)=0d0
       endif
       end subroutine compute_MCsubtraction_kl
+
+
+      subroutine compute_pythia_local_counterterm(born_weights,z,
+     $     n_connect,weights,include_gfun,y)
+c Shower density in the massless incoming-quark approximation.
+c The IF density uses ordinary real-state PDFs. The IF
+c measure, including the flux ratio, is dz dQ2 dphi/(32*pi**3).
+c Thus D/B = 2*g**2*P(z)/(z*Q2). With include_gfun, damp this density
+c by G(w), w=1-zI, which vanishes both soft and final-collinear. The
+c collinear-patched mode uses a soft-energy G profile and the corrected
+c numerator zI**2+zeta**2. Adding the top-soft patch removes the remaining
+c local G replacement; its bounded factor is also in the shower veto.
+c PythiaLocalGProfile=1 instead forces the common G(w) prescription for
+c validation, including with both patches. Kernel choices are unchanged.
+c The caller adds (1-G)*[S+(1-Gc)*(C-SC)] with the native FKS endpoint
+c measures, to BOTH S and H. Do not apply the global-recoil xfact,
+c shower Jacobian, FKS Hij or a second PDF 1/z.
+      use scale_module,only: shower_scale_nbody_min,
+     $     shower_scale_nbody_max
+      use fks_phase_space_data,only: pythia_recoil_pair
+      use FKSParams,only: PythiaLocalCollinearPatch,PythiaLocalSoftPatch,
+     $     PythiaLocalGProfile
+      implicit none
+      include 'orders.inc'
+      include 'coupl.inc'
+      double precision born_weights(amp_split_size),z(2),
+     $     weights(amp_split_size,2),kernel,smin,smax,damping,y,gsoft,
+     $     numerator,gcoordinate
+      logical include_gfun
+      integer n_connect,a,f
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision ch_i,ch_j,ch_m
+      integer i_type,j_type,m_type,j_pdg
+      common/cparticle_types/ch_i,ch_j,ch_m,
+     $     i_type,j_type,m_type,j_pdg
+      weights=0d0
+      z=local_z
+      n_connect=1
+      gfactsf=1d0
+      gfactcl=1d0
+      gfactazi=0d0
+      if(local_z.le.0d0.or.local_w.le.0d0.or.local_zeta.le.0d0.or.
+     $     local_q2.le.0d0.or.local_pt2.lt.0d0)return
+      a=pythia_recoil_pair(1)
+      f=pythia_recoil_pair(2)
+      if(f.gt.i_fks)f=f-1
+      smin=shower_scale_nbody_min(a,f)
+      smax=shower_scale_nbody_max(a,f)
+      if(smin.lt.0d0.or.smax.le.smin)then
+         write(*,*) 'Invalid local dipole starting-scale bounds',
+     $        a,f,smin,smax
+         stop 1
+      endif
+      damping=1d0-emscafun((sqrt(local_w*local_q2)-smin)/
+     $     (smax-smin),1d0)
+      if(i_type.eq.8)then
+c Select exactly the numerator used by the corresponding shower build.
+         numerator=1d0+local_z**2
+         gcoordinate=local_w
+         if(PythiaLocalCollinearPatch)then
+            numerator=local_z**2+local_zeta**2
+            if(PythiaLocalGProfile.eq.0)gcoordinate=local_soft_energy
+         endif
+         kernel=(4d0/3d0)*numerator/local_w*local_chi
+c For the sole massive Born quark (top), use the same bounded soft ratio
+c as the quark IF shower veto. The massless line is unchanged. With both
+c patches all required limits agree, so no local G replacement is needed.
+         if(PythiaLocalSoftPatch.and.local_mass2.gt.0d0)then
+            kernel=kernel*local_pt2/
+     $           (local_w*local_q2*local_zeta)
+         endif
+         if(include_gfun.and.(.not.PythiaLocalSoftPatch.or.
+     $        PythiaLocalGProfile.eq.1))then
+            gsoft=pythia_local_gprofile(gcoordinate)
+            kernel=kernel*gsoft
+            gfactcl=pythia_local_gprofile(1d0-y)
+c The replacement has the same starting-scale damping as the raw term.
+c Return its complement only AFTER applying the original G to the kernel.
+            gfactsf=1d0-(1d0-gsoft)*damping
+         endif
+      elseif(abs(i_type).eq.3.and.j_fks.le.nincoming.and.
+     $       j_type.eq.8)then
+c Backward g -> q qbar. The Born emitter is a quark: no spin term
+c and no division between final- and initial-state FKS orientations.
+         kernel=0.5d0*(local_z**2+local_w**2)
+      else
+         write(*,*) 'Unsupported local dipole splitting',
+     $        i_type,j_type,m_type,i_fks,j_fks
+         stop 1
+      endif
+      weights(:,1)=born_weights*2d0*g**2*kernel/
+     $     (local_z*local_q2)*damping
+      end subroutine compute_pythia_local_counterterm
+
+
+      double precision function pythia_local_gprofile(v) result(gfun)
+c Compact smooth profile: zero quadratically at the unresolved endpoint,
+c one outside the transition region. Avoid the legacy absolute-y profile
+c and its fixed 0.01 cutoff: the local width can be varied independently.
+      use FKSParams,only: PythiaLocalGWidth
+      implicit none
+      double precision v,u
+      if(v.le.0d0)then
+         gfun=0d0
+      elseif(v.ge.PythiaLocalGWidth)then
+         gfun=1d0
+      else
+         u=v/PythiaLocalGWidth
+         gfun=u**2/(u**2+(1d0-u)**2)
+      endif
+      end function pythia_local_gprofile
+
+
+      subroutine prepare_pythia_local_kinematics(p,i_fks,j_fks)
+      use fks_phase_space_data,only: pythia_recoil_pair
+      use fks_phase_space_helpers,only: rho
+      implicit none
+      double precision p(0:3,nexternal),pa(0:3),pf(0:3),k(0:3),
+     $     pak,pfk,paf,nf,denom,delta,total(0:3),shat
+      integer i_fks,j_fks,a,f
+      double precision pmass(nexternal)
+      common/to_mass/pmass
+      a=pythia_recoil_pair(1)
+      f=pythia_recoil_pair(2)
+      if(a.lt.1.or.a.gt.2.or.f.le.2.or.f.gt.nexternal.or.
+     $     f.eq.i_fks)then
+         write(*,*) 'Missing local IF recoil pair',a,f,i_fks,j_fks
+         stop 1
+      endif
+      pa=p(:,a)
+      pf=p(:,f)
+      k=p(:,i_fks)
+      local_z=1d0
+      local_w=0d0
+      local_q2=0d0
+      local_d=0d0
+      local_zeta=1d0
+      local_pt2=0d0
+      local_chi=0d0
+      local_soft_energy=0d0
+      local_mass2=pmass(f)**2
+      if(k(0).le.0d0.or.pa(0).le.0d0.or.pf(0).le.0d0)return
+c True gluon energy fraction in the real partonic CM, independent of the
+c IF/FI history and nonzero at a hard outgoing collinear endpoint.
+      total=sum(p(:,1:nincoming),dim=2)
+      shat=total(0)**2-sum(total(1:3)**2)
+      if(shat.le.0d0)return
+      local_soft_energy=2d0*(total(0)*k(0)-
+     $     sum(total(1:3)*k(1:3)))/shat
+c Rationalize the small scalar products instead of subtracting energies.
+      pak=pa(0)*k(0)*sum((pa(1:3)/pa(0)-
+     $     k(1:3)/k(0))**2)/2d0
+      nf=rho(pf)
+      if(nf.gt.0d0)then
+         pfk=k(0)*(local_mass2/(pf(0)+nf)+
+     $        nf*sum((pf(1:3)/nf-k(1:3)/k(0))**2)/2d0)
+         paf=pa(0)*(local_mass2/(pf(0)+nf)+
+     $        nf*sum((pf(1:3)/nf-pa(1:3)/pa(0))**2)/2d0)
+      else
+         pfk=k(0)*pf(0)
+         paf=pa(0)*pf(0)
+      endif
+      denom=paf+pak
+      if(denom.le.0d0.or.pfk+pak.le.0d0)return
+      local_w=pfk/denom
+      local_z=1d0-local_w
+      local_d=2d0*local_z*denom
+      local_q2=2d0*pak
+      local_zeta=paf/denom
+      delta=pak/denom
+      local_pt2=local_w*local_q2*local_zeta-
+     $     local_mass2*delta**2
+      local_chi=pfk/(pfk+pak)
+      if(j_fks.gt.nincoming)local_chi=pak/(pfk+pak)
+      end subroutine prepare_pythia_local_kinematics
 
       subroutine find_qed_connector(p_born,iparticle,n_connect,i_connect)
       use process_module, only: refresh_qed_dipoles,qed_dipole_n
@@ -3172,9 +3358,12 @@ c These helpers share the same active history as the analytic kernels.
 c This is the (relative) pT of the splitting. For some showers this is
 c equal to the shower variable, but not for all. This is what is used for
 c the damping.
+        use FKSParams,only: FKSPythiaLocalRecoil
         implicit none
         double precision :: xi_i_fks,y_ij_fks
-        if(ileg.eq.1)then
+        if(FKSPythiaLocalRecoil.eq.1)then
+           get_qMC=sqrt(max(0d0,local_w*local_q2))
+        elseif(ileg.eq.1)then
            get_qMC=qMC_ileg1(xi_i_fks,y_ij_fks)
         elseif(ileg.eq.2)then
            get_qMC=qMC_ileg2(xi_i_fks,y_ij_fks)
@@ -3308,6 +3497,7 @@ c Determine ileg
 
       subroutine prepare_mc_kinematics(pp,i_fks,j_fks,xi_i_fks,y_ij_fks,mass,include_gfun)
         use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
+        use FKSParams,only: FKSPythiaLocalRecoil
 c takes an n+1-body phase-space point, and fills invariants relevant for
 c computation of shower subtraction terms
         implicit none
@@ -3318,6 +3508,15 @@ c computation of shower subtraction terms
         double precision :: pshower(0:3,next_n1)
 
         call fill_father_and_ileg(i_fks,j_fks,mass)
+        if(FKSPythiaLocalRecoil.eq.1)then
+           call prepare_pythia_local_kinematics(pp,i_fks,j_fks)
+           fksfather=j_fks
+           if(j_fks.gt.i_fks)fksfather=fksfather-1
+           gfactsf=1d0
+           gfactcl=1d0
+           gfactazi=0d0
+           return
+        endif
 
         xm12=0d0
         xm22=0d0

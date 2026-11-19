@@ -22,6 +22,22 @@ if [[ "$NFILE" != "" ]]; then
     cp -H ../events_$NFILE.lhe events.lhe
     if [ $SHOWER == "PYTHIA8" ] ; then
         cp ../Pythia8.exe ../Pythia8.cmd .
+        # Each split job needs a different random sequence. Keep the first
+        # job's fixed seed, and wrap later seeds within Pythia's valid range.
+        python3 - "$NFILE" <<'PYTHIA_SEED' || exit 1
+import pathlib
+import re
+import sys
+
+path = pathlib.Path('Pythia8.cmd')
+text = path.read_text()
+matches = list(re.finditer(r'^\s*Random:seed\s*=\s*([+-]?\d+)(?=\s|$)',
+                           text, re.MULTILINE | re.IGNORECASE))
+if matches and int(matches[-1][1]) > 0:
+    match = matches[-1]
+    seed = (int(match[1]) + int(sys.argv[1]) - 2) %% 900000000 + 1
+    path.write_text(text[:match.start(1)] + str(seed) + text[match.end(1):])
+PYTHIA_SEED
         if [ -f ../config.sh ] ; then cp ../config.sh . ; fi
     else
         if [ $SHOWER == "HERWIG7" ] ; then

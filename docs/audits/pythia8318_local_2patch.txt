@@ -1,0 +1,117 @@
+The optional Pythia 8.318 quark IF collinear and top-soft patches
+
+pp_tj_local_2patch is a fresh export of the same five-flavour, stable-top
+t-channel process as pp_tj_local_patch. Its production cards request one
+million events with identical cuts, scales, PDFs and analysis settings.
+From pp_tj_local_2patch run:
+
+    ./bin/generate_events -f
+
+Generation automatically showers and produces the same 75 histograms,
+with PDF/HTML/HwU output in Events/run_01/ (or the next available run name).
+Existing events can be showered with ./bin/shower run_01 -f. Hadronisation,
+MPI, beam remnants, primordial kT, colour reconnection, QED/weak showers,
+top decays and matrix-element corrections are off. QCD ISR and FSR remain
+on; there is no merging. Shower quark masses are unchanged.
+
+Cards/FKS_params.dat enables FKSPythiaLocalRecoil=1, FKSExplicitSum,
+MCExplicitKLSum, PythiaLocalCollinearPatch and PythiaLocalSoftPatch. The
+launcher selects both corresponding private shower flags. Both local G
+replacements are disabled: the corrected shower density itself has the
+required Born soft and massless collinear limits. PythiaLocalGWidth is
+inactive in this mode. Ordinary FKS subtraction remains in place. Grids
+and events must be regenerated when changing matching prescriptions.
+
+Let pa be the real incoming quark, pf the outgoing top colour partner,
+k the emitted gluon, and m^2=pf^2. Define the backward momentum fraction
+zI=1-pf.k/[pa.(pf+k)], Q2=2 pa.k, D=2 pBorn_a.pBorn_f and
+zeta=1-zI*Q2/D. The collinear patch uses CF*(zI^2+zeta^2)/(1-zI), CF=4/3.
+The additional top-soft patch multiplies this by
+
+    r = 1 - m^2 pa.k / [2 pa.pf pf.k]
+      = 1 - m^2 zI^2 Q2 / [(1-zI) zeta D^2]
+      = pT2physical / [(1-zI) Q2 zeta].
+
+In the soft limit the dipole density becomes
+
+    2 gs^2 CF pa.pf/(pa.k pf.k) - gs^2 CF m^2/(pf.k)^2,
+
+including the missing massive self-eikonal. Here gs is the QCD coupling.
+The positive physical transverse momentum enforces 0 <= r <= 1; the
+incoming-collinear limit is r -> 1. The light-quark line is unaffected.
+In Pythia variables this is pT2corr/(pT2*z1), where pT2=(1-z)*Q2,
+z=zI and z1=zeta. The factor is inside the branching veto, so the same
+modified rate also determines the Sudakov factor. The matching code uses
+exactly this factor with the existing recoil map and scale damping.
+
+The extra patch acts only on q -> qg with a CURRENT incoming-quark to
+outgoing-top (or antiquark to antitop) colour connection. The current
+connection and its invariants are used after every shower update. It is
+not restricted to the first event emission: a light-line emission may
+leave the original heavy-quark line intact. After a heavy-line emission,
+the new final-final gluon-top dipole is left to SimpleTimeShower, including
+its existing recoilDeadCone correction. Applying the Born correction to
+that dipole as well would risk counting its mass suppression twice.
+SimpleTimeShower.cc is unchanged. Incoming-gluon to top IF configurations
+after a backward flavour conversion are outside this quark patch's scope.
+
+These restrictions avoid negative branching weights and avoid adding a
+second correction to the final-final shower. They do not prove unchanged
+all-orders logarithmic accuracy. The correction changes finite emission
+rates and Sudakovs by design; those higher-order effects should be studied
+with the four samples. Existing mass/threshold and momentum-reshuffling
+issues are not repaired by either patch.
+
+The source patches, applied in order, are:
+
+    Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-local-quark-collinear.patch
+    Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-local-top-soft.patch
+
+The process selects HEPTools/pythia8_local_2patch through its configuration,
+shower data path and process-local library search path. Both flags default
+to off. The stock Pythia installation and the one-patch build are never
+modified. Library-path selection is confined to the shower subprocess,
+so default Pythia is preserved after success, failure or interruption,
+without a shared installation to restore. To rebuild in a NEW prefix:
+
+    python3 docs/audits/build_pythia8_local_collinear.py STOCK NEW_PREFIX --top-soft
+
+Validation used a separate 1000-event run, Events/recoil_2patch_check/.
+All four subprocesses passed the production ME/MC singular-limit checks
+and their 20/20 virtual-pole checks. The normal interface accepted all
+1000 shower events and wrote all 75 histograms and PDF/HTML output. The
+existing event-limit handling calls the analysis for 999 of those events,
+as in the other samples. Production cards are restored to one million.
+The requested open partonic record has beam remnants and Check:event off;
+these acceptance counts are not a momentum-conservation validation.
+
+The focused kernel/launcher tests (31) and map/matching regression tests
+(46) pass. An independent shower audit compares 100 accepted two-patch
+branchings with the Fortran density, checks the soft ratio and its scope,
+and verifies bitwise agreement with stock or the one-patch shower when
+the corresponding flags are disabled. Complete histories cover both beams,
+quarks/antiquarks, later quark-top IF and final-final gluon-top emissions,
+with no soft-factor-bound or stable-top-mass violations. Run it with:
+
+    python3 docs/audits/check_pythia8_local_soft_patch.py STOCK ONE_PATCH TWO_PATCHES
+
+The full-history diagnostic enables beam remnants (primordial kT still
+off) and Check:event, so the complete proton record can be checked. It
+does find event-check rejections: stock 21/1200, collinear-only 33/1200,
+and both patches 22/1200, across the four beam/flavour fixtures. They are
+recorded, not counted as successful momentum checks. A separate 1000-event
+single-fixture comparison gives 10, 19 and 20 rejections respectively.
+These finite samples neither establish equal rejection rates nor identify
+a new top-soft-patch-specific failure. The full audit record is
+docs/audits/pythia8318_singletop_local_2patch_validation.json.
+
+After all four production samples have been generated, overlay them from
+the repository root:
+
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches --shape
+
+The massive soft current is discussed in Catani et al., hep-ph/0201036:
+https://arxiv.org/abs/hep-ph/0201036
+Pythia documents its final-final recoil dead-cone correction here:
+https://pythia.org/latest-manual/TimelikeShowers.html

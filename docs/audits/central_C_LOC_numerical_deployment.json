@@ -1,0 +1,230 @@
+{
+  "status": "Deployed and verified in Template and22freshunstartedexports; finalcontrolledintegration,pipeline,andregressiontests passed",
+  "archive": "campaign_archive/before_numerical_fix_20261025_091850",
+  "exports": [
+    {
+      "directory": "central_runs_fixed/C_GLB",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "1bb7e9613168e9cc1a63af18bfbf193be12c13891b0eebda5cda919711dfa45e"
+    },
+    {
+      "directory": "central_runs_fixed/C_LOC",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "874da1416973d8d30c820f3b03d2f1c6787b9cb766cbdc7db05dcd00e1ccf09f"
+    },
+    {
+      "directory": "central_runs_fixed/C_Q",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "9b1f395594cda1b42bc05b1a682ce08cf0b7103aecf27de8eaf607f471305027"
+    },
+    {
+      "directory": "central_runs_fixed/C_QT",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "106d7770440c83d9e4ba570b20505a63e5035c556280baafdb5326ae58c45741"
+    },
+    {
+      "directory": "g_runs_fixed/G_LOC_H005",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "f6d8cbb904544e34e10abeff2ea94e4d5b6959b6c080d6043e95e7996141bc11"
+    },
+    {
+      "directory": "g_runs_fixed/G_LOC_H020",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "78dc72317c5dc951e7ceaa34897119582d3501b42ff321c31a83c705dfa0926f"
+    },
+    {
+      "directory": "g_runs_fixed/G_Q_H005",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "be1a2e523fc6dff69ac49bdf5040254a6473f58e9ec7ccf31e2f9528904878ec"
+    },
+    {
+      "directory": "g_runs_fixed/G_Q_H020",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "706444057991dcb8c691352cb7ef5a5ca4cd22cce09975a021c3c8a03ad887c5"
+    },
+    {
+      "directory": "g_runs_fixed/P_Q_COMMON_W",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "78c47e10f1a4a7b9432e429188bd6434b283df75ce19dd145b90349762dadcac"
+    },
+    {
+      "directory": "g_runs_fixed/P_QT_COMMON_W",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "19d0249b63c857c637144af45e71846342547ad04a1d571ef24486bc27c416d3"
+    },
+    {
+      "directory": "scale_runs_fixed/S_GLB_Q0P5",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "a0c7106291ed32bad4af546c62b9f58ba13989c54858935f45b0f50901b0b335"
+    },
+    {
+      "directory": "scale_runs_fixed/S_GLB_Q1",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "b4c5a371aa3cb04f6fa2c4673f2e5958d8c712785a79e083a2f3b78cd6a92285"
+    },
+    {
+      "directory": "scale_runs_fixed/S_GLB_Q2",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "dff25cf671102ed996814750fe93e400e004bd527b5677eb36094229065ad275"
+    },
+    {
+      "directory": "scale_runs_fixed/S_LOC_Q0P5",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "4092e80125320a03cbe35f70217d42a68d30dab4537f1a503dc9e962d173849b"
+    },
+    {
+      "directory": "scale_runs_fixed/S_LOC_Q1",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "4c62285123698568caadef449a6cbfe6272d7f57f3e49a0998f186aa079f9815"
+    },
+    {
+      "directory": "scale_runs_fixed/S_LOC_Q2",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "248f19415859a23c46620d47983ce48359a1bc11cccf372bf9b22adee42a6cec"
+    },
+    {
+      "directory": "scale_runs_fixed/S_Q_Q0P5",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "765f74fa54c91223857dea3efe889cc5af0237ad1fd85deb41f0494e64698679"
+    },
+    {
+      "directory": "scale_runs_fixed/S_Q_Q1",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "330ad9fc35b46eec5beeea15a4eb238d7b079404e2c7931d3226f6f0d3a6dd50"
+    },
+    {
+      "directory": "scale_runs_fixed/S_Q_Q2",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "2ac12adc8fd50c5e16c604357df32135fe9fe0319ea50d6831185bc25bbaea3b"
+    },
+    {
+      "directory": "scale_runs_fixed/S_QT_Q0P5",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "4d843a0c6f9ceb505d80bc1e51452847f3c3800cccc88ba967fb8041516256ae"
+    },
+    {
+      "directory": "scale_runs_fixed/S_QT_Q1",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "3c31009af9fad36ed4ed557e64939a61774b2000b3da10f281337dd65aa5c9bf"
+    },
+    {
+      "directory": "scale_runs_fixed/S_QT_Q2",
+      "schema": 3,
+      "numerical_fix": "local-recoil-geometry-and-endpoints-2026-10-25",
+      "matching_sources_verified": 22,
+      "shower_jobs": 64,
+      "manifest_sha256": "63f30129a53fa0c0085275b22786fa711c6074a4c3f8535087ff5673ec7bca51"
+    }
+  ],
+  "sources_sha256": {
+    "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+    "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+    "Template/NLO/SubProcesses/fks_singular.f": "af64287eeaa425c7b9444c09a7890c026ef85737d26a79aebcc42d523377f3e2",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+    "Template/NLO/SubProcesses/genps_fks.f": "a636188ff53aa427084cdcd91950c393526b56ed33a7af78f68026199cf4b8bf",
+    "Template/NLO/SubProcesses/genps_fks_helpers.f": "691b2c46b7084406115c6af02a606ae2fa1e969bf4e493b54db14629ffd52abb",
+    "Template/NLO/SubProcesses/genps_fks_radiation.f": "b3f556df415e427d342f12fca6f171a7d4b0c897f3f560bc3f0cc388c1ddac84",
+    "Template/NLO/SubProcesses/fks_phase_space_data.f": "db09b0c19942d36c3fd5ca60162a4c9e3ccdfe98c755d70ce76b200ab2ed95e3",
+    "Template/NLO/SubProcesses/initial_recoil.f": "827491bb0699b6070570c9c86fde6f47055d202e3bb5272be1fc7b64ff32ea3e",
+    "Template/NLO/SubProcesses/resonance_recoil.f": "cfb85cf75959fee528c89c13a349bbd1ad97e47bbda7e188b0800951f4df05b8",
+    "Template/NLO/SubProcesses/boostwdir2.f": "60c5e4525978681752684ecc16b58344fe9792bf6fc57b6a1e7e08a501c5507a",
+    "Template/NLO/SubProcesses/fks_Sij.f": "2ca691ef24b4bc27efbec51825e14664a38ce0b2d3b6eb9cdc75e0beb62a83a2",
+    "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+    "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+    "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+    "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+    "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+    "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+    "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+    "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+    "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+    "Template/NLO/MCatNLO/shower_template.sh": "86e35c074d39a1fa279ede4de61a61e8daa0b41fe6d6a716be92d94a1f9d38ea"
+  },
+  "production_runs_started": false,
+  "validation": {
+    "unit_tests_passed": 122,
+    "recorded_reconstruction_failures_recovered": 18429,
+    "controlled_integration_calls": 1200000,
+    "rejected_kinematics": 0,
+    "rejected_nonfinite": 0,
+    "numerical_warning_families": 0,
+    "sigma_pb": 131.687245,
+    "sigma_error_pb": 1.026221,
+    "fixed_order_pb": 132.07576,
+    "fixed_order_error_pb": 0.049875,
+    "fixed_order_pull": -0.378,
+    "temporary_pipeline_events": 2000,
+    "temporary_pipeline_workers": 8,
+    "temporary_pipeline_histograms": 75,
+    "temporary_pipeline_numerical_warnings": 0,
+    "master_prepare_only_resume_passed": true
+  },
+  "evidence_sha256": {
+    "docs/audits/central_C_LOC_numerical_fix_validation.json": "7d27bacd6cb88931139ac69f9290b3e4b263c44ab4d646258edbe1e4d5dea632",
+    "docs/audits/central_C_LOC_fresh_pipeline_validation.json": "7bcd78f404fa64bef974115b33ce4b1bcc14bb343d01b27365ba69e6703135e6",
+    "docs/audits/central_C_LOC_endpoint_replay.json": "61fe686f9c0ad1d5fa9fed271c66617cbd45992222a6e5d2b3e3fc21db300125"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "stock_unchanged": true,
+  "private_patch_default": "off",
+  "kernel_scope_checks": 8,
+  "stock": "/tmp/singletop_local_matching_pythia",
+  "private": "/export/slow1/rikkert/SingleTopLocal/HEPTools/pythia8_local_collinear_patch",
+  "results": [
+    {
+      "beam_swap": 0,
+      "antiquark": 0,
+      "default_points_bitwise_equal": 25,
+      "patched_density_points": 25,
+      "patched_shower": "LOCAL_EMISSIONS first=300 gluon=156 conversion=144 both_ends=1 first_fsr=0 failures=0"
+    },
+    {
+      "beam_swap": 0,
+      "antiquark": 1,
+      "default_points_bitwise_equal": 25,
+      "patched_density_points": 25,
+      "patched_shower": "LOCAL_EMISSIONS first=300 gluon=143 conversion=157 both_ends=1 first_fsr=0 failures=0"
+    },
+    {
+      "beam_swap": 1,
+      "antiquark": 0,
+      "default_points_bitwise_equal": 25,
+      "patched_density_points": 25,
+      "patched_shower": "LOCAL_EMISSIONS first=300 gluon=179 conversion=121 both_ends=1 first_fsr=0 failures=0"
+    },
+    {
+      "beam_swap": 1,
+      "antiquark": 1,
+      "default_points_bitwise_equal": 25,
+      "patched_density_points": 25,
+      "patched_shower": "LOCAL_EMISSIONS first=300 gluon=182 conversion=118 both_ends=1 first_fsr=0 failures=0"
+    }
+  ],
+  "production_validation": {
+    "process": "pp_tj_local_patch",
+    "run": "recoil_patch_check",
+    "generated_events": 1000,
+    "shower_accepted_events": 1000,
+    "analysis_histograms": 75,
+    "output_formats": [
+      "HwU",
+      "PDF",
+      "HTML"
+    ],
+    "subprocesses_passing_ME_MC_and_20_pole_checks": 4,
+    "production_nevents_restored": 1000000,
+    "run_and_param_cards_identical_to_pp_tj_local": true,
+    "analysis_identical_to_pp_tj_local": true,
+    "ordinary_soft_G_retained": true,
+    "hard_final_collinear_G_replacement_disabled": true
+  },
+  "unit_tests": {
+    "passed": 70,
+    "failed": 0
+  },
+  "private_patch_sha256": "26a80dc2b7feb3e7c8a8813eb36715fa95502c1c37ca54244ad1ebf87ee48259"
+}

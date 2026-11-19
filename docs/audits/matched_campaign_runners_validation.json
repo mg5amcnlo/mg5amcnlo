@@ -1,0 +1,50 @@
+{
+  "date_utc": "2026-10-24T19:55:31.134226+00:00",
+  "runners": {
+    "paper/run_g_variations.py": {
+      "G": 4,
+      "P": 2
+    },
+    "paper/run_shower_scales.py": {
+      "S": 12
+    }
+  },
+  "dry_run_counts": "passed: 6 G/P and 12 S",
+  "fresh_exports_prepared_and_cards_checked": [
+    "G_LOC_H005",
+    "P_Q_COMMON_W",
+    "P_QT_COMMON_W",
+    "S_GLB_Q2"
+  ],
+  "tests": {
+    "local_matching": 23,
+    "fks_explicit_sum": 5,
+    "pythia_weight_reader": 4
+  },
+  "small_run": {
+    "directory": "/tmp/singletop_matched_runners_5amp22yz/S_GLB_Q2",
+    "generated": 20,
+    "shower_accepted": 20,
+    "analysed": 19,
+    "shower_scale_factor": 2.0,
+    "histograms": 75,
+    "inclusive_scale_combinations": 9,
+    "retained_weight_columns_including_central_and_error": 29,
+    "signed_scale_sums_compared_to_lhe": "passed for all nine, including six negative events in each",
+    "normalisation": "existing MG5 N-1 analysis convention; each tested sum is sum(first 19 weights)/20",
+    "generation_log": "/tmp/singletop_matched_runners_5amp22yz/S_GLB_Q2_generate.log",
+    "corrected_shower_log": "/tmp/singletop_matched_runners_5amp22yz/S_GLB_Q2_reshower.log"
+  },
+  "restart_checks": "passed: skip completed runs; stop on incomplete exports without overwriting",
+  "stock_pythia_library_sha256": "df00092d902c01103ced2f9c76a66b6b184edd8851695f84acb0c41a8ffdabab",
+  "stock_pythia_unchanged": true,
+  "source_sha256": {
+    "paper/run_g_variations.py": "9ea389291924c8e2c69b5b05868006a466830c27b266cf7d222d7c8edcb110d5",
+    "paper/run_shower_scales.py": "75b77f111848987847fa94aba66a31015c4bfb9cd885bd2b606da61478777d4b",
+    "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+    "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+    "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+    "Template/NLO/Cards/FKS_params.dat": "c211555fec79f1c17d3f0b676697ae42efc982cfb87cc35f0b261fda49dd097d"
+  },
+  "g_p_s_production_campaigns_started": false
+}

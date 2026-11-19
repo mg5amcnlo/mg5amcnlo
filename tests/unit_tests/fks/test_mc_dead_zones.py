@@ -36,9 +36,12 @@ class TestMCDeadZones(unittest.TestCase):
         (work / "born_nhel.inc").write_text(
             "      integer max_bcol\n      parameter(max_bcol=1)\n")
         (work / "fks_info.inc").write_text("")
+        (work / "coupl.inc").write_text(
+            "      double precision g\n      common/test_couplings/g\n")
         shutil.copyfile(TEMPLATE / "fks_powers.inc", work / "fks_powers.inc")
         routines = [mc_counterterm_test_module(
-                    ("compute_MCsubtraction_kl", "classify_mc_kernel_limits",
+                    ("compute_MCsubtraction_kl", "compute_pythia_local_counterterm", "pythia_local_gprofile",
+                     "classify_mc_kernel_limits",
                      "compute_damping_weight",
                      "emscafun", "get_dead_zone", "py8_global_fsr_support", "py8_qed_isr_support", "get_angle",
                      "find_qed_connector"))]

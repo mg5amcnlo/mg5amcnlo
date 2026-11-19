@@ -1,0 +1,173 @@
+{
+  "process": "/tmp/C_LOC_generation_resume_20261025_0qm2qe1s/C_LOC",
+  "run": "numerical_smoke_v3",
+  "requested_events": 2000,
+  "shower_workers": 8,
+  "seed": 762003,
+  "command": [
+    "./bin/generate_events",
+    "aMC@NLO",
+    "-f",
+    "--name=numerical_smoke_v3",
+    "--only_generation"
+  ],
+  "before_sha256": {
+    "SubProcesses/P0_bdx_tux/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_bdx_tux/GF1.0/mint_grids": "1ea9d0978a11d138bc9a75b455174da07d546d47bd466fe0a54f9792ea341ce5",
+    "SubProcesses/P0_bdx_tux/GF1.0/log_MINT0.txt": "36b6b1e6f980f30eebf53d70fca3ae7d202fc8bb05a5e5ad6dda13c0c2bbaf9a",
+    "SubProcesses/P0_bdx_tux/GF1.0/log_MINT1.txt": "cc3a51a7ae76077ed8fd6ed459853cf6a7947033811894aeee9100727e9ad62f",
+    "SubProcesses/P0_bdx_tux/GF1.0/res_1": "eb9718ecb130ad9f8ac8fda4f46383ea34f04e108df42a15eb5404ad879481f1",
+    "SubProcesses/P0_bdx_tux/GF1.0/res_1.dat": "1f89d1b1e536ffb4836ace0c89bdf63a5551a02756a506b7ceae91776e75db87",
+    "SubProcesses/P0_dxb_tux/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_dxb_tux/GF1.0/mint_grids": "0af6d7f6367e344e84425ea679fe74e8553c0d2c6d942fdf9e4c66afe7571d11",
+    "SubProcesses/P0_dxb_tux/GF1.0/log_MINT0.txt": "9e39c25cacde2f0be272b0bbe9c07bdb974af9ac4a5312d0cfcd3586114fc1ff",
+    "SubProcesses/P0_dxb_tux/GF1.0/log_MINT1.txt": "f42c8877e30591173d843900b1becb941950f52d400302b57b4bb1b6cac58a15",
+    "SubProcesses/P0_dxb_tux/GF1.0/res_1": "d2626abce1a647145a19399e600397dc61bfb4269a2ecc1220db1bc3fdedef7b",
+    "SubProcesses/P0_dxb_tux/GF1.0/res_1.dat": "c61b69da9bc9e2a201113cede8ac419134f13516033582df2bcb7a92588087c8",
+    "SubProcesses/P0_bu_td/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_bu_td/GF1.0/mint_grids": "f0af478597c0cf502f451e6877ee7df1b2f1f639190480943e0a23f8f4b9d357",
+    "SubProcesses/P0_bu_td/GF1.0/log_MINT0.txt": "2e0ef8041048ba90b930c81cf415dee405ec3af7ba2db4e8e6cf3590619bceb5",
+    "SubProcesses/P0_bu_td/GF1.0/log_MINT1.txt": "4145fc204163aabce4757fc989ef73862008636d3a7e2529eebdb1b85b3292f9",
+    "SubProcesses/P0_bu_td/GF1.0/res_1": "b4d87a46f467c5429a1bd55fe9893a2f05874e0e466ca599cbc7d575f7e62ac0",
+    "SubProcesses/P0_bu_td/GF1.0/res_1.dat": "1f8cb2d2cb601684487c4e52191afc6d9dab9da13ae4b0e4fbc7a9c01ab3ab47",
+    "SubProcesses/P0_ub_td/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_ub_td/GF1.0/mint_grids": "25e5e900e8fba03667cf1d4c3b6c9a5f91b87dcf497b73c6e104fe0ffbe33e40",
+    "SubProcesses/P0_ub_td/GF1.0/log_MINT0.txt": "17276a07dc98eed0d911448c530496a2612ba10e21d93e4e22bf44b378ef4a82",
+    "SubProcesses/P0_ub_td/GF1.0/log_MINT1.txt": "3ce702f692abade299dee500ea2c9c626c63773f87a9ff01e488dadcf3174713",
+    "SubProcesses/P0_ub_td/GF1.0/res_1": "28cde8fdb89deb8af1536af60fa6bda890b71164e6f0e99f2948273864e09879",
+    "SubProcesses/P0_ub_td/GF1.0/res_1.dat": "ef56ca65a57cb8c5dd38441ba735a8757e4ad628d54922b30521f9e71b8296df"
+  },
+  "source_sha256": "ab6cdf35cbecbb8c876675ece29a933eee7e4c1a7865226ca0456930934dc566",
+  "archived_splits": [],
+  "completed_utc": "2026-10-25T10:20:34.436060+00:00",
+  "exit_code": 0,
+  "integration_reused": true,
+  "integration_stage_logs_and_grids_unchanged": true,
+  "after_sha256": {
+    "SubProcesses/P0_bdx_tux/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_bdx_tux/GF1.0/mint_grids": "1ea9d0978a11d138bc9a75b455174da07d546d47bd466fe0a54f9792ea341ce5",
+    "SubProcesses/P0_bdx_tux/GF1.0/log_MINT0.txt": "36b6b1e6f980f30eebf53d70fca3ae7d202fc8bb05a5e5ad6dda13c0c2bbaf9a",
+    "SubProcesses/P0_bdx_tux/GF1.0/log_MINT1.txt": "cc3a51a7ae76077ed8fd6ed459853cf6a7947033811894aeee9100727e9ad62f",
+    "SubProcesses/P0_bdx_tux/GF1.0/res_1": "eb9718ecb130ad9f8ac8fda4f46383ea34f04e108df42a15eb5404ad879481f1",
+    "SubProcesses/P0_bdx_tux/GF1.0/res_1.dat": "1f89d1b1e536ffb4836ace0c89bdf63a5551a02756a506b7ceae91776e75db87",
+    "SubProcesses/P0_dxb_tux/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_dxb_tux/GF1.0/mint_grids": "0af6d7f6367e344e84425ea679fe74e8553c0d2c6d942fdf9e4c66afe7571d11",
+    "SubProcesses/P0_dxb_tux/GF1.0/log_MINT0.txt": "9e39c25cacde2f0be272b0bbe9c07bdb974af9ac4a5312d0cfcd3586114fc1ff",
+    "SubProcesses/P0_dxb_tux/GF1.0/log_MINT1.txt": "f42c8877e30591173d843900b1becb941950f52d400302b57b4bb1b6cac58a15",
+    "SubProcesses/P0_dxb_tux/GF1.0/res_1": "d2626abce1a647145a19399e600397dc61bfb4269a2ecc1220db1bc3fdedef7b",
+    "SubProcesses/P0_dxb_tux/GF1.0/res_1.dat": "c61b69da9bc9e2a201113cede8ac419134f13516033582df2bcb7a92588087c8",
+    "SubProcesses/P0_bu_td/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_bu_td/GF1.0/mint_grids": "f0af478597c0cf502f451e6877ee7df1b2f1f639190480943e0a23f8f4b9d357",
+    "SubProcesses/P0_bu_td/GF1.0/log_MINT0.txt": "2e0ef8041048ba90b930c81cf415dee405ec3af7ba2db4e8e6cf3590619bceb5",
+    "SubProcesses/P0_bu_td/GF1.0/log_MINT1.txt": "4145fc204163aabce4757fc989ef73862008636d3a7e2529eebdb1b85b3292f9",
+    "SubProcesses/P0_bu_td/GF1.0/res_1": "b4d87a46f467c5429a1bd55fe9893a2f05874e0e466ca599cbc7d575f7e62ac0",
+    "SubProcesses/P0_bu_td/GF1.0/res_1.dat": "1f8cb2d2cb601684487c4e52191afc6d9dab9da13ae4b0e4fbc7a9c01ab3ab47",
+    "SubProcesses/P0_ub_td/GF1.0/grid.MC_integer": "c5c1bb60aee98a88978d14448f2ccab1c13a37e910b7f66655eda21b9bc34274",
+    "SubProcesses/P0_ub_td/GF1.0/mint_grids": "25e5e900e8fba03667cf1d4c3b6c9a5f91b87dcf497b73c6e104fe0ffbe33e40",
+    "SubProcesses/P0_ub_td/GF1.0/log_MINT0.txt": "17276a07dc98eed0d911448c530496a2612ba10e21d93e4e22bf44b378ef4a82",
+    "SubProcesses/P0_ub_td/GF1.0/log_MINT1.txt": "3ce702f692abade299dee500ea2c9c626c63773f87a9ff01e488dadcf3174713",
+    "SubProcesses/P0_ub_td/GF1.0/res_1": "28cde8fdb89deb8af1536af60fa6bda890b71164e6f0e99f2948273864e09879",
+    "SubProcesses/P0_ub_td/GF1.0/res_1.dat": "ef56ca65a57cb8c5dd38441ba735a8757e4ad628d54922b30521f9e71b8296df"
+  },
+  "generated_events": 2000,
+  "accepted_shower_events": 2000,
+  "physical_histograms": 75,
+  "auxiliary_histograms": 0,
+  "finite_physical_histogram_weights": 6306,
+  "generation_logs": {
+    "SubProcesses/P0_bdx_tux/GF1.0/log_MINT2.txt": {
+      "sha256": "a08b7fedcf3c78634e5a1b33a513c1e585c9c12e298e8dcfcb86274614b3b094",
+      "seconds": 2
+    },
+    "SubProcesses/P0_dxb_tux/GF1.0/log_MINT2.txt": {
+      "sha256": "24c5b6dbbe15f81ea515fbb057c9323c2881c34f2cbc57ee32dec329d2fb5da9",
+      "seconds": 2
+    },
+    "SubProcesses/P0_bu_td/GF1.0/log_MINT2.txt": {
+      "sha256": "b78b8641d479b8561924fd46ee9b2b000c113650351e5598cd556f1727cc88e6",
+      "seconds": 8
+    },
+    "SubProcesses/P0_ub_td/GF1.0/log_MINT2.txt": {
+      "sha256": "10e9178e6a081e31e359e518d2688ae0ea695a14fef51f4bc892be856e26192c",
+      "seconds": 8
+    }
+  },
+  "shower_logs": {
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_1.log": {
+      "sha256": "26e4c2b80d752f0090867d9036bc9aac5958c93fae8bbc0b4c617f9995650cd3",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_2.log": {
+      "sha256": "d5c2301dc73ca9c2e9f0bdfd0ef15b7eba802044550d6048754827f99ec4130a",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_3.log": {
+      "sha256": "d35fc184e2ab393c59ab7e487d2aabd8eade31b1e6fae367bf419f0c58bc097a",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_4.log": {
+      "sha256": "928abb83b84acc2df3fdb0c0a1fa5eb3dc041f2586a11c463c016b1bc8ad9931",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_5.log": {
+      "sha256": "59e3dc0cb211f419e168314c4680f588f20cc12072e88c2da41ed29f22481f84",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_6.log": {
+      "sha256": "a77c5ee71d8518acc8214bb20bc87b75743b2c7d0d576e2f2979a01c432decdb",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_7.log": {
+      "sha256": "65606cebd4b8f15fb9479facc3a5775848cfb7d913f9cf0099d1f460f0343d7c",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    },
+    "MCatNLO/RUN_PYTHIA8_3/mcatnlo_run_8.log": {
+      "sha256": "3bf95144ccb4c610e7f1d153b4f78d0261acb06577a5f3dc09aa1ce052c2e0c0",
+      "tried_selected_accepted": [
+        250,
+        250,
+        250
+      ]
+    }
+  },
+  "pipeline_log": "/tmp/C_LOC_generation_resume_20261025_0qm2qe1s/generation_resume.log",
+  "pipeline_log_sha256": "9fb6fdd14f7da040646f0b01c8f5587567d272db4eb5d51602efe7fd9287a86f",
+  "outputs_sha256": {
+    "events.lhe.gz": "23457aca9d7479cff7824f3e95f2f5ee90a0cf1e1aca3425741bc48b5e0dab1d",
+    "summary.txt": "bc6c3326289828f7c7faef1233a5da78e0b4b0c0febbc9869fd16b40fe25e1ca",
+    "plot_PYTHIA8_1_0.HwU": "5b5f8141d25400b97b96846c2f78e06d1eecb65191d86c19a902850641d6669a",
+    "plot_PYTHIA8_1_0.pdf": "5fc29302d4788683df8b4383d8e2a06908ac315b291a7e63951fe5b6e9853f52"
+  },
+  "nonfatal_expected_warnings": [
+    "Missing StdHEP source affects only legacy HERWIG6/PYTHIA6 showers",
+    "Using fjcore rather than full FastJet"
+  ]
+}

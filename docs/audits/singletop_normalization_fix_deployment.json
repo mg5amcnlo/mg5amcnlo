@@ -1,0 +1,662 @@
+{
+  "processes": [
+    {
+      "process": "pp_tj_default",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "pp_tj_local",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "pp_tj_local_patch",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "pp_tj_local_2patch",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/G_LOC_H005",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/G_LOC_H020",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/G_Q_H005",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/G_Q_H020",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/P_QT_COMMON_W",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "g_runs/P_Q_COMMON_W",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q0P5",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q1",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q2",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q0P5",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q1",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q2",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    },
+    {
+      "process": "scale_runs/S_Q_Q0P5",
+      "source_before_sha256": "2ae9933148ecd1d99d0e7b1c03fb345b8182bac458cf55f69b37661e957b2e87",
+      "source_after_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "existing_samples": "invalid: regenerate; no changes to saved event files"
+    }
+  ],
+  "builds": [
+    {
+      "process": "pp_tj_default",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.36,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_default_P0_bdx_tux.log",
+      "binary_sha256": "d3f8a3fb122e0dde11e0e62ee7e40cc87d9e06c25a3db3210dd62eb2946353cc"
+    },
+    {
+      "process": "pp_tj_default",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 2.91,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_default_P0_bu_td.log",
+      "binary_sha256": "3162a6add60990438be5b3382061abdb5dadfb70dd2b0bf7f50de5f5ba19ff11"
+    },
+    {
+      "process": "pp_tj_default",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 2.69,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_default_P0_dxb_tux.log",
+      "binary_sha256": "2ad35482c4c1590abbf366450257d42167eeb131edf8687e024bef84f754ca96"
+    },
+    {
+      "process": "pp_tj_default",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 2.91,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_default_P0_ub_td.log",
+      "binary_sha256": "70d7502e7c405f349aab9a0f29af5b2da66832ba36dbf9af5bdee4a0d93acf0e"
+    },
+    {
+      "process": "pp_tj_local",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 2.72,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_P0_bdx_tux.log",
+      "binary_sha256": "e2f0885fe330cfa26ddc125c6749a58a283fa5000cf43270aa97c3eaa3da74b3"
+    },
+    {
+      "process": "pp_tj_local",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 2.63,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_P0_bu_td.log",
+      "binary_sha256": "f2b648014ee8b475a01c13796a3036ffda94e81adbc5515b849e6322cf16f2b0"
+    },
+    {
+      "process": "pp_tj_local",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 2.91,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_P0_dxb_tux.log",
+      "binary_sha256": "8b306e7469f2db7c6fc24f347c89c2051d43d87f705dfdafbb476502869c941e"
+    },
+    {
+      "process": "pp_tj_local",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 2.53,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_P0_ub_td.log",
+      "binary_sha256": "7ed29955ecee2004461cbd9b309e71b26b1b6e89e44a65d1579d462f9645826c"
+    },
+    {
+      "process": "pp_tj_local_patch",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 5.03,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_patch_P0_bdx_tux.log",
+      "binary_sha256": "62626d353e11a93438d2299d72451a3c1accb310a65ff8e3e9e02f2b3b760ef5"
+    },
+    {
+      "process": "pp_tj_local_patch",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 3.94,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_patch_P0_bu_td.log",
+      "binary_sha256": "b1575fe7ee8ef6467e82aead781899448a0206e7fcd05ddd7d110104f44396b2"
+    },
+    {
+      "process": "pp_tj_local_patch",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 3.84,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_patch_P0_dxb_tux.log",
+      "binary_sha256": "2751629a07fac340649968fbcf32e53ef4b75e95c7d98a9a28269541227f89ba"
+    },
+    {
+      "process": "pp_tj_local_patch",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 3.78,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_patch_P0_ub_td.log",
+      "binary_sha256": "ab60ad2ad6b248804b6d33667091a68035fa1a59440556cf320b843b40ecc1fa"
+    },
+    {
+      "process": "pp_tj_local_2patch",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 3.66,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_2patch_P0_bdx_tux.log",
+      "binary_sha256": "313cdde2849117a0de52a94dcbba056759ba103237393cb6c1452d5d7dfd4cd3"
+    },
+    {
+      "process": "pp_tj_local_2patch",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 3.56,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_2patch_P0_bu_td.log",
+      "binary_sha256": "78064946b548928df223dce943744b8a33f595b84b3ae4f7ae2c81589f3f64c5"
+    },
+    {
+      "process": "pp_tj_local_2patch",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 3.56,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_2patch_P0_dxb_tux.log",
+      "binary_sha256": "796824d07b1dfa4d4be89fe9de17616ad1266ddae573e5708d619f29945626ee"
+    },
+    {
+      "process": "pp_tj_local_2patch",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 3.03,
+      "build_log": "docs/audits/normalization_fix_builds/pp_tj_local_2patch_P0_ub_td.log",
+      "binary_sha256": "6c5d31f4805e0f02ee86d37995ae224e075a30297addcb6c1dc189d7c91bfa11"
+    },
+    {
+      "process": "g_runs/G_LOC_H005",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.39,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H005_P0_bdx_tux.log",
+      "binary_sha256": "5649026d39aac51d06e04388cc47ca4329644b023845b91a0b6136b4da795e18"
+    },
+    {
+      "process": "g_runs/G_LOC_H005",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.57,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H005_P0_bu_td.log",
+      "binary_sha256": "9a2d4d941dc960af7d3405244ea5839598e5af4334ed97ed7ae976d357f11cd7"
+    },
+    {
+      "process": "g_runs/G_LOC_H005",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.36,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H005_P0_dxb_tux.log",
+      "binary_sha256": "18488a065322a2665bb67565d540e03e29545a34dd050b7666d99d394c6199f9"
+    },
+    {
+      "process": "g_runs/G_LOC_H005",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.79,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H005_P0_ub_td.log",
+      "binary_sha256": "a4c4f6a1b956cf5dbda9ec3152a7ef6dc20b8d796101a3ce4ca594937c16fc04"
+    },
+    {
+      "process": "g_runs/G_LOC_H020",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 2.4,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H020_P0_bdx_tux.log",
+      "binary_sha256": "32e39c77b576b9ee6dccf5bdeecaa46d1226c3f05844c2bb1773970665820c5d"
+    },
+    {
+      "process": "g_runs/G_LOC_H020",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 2.41,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H020_P0_bu_td.log",
+      "binary_sha256": "437d4534b680d158154dc32ae8f3430191248234fa8d1828fd7c1f50f5b017a7"
+    },
+    {
+      "process": "g_runs/G_LOC_H020",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 2.41,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H020_P0_dxb_tux.log",
+      "binary_sha256": "f316c2ad25f1e689459fac69684e340856c5755e648e72a471e7333a1b10a1a6"
+    },
+    {
+      "process": "g_runs/G_LOC_H020",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 2.6,
+      "build_log": "docs/audits/normalization_fix_builds/G_LOC_H020_P0_ub_td.log",
+      "binary_sha256": "a01932c590805372ae914000a2d5706f956b2704f2c4999822e67e702812b790"
+    },
+    {
+      "process": "g_runs/G_Q_H005",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 2.18,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H005_P0_bdx_tux.log",
+      "binary_sha256": "f79d54be2e45d1a7d53f335f6f491873b3ef54e3cbe65d707f1b642d874d4dec"
+    },
+    {
+      "process": "g_runs/G_Q_H005",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.96,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H005_P0_bu_td.log",
+      "binary_sha256": "0d397b10ea41c8ac93fd7737b540048fef5b497c3ec1253621c78dc0e9a32872"
+    },
+    {
+      "process": "g_runs/G_Q_H005",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.75,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H005_P0_dxb_tux.log",
+      "binary_sha256": "34a5a41cb6f734ca6269c396e0a23c5f113306810fa46686d4d78d2467288a6f"
+    },
+    {
+      "process": "g_runs/G_Q_H005",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.45,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H005_P0_ub_td.log",
+      "binary_sha256": "d3ce5bf03c75e07dbb2e87a21df374463538f717a89d3cc72967c3ef4cd13df5"
+    },
+    {
+      "process": "g_runs/G_Q_H020",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.79,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H020_P0_bdx_tux.log",
+      "binary_sha256": "d1871ee681ebc9c0f7cdc9512d746bd6a1889a8349a16e91343af0e069de0db7"
+    },
+    {
+      "process": "g_runs/G_Q_H020",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.68,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H020_P0_bu_td.log",
+      "binary_sha256": "76865c96faad21396654ac512df0cbcd8c4123620ef7a3235575e68daa8bedac"
+    },
+    {
+      "process": "g_runs/G_Q_H020",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.95,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H020_P0_dxb_tux.log",
+      "binary_sha256": "e50d46fda71c62f5d1421ab02134170804bca3cd5977d13031bd19dbf3b52961"
+    },
+    {
+      "process": "g_runs/G_Q_H020",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.73,
+      "build_log": "docs/audits/normalization_fix_builds/G_Q_H020_P0_ub_td.log",
+      "binary_sha256": "523153e2d80b17969a5b3973e4201114aacfdfbaf4a6fa862174fa65d9dc4b22"
+    },
+    {
+      "process": "g_runs/P_QT_COMMON_W",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.24,
+      "build_log": "docs/audits/normalization_fix_builds/P_QT_COMMON_W_P0_bdx_tux.log",
+      "binary_sha256": "df384201136151acbacb508cdf7297b96a809be0ca85aa2cc9aa118e626f5b5d"
+    },
+    {
+      "process": "g_runs/P_QT_COMMON_W",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.21,
+      "build_log": "docs/audits/normalization_fix_builds/P_QT_COMMON_W_P0_bu_td.log",
+      "binary_sha256": "fc390ee4b5fb0bccd68dd2218f164ca983ab584882847f9c5c82a2267880ba80"
+    },
+    {
+      "process": "g_runs/P_QT_COMMON_W",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.31,
+      "build_log": "docs/audits/normalization_fix_builds/P_QT_COMMON_W_P0_dxb_tux.log",
+      "binary_sha256": "0f06b515f4890123c6203344a5dbf1f4a25432dc77953615ee8ed01f96d52090"
+    },
+    {
+      "process": "g_runs/P_QT_COMMON_W",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.31,
+      "build_log": "docs/audits/normalization_fix_builds/P_QT_COMMON_W_P0_ub_td.log",
+      "binary_sha256": "ed49d600851aeea583315b75a609923c0564416b82c8bd4f29213784a96f36f0"
+    },
+    {
+      "process": "g_runs/P_Q_COMMON_W",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.9,
+      "build_log": "docs/audits/normalization_fix_builds/P_Q_COMMON_W_P0_bdx_tux.log",
+      "binary_sha256": "20c3f003efd66568b28224634aeecf462db5173182055027686a64e9cec6f871"
+    },
+    {
+      "process": "g_runs/P_Q_COMMON_W",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.76,
+      "build_log": "docs/audits/normalization_fix_builds/P_Q_COMMON_W_P0_bu_td.log",
+      "binary_sha256": "c1ca94e0070283c5669356494ebd2c63a301b7a4d95a062355cbeb76598adc05"
+    },
+    {
+      "process": "g_runs/P_Q_COMMON_W",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 2.01,
+      "build_log": "docs/audits/normalization_fix_builds/P_Q_COMMON_W_P0_dxb_tux.log",
+      "binary_sha256": "dbfdd5db2edd49cf1d5ea15ff4603b4f3946a7b5da244453444400111e892884"
+    },
+    {
+      "process": "g_runs/P_Q_COMMON_W",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.89,
+      "build_log": "docs/audits/normalization_fix_builds/P_Q_COMMON_W_P0_ub_td.log",
+      "binary_sha256": "9d2222cd8f188ace6538770c9322f6230c96c859fee139a935fc464c129ce546"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q0P5",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.81,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q0P5_P0_bdx_tux.log",
+      "binary_sha256": "f27c2d42bbd1683fb059265b267cfd0d9b9ad6851d82712919b9cd64475dd1d4"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q0P5",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.84,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q0P5_P0_bu_td.log",
+      "binary_sha256": "e96edfe0b49dc47e77140353e06feae1b8e583a5f921bab770457c9c90792292"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q0P5",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.68,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q0P5_P0_dxb_tux.log",
+      "binary_sha256": "8fa7591a4d5969e4ae54500c2fb0c52398d36bc6c07762ee616ff50c2f9d7699"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q0P5",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.9,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q0P5_P0_ub_td.log",
+      "binary_sha256": "acbcaf1cf5cbe991f5ff49399ee8669eba05fb533e4e0e808b695a4b7dfa40ec"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q1",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.57,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q1_P0_bdx_tux.log",
+      "binary_sha256": "99e287fd61040b9cfd93fa4b7bc8941e9f406679b54946335be0252296891d49"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q1",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.94,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q1_P0_bu_td.log",
+      "binary_sha256": "78ace1491c76fcd3da300b4cefc791e485b712b976bdf148ef98ce8ab072aa17"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q1",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.7,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q1_P0_dxb_tux.log",
+      "binary_sha256": "8c3231924c69d6193635865d76affd338a3b2ed469588aa94b4ffad4ecdd89bc"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q1",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.63,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q1_P0_ub_td.log",
+      "binary_sha256": "d328c343e058ec4a8ba6ebb9400d6de28788ff8eaef3569c628cf6cfc63d1f37"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q2",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.84,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q2_P0_bdx_tux.log",
+      "binary_sha256": "f19aeac23573bfbe529fa0c9d8e1fa163d7931fc62c710b606644713349af9ef"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q2",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.86,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q2_P0_bu_td.log",
+      "binary_sha256": "d5c60f9e00900be9fb6a0cef03ddfd8dd7a60df4f375f1841a0bc716f54e5f7e"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q2",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.86,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q2_P0_dxb_tux.log",
+      "binary_sha256": "3b360798d4b1147faba063b40b2b5b0daab476e513a851cc31ed23159629eb4f"
+    },
+    {
+      "process": "scale_runs/S_GLB_Q2",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.79,
+      "build_log": "docs/audits/normalization_fix_builds/S_GLB_Q2_P0_ub_td.log",
+      "binary_sha256": "cecb572fee11ef93ed20c3d3365caffde20ddebb2a60ba9cd87bc3b3bd47ed39"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q0P5",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.6,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q0P5_P0_bdx_tux.log",
+      "binary_sha256": "684e0b130c58bccae1a126c51c2b37901d3b5f98119d114e1782343ae2e1802d"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q0P5",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.75,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q0P5_P0_bu_td.log",
+      "binary_sha256": "832e34d22d6eff4ab833aa637a209e99cf0be00a6283543b5464158be1394a43"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q0P5",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.32,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q0P5_P0_dxb_tux.log",
+      "binary_sha256": "4c3b29c173315a62e0b500ab9b73f3be3825d8b8d871e20cad1f6946a1b8ac66"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q0P5",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.62,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q0P5_P0_ub_td.log",
+      "binary_sha256": "31102d90e67eba08e2ddc70161f803deff17b2d12d8a02bf21e12ad08be14c30"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q1",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.23,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q1_P0_bdx_tux.log",
+      "binary_sha256": "8a862015d70682fc6d959dd32aca4d4a3befda40b4a9cc2a4357fc41e9215457"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q1",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.25,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q1_P0_bu_td.log",
+      "binary_sha256": "04d198f5de2dee255d688780f05189c18fb1a70e66d1368d67f90870605a2cd1"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q1",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.35,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q1_P0_dxb_tux.log",
+      "binary_sha256": "9ad485c344605f39e8a2ccbe9e0d8ecadba27e3bffb5bc19ce4825d3fee6e53a"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q1",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.3,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q1_P0_ub_td.log",
+      "binary_sha256": "82297bf6bff7bc5e9e36cf1114234830885a762230809f365d8bbebac6b28296"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q2",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.21,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q2_P0_bdx_tux.log",
+      "binary_sha256": "7526abfadd6b8263bcbcab34e1e5497cc0fb41c9a34ed33179dce17b47dde851"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q2",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.2,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q2_P0_bu_td.log",
+      "binary_sha256": "037306df5ac83bac4c174eb722c0b77baf6fd31a3b522844dc47897f2636260b"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q2",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.2,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q2_P0_dxb_tux.log",
+      "binary_sha256": "c83fc7afeeebc2c33ad028e517ccbba796a26fda1c7bc0241c966bdfde71fce7"
+    },
+    {
+      "process": "scale_runs/S_LOC_Q2",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.2,
+      "build_log": "docs/audits/normalization_fix_builds/S_LOC_Q2_P0_ub_td.log",
+      "binary_sha256": "6d5eb84de98f486dfb812f2a2e35bec9e559267a1e71fd684076c5155f9d9917"
+    },
+    {
+      "process": "scale_runs/S_Q_Q0P5",
+      "subprocess": "P0_bdx_tux",
+      "returncode": 0,
+      "seconds": 1.16,
+      "build_log": "docs/audits/normalization_fix_builds/S_Q_Q0P5_P0_bdx_tux.log",
+      "binary_sha256": "14ff968963cb984c64cb1f218a6e800708a29c237c035f6f9b2ed686e0bb2388"
+    },
+    {
+      "process": "scale_runs/S_Q_Q0P5",
+      "subprocess": "P0_bu_td",
+      "returncode": 0,
+      "seconds": 1.33,
+      "build_log": "docs/audits/normalization_fix_builds/S_Q_Q0P5_P0_bu_td.log",
+      "binary_sha256": "304fc6069cd791bdb0c7a7619961b4f2d62ef5354f3c6938147c0c8eb327d5d6"
+    },
+    {
+      "process": "scale_runs/S_Q_Q0P5",
+      "subprocess": "P0_dxb_tux",
+      "returncode": 0,
+      "seconds": 1.33,
+      "build_log": "docs/audits/normalization_fix_builds/S_Q_Q0P5_P0_dxb_tux.log",
+      "binary_sha256": "09294993003f4af69b464d71217dbe32f928ed9e60be2a54e5a5ab462b7258e5"
+    },
+    {
+      "process": "scale_runs/S_Q_Q0P5",
+      "subprocess": "P0_ub_td",
+      "returncode": 0,
+      "seconds": 1.34,
+      "build_log": "docs/audits/normalization_fix_builds/S_Q_Q0P5_P0_ub_td.log",
+      "binary_sha256": "0dde292aca8cc0316d8dbe0baaf414e6df330222d16ce1fb1db172eec8709d94"
+    }
+  ],
+  "tests": {
+    "focused_unittest_count": 43,
+    "status": "passed",
+    "commands": [
+      "python3 -m unittest tests.unit_tests.fks.test_fxfx_clustering tests.unit_tests.fks.test_cluster_optimization tests.unit_tests.fks.test_pythia_local_matching tests.unit_tests.fks.test_fks_explicit_sum"
+    ],
+    "invalid_sample_guards": "analysis and matched-campaign completion checks reject the marked superseded samples",
+    "documents": "paper.pdf and single_top_local_recoil.pdf rebuilt with explicit superseded-sample notices"
+  },
+  "regeneration_required": "All four central matched samples, four G-width variations, two common-G comparisons, and twelve shower-scale variations. Preserve existing event files; use new run names or fresh campaign output directories. Full integration/unweighting must be repeated; reshowering cannot fix LHE weights."
+}

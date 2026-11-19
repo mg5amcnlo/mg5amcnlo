@@ -392,31 +392,56 @@ c in the k_1+k_2 c.m. frame. Here, ka=\tilde{k}_1, ,kb=\tilde{k}_2
       implicit none
       real*8 p1(0:3),p2(0:3),ka(0:3),kb(0:3)
       real*8 E1,E2,xm1,xm2,beta1,beta2,costhfks
-      double precision tmp,costh_fks,get_cms_energy,dot
-      real*8 tiny
-      parameter (tiny=1.d-6)
-      external dot
+      real*8 q(0:3),r1(3),r2(3),qmass,pq1,pq2,
+     $     length1,length2,scale1,scale2,energy1,energy2
+      double precision get_cms_energy
 c
+      r1=p1(1:3)
+      r2=p2(1:3)
       if(ybst_til_tocm.eq.0.d0)then
-        tmp=costh_fks(p1,p2)
-        beta1=sqrt(1-(xm1/p1(0))**2)
-        beta2=sqrt(1-(xm2/p2(0))**2)
+        energy1=p1(0)
+        energy2=p2(0)
       else
         if(E1.lt.0.d0)E1=get_cms_energy(p1,ka,kb)
-        beta1=sqrt(1-(xm1/E1)**2)
         if(E2.lt.0.d0)E2=get_cms_energy(p2,ka,kb)
-        beta2=sqrt(1-(xm2/E2)**2)
-        tmp=(1-dot(p1,p2)/(E1*E2))/(beta1*beta2)
-        if((abs(tmp)-1.d0).gt.tiny)then
-          write(*,*)'Warning in get_cms_costh_fks',tmp
-          tmp=sign(1.d0,tmp)
-        elseif( (abs(tmp)-1.d0).le.tiny .and.
-     #          (abs(tmp)-1.d0).ge.0.d0 )then
-          tmp=sign(1.d0,tmp)
+        energy1=E1
+        energy2=E2
+c Boost the spatial vectors explicitly to the incoming-pair rest frame.
+c This is the usual rotation-free boost, with (gamma-1)/|q|^2 written
+c as 1/[M(q0+M)] so an arbitrarily small boost remains well defined.
+        q=ka+kb
+        if(maxval(abs(q(1:3))).gt.0d0)then
+          qmass=sqrt((q(0)-q(3))*(q(0)+q(3))
+     $         -q(1)**2-q(2)**2)
+          pq1=sum(p1(1:3)*q(1:3))
+          pq2=sum(p2(1:3)*q(1:3))
+          r1=p1(1:3)+q(1:3)*
+     $         (pq1/(qmass*(q(0)+qmass))-p1(0)/qmass)
+          r2=p2(1:3)+q(1:3)*
+     $         (pq2/(qmass*(q(0)+qmass))-p2(0)/qmass)
         endif
       endif
 c
-      costhfks=tmp
+c For an on-shell massive leg |p|/E equals sqrt(1-m^2/E^2).
+c The norm retains a small physical velocity when E rounds to m (or
+c slightly below it), without a negative square root or a zero divisor.
+      scale1=maxval(abs(r1))
+      scale2=maxval(abs(r2))
+      length1=0d0
+      length2=0d0
+      if(scale1.gt.0d0)length1=scale1*sqrt(sum((r1/scale1)**2))
+      if(scale2.gt.0d0)length2=scale2*sqrt(sum((r2/scale2)**2))
+      beta1=1d0
+      beta2=1d0
+      if(xm1.ne.0d0)beta1=length1/energy1
+      if(xm2.ne.0d0)beta2=length2/energy2
+c At rest the angle is arbitrary: its coefficient beta is zero.
+      costhfks=1d0
+      if(length1.gt.0d0.and.length2.gt.0d0)then
+        costhfks=sum((r1/length1)*(r2/length2))
+c The scalar product of unit vectors can exceed the bounds by roundoff.
+        costhfks=max(-1d0,min(1d0,costhfks))
+      endif
 c
       return
       end

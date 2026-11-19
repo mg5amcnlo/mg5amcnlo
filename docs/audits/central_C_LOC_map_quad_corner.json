@@ -1,0 +1,54 @@
+{
+  "scope": "One light-FSR corner, kinematic test only",
+  "point": {
+    "source": "central_runs_fixed/C_LOC/SubProcesses/P0_bdx_tux/GF1.0/log.txt",
+    "beam": 2,
+    "partner": 4,
+    "j": 4,
+    "momenta": [
+      [
+        526.764699790082,
+        0.0,
+        0.0,
+        526.764699790082
+      ],
+      [
+        5115.442276622567,
+        -0.0,
+        -0.0,
+        -5115.442276622567
+      ],
+      [
+        540.9682936146762,
+        -0.00021367543286962052,
+        0.0028604486734205075,
+        512.559942531746
+      ],
+      [
+        5101.235465808072,
+        -0.0008964235090903635,
+        -0.0006469421881957513,
+        -5101.235465807961
+      ],
+      [
+        0.0032169898959142447,
+        0.001110098941959984,
+        -0.0022135064852247563,
+        -0.0020535562737216805
+      ]
+    ],
+    "logged_relative_error": 0.0014156901560842998
+  },
+  "quad_original_input": {
+    "passed": false,
+    "replay_output_relative_error": 1.0,
+    "reported_mismatch_before_rejection": 0.0014915677757455722,
+    "max_input_component_change_GeV": 0.0
+  },
+  "quad_onshell_input": {
+    "passed": true,
+    "replay_output_relative_error": 3.3480402962449075e-22,
+    "reported_mismatch_before_rejection": null,
+    "max_input_component_change_GeV": 8.885619651239654e-12
+  }
+}

@@ -3,6 +3,7 @@
       use fks_phase_space_data, only: p1_cnt
 c Computes all the info needed to write out the events including the
 c intermediate resonances. It also boosts the events to the lab frame
+      use FKSParams,only: FKSPythiaLocalRecoil
       use fks_phase_space, only: fks_phase_space_point,generate_born_event,
      $     generate_momenta
       use process_module
@@ -285,7 +286,10 @@ c
 c Shift particle momenta to put them on the mass shell as given in the
 c subroutine fill_MC_mshell().
 c
-      if(putonshell)then
+c Local matching and the shower use the hard five-flavour masses. Keep
+c these exact momenta: the legacy mass reshuffler assumes equal incoming
+c energies for FSR and cannot act on a local incoming-recoil event.
+      if(putonshell.and.FKSPythiaLocalRecoil.eq.0)then
          mfail=-1
 c fills the common block with the MC masses (special treatment of i_fks
 c and j_fks, because phase-space generation won't work in all cases).

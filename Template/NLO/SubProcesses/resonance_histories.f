@@ -3,11 +3,16 @@ c Select the chart's own decay tree. Evaluate its resonance criterion
 c with the ordinary generation cuts; native radiation projection itself
 c still covers the full physical real phase space.
       use mc_native_context, only: native_mapping
+      use FKSParams,only: FKSPythiaLocalRecoil
+      use fks_phase_space_data,only: pythia_recoil_pair,
+     $     initial_recoil_leg,resonance_recoil
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
       include 'born_conf.inc'
       integer iconfig_native,itree(2,-max_branch:-1),iconf,this_config
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       common /to_itree/itree,iconf
       common /to_mconfigs/this_config
       integer igranny,iaunt
@@ -27,6 +32,15 @@ c still covers the full physical real phase space.
       if(granny_is_res)
      $     default_members=granny_chain_real_final(1:nexternal)
       call select_fks_recoil(default_members,.true.)
+      if(FKSPythiaLocalRecoil.eq.1)then
+c Native histories bypass initialize_fks_phase_space. Install the same
+c pair here before inversion; select_fks_recoil clears stale point state.
+         call mc_select_pythia_pair(pythia_recoil_pair)
+         if(j_fks.gt.nincoming)then
+            initial_recoil_leg=pythia_recoil_pair(1)
+            resonance_recoil=.true.
+         endif
+      endif
       end
 
 

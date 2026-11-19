@@ -63,6 +63,13 @@ c Each soft/collinear sample has its own failure count.
             y_ij_fks_fix=y_ij_fks_fix_input
          endif
          call generate_valid_momenta(wgt,xx,p)
+c Hold the other radiation coordinate fixed for overlap tests. Forward
+c maps use the sampled coordinates for the variable not taken to its
+c endpoint; changing cxiyfix alone does not fix that variable in all maps.
+         if(colltest.and.xi_i_fks_fix_input.ne.-2d0)
+     $        xx(ndim-2)=sqrt(xi_i_fks_fix_input)
+         if(softtest.and.y_ij_fks_fix_input.ne.-2d0)
+     $        xx(ndim-1)=sqrt((1d0-y_ij_fks_fix_input)/2d0)
 
          do i=1,nstep
             if (softtest) xi_i_fks_fix=0.1d0**i
@@ -271,7 +278,8 @@ c dump momenta in a fort.80 file
       
       subroutine compute_towards_limit(ilim,x,amp
      $     ,wgt_PS,xp)
-      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt,
+     $     pythia_recoil_pair,pythia_isr_coordinate
       use fks_phase_space, only: generate_momenta
       use mint_module
       implicit none
@@ -299,6 +307,10 @@ c dump momenta in a fort.80 file
          write (*,*) 'to implement (MC/MC)'
       endif
 
+c Compare coefficients of the common dw/w singular measure. The local
+c ISR chart samples w, while sreal is regulated with the physical xi.
+      if(pythia_recoil_pair(2).gt.0.and.j_fks.le.nincoming.and.
+     $     xi_i_fks_ev.gt.0d0)wgt=wgt*pythia_isr_coordinate/xi_i_fks_ev
       wgt_PS = wgt
 
       ! save amplitudes (and PS weight) towards limit
@@ -372,6 +384,7 @@ c probability multiplies both terms and is not part of this limit test.
 
 
       subroutine compute_MC_subt_term_test(p,p_cms,wgt)
+      use FKSParams,only: FKSPythiaLocalRecoil
       use mc_counterterms, only: compute_MCsubtraction_kl,
      $     fill_father_and_ileg,fksfather,mc_shower_scale_mass
       use fks_phase_space_data, only: p_born,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
@@ -400,6 +413,11 @@ c over other histories is an integration operation, not a native limit test.
       double precision pmass(nexternal)
       common/to_mass/pmass
       external fks_Hij,mc_born_flow_weight
+
+      if(FKSPythiaLocalRecoil.eq.1)then
+         call compute_MC_local_sum_test(p,p_cms,wgt)
+         return
+      endif
 
 c Use the coordinates of the active map, including the resonance frame.
       xi=xi_i_fks_ev
@@ -442,6 +460,112 @@ c sum without a randomly selected flow or a stale Born-flow probability.
       enddo
       call set_cms_stuff(-100)
       amp_split=amp_split_mc
+      end
+
+
+      subroutine compute_MC_local_sum_test(p,p_cms,wgt)
+c Local quark IF radiation has one combined kernel. Compare the complete
+c native sum, repartitioned by the outer Sij as in the production H driver,
+c to the exact ME limit. One endpoint alone does not carry the soft current.
+      use fks_phase_space,only: fks_phase_space_point,
+     $     capture_fks_phase_space,restore_fks_phase_space,
+     $     initialize_fks_phase_space,generate_native_momenta
+      use fks_phase_space_data,only: p_born,xi_i_fks_ev,y_ij_fks_ev,
+     $     ycm_cnt
+      use fks_phase_space_helpers,only: boost_n1_to_lab,
+     $     apply_momentum_permutation
+      use mc_native_context,only: native_mapping,set_native_history
+      use mc_counterterms,only: compute_MCsubtraction_kl,fksfather
+      use scale_module
+      use mint_module,only: iconfig
+      implicit none
+      include 'nexternal.inc'
+      include 'orders.inc'
+      include 'nFKSconfigs.inc'
+      include 'mc_histories.inc'
+      double precision p(0:3,nexternal),p_cms(0:3,nexternal),wgt,
+     $     lab(0:3,nexternal),flipped(0:3,nexternal),
+     $     pn(0:3,nexternal),pnlab(0:3,nexternal),pncm(0:3,nexternal),
+     $     jac,z(2),terms(amp_split_size,2),total(amp_split_size),
+     $     sector,fks_Sij,regulated,gterms(amp_split_size),native_reg
+      integer owner,config,flow,ihist,n_connect
+      integer i_fks,j_fks,nFKSprocess
+      common/fks_indices/i_fks,j_fks
+      common/c_nFKSprocess/nFKSprocess
+      logical softtest,colltest,soft_save,coll_save,pass
+      common/sctests/softtest,colltest
+      type(fks_phase_space_point) saved
+      external fks_Sij
+
+      owner=nFKSprocess
+      config=iconfig
+c This scoped process has one Born flow. The diagnostic has not picked
+c a flow on its first entry, so zero is not a valid restoration target.
+      flow=max(1,born_flow_picked)
+      soft_save=softtest
+      coll_save=colltest
+      call set_cms_stuff(-100)
+      sector=fks_Sij(p,i_fks,j_fks,xi_i_fks_ev,y_ij_fks_ev)
+      regulated=xi_i_fks_ev**2*(1d0-y_ij_fks_ev)*sector
+      call boost_n1_to_lab(p,lab,-ycm_cnt(0))
+      call capture_fks_phase_space(saved)
+      saved%p=p
+      saved%p_cms=p_cms
+      saved%p_lab=lab
+      saved%weight=wgt
+      total=0d0
+      if(.not.MC_HIST_COMPLETE(owner))
+     $     error stop 'Incomplete local MC diagnostic history sum'
+c The input already approaches the requested endpoint. Native inverse
+c maps must recover its coordinates, without imposing the outer test's
+c fixed xi or y on a different chart.
+      softtest=.false.
+      colltest=.false.
+      native_mapping=.true.
+      do ihist=MC_HIST_FIRST(owner),MC_HIST_LAST(owner)
+         iconfig=1
+         call update_fks_dir(MC_HIST_NATIVE(ihist))
+         call set_native_history(ihist)
+         call init_process_module_nbody_wrapper()
+         call update_coltype_and_charge(nFKSprocess,i_fks,j_fks)
+         call apply_momentum_permutation(MC_HIST_PERM(:,ihist),
+     $        lab,flipped,pass)
+         if(.not.pass)error stop 'Invalid local MC diagnostic permutation'
+         call select_native_recoil(iconfig)
+         call generate_native_momenta(flipped,pn,pnlab,pncm,jac,pass)
+         if(.not.pass)error stop 'Invalid local MC diagnostic projection'
+c Restore diagnostic precision for the amplitudes, after the native
+c inverse. Otherwise sreal uses its production 1e-6 angular shortcut,
+c while the reference uses 1e-12, leaving a false finite soft offset.
+         softtest=soft_save
+         colltest=coll_save
+         born_flow_picked=1
+         call init_process_module_n1body_wrapper(born_flow_picked)
+         call compute_shower_scale_nbody(p_born,-fksfather,0d0)
+         call compute_prefactors_n1body(1d0,jac)
+         call compute_MCsubtraction_kl(i_fks,j_fks,xi_i_fks_ev,
+     $        y_ij_fks_ev,pn,pncm,p_born,.true.,z,n_connect,terms)
+         native_reg=xi_i_fks_ev**2*(1d0-y_ij_fks_ev)
+         call compute_MCsubtraction_from_gfun_test(gterms)
+         total=total+sum(terms(:,1:n_connect),dim=2)+gterms/native_reg
+         softtest=.false.
+         colltest=.false.
+      enddo
+      call set_native_history(0)
+      native_mapping=.false.
+      iconfig=config
+      call update_fks_dir(owner)
+c update_fks_dir calls setfksfactor, which clears the diagnostic flags.
+      softtest=soft_save
+      colltest=coll_save
+      call init_process_module_nbody_wrapper()
+      call update_coltype_and_charge(owner,i_fks,j_fks)
+      call initialize_fks_phase_space(iconfig)
+      call restore_fks_phase_space(saved)
+      born_flow_picked=flow
+      call init_process_module_n1body_wrapper(born_flow_picked)
+      call set_cms_stuff(-100)
+      amp_split=regulated*total
       end
 
       subroutine compute_MCsubtraction_from_gfun_test(amp_gfun)
@@ -773,14 +897,24 @@ c$$$         endif
          write(*,*) '  Enter alpha>0 to set G_azi=0 (no azi corr)'
          read (*,*) alazi,beazi
       endif
-      ! TODO : remove this option
-      write(*,*) 'Enter xi_i, y_ij to be used in coll/soft tests'
+      write(*,*) 'Enter energy sample xi_hat, y_ij for coll/soft tests'
+      write(*,*) ' Fixed xi_hat sets x_E^2; the map supplies its upper bound'
       write(*,*) ' Enter -2 to generate them randomly'
       read (*,*) xi_i_fks_fix_input,y_ij_fks_fix_input
 
-      if (xi_i_fks_fix_input.ne.-2d0 .or. y_ij_fks_fix_input.ne.-2d0)
+c Fixed inputs also test the overlap: take the collinear limit at a small
+c fixed energy sample and the soft limit at fixed y close to one. Endpoints
+c are excluded here; test_limits supplies the exact limiting point.
+      if (xi_i_fks_fix_input.ne.-2d0.and..not.
+     $     (xi_i_fks_fix_input.gt.0d0.and.xi_i_fks_fix_input.lt.1d0))
      $     then
-         write (*,*) 'Cannot use fixed inputs'
+         write (*,*) 'Fixed xi must be between 0 and 1, or -2 for random.'
+         stop 1
+      endif
+      if (y_ij_fks_fix_input.ne.-2d0.and..not.
+     $     (y_ij_fks_fix_input.gt.-1d0.and.y_ij_fks_fix_input.lt.1d0))
+     $     then
+         write (*,*) 'Fixed y must be between -1 and 1, or -2 for random.'
          stop 1
       endif
       

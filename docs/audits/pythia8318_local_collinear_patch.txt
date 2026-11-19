@@ -1,0 +1,100 @@
+The optional Pythia 8.318 quark IF numerator patch
+
+pp_tj_local_patch is a fresh export of the same five-flavour, stable-top
+t-channel process as pp_tj_local. Its production cards request one million
+events with the same cuts, scales, PDFs, matching and shower settings.
+Run from that directory:
+
+    ./bin/generate_events -f
+
+The existing shower card enables automatic Pythia8 showering. The analysis
+is identical to pp_tj_local: 75 histograms, with PDF/HTML/HwU output under
+Events/run_01/. The first available run name is used. For already generated
+events, ./bin/shower run_01 -f also selects the corresponding patched shower.
+Hadronisation, MPI, beam remnants, primordial kT, colour reconnection, QED,
+weak showers, top decays and MECs remain off. Quark masses are unchanged.
+
+There are two coupled changes:
+
+1. Cards/FKS_params.dat sets PythiaLocalCollinearPatch=.true., in addition
+   to FKSPythiaLocalRecoil=1, FKSExplicitSum and MCExplicitKLSum. In the IF
+   MC counterterm, CF*(1+zI^2)/(1-zI) becomes CF*(zI^2+zeta^2)/(1-zI).
+   Here zI is the backward incoming momentum fraction, Q2=2 pa.k,
+   D=2 pBorn_a.pBorn_f and zeta=1-zI*Q2/D. CF=4/3, pa is the real incoming
+   quark, pf its outgoing colour partner, and k the emitted gluon.
+   Maps, orientation partitions, PDFs, starting-scale damping and the
+   backward g->qqbar counterterm are unchanged.
+
+2. The shower launcher selects SpaceShower:IFquarkCollinearCorrection=on
+   in a private Pythia build. In SimpleSpaceShower::pT2nextQCD, this
+   multiplies the q->qg branching veto weight by
+
+       (z^2+z1^2)/(1+z^2),  z1=1-z*Q2/(m2ColPair-m2ColPartner).
+
+   z=zI and z1=zeta for the matched map; m2ColPair-m2ColPartner=D.
+   It acts only for an IF quark colour partner. The Sudakov factor uses
+   the same corrected rate because the change is inside the branching
+   veto. Other splittings, recoil maps, masses and thresholds are unchanged.
+   The weight lies in [0,1], approaches one in the incoming-collinear and
+   soft limits, and gives the outgoing AP numerator at zI->1. MECs are off;
+   no existing MEC is multiplied onto this modified base kernel.
+
+The special G profile g(1-zI), which would still switch off hard outgoing
+collinear radiation, is replaced by the ordinary soft profile
+g(2*E_g/sqrt(shat)), evaluated in the real partonic CM. It uses the same
+PythiaLocalGWidth=0.01 and compact quadratic transition as before. Thus hard
+final-collinear radiation uses the patched density directly, without a G
+replacement. The usual soft correction remains necessary for the top's
+missing self-eikonal. Its C-SC overlap also remains: a soft replacement by
+itself would spoil the collinear limit within the soft transition region.
+The massive-top soft mismatch is not changed by this Pythia patch.
+
+The supplied source patch is
+Template/NLO/MCatNLO/srcPythia8/patches/pythia8318-local-quark-collinear.patch.
+It adds one default-off setting and one guarded veto-weight factor. To
+rebuild in a NEW private directory from the unmodified built 8.318 source:
+
+    python3 docs/audits/build_pythia8_local_collinear.py STOCK NEW_PREFIX
+
+The prepared process points to HEPTools/pythia8_local_collinear_patch in
+Cards/amcatnlo_configuration.txt and its shower-card DM_2 data path. HepMC2
+paths are the same as in the other processes. The launch script refuses
+the patched matching prescription if the shower's XML lacks the new flag.
+The process-local shower template puts the selected library paths before
+inherited paths, ensuring this shower loads the private library.
+
+The stock Pythia installation is never patched or rebuilt. The private
+setting defaults to off and is enabled only in this process's shower.
+Library-path changes apply only inside the shower subprocess. Consequently
+the standard Pythia remains at its original default after success, failure,
+interruption or concurrent runs; there is no shared patch to undo. Stock
+source and library SHA256 checks, and bitwise comparison with the private
+flag disabled, verify this isolation. The other pp_tj_* processes and their
+original event files are unchanged.
+
+Validation: the full generate_events chain was exercised with 1000 events
+in a separate named run, Events/recoil_patch_check/. All four subprocesses
+passed the production ME/MC singular-limit checks and 20/20 pole checks.
+Pythia accepted all 1000 events, and the normal interface produced all 75
+histograms and PDF/HTML output. The usual driver analyzes 999 events because
+its event-limit check precedes the last analysis call, as in the other
+processes. Production cards were then restored to one million events.
+Existing nonfatal Pythia threshold/dipole/recoiler warnings still occur;
+this numerator patch does not address their separate mass/threshold issues.
+
+The shower audit checks both beams and quarks/antiquarks, compares 100
+accepted patched points with the Fortran density, and compares 100 default
+points bit for bit against stock. Run it with:
+
+    python3 docs/audits/check_pythia8_local_collinear_patch.py STOCK PRIVATE
+
+The audit record is pythia8318_singletop_local_patch_validation.json.
+Unit tests also check the outgoing AP limit
+without G, the incoming AP limit, gluon conversion, the remaining soft
+profile and coupled launcher selection. Fresh grids/events are required
+when switching between the stock-G and patched prescriptions.
+
+After generating all three samples, overlay them from the repository root:
+
+    python3 Analyses/compare_pp_tj_recoil.py --patched
+    python3 Analyses/compare_pp_tj_recoil.py --patched --shape

@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
   int count = 0;
   reader.lhef_read_wgtsinfo_(count, labels);
   std::cout << "count " << count << '\n';
+  if (argc > 2) std::cout << "label " << std::string(labels[1], 80) << '\n';
   double weights[1024] = {0.};
   for (int event = 0; event < 2; ++event) {
     reader.lhef_read_wgts_(weights);
@@ -43,9 +44,10 @@ int main(int argc, char** argv) {
                         str(MCATNLO / 'include'), str(source), '-o',
                         str(cls.executable)], check=True, capture_output=True)
 
-    def read_events(self, reweight, jwgtinfo=0, header=True):
+    def read_events(self, reweight, jwgtinfo=0, header=True,
+                    label='scale variation', show_label=False):
         weights = ("<initrwgt>\n<weightgroup name='test'>\n"
-                   "<weight id='1001'> scale variation </weight>\n"
+                   f"<weight id='1001'> {label} </weight>\n"
                    "</weightgroup>\n</initrwgt>\n") if reweight else ''
         contents = '<LesHouchesEvents version="3.0">\n'
         if header:
@@ -64,7 +66,8 @@ int main(int argc, char** argv) {
         contents += '</LesHouchesEvents>\n'
         path = Path(self.work.name) / 'events.lhe'
         path.write_text(contents)
-        result = subprocess.run([str(self.executable), str(path)],
+        result = subprocess.run([str(self.executable), str(path)] +
+                                (['labels'] if show_label else []),
                                 text=True, capture_output=True, timeout=3)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
@@ -78,21 +81,42 @@ int main(int argc, char** argv) {
                          'count 1\nevent 0 0\nevent 1 0\n')
 
     def test_reweighting_with_both_supported_weight_formats(self):
-        for jwgtinfo in (0, 9):
+        for jwgtinfo in (0, 9, -9):
             with self.subTest(jwgtinfo=jwgtinfo):
                 self.assertEqual(self.read_events(True, jwgtinfo),
                                  'count 2\nevent 0 2.5\nevent 1 -3.25\n')
 
+    def test_inclusive_scale_labels_are_recognised_and_order_tags_retained(self):
+        for tag in (0, 400, 402):
+            label = f'tag= {tag} dyn= -1 muR=0.20000E+01 muF=0.10000E+01'
+            result = self.read_events(True, -9, label=label, show_label=True)
+            output = next(line for line in result.splitlines() if line.startswith('label '))
+            self.assertIn('dyn= -1 muR=0.20000E+01 muF=0.10000E+01', output)
+            self.assertEqual('tag=' in output, tag != 0)
+
 
 @unittest.skipUnless(shutil.which('bash'), 'requires bash')
 class TestPythiaDeltaSteering(unittest.TestCase):
-    def steering(self, delta, dipole_setting):
+    def steering(self, delta, dipole_setting, local=False, expected_error=None,
+                 collinear_patch=False, patch_available=False,
+                 soft_patch=False, soft_available=False):
         with tempfile.TemporaryDirectory(prefix='mg5_py8_steering_') as tmp:
-            work = Path(tmp)
+            work = Path(tmp) / 'MCatNLO'
+            work.mkdir()
+            (Path(tmp) / 'Cards').mkdir()
+            (Path(tmp) / 'Cards/FKS_params.dat').write_text(
+                '#FKSPythiaLocalRecoil\n'+str(int(local))+'\n'
+                '#PythiaLocalCollinearPatch\n'+str(collinear_patch)+'\n'
+                '#PythiaLocalSoftPatch\n'+str(soft_patch)+'\n')
             (work / 'xmldoc').mkdir()
             (work / 'xmldoc/BeamParameters.xml').write_text(
                 '<flag name="Beams:setDipoleShowerStartingScalesFromLHEF" '
                 'default="off"/>\n' if dipole_setting else '<chapter/>\n')
+            (work / 'xmldoc/SpacelikeShowers.xml').write_text(
+                '<chapter>' + ('<flag name="SpaceShower:IFquarkCollinearCorrection" '
+                'default="off"/>' if patch_available else '') +
+                ('<flag name="SpaceShower:IFtopSoftCorrection" '
+                'default="off"/>' if soft_available else '') + '</chapter>\n')
             card = ShowerCard()
             card.testing = True
             (work / 'shower.dat').write_text(card.write_card('PYTHIA8', ''))
@@ -118,6 +142,11 @@ runMCMadFKS
                  str(work / 'shower.dat')], cwd=work,
                 env=dict(os.environ, DELTA='ON' if delta else 'OFF'),
                 text=True, capture_output=True, timeout=10)
+            if expected_error is not None:
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected_error, result.stdout+result.stderr)
+                self.assertFalse((work / 'Pythia8.cmd').exists())
+                return
             self.assertEqual(result.returncode, 0, result.stderr)
             return (work / 'Pythia8.cmd').read_text()
 
@@ -135,3 +164,47 @@ runMCMadFKS
         result = self.steering(False, True)
         self.assertNotIn('Beams:setProductionScalesFromLHEF', result)
         self.assertNotIn('Beams:setDipoleShowerStartingScalesFromLHEF', result)
+
+    def test_local_matching_uses_only_stock_settings(self):
+        result = self.steering(False, True, local=True)
+        for setting in ('SpaceShower:dipoleRecoil = on',
+                        'TimeShower:globalRecoil = off',
+                        'SpaceShower:pT0Ref force = 0.',
+                        'TimeShower:QEDshowerByOther = off',
+                        '6:mayDecay = off'):
+            self.assertIn(setting, result)
+        self.assertNotIn('singleTopLocal', result)
+        for pdg in range(1, 6):
+            self.assertNotRegex(result, r'(?m)^'+str(pdg)+r':m0\s*=\s*0(?:\.|\s)')
+
+    def test_local_matching_rejects_delta(self):
+        self.steering(True, True, local=True,
+                      expected_error='Single-top local recoil requires DELTA=OFF')
+
+    def test_collinear_patch_is_enabled_only_with_paired_counterterm(self):
+        result = self.steering(False, True, local=True, collinear_patch=True,
+                               patch_available=True)
+        self.assertIn('SpaceShower:IFquarkCollinearCorrection = on', result)
+        result = self.steering(False, True, local=True, patch_available=True)
+        self.assertIn('SpaceShower:IFquarkCollinearCorrection = off', result)
+
+    def test_collinear_patch_rejects_stock_library_or_global_matching(self):
+        self.steering(False, True, local=True, collinear_patch=True,
+                      expected_error='selected Pythia build lacks')
+        self.steering(False, True, collinear_patch=True, patch_available=True,
+                      expected_error='requires FKSPythiaLocalRecoil=1')
+
+    def test_top_soft_patch_is_paired_and_defaults_off(self):
+        result = self.steering(False, True, local=True, collinear_patch=True,
+                              patch_available=True, soft_patch=True, soft_available=True)
+        self.assertIn('SpaceShower:IFtopSoftCorrection = on', result)
+        result = self.steering(False, True, local=True, collinear_patch=True,
+                              patch_available=True, soft_available=True)
+        self.assertIn('SpaceShower:IFtopSoftCorrection = off', result)
+
+    def test_top_soft_patch_rejects_inconsistent_build_or_prescription(self):
+        self.steering(False, True, local=True, soft_patch=True,
+                      expected_error='requires PythiaLocalCollinearPatch')
+        self.steering(False, True, local=True, collinear_patch=True,
+                      patch_available=True, soft_patch=True,
+                      expected_error='selected Pythia build lacks the IF top soft patch')

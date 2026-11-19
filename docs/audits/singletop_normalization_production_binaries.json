@@ -1,0 +1,39 @@
+{
+  "subprocesses": [
+    {
+      "process": "P0_bu_td",
+      "returncode": 0,
+      "sigma_pb": 54.68034585111411,
+      "error_pb": 0.3683808176344336,
+      "difference_from_instrumented": 0.0,
+      "matches_instrumented": true
+    },
+    {
+      "process": "P0_ub_td",
+      "returncode": 0,
+      "sigma_pb": 53.42995276728477,
+      "error_pb": 0.49537904669246413,
+      "difference_from_instrumented": 0.0,
+      "matches_instrumented": true
+    },
+    {
+      "process": "P0_bdx_tux",
+      "returncode": 0,
+      "sigma_pb": 11.906527911358276,
+      "error_pb": 0.09951264027600905,
+      "difference_from_instrumented": 0.0,
+      "matches_instrumented": true
+    },
+    {
+      "process": "P0_dxb_tux",
+      "returncode": 0,
+      "sigma_pb": 11.854695730098438,
+      "error_pb": 0.10260378214655268,
+      "difference_from_instrumented": 0.0,
+      "matches_instrumented": true
+    }
+  ],
+  "total_pb": 131.8715222598556,
+  "error_pb": 0.6336679953954026,
+  "all_passed": true
+}

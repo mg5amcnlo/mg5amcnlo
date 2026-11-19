@@ -70,10 +70,11 @@ c threshold the generic discriminant loses precision by cancellation.
 
       subroutine getangles(pin,th,cth,sth,phi,cphi,sphi)
       implicit none
-      real*8 pin(0:3),th,cth,sth,phi,cphi,sphi,xlength
+      real*8 pin(0:3),th,cth,sth,phi,cphi,sphi,xlength,
+     $     xscale,xtrans,xdir(3)
 c
-      xlength=pin(1)**2+pin(2)**2+pin(3)**2
-      if(xlength.eq.0)then
+      xscale=maxval(abs(pin(1:3)))
+      if(xscale.eq.0d0)then
         th=0.d0
         cth=1.d0
         sth=0.d0
@@ -81,16 +82,21 @@ c
         cphi=1.d0
         sphi=0.d0
       else
-        xlength=sqrt(xlength)
-        cth=pin(3)/xlength
-        th=acos(cth)
-        if(cth.ne.1.d0)then
-          sth=sqrt(1-cth**2)
-          phi=atan2(pin(2),pin(1))
-          cphi=cos(phi)
-          sphi=sin(phi)
+c A nonzero transverse direction must survive even when cos(theta)
+c rounds to +/-1. Recover sin(theta) and the azimuth directly from
+c the momentum, rather than subtracting nearly equal squared cosines.
+c Scale first so the same construction also works for soft momenta.
+        xdir=pin(1:3)/xscale
+        xtrans=sqrt(xdir(1)**2+xdir(2)**2)
+        xlength=sqrt(xtrans**2+xdir(3)**2)
+        cth=xdir(3)/xlength
+        sth=xtrans/xlength
+        th=atan2(xtrans,xdir(3))
+        if(xtrans.gt.0d0)then
+          phi=atan2(xdir(2),xdir(1))
+          cphi=xdir(1)/xtrans
+          sphi=xdir(2)/xtrans
         else
-          sth=0.d0
           phi=0.d0
           cphi=1.d0
           sphi=0.d0

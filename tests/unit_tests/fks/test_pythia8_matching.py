@@ -181,7 +181,7 @@ class TestPythia8Matching(unittest.TestCase):
             'double precision :: shower_scale_nbody_min(5,5),'
             'shower_scale_nbody_max(5,5)\nend module\n')
         (work / 'fks_phase_space.f').write_text(
-            fks_test_module(('invert_fks_radiation',)))
+            fks_test_module(('invert_fks_radiation', 'boost_born_to_cms')))
         selections = {
             'montecarlocounter.f': (
                 'zPY8', 'xiPY8', 'xjacPY8',

@@ -1,0 +1,54 @@
+{
+  "local": {
+    "input": "pp_tj_local/Events/run_01/events.lhe.gz",
+    "file_bytes": 156615365,
+    "mtime_ns": 1792831638000000000,
+    "generated": 1000000,
+    "analysed": 999999,
+    "negative": 262397,
+    "mean_lhe_weight_pb": 138.42436668949475,
+    "predicted_histogram_pb": 138.42407539610474,
+    "predicted_histogram_error_pb": 0.2912932443511637,
+    "actual_histogram_pb": 138.4241,
+    "actual_histogram_error_pb": 0.2912932,
+    "absolute_weight_range_pb": [
+      291.29339,
+      291.29339
+    ]
+  },
+  "G_LOC_H005": {
+    "input": "g_runs/G_LOC_H005/Events/G_LOC_H005/events.lhe.gz",
+    "file_bytes": 157253455,
+    "mtime_ns": 1792877316000000000,
+    "generated": 1000000,
+    "analysed": 999999,
+    "negative": 274487,
+    "mean_lhe_weight_pb": 138.94877503886914,
+    "predicted_histogram_pb": 138.94846696621914,
+    "predicted_histogram_error_pb": 0.3080724959608295,
+    "actual_histogram_pb": 138.9485,
+    "actual_histogram_error_pb": 0.3080725,
+    "absolute_weight_range_pb": [
+      308.07265,
+      308.07265
+    ]
+  },
+  "powheg": {
+    "input": "pp_tj_powheg/Events/run_01/events.lhe.gz",
+    "file_bytes": 144532090,
+    "mtime_ns": 1792876642617186446,
+    "generated": 1000000,
+    "analysed": 1000000,
+    "negative": 2494,
+    "mean_lhe_weight_pb": 131.98933680884477,
+    "predicted_histogram_pb": 131.98933680884477,
+    "predicted_histogram_error_pb": 0.13265100000098193,
+    "actual_histogram_pb": 131.98934,
+    "actual_histogram_error_pb": 0.132651,
+    "absolute_weight_range_pb": [
+      132.651,
+      132.651
+    ]
+  },
+  "validation_status": "Historical MC@NLO inputs invalidated by the uninitialized core mother momentum; regenerate rates and shapes. Fixed-order and POWHEG are unaffected."
+}

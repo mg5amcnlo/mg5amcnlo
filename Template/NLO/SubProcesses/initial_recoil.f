@@ -45,6 +45,17 @@ c The flux, PDFs and full-process incoming invariant are caller-owned.
       if(xp(0,irec).le.0d0.or.
      $     abs(dot(xp(:,irec),xp(:,irec))).gt.
      $     1d-10*xp(0,irec)**2)goto 900
+c A null final-state leg is best generated in the incoming spectator's
+c light-cone basis. A boost to the reservoir rest frame cannot retain
+c its small light-cone component when the laboratory jet is very hard.
+      if(m_j_fks.eq.0d0)then
+         isolsign=1
+         call generate_massless_initial_recoil(icountevts,i_fks,
+     $        j_fks,irec,xbar,x,phi_i_fks,xp,xiimax,xinorm,
+     $        xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,
+     $        q,mass2,beam_ratio,pass)
+         return
+      endif
       reservoir=((1d0-xbar)/xbar)*xp(:,irec)
       q=xp(:,j_fks)+reservoir
       mass2=m_j_fks**2+2d0*dot(xp(:,j_fks),reservoir)
@@ -157,6 +168,11 @@ c for the measure, including the massive second solution/native map.
       if(p(0,irec).le.0d0.or.
      $     abs(dot(p(:,irec),p(:,irec))).gt.
      $     1d-10*p(0,irec)**2)goto 900
+      if(m_j_fks.eq.0d0)then
+         call invert_massless_initial_recoil(p,irec,xreal,i_fks,
+     $        j_fks,pborn,x,xjac,xpswgt,q,mass2,xbar,pass)
+         return
+      endif
 c Use the unchanged spectators when reconstructing a small Born beam
 c fraction. Subtracting the hard daughters from the enlarged incoming
 c momentum loses all Born precision for a large borrowed energy.
@@ -267,6 +283,313 @@ c momentum loses all Born precision for a large borrowed energy.
       pass=all(ieee_is_finite(pborn)).and.
      $     ieee_is_finite(xjac).and.xjac.gt.0d0.and.
      $     ieee_is_finite(xpswgt).and.xpswgt.gt.0d0
+      if(pass)return
+ 900  continue
+      pass=.false.
+      xjac=-149d0
+      end
+
+
+      subroutine null_recoil_components(p,idir,plus,minus,pass)
+c Recover the small null component from the known model mass, rather
+c than subtracting the energy and longitudinal momentum. Only roundoff
+c deviations from the external mass shell are admitted here.
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      double precision p(0:3),plus,minus,norm,pt2
+      integer idir
+      logical pass
+      pt2=sum(p(1:2)**2)
+      norm=sqrt(pt2+p(3)**2)
+      pass=all(ieee_is_finite(p)).and.p(0).gt.0d0.and.
+     $     abs(p(0)-norm).le.1d-10*max(1d0,p(0))
+      plus=0d0
+      minus=0d0
+      if(.not.pass)return
+      if(idir*p(3).ge.0d0)then
+         plus=norm+idir*p(3)
+         if(plus.gt.0d0)minus=pt2/plus
+      else
+         minus=norm-idir*p(3)
+         if(minus.gt.0d0)plus=pt2/minus
+      endif
+      end
+
+
+      subroutine null_recoil_axes(p,q,mass,u,v)
+c Transport the ordinary FSR transverse axes. For an incoming null
+c spectator their transverse projections are an orthonormal 2D basis.
+      use fks_phase_space_helpers, only: getangles
+      implicit none
+      double precision p(0:3),q(0:3),mass,u(2),v(2),
+     $     qr(0:3),pr(0:3),r(0:3),rr(0:3),rl(0:3),
+     $     th,cth,sth,ph,cph,sph,orient
+      qr(0)=q(0)
+      qr(1:3)=-q(1:3)
+      call boostm(p,qr,mass,pr)
+      call getangles(pr,th,cth,sth,ph,cph,sph)
+      r=(/0d0,1d0,0d0,0d0/)
+      call rotate_invar(r,rr,cth,sth,cph,sph)
+      call boostm(rr,q,mass,rl)
+      u=rl(1:2)/sqrt(sum(rl(1:2)**2))
+      r=(/0d0,0d0,1d0,0d0/)
+      call rotate_invar(r,rr,cth,sth,cph,sph)
+      call boostm(rr,q,mass,rl)
+      orient=sign(1d0,u(1)*rl(2)-u(2)*rl(1))
+      v=orient*(/-u(2),u(1)/)
+      end
+
+
+      subroutine generate_massless_initial_recoil(icountevts,
+     $     i_fks,j_fks,irec,xbar,x,phi,xp,xiimax,xinorm,xi,y,
+     $     xihat,phat,xjac,xpswgt,q,mass2,beam_ratio,pass)
+      use fks_phase_space_data, only: xij_aor,veckn_ev,
+     $     veckbarn_ev,xp0jfks
+      use mc_native_context, only: native_mapping
+      use FKSParams, only: pythia_local_matching
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      include 'nexternal.inc'
+      integer icountevts,i_fks,j_fks,irec,idir
+      double precision xbar,x(2),phi,xp(0:3,nexternal),
+     $     xiimax,xinorm,xi,y,xihat,phat(0:3),xjac,xpswgt,
+     $     q(0:3),mass2,beam_ratio,p(0:3),pr(0:3),reservoir(0:3),
+     $     pp,pm,rp,mass,rad,c,v,d,n,a,b,a0,delta,
+     $     u(2),vv(2),kt(2),kp,km,jp,jm,trans(2),
+     $     aa,bb,st,ct,qr(0:3),mother(0:3),sstiny,cctiny
+      double precision,parameter :: pi=3.1415926535897932d0
+      double precision xi_fix,y_fix
+      common/cxiyfix/xi_fix,y_fix
+      logical pass,softtest,colltest
+      common/sctests/softtest,colltest
+      pass=.false.
+      if(irec.lt.1.or.irec.gt.2.or.xbar.le.0d0.or.
+     $     xbar.ge.1d0)goto 900
+      idir=3-2*irec
+      call null_recoil_components(xp(:,j_fks),idir,pp,pm,pass)
+      if(.not.pass.or.pm.le.0d0)goto 900
+      p=xp(:,j_fks)
+      p(0)=(pp+pm)/2d0
+      p(3)=idir*(pp-pm)/2d0
+      reservoir=(1d0-xbar)/xbar*xp(:,irec)
+      rp=2d0*reservoir(0)
+      mass2=rp*pm
+      if(mass2.le.0d0)goto 900
+      mass=sqrt(mass2)
+      q=p+reservoir
+      call null_recoil_axes(p,q,mass,u,vv)
+      sstiny=1d-6
+      cctiny=5d-7
+      if(native_mapping.or.pythia_local_matching().or.softtest.or.
+     $     colltest)then
+         sstiny=0d0
+         cctiny=0d0
+      endif
+      if(abs(icountevts).eq.1.or.abs(icountevts).eq.2)then
+         y=dble(sign(1,icountevts))
+         v=1d0+y
+      elseif(colltest)then
+         y=y_fix
+         v=1d0+y
+      elseif(native_mapping)then
+         rad=min(x(2),1d0-x(2))
+         if(x(2).le.0.5d0)then
+            v=2d0*cos(pi*rad/2d0)**2
+         else
+            v=2d0*sin(pi*rad/2d0)**2
+         endif
+         y=cos(pi*x(2))
+      else
+         v=2d0*(1d0-cctiny)*(1d0-x(2))*(1d0+x(2))
+         y=v-1d0
+      endif
+      if(.not.colltest)then
+         if(native_mapping)then
+            xjac=xjac*pi*sin(pi*min(x(2),1d0-x(2)))
+         else
+            xjac=xjac*4d0*x(2)*(1d0-cctiny)
+         endif
+      endif
+      xiimax=1d0
+      xinorm=1d0
+      if(icountevts.eq.0.or.abs(icountevts).eq.2)then
+         xi=0d0
+         c=1d0
+      elseif(softtest)then
+         xi=xi_fix
+         c=1d0-xi
+      elseif(native_mapping)then
+c Two energy hemispheres retain both the soft and hard complements.
+         if(x(1).le.0.5d0)then
+            xi=2d0*x(1)**2
+            c=1d0-xi
+         else
+            c=2d0*(1d0-x(1))**2
+            xi=1d0-c
+         endif
+      else
+         c=(1d0-sstiny)*(1d0-x(1))*(1d0+x(1))
+         xi=sstiny+(1d0-sstiny)*x(1)**2
+      endif
+      if(.not.softtest)then
+         if(native_mapping)then
+            xjac=xjac*4d0*min(x(1),1d0-x(1))
+         else
+            xjac=xjac*2d0*x(1)*(1d0-sstiny)
+         endif
+      endif
+      if(xi.lt.0d0.or.c.le.0d0.or.v.lt.0d0.or.v.gt.2d0)
+     $     goto 900
+      d=2d0*c+xi*v
+      n=2d0*c*c+xi*v*(1d0+c)
+      if(d.le.0d0.or.n.le.0d0)goto 900
+      aa=v/n
+      bb=c*c*(2d0-v)/n
+      a=xi*aa
+      b=xi*bb
+      a0=c*d/n
+      delta=xi*c*(2d0-v)/d
+      trans=cos(phi)*u+sin(phi)*vv
+c The reduced emitted direction is also needed at the soft endpoint.
+      kt=sqrt(max(0d0,aa*bb*mass2))*trans
+      km=aa*pm
+      phat(1:2)=aa*p(1:2)+kt
+      if(km.gt.0d0)then
+         kp=sum(phat(1:2)**2)/km
+      else
+         kp=bb*rp
+      endif
+      phat(0)=(kp+km)/2d0
+      phat(3)=idir*(kp-km)/2d0
+      xp(:,i_fks)=xi*phat
+      kt=xi*kt
+      jm=a0*pm
+      xp(1:2,j_fks)=a0*p(1:2)-kt
+      if(jm.le.0d0)goto 900
+      jp=sum(xp(1:2,j_fks)**2)/jm
+      xp(0,j_fks)=(jp+jm)/2d0
+      xp(3,j_fks)=idir*(jp-jm)/2d0
+      beam_ratio=1d0+delta*(1d0-xbar)/xbar
+      xp(:,irec)=beam_ratio*xp(:,irec)
+      xihat=xi
+      xpswgt=xpswgt*4d0*mass2*c/
+     $     (d*n*(4d0*pi)**3)
+      qr(0)=q(0)
+      qr(1:3)=-q(1:3)
+      call boostm(p,qr,mass,mother)
+      call initial_recoil_collinear_phase(mother,q,mass,phi,xij_aor)
+      if(icountevts.eq.-100)then
+         veckn_ev=mass*c/d
+         veckbarn_ev=mass/2d0
+         xp0jfks=veckn_ev
+      endif
+      pass=all(ieee_is_finite(xp)).and.
+     $     ieee_is_finite(xpswgt).and.xpswgt.gt.0d0
+      if(pass)return
+ 900  continue
+      pass=.false.
+      xjac=-148d0
+      end
+
+
+      subroutine invert_massless_initial_recoil(p,irec,xreal,
+     $     i_fks,j_fks,pborn,x,xjac,xpswgt,q,mass2,xbar,pass)
+      use fks_phase_space_data, only: xinorm_ev
+      use fks_radiation_maps, only: native_fsr_angle
+      use mc_native_context, only: native_mapping
+      implicit none
+      include 'nexternal.inc'
+      integer irec,i_fks,j_fks,idir,i,ib
+      double precision p(0:3,nexternal),xreal,pborn(0:3,nexternal-1),
+     $     x(3),xjac,xpswgt,q(0:3),mass2,xbar,kp,km,jp,jm,
+     $     pp,pm,mother(0:3),unchanged(0:3),reservoir(0:3),
+     $     bornratio,alpha,a0,delta,c,xi,eta,beta,phi,angle,
+     $     u(2),v(2),kt(2),krest(0:3),jrest(0:3),mass,
+     $     work(0:3,nexternal),xiimax,xinorm,y,xihat,
+     $     phat(0:3),beam_ratio,sstiny,cctiny
+      double precision,parameter :: pi=3.1415926535897932d0
+      logical pass,softtest,colltest
+      common/sctests/softtest,colltest
+      pass=.false.
+      if(irec.lt.1.or.irec.gt.2.or.xreal.le.0d0.or.
+     $     xreal.ge.1d0)goto 900
+      idir=3-2*irec
+      call null_recoil_components(p(:,i_fks),idir,kp,km,pass)
+      if(.not.pass)goto 900
+      call null_recoil_components(p(:,j_fks),idir,jp,jm,pass)
+      if(.not.pass)goto 900
+      pm=km+jm
+      if(pm.le.0d0.or.jm.le.0d0.or.km.le.0d0)goto 900
+      mother(1:2)=p(1:2,i_fks)+p(1:2,j_fks)
+      pp=sum(mother(1:2)**2)/pm
+      mother(0)=(pp+pm)/2d0
+      mother(3)=idir*(pp-pm)/2d0
+      unchanged=p(:,3-irec)
+      do i=3,nexternal
+         if(i.ne.i_fks.and.i.ne.j_fks)
+     $        unchanged=unchanged-p(:,i)
+      enddo
+      if(abs(pm-(unchanged(0)-idir*unchanged(3))).gt.
+     $     1d-9*max(1d0,maxval(abs(p))))goto 900
+      bornratio=(pp-unchanged(0)-idir*unchanged(3))/
+     $     (2d0*p(0,irec))
+      if(bornratio.le.0d0.or.bornratio.gt.1d0)goto 900
+      xbar=xreal*bornratio
+      reservoir=(1d0-xbar)/xreal*p(:,irec)
+      q=mother+reservoir
+      mass2=2d0*reservoir(0)*pm
+      if(mass2.le.0d0)goto 900
+      mass=sqrt(mass2)
+      alpha=km/pm
+      a0=jm/pm
+      delta=(xreal-xbar)/(1d0-xbar)
+      if(delta.lt.0d0.or.delta.ge.1d0)goto 900
+      beta=delta*a0
+      c=a0*(1d0-xreal)/(1d0-xbar)
+      xi=alpha+beta
+      eta=a0+delta*alpha
+      krest=(/xi,2d0*sqrt(max(0d0,alpha*beta)),0d0,
+     $     alpha-beta/)
+      jrest=(/eta,-krest(1),0d0,a0-delta*alpha/)
+      angle=native_fsr_angle(krest,jrest)
+      call null_recoil_axes(mother,q,mass,u,v)
+      kt=p(1:2,i_fks)-alpha*mother(1:2)
+      phi=modulo(atan2(sum(kt*v),sum(kt*u)),2d0*pi)
+      if(native_mapping)then
+         if(xi.le.0.5d0)then
+            x(1)=sqrt(xi/2d0)
+         else
+            x(1)=1d0-sqrt(c/2d0)
+         endif
+         x(2)=angle
+      else
+         sstiny=1d-6
+         cctiny=5d-7
+         if(softtest.or.colltest)then
+            sstiny=0d0
+            cctiny=0d0
+         endif
+         x(1)=sqrt(max(0d0,(xi-sstiny)/(1d0-sstiny)))
+         y=cos(pi*angle)
+         x(2)=sqrt(max(0d0,((1d0-y)/2d0-cctiny)/
+     $        (1d0-cctiny)))
+      endif
+      x(3)=phi/(2d0*pi)
+      work=p
+      work(:,i_fks)=0d0
+      work(:,j_fks)=mother
+      work(:,irec)=bornratio*p(:,irec)
+      ib=0
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         ib=ib+1
+         pborn(:,ib)=work(:,i)
+      enddo
+      xjac=xjac*2d0*pi
+      call generate_massless_initial_recoil(-100,i_fks,j_fks,
+     $     irec,xbar,x,phi,work,xiimax,xinorm,xi,y,xihat,
+     $     phat,xjac,xpswgt,q,mass2,beam_ratio,pass)
+      xinorm_ev=xinorm
       if(pass)return
  900  continue
       pass=.false.

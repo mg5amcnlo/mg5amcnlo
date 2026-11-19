@@ -10,7 +10,10 @@ c Sampling and radiation kernels live in their own lower-level modules.
      $     generate_momenta_massless_final_inverse,
      $     generate_momenta_massive_final_inverse,
      $     generate_momenta_initial_inverse,
-     $     generate_momenta_initial_noevpr,use_symmetric_isr_mapping
+     $     generate_momenta_initial_noevpr,use_symmetric_isr_mapping,
+     $     generate_momenta_pythia_initial,
+     $     invert_momenta_pythia_initial,
+     $     pythia_local_radiation_coordinates
       use fks_phase_space_helpers, only: lambda,get_recoil,
      $     isr_recoil_boost,prepare_isr_recoil_boost,
      $     apply_isr_recoil_boost
@@ -41,6 +44,7 @@ c point generated from it, including a rejected radiation trial.
 c Provenance for reuse by the integration drivers. Imported/projected
 c Born points have sampled=.false.; radiation itself needs no chart.
          integer :: ndim=0,config=0,sector=0,epoch=-1,recoil_leg=0
+         integer :: pythia_pair(2)=0
          integer :: beams(2)=0
          logical :: native=.false.,limit_tests(2)=.false.
          double precision :: coordinates(99)=0d0
@@ -102,6 +106,9 @@ c Cursor used by set_cms_stuff: lab/CM boosts, sqrt(shat), shat.
          logical :: resonance_recoil=.false.
          logical :: resonance_members(nexternal)=.false.
          integer :: initial_recoil_leg=0
+         integer :: pythia_pair(2)=0
+         double precision :: pythia_isr_coordinate=0d0,
+     $        pythia_isr_soft_scale=1d0
          integer :: sector=0,i_fks=0,j_fks=0,config=0
       end type fks_phase_space_point
 
@@ -267,11 +274,14 @@ c This routine neither samples momenta nor applies an integration weight.
 
       subroutine initialize_fks_recoil()
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair
 c set_tau_min installs the sector's cut bounds, conflicting BWs and
 c resonance descendants. Recoil selection must follow that operation.
+      use FKSParams,only: FKSPythiaLocalRecoil
       implicit none
       include 'nFKSconfigs.inc'
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
       logical granny_is_res,granny_chain(-nexternal:nexternal),
      $     granny_chain_real_final(-nexternal:nexternal)
       integer igranny,iaunt,nFKSprocess
@@ -289,10 +299,18 @@ c resonance descendants. Recoil selection must follow that operation.
       resonance_momentum=0d0
       resonance_mass2=0d0
       initial_recoil_leg=0
+      pythia_recoil_pair=0
       call set_tau_min()
       if(granny_is_res)
      $     resonance_members=granny_chain_real_final(1:nexternal)
       call select_fks_recoil(resonance_members,abrv.ne.'born')
+      if(FKSPythiaLocalRecoil.eq.1)then
+         call mc_select_pythia_pair(pythia_recoil_pair)
+         if(j_fks.gt.nincoming)then
+            initial_recoil_leg=pythia_recoil_pair(1)
+            resonance_recoil=.true.
+         endif
+      endif
       write_granny(nFKSprocess)=.true.
       which_is_granny(nFKSprocess)=igranny
       end subroutine initialize_fks_recoil
@@ -321,7 +339,7 @@ c reused for their radiation-dependent reduced Born systems.
 
 
       subroutine prepare_fks_beam_point(ndim,x,born,m,s,totmass,pass)
-      use fks_phase_space_data, only: initial_recoil_leg,tau_Born_lower_bound,
+      use fks_phase_space_data, only: initial_recoil_leg,pythia_recoil_pair,tau_Born_lower_bound,
      $     tau_lower_bound_resonance,tau_lower_bound
 c Prepare current masses and sample incoming fractions. No mass sums
 c are cached: event output may temporarily replace the external masses.
@@ -411,6 +429,7 @@ c condition in initialize_born_chart and avoid threshold roundoff.
       born%epoch=native_epoch
       born%native=native_mapping
       born%recoil_leg=initial_recoil_leg
+      born%pythia_pair=pythia_recoil_pair
       born%coordinates(1:ndim)=x(1:ndim)
       born%external_mass=pmass
       born%beam_energy=ebeam
@@ -443,7 +462,7 @@ c condition in initialize_born_chart and avoid threshold roundoff.
 
 
       logical function fks_born_matches(born,ndim,x)
-      use fks_phase_space_data, only: initial_recoil_leg,tau_Born_lower_bound,
+      use fks_phase_space_data, only: initial_recoil_leg,pythia_recoil_pair,tau_Born_lower_bound,
      $     tau_lower_bound_resonance,tau_lower_bound
 c Deliberately require the same sector as well as the same Born chart.
 c Equal Born flavours alone do not imply equal cuts/BW sampling maps.
@@ -467,6 +486,7 @@ c Equal Born flavours alone do not imply equal cuts/BW sampling maps.
      $     return
       if(born%native.neqv.native_mapping)return
       if(born%recoil_leg.ne.initial_recoil_leg)return
+      if(any(born%pythia_pair.ne.pythia_recoil_pair))return
       if(any(born%external_mass.ne.pmass).or.
      $     any(born%beam_energy.ne.ebeam).or.
      $     any(born%beams.ne.lpp).or.
@@ -572,6 +592,9 @@ c chart, beam sampling or recoil selection. The active sector/recoiler
 c must already be installed. The immutable Born measures never include
 c the caller weight: apply it once to real and counterevent Jacobians.
       use fks_phase_space_helpers, only: boost_n1_to_its_cms,boost_n1_to_lab
+      use FKSParams,only: pythia_local_matching
+      use mc_native_context,only: native_mapping
+      use fks_phase_space_data,only: pythia_recoil_pair
       implicit none
       include 'timing_variables.inc'
       type(fks_born_point),intent(in) :: born
@@ -580,7 +603,11 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       logical use_evpr
       double precision rad(3),wgt,p(0:3,nexternal),
      $     p_lab(0:3,nexternal),p_cms(0:3,nexternal),
-     $     xjac,jac,dummy
+     $     xjac,jac,dummy,mapped(3),angular_jac
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      logical softtest,colltest
+      common/sctests/softtest,colltest
       double precision omx(2)
       common/to_ee_omx1/omx
       common/to_use_evpr/use_evpr
@@ -604,7 +631,18 @@ c the caller weight: apply it once to real and counterevent Jacobians.
       omx=born%omx
       use_evpr=.true.
       xjac=born%xjac
-      call generate_FKS_kinematics(rad,nbody_only,xjac,born%xpswgt,born%stot,born%shat,born%sqrtshat,born%tau,born%ycm,
+      mapped=rad
+      if(pythia_local_matching().and..not.native_mapping.and.
+     $     .not.(softtest.or.colltest))then
+         call pythia_local_radiation_coordinates(born%p,born%xbjrk,born%mass,
+     $        i_fks,j_fks,pythia_recoil_pair,rad,mapped,angular_jac,pass)
+         if(.not.pass)then
+            call reject_fks_phase_space(wgt,p,p_lab,p_cms)
+            goto 900
+         endif
+         xjac=xjac*angular_jac
+      endif
+      call generate_FKS_kinematics(mapped,nbody_only,xjac,born%xpswgt,born%stot,born%shat,born%sqrtshat,born%tau,born%ycm,
      $     born%xbjrk,born%mass,jac,p,pass)
       if(.not.pass.or.xjac.lt.0d0)then
          pass=.false.
@@ -651,6 +689,7 @@ c unused by the current sector. Negative values are validity sentinels.
 
       subroutine reset_fks_kinematics()
       use fks_phase_space_data, only: resonance_momentum,resonance_mass2,p_ev,p_born_coll,
+     $     pythia_isr_coordinate,pythia_isr_soft_scale,
      $     p_born_norad,xi_ev => xi_i_fks_ev,y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,
      $     p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,xi_hat_ev => xi_i_hat_ev,
      $     xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,sqrtshat_cnt,shat_cnt,
@@ -704,6 +743,8 @@ c absent endpoints cannot inherit data from a previous radiation trial.
       shat=0d0
       resonance_momentum=0d0
       resonance_mass2=0d0
+      pythia_isr_coordinate=0d0
+      pythia_isr_soft_scale=1d0
       p_born_coll=0d0
       p_born_coll(0,1)=-99d0
       p_born_norad=0d0
@@ -714,7 +755,8 @@ c absent endpoints cannot inherit data from a previous radiation trial.
       subroutine generate_FKS_kinematics(rad,nbody_only,xjac0,xpswgt0,stot,shat_born,sqrtshat_born,tau_born,ycm_born,
      $     xbjrk_born,m_born,jac,p,pass)
       use fks_phase_space_data, only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg,nocntevents,sqrtshat,shat,isolsign
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair,
+     $     nocntevents,sqrtshat,shat,isolsign
       implicit none
 
       double precision xjac0,xpswgt0,p(0:3,nexternal),stot,shat_born,sqrtshat_born,tau_born,ycm_born,jac
@@ -868,8 +910,19 @@ c selected physical incoming momentum (and its PDF argument) changes.
          endif
       elseif(j_fks.le.nincoming) then
          isolsign=1
-         call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,rad(1:2),
-     $     shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+         if(pythia_recoil_pair(2).gt.0)then
+            call generate_momenta_pythia_initial(icountevts,
+     $           i_fks,j_fks,pythia_recoil_pair(2),xbjrk_born,
+     $           tau_born,ycm_born,shat_born,phi_i_fks,xp,rad(1:2),
+     $           shat,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,
+     $           xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac,pass)
+         else
+            call generate_momenta_initial(icountevts,i_fks,j_fks,
+     $           xbjrk_born,tau_born,ycm_born,shat_born,phi_i_fks,xp,
+     $           rad(1:2),shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,
+     $           xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,
+     $           xjac,pass)
+         endif
          if (.not.pass) goto 112
       else
          write (*,*) 'Error #2 in genps_fks.f',j_fks
@@ -1317,7 +1370,8 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
 
       subroutine generate_native_momenta(p_input,p,p_lab,p_cms,
      $     jac,pass,point)
-      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound
+      use fks_phase_space_data, only: tau_Born_lower_bound,tau_lower_bound_resonance,tau_lower_bound,
+     $     initial_recoil_leg,pythia_recoil_pair
 ! Project a fixed real point onto its native Born and invert ONLY the
 ! three radiation coordinates. The Born sampling measure is common to
 ! the real and counterevents and cancels in repartition_MC_H. Generate
@@ -1401,6 +1455,8 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
      $     goto 900
       born%valid=.true.
       born%native=.true.
+      born%recoil_leg=initial_recoil_leg
+      born%pythia_pair=pythia_recoil_pair
       born%external_mass=pmass
       born%beam_energy=ebeam
       born%beams=lpp
@@ -1474,14 +1530,29 @@ c histories only consume momenta and active data, so skip their snapshot.
       end subroutine generate_native_momenta
 
 
+      subroutine boost_born_to_cms(pb,ycm)
+      implicit none
+      double precision pb(0:3,nexternal-1),ycm,pplus,pminus,expy
+      integer i
+      expy=exp(ycm)
+      do i=1,nexternal-1
+         pplus=(pb(0,i)+pb(3,i))/expy
+         pminus=(pb(0,i)-pb(3,i))*expy
+         pb(0,i)=(pplus+pminus)/2d0
+         pb(3,i)=(pplus-pminus)/2d0
+      enddo
+      end subroutine boost_born_to_cms
+
+
       subroutine invert_fks_radiation(xx,xjac0,xpswgt0,
      $     stot,tau_born,ycm_born,xbjrk_born,p_lab,pb)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg,p_i_fks_cnt
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair,p_i_fks_cnt
 ! Input momenta are in the symmetric hadron frame used by generate_momenta.
 ! No Born integration-channel coordinates or Jacobians are recovered.
       use fks_phase_space_helpers, only: boost_n1_to_its_cms,
      $     boost_n1_to_lab,get_xi_from_p,get_yij_from_p,get_phi_from_p
+      use mc_native_context, only: native_mapping
       implicit none
       double precision xjac0,xpswgt0,xx(3),p_cms(0:3,nexternal),stot
      $     ,tau_born,ycm_born,xbjrk_born(2),pb(0:3,
@@ -1492,7 +1563,12 @@ c histories only consume momenta and active data, so skip their snapshot.
       common /to_mass/pmass
       double precision m_j_fks,xi_i_fks,y_ij_fks,phi_i_fks,xbjrk(2),shat
      $     ,sqrtshat,tau,ycm,y_lab_to_cms,xbar,trial_jac,trial_ps
-      logical pass
+      double precision w,stiny,ctiny,xmax,xnorm,xihat,phat(0:3)
+      double precision radnorm,radpt2,radlong,radangle
+      double precision,parameter :: twopi=6.2831853071795864769d0
+      integer i,ib
+      logical pass,softtest,colltest
+      common/sctests/softtest,colltest
       m_j_fks=pmass(j_fks)
 
       xbjrk(1:2)=p_lab(0,1:2)/(sqrt(stot)/2d0)
@@ -1521,6 +1597,72 @@ c a direct inversion in the lab would use a different transverse basis.
      $        pb(:,1:nexternal-1),xx,xjac0,xpswgt0,
      $        resonance_momentum,resonance_mass2,xbar,pass)
          if(.not.pass)xjac0=-148d0
+         return
+      endif
+
+      if(pythia_recoil_pair(2).gt.0.and.j_fks.le.nincoming)then
+         call invert_momenta_pythia_initial(p_lab,i_fks,j_fks,
+     $        pythia_recoil_pair(2),pmass(pythia_recoil_pair(2)),
+     $        xbjrk(j_fks),pb(:,1:nexternal-1),xbar,w,pass)
+         if(.not.pass)then
+            xjac0=-152d0
+            return
+         endif
+         xbjrk_born=xbjrk
+         xbjrk_born(j_fks)=xbar
+         tau_born=product(xbjrk_born)
+         ycm_born=log(xbjrk_born(1)/xbjrk_born(2))/2d0
+         call boost_n1_to_its_cms(p_lab,p_cms,y_lab_to_cms)
+         y_ij_fks=get_yij_from_p(i_fks,j_fks,p_cms,
+     $        p_i_fks_cnt(:,0))
+         phi_i_fks=get_phi_from_p(i_fks,j_fks,p_cms)
+         stiny=1d-6
+         ctiny=5d-7
+         if(native_mapping.or.softtest.or.colltest)then
+            stiny=0d0
+            ctiny=0d0
+         endif
+         xx(1)=(w/(1d0-xbar)-stiny)/(1d0-stiny)
+c Recover the half-angle from transverse momentum. Forming 1-y loses
+c the real transverse direction when y rounds to one near a beam.
+         radpt2=sum(p_cms(1:2,i_fks)**2)
+         radlong=(3-2*j_fks)*p_cms(3,i_fks)
+         radnorm=sqrt(radpt2+radlong**2)
+         if(radnorm.le.0d0)then
+            xjac0=-152d0
+            return
+         endif
+         if(radlong.ge.0d0)then
+            radangle=radpt2/(2d0*radnorm*(radnorm+radlong))
+         else
+            radangle=(radnorm-radlong)/(2d0*radnorm)
+         endif
+         xx(2)=(radangle-ctiny)/(1d0-ctiny)
+         if(any(xx(1:2).lt.-1d-10))then
+            xjac0=-152d0
+            return
+         endif
+         xx(1:2)=sqrt(max(0d0,xx(1:2)))
+         xx(3)=modulo(phi_i_fks,twopi)/twopi
+         if(any(xx.lt.0d0).or.any(xx.gt.1d0+1d-10))then
+            xjac0=-152d0
+            return
+         endif
+         call boost_born_to_cms(pb(:,1:nexternal-1),ycm_born)
+         ib=0
+         p_cms=0d0
+         do i=1,nexternal
+            if(i.eq.i_fks)cycle
+            ib=ib+1
+            p_cms(:,i)=pb(:,ib)
+         enddo
+         xjac0=xjac0*twopi
+         call generate_momenta_pythia_initial(-100,i_fks,j_fks,
+     $        pythia_recoil_pair(2),xbjrk_born,tau_born,ycm_born,
+     $        tau_born*stot,phi_i_fks,p_cms,xx(1:2),shat,sqrtshat,
+     $        tau,ycm,xbjrk,phat,xmax,xnorm,xi_i_fks,y_ij_fks,
+     $        xihat,xpswgt0,xjac0,pass)
+         if(.not.pass)xjac0=-152d0
          return
       endif
 
@@ -1563,7 +1705,8 @@ c a direct inversion in the lab would use a different transverse basis.
 
       subroutine capture_fks_phase_space(point)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg,p_ev,p_born_coll,p_born_norad,xi_ev => xi_i_fks_ev,
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair,
+     $     pythia_isr_coordinate,pythia_isr_soft_scale,p_ev,p_born_coll,p_born_norad,xi_ev => xi_i_fks_ev,
      $     y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,
      $     xi_hat_ev => xi_i_hat_ev,xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,
      $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xi_max_ev => xiimax_ev,
@@ -1647,6 +1790,9 @@ c generation frame also for massive solutions with no counterevents.
       point%resonance_recoil=resonance_recoil
       point%resonance_members=resonance_members
       point%initial_recoil_leg=initial_recoil_leg
+      point%pythia_pair=pythia_recoil_pair
+      point%pythia_isr_coordinate=pythia_isr_coordinate
+      point%pythia_isr_soft_scale=pythia_isr_soft_scale
       point%p_born_coll=0d0
       point%p_born_coll(0,1)=-99d0
       point%p_born_norad=0d0
@@ -1670,7 +1816,8 @@ c generation frame also for massive solutions with no counterevents.
 
       subroutine restore_fks_phase_space(point)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg,p_ev,p_born_coll,p_born_norad,xi_ev => xi_i_fks_ev,
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair,
+     $     pythia_isr_coordinate,pythia_isr_soft_scale,p_ev,p_born_coll,p_born_norad,xi_ev => xi_i_fks_ev,
      $     y_ev => y_ij_fks_ev,p_i_ev => p_i_fks_ev,p_i_cnt => p_i_fks_cnt,xi_cnt => xi_i_fks_cnt,
      $     xi_hat_ev => xi_i_hat_ev,xi_hat_cnt => xi_i_hat_cnt,xbjrk_ev,xbjrk_cnt,sqrtshat_ev,shat_ev,
      $     sqrtshat_cnt,shat_cnt,tau_ev,ycm_ev,tau_cnt,ycm_cnt,xi_max_ev => xiimax_ev,
@@ -1751,6 +1898,9 @@ c routine does not change process, shower, colour, PDF or coupling state.
       resonance_recoil=point%resonance_recoil
       resonance_members=point%resonance_members
       initial_recoil_leg=point%initial_recoil_leg
+      pythia_recoil_pair=point%pythia_pair
+      pythia_isr_coordinate=point%pythia_isr_coordinate
+      pythia_isr_soft_scale=point%pythia_isr_soft_scale
       p_born_coll=point%p_born_coll
       p_born_norad=point%p_born_norad
       if(timing_sampled)call timing_leave(timing_phase_space)

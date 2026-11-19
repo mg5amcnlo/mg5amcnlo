@@ -147,6 +147,63 @@ program check_recoil_selection
     FKSFinalRecoil = 1
     call DefaultFKSParam()
     if (FKSFinalRecoil.ne.0) error stop 'reset default'
+    call FKSParamReader('pythia_card.dat', .false., .true.)
+    if (FKSPythiaLocalRecoil.ne.1) error stop 'read local PYTHIA card'
+    if (PythiaLocalGWidth.ne.0.02d0) error stop 'read local G width'
+    call FKSParamReader('old_card.dat', .false., .true.)
+    if (FKSPythiaLocalRecoil.ne.0) error stop 'old card local default'
+    if (PythiaLocalGWidth.ne.0.01d0) error stop 'old card G width default'
+
+  case ('pythia')
+    FKSPythiaLocalRecoil = 1
+    call select_fks_recoil(defaults, .true.)
+    if (local.or.beam.ne.0) error stop 'pair requires native metadata'
+
+  case ('pythia_matching')
+    FKSPythiaLocalRecoil = 1
+    nlo_ps = .true.
+    call select_fks_recoil(defaults, .true.)
+    error stop 'accepted local PYTHIA matching'
+
+  case ('pythia_matching_enabled')
+    FKSPythiaLocalRecoil = 1
+    nlo_ps = .true.
+    fixed_order = .false.
+    FKSExplicitSum = .true.
+    call select_fks_recoil(defaults, .true.)
+    call configure_fxfx_sudakov(0,.true.,'PYTHIA8')
+
+  case ('pythia_wrong_shower')
+    FKSPythiaLocalRecoil = 1
+    FKSExplicitSum = .true.
+    beam = get_fks_isr_mapping(.true.,'HERWIG6')
+    error stop 'accepted wrong shower'
+
+  case ('pythia_merging')
+    FKSPythiaLocalRecoil = 1
+    call configure_fxfx_sudakov(3,.true.,'PYTHIA8')
+    error stop 'accepted merging'
+
+  case ('pythia_conflict')
+    FKSPythiaLocalRecoil = 1
+    FKSISRMapping = 2
+    call select_fks_recoil(defaults, .true.)
+    error stop 'accepted conflicting ISR mapping'
+
+  case ('pythia_request')
+    mask(4) = .true.
+    call set_fks_recoilers(mask, pass)
+    FKSPythiaLocalRecoil = 1
+    call select_fks_recoil(defaults, .true.)
+    error stop 'accepted conflicting explicit recoil'
+
+  case ('pythia_invalid')
+    call FKSParamReader('pythia_invalid.dat', .false., .true.)
+    error stop 'accepted invalid local PYTHIA parameter'
+
+  case ('pythia_invalid_width')
+    call FKSParamReader('pythia_invalid_width.dat', .false., .true.)
+    error stop 'accepted invalid local G width'
 
   case ('invalid_card')
     call FKSParamReader('invalid_card.dat', .false., .true.)
@@ -186,6 +243,9 @@ class TestRecoilSelection(unittest.TestCase):
             (work / "beam_card.dat").write_text("#FKSFinalRecoil\n2\n")
             (work / "old_card.dat").write_text("#UsePolyVirtual\n.False.\n")
             (work / "invalid_card.dat").write_text("#FKSFinalRecoil\n3\n")
+            (work / "pythia_card.dat").write_text(
+                "#FKSPythiaLocalRecoil\n1\n#PythiaLocalGWidth\n0.02d0\n")
+            (work / "pythia_invalid.dat").write_text("#FKSPythiaLocalRecoil\n2\n")
             result = subprocess.run([
                 shutil.which("gfortran"), "-O2", "-std=legacy",
                 "-ffixed-line-length-none", "-fcheck=all", "-I", str(work),
@@ -229,3 +289,27 @@ class TestRecoilSelection(unittest.TestCase):
         result = self.run_mode("mcatnlo")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("MC@NLO counterterms require their own map", result.stdout)
+
+    def test_pythia_option_and_rejected_combinations(self):
+        self.check_mode("pythia")
+        self.check_mode("pythia_matching_enabled")
+        for mode, message in (
+                ("pythia_matching", "requires MCExplicitKLSum and FKSExplicitSum"),
+                ("pythia_wrong_shower", "Local matching requires PYTHIA8"),
+                ("pythia_merging", "Local matching requires ickkw=0"),
+                ("pythia_conflict", "requires FKSISRMapping=0"),
+                ("pythia_request", "conflicts with explicit"),
+                ("pythia_invalid", "FKSPythiaLocalRecoil must be 0 or 1")):
+            with self.subTest(mode=mode):
+                result = self.run_mode(mode)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(message, result.stdout)
+
+    def test_invalid_local_G_width_is_rejected(self):
+        for width in ("0d0", "-0.01d0", "1.01d0", "NaN"):
+            with self.subTest(width=width):
+                (self.workdirs[2] / "pythia_invalid_width.dat").write_text(
+                    "#PythiaLocalGWidth\n"+width+"\n")
+                result = self.run_mode("pythia_invalid_width")
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("PythiaLocalGWidth must be greater than 0", result.stdout)

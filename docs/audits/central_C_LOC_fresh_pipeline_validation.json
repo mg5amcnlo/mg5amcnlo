@@ -1,0 +1,76 @@
+{
+  "purpose": "Actual export/compile/integrate/unweight/Pythia/plots pipeline validation with final repaired sources; temporary 2000-event sample, not production",
+  "directory": "/tmp/C_LOC_fresh_pipeline_w2epc00v/C_LOC",
+  "run": "numerical_smoke_v3",
+  "command": "./bin/generate_events aMC@NLO -f --name=numerical_smoke_v3",
+  "cores": 8,
+  "nevents": 2000,
+  "shower_workers": [
+    {
+      "worker": 1,
+      "accepted": 250,
+      "seed": 860201
+    },
+    {
+      "worker": 2,
+      "accepted": 250,
+      "seed": 860202
+    },
+    {
+      "worker": 3,
+      "accepted": 250,
+      "seed": 860203
+    },
+    {
+      "worker": 4,
+      "accepted": 250,
+      "seed": 860204
+    },
+    {
+      "worker": 5,
+      "accepted": 250,
+      "seed": 860205
+    },
+    {
+      "worker": 6,
+      "accepted": 250,
+      "seed": 860206
+    },
+    {
+      "worker": 7,
+      "accepted": 250,
+      "seed": 860207
+    },
+    {
+      "worker": 8,
+      "accepted": 250,
+      "seed": 860208
+    }
+  ],
+  "physical_histograms": 75,
+  "generation_numerical_diagnostic_counts": {
+    "Native MC reconstruction mismatch": 0,
+    "Kinematics of counterevents": 0,
+    "Inconsistent shat": 0,
+    "Warning in get_cms_costh_fks": 0,
+    "Rejecting phase-space point: nonfinite weight": 0,
+    "invalid native MC H radiation projection": 0,
+    "Mass shell violation": 0,
+    "WARNING in eikonal_reduced: no cnt momenta": 0
+  },
+  "source_sha256": {
+    "genps_fks_helpers.f": "691b2c46b7084406115c6af02a606ae2fa1e969bf4e493b54db14629ffd52abb",
+    "fks_Sij.f": "2ca691ef24b4bc27efbec51825e14664a38ce0b2d3b6eb9cdc75e0beb62a83a2",
+    "fks_singular.f": "af64287eeaa425c7b9444c09a7890c026ef85737d26a79aebcc42d523377f3e2",
+    "initial_recoil.f": "827491bb0699b6070570c9c86fde6f47055d202e3bb5272be1fc7b64ff32ea3e",
+    "genps_fks.f": "a636188ff53aa427084cdcd91950c393526b56ed33a7af78f68026199cf4b8bf",
+    "genps_fks_radiation.f": "b3f556df415e427d342f12fca6f171a7d4b0c897f3f560bc3f0cc388c1ddac84"
+  },
+  "output_sha256": {
+    "plot_PYTHIA8_1_0.HwU": "5b5f8141d25400b97b96846c2f78e06d1eecb65191d86c19a902850641d6669a",
+    "events.lhe.gz": "518b6cccf49da84d95b115aae791b5d3dac38ce17a80fcc9114676e3128d7081",
+    "summary.txt": "bc6c3326289828f7c7faef1233a5da78e0b4b0c0febbc9869fd16b40fe25e1ca",
+    "plot_PYTHIA8_1_0.pdf": "a769ffb892dbacd081fc4b8d8097e91f2eb67ac02346be088eb1247fe51ed340"
+  },
+  "run_summary": "\n   --------------------------------------------------------------\n      Summary:\n      Process p p > t j $$ w+ w- [QCD]\n      Run at p-p collider (6500.0 + 6500.0 GeV)\n      Number of events generated: 2000\n      Total cross section: 1.335e+02 +- 2.1e+00 pb\n   --------------------------------------------------------------\n"
+}

@@ -73,6 +73,7 @@ class TestMCEventColours(unittest.TestCase):
                 str(TEMPLATE / 'genps_fks_helpers.f'),
                 str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
                 str(TEMPLATE / 'herwig7_scales.f90'),
+                str(TEMPLATE / 'FKSParams.f90'),
                 str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),
                 str(work / 'colours.f'),
                 str(ROOT / 'tests/input_files/check_mc_event_colours.f90'),

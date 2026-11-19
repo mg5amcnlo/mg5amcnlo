@@ -623,7 +623,8 @@ c its value to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_soft_counter_term(replace_MC_subt)
-      use fks_phase_space_data,only: p1_cnt,xiimax_cnt,xi_i_hat_ev,xi_i_fks_ev,y_ij_fks_ev
+      use fks_phase_space_data,only: p1_cnt,xiimax_cnt,xi_i_hat_ev,xi_i_fks_ev,y_ij_fks_ev,
+     $     pythia_recoil_pair,pythia_isr_coordinate
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
       use extra_weights
@@ -635,7 +636,7 @@ c the list of weights using the add_wgt subroutine
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
-      double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt,g22
+      double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt,g22,soft_energy
       parameter (zero=0d0)
       external fks_Sij
       double precision     xiScut_used,xiBSVcut_used
@@ -649,6 +650,9 @@ c the list of weights using the add_wgt subroutine
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       integer get_orders_tag
+      soft_energy=xi_i_fks_ev
+      if(pythia_recoil_pair(2).gt.0.and.j_fks.le.nincoming)
+     $     soft_energy=pythia_isr_coordinate
 ! Inner histories need only the G replacement, never the ordinary S term.
       if(timing_sampled)call timing_enter(timing_fks_local)
       if (mc_H_only.and.(replace_MC_subt.le.0d0.or.
@@ -677,7 +681,7 @@ c the list of weights using the add_wgt subroutine
         else
           wgt1=0d0
         endif
-        if (xi_i_fks_ev.le.xiScut_used) then
+        if (soft_energy.le.xiScut_used) then
           wgt1=wgt1-amp_split(iamp)*s_s*f_s/g22
         endif
         if (wgt1.ne.0d0) call add_wgt(4,orders,wgt1,0d0,0d0)
@@ -989,6 +993,7 @@ c value to the list of weights using the add_wgt subroutine
       use fks_phase_space_data, only: xi_i_fks_ev,y_ij_fks_ev,p_born,xbjrk_cnt
       use extra_weights
       use process_module, only: mcatnlo_delta_mod
+      use FKSParams, only: FKSPythiaLocalRecoil
       implicit none
 c     Compute the ordinary, complete native-history MC contribution. The
 c     driver repartitions H only after adding its real and G terms. It
@@ -1029,7 +1034,11 @@ c Use the coordinates of the active map, including the resonance frame.
       call compute_MCsubtraction_kl(i_fks,j_fks,xi,y,p
      $     ,p_cms,p_born,include_gfun,z,n_connect
      $     ,amp_split_xmcxsec)
-      if (mcatnlo_delta_mod) then
+      if(FKSPythiaLocalRecoil.eq.1)then
+c The local prescription is ordinary MC@NLO. A coupling-independent
+c debugging probability would change its first-order shower expansion.
+         probne=1d0
+      elseif (mcatnlo_delta_mod) then
 !     include Delta
          call compute_delta(p,probne)
       else
@@ -1783,7 +1792,8 @@ c Compute the multi-channel enhancement factor 'enhance_real'.
 
       subroutine compute_prefactors_n1body(vegas_wgt,jac_ev)
       use fks_phase_space_data,only: resonance_momentum,resonance_recoil,p1_cnt,jac_cnt,xi_i_fks_ev,y_ij_fks_ev,p_i_fks_cnt,
-     $     xi_i_fks_cnt,xinorm_ev,xiimax_ev,xiimax_cnt,xinorm_cnt,shat,nocntevents
+     $     xi_i_fks_cnt,xinorm_ev,xiimax_ev,xiimax_cnt,xinorm_cnt,shat,nocntevents,
+     $     pythia_recoil_pair,pythia_isr_coordinate,pythia_isr_soft_scale
 c Compute all relevant prefactors for the real emission and counter
 c terms.
       implicit none
@@ -1792,7 +1802,8 @@ c terms.
       include 'genps.inc'
       include 'fks_powers.inc'
       include 'coupl.inc'
-      double precision vegas_wgt,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll,jac_ev,pi,prefact_cnt_ssc_c,
+      double precision vegas_wgt,prefact,prefact_soft,prefact_cnt_ssc,
+     $     prefact_deg,prefact_c,prefact_coll,jac_ev,pi,prefact_cnt_ssc_c,
      $     prefact_coll_c,prefact_deg_slxi,prefact_deg_sxi
       integer i
       double precision soft_cut,coll_cut,angle_cut,soft_scale,
@@ -1827,6 +1838,9 @@ c terms.
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
+      prefact_soft=prefact
+      if(pythia_recoil_pair(2).gt.0.and.j_fks.le.nincoming)
+     $     prefact_soft=xinorm_ev/pythia_isr_coordinate/(1-y_ij_fks_ev)
       f_r=prefact*jac_ev*fkssymmetryfactor*vegas_wgt
       !TODO: check fkssymmetryfactor
       f_MC_S=f_r
@@ -1835,6 +1849,13 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
          soft_cut=xicut_used
          coll_cut=xicut_used
          angle_cut=delta_used
+         if(pythia_recoil_pair(2).gt.0.and.j_fks.le.nincoming)then
+c xi=a*w+O(w^2). The d-dimensional soft density contains a^(-2 eps).
+c Its finite log(a) is restored by subtracting log(xicut/(a*h)).
+c a->1 at the emitter-collinear endpoint, so no extra collinear pole,
+c PDF remnant or change to the integrated pole operator is introduced.
+            soft_cut=xicut_used*pythia_isr_soft_scale
+         endif
          if(resonance_recoil)then
             total=sum(p1_cnt(:,1:nincoming,0),dim=2)
             call resonance_subtraction_scales(total,resonance_momentum,
@@ -1863,9 +1884,9 @@ c induced by changing the recoiler of a final-state emitter.
          prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
      $        log(soft_cut/min(xiimax_ev,xiScut_used))/(1
      $        -y_ij_fks_ev)
-         f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)
+         f_s=(prefact_soft+prefact_cnt_ssc)*jac_cnt(0)
      $        *fkssymmetryfactor*vegas_wgt
-         f_s_MC_S=prefact*jac_cnt(0)
+         f_s_MC_S=prefact_soft*jac_cnt(0)
      $        *fkssymmetryfactor*vegas_wgt
          f_s_MC_H=f_s_MC_S
 
@@ -4487,7 +4508,7 @@ c Born and multiplies with the AP splitting function or eikonal factors.
       if (softtest.or.colltest) then
          tiny=1d-12
       else
-         tiny=1d-6
+         tiny=1d-5
       endif
 
       if(pp(0,1).le.0.d0)then
@@ -4541,6 +4562,7 @@ c has soft singularities
 
       subroutine sborncol_fsr(p,xi_i_fks,y_ij_fks,wgt)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,p_born,shat,p_i_fks_ev,xij_aor
+      use fks_phase_space_helpers, only: dot
       implicit none
       include "nexternal.inc"
       include "nFKSconfigs.inc"
@@ -4560,8 +4582,7 @@ C
 
       integer i,imother_fks,iord
 C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
-      double precision dot,radiation_mass2
-      external dot
+      double precision radiation_mass2
       double precision t,z,ap(2),E_j_fks,E_i_fks,Q(2),cphi_mother,
      # sphi_mother,pi(0:3),pj(0:3),wgt_born
       double complex W1(6),W2(6),W3(6),W4(6),Wij_angle,Wij_recta
@@ -4614,7 +4635,10 @@ c Unphysical kinematics: set matrix elements equal to zero
          E_i_fks=dot(resonance_momentum,p(:,i_fks))
      $        /sqrt(resonance_mass2)
       endif
-      z = 1d0 - E_i_fks/(E_i_fks+E_j_fks)
+c Retain a soft quark's positive energy fraction. The subtracted form
+c 1-E_i/(E_i+E_j) rounds to zero when the gluon carries almost all the
+c energy, introducing an artificial zero in t and the AP denominator.
+      z = E_j_fks/(E_i_fks+E_j_fks)
       t = z * radiation_mass2/4d0
       call sborn_native(p_born,wgt_born)
       if (iextra_cnt.gt.0)
@@ -5958,6 +5982,8 @@ c do the same as above for the counterevents
 
       subroutine get_mc_lum(j_fks,z_shower,xi_i_fks,xlum_mc_fact
      $     ,xbjrk_born)
+      use FKSParams,only: FKSPythiaLocalRecoil
+      use fks_phase_space_data,only: pythia_recoil_pair
       implicit none
       include "run.inc"
       include "nexternal.inc"
@@ -5967,7 +5993,20 @@ c do the same as above for the counterevents
         write(*,*)'Error #1 in get_mc_lum',z_shower
         stop
       endif
-      if(j_fks.gt.nincoming)then
+      if(FKSPythiaLocalRecoil.eq.1)then
+c Both FKS orientations are backward SpaceShower evolution. Its 1/z
+c is already in the invariant scalar density; use ordinary real PDFs.
+        if(z_shower.le.0d0)then
+          write(*,*) 'Invalid local shower fraction',z_shower
+          stop 1
+        endif
+        xbk=xbjrk_born
+        xbk(pythia_recoil_pair(1))=
+     $       xbjrk_born(pythia_recoil_pair(1))/z_shower
+        xlum_mc_fact=1d0
+        if(any(xbk.gt.1d0))xlum_mc_fact=0d0
+        return
+      elseif(j_fks.gt.nincoming)then
         xbk(1)=xbjrk_born(1)
         xbk(2)=xbjrk_born(2)
         xlum_mc_fact=1.d0

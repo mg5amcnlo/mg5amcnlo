@@ -1,0 +1,55 @@
+--- a/Template/NLO/SubProcesses/genps_fks_helpers.f
++++ b/Template/NLO/SubProcesses/genps_fks_helpers.f
+@@ -70,33 +70,25 @@
+ 
+       subroutine getangles(pin,th,cth,sth,phi,cphi,sphi)
+       implicit none
+-      real*8 pin(0:3),th,cth,sth,phi,cphi,sphi,xlength
+-c
+-      xlength=pin(1)**2+pin(2)**2+pin(3)**2
+-      if(xlength.eq.0)then
+-        th=0.d0
+-        cth=1.d0
+-        sth=0.d0
+-        phi=0.d0
+-        cphi=1.d0
+-        sphi=0.d0
+-      else
+-        xlength=sqrt(xlength)
+-        cth=pin(3)/xlength
+-        th=acos(cth)
+-        if(cth.ne.1.d0)then
+-          sth=sqrt(1-cth**2)
+-          phi=atan2(pin(2),pin(1))
+-          cphi=cos(phi)
+-          sphi=sin(phi)
+-        else
+-          sth=0.d0
+-          phi=0.d0
+-          cphi=1.d0
+-          sphi=0.d0
+-        endif
+-      endif
+-      return
++      double precision pin(0:3),th,cth,sth,phi,cphi,sphi,pt,norm
++      pt=sqrt(sum(pin(1:2)**2))
++      norm=sqrt(pt**2+pin(3)**2)
++      th=0d0
++      cth=1d0
++      sth=0d0
++      phi=0d0
++      cphi=1d0
++      sphi=0d0
++      if(norm.gt.0d0)then
++         cth=pin(3)/norm
++         sth=pt/norm
++         th=atan2(pt,pin(3))
++      endif
++      if(pt.gt.0d0)then
++         phi=atan2(pin(2),pin(1))
++         cphi=pin(1)/pt
++         sphi=pin(2)/pt
++      endif
+       end subroutine getangles
+ 
+ 

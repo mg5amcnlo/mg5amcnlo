@@ -211,6 +211,69 @@
 ! Default :: 0
 !
 ! ==========================================================================
+! PYTHIA local initial-final recoil (single-top production)
+! ==========================================================================
+! 0: retain the ordinary recoil choices (default).
+! 1: select each quark's unique initial-final Born colour partner for
+!    both initial- and final-state emitters. Supports five-flavour
+!    on-shell t-channel single-top production with QCD corrections.
+!    Requires FKSISRMapping=0, FKSFinalRecoil=0 and hadron beams.
+!    By default use the stock PYTHIA8 kernel with FKS G replacements;
+!    the optional quark IF numerator patch is selected separately below.
+!    Requires PYTHIA8, MCExplicitKLSum, FKSExplicitSum, ickkw=0 and
+!    mcatnlo_delta=False. The default needs no Pythia source modification.
+!    Resonance decay mappings are not supported.
+! Regenerate integration grids after changing this choice.
+#FKSPythiaLocalRecoil
+0
+! Default :: 0
+!
+! Use the opt-in quark IF numerator correction in a private Pythia build.
+! This changes BOTH the MC counterterm and the shower: (1+zI^2) becomes
+! (zI^2+zeta^2). The special final-collinear G completion is then replaced
+! by the patched kernel; ordinary soft and soft-collinear G terms remain.
+! Requires FKSPythiaLocalRecoil=1 and the supplied Pythia 8.318 patch.
+! Regenerate integration grids and events after changing this choice.
+#PythiaLocalCollinearPatch
+.false.
+! Default :: .false.
+!
+! Add the bounded massive-top soft suppression on quark IF dipoles.
+! Requires PythiaLocalCollinearPatch and the paired private Pythia build.
+! Both patched kernels then have the required Born soft/collinear limits;
+! local G replacements are disabled. Regenerate grids and events.
+#PythiaLocalSoftPatch
+.false.
+! Default :: .false.
+!
+! Width of the local MC@NLO G transition. G(v)=u^2/[u^2+(1-u)^2],
+! u=v/width, for 0<v<width; G=0 at v=0 and G=1 above width.
+! Automatic: use v=1-zI for the stock shower factor, or v=xi for the
+! collinear-patched kernel; both patches disable local G by default.
+! The angular C-SC profile uses v=1-y_FKS whenever local G is active.
+! The variable 1-zI vanishes both soft and final-collinear. The exact
+! replacement is S+(1-Gcoll)*(C-SC), with each native endpoint measure.
+! With PythiaLocalCollinearPatch, the first variable is instead the soft
+! gluon energy 2*E_g/sqrt(shat), so hard final-collinear emission uses the
+! patched shower density directly. C-SC still protects the soft overlap.
+! Values must be in (0,1]. Vary this small width to assess power effects
+! of the G prescription; regenerate integration grids when changing it.
+#PythiaLocalGWidth
+0.01d0
+! Default :: 0.01d0
+!
+! Validation control for comparisons at a common local G prescription.
+! 0: automatic (stock: G(1-zI); collinear patch: G(xi); both patches: no G).
+! 1: force G(1-zI), also with both kernel patches. The same angular
+!    C-SC replacement, starting-scale damping and native endpoint measures
+!    are retained. This changes only the G prescription, not either kernel
+!    patch or the paired shower build. Requires FKSPythiaLocalRecoil=1.
+! Regenerate integration grids and events when changing this setting.
+#PythiaLocalGProfile
+0
+! Default :: 0
+!
+! ==========================================================================
 ! MC@NLO construction
 ! ==========================================================================
 !

@@ -227,6 +227,145 @@ those context operations. Restoration checks the sector, FKS emitter/sister
 indices and channel against the saved point.
 
 
+## PYTHIA local recoil for single-top production
+
+New exports accept this opt-in setting in `Cards/FKS_params.dat`:
+
+```text
+#FKSPythiaLocalRecoil
+1
+```
+
+The default is zero. Regenerate older process exports to obtain the new
+runtime and card, and regenerate integration grids after changing the setting.
+Keep `FKSISRMapping=0` and `FKSFinalRecoil=0`. Explicit recoil requests and
+resonance decay mappings cannot be combined with this mode. It is supported
+at fixed order and for ordinary MC@NLO with unmodified Pythia8. Matching
+requires `FKSExplicitSum=.true.`, `MCExplicitKLSum=.true.`, `ickkw=0` and
+`mcatnlo_delta=False`. The local G prescription restores the exact FKS soft
+and collinear limits inside MG5, with `PythiaLocalGWidth=0.01d0` by default.
+Regenerate grids when changing this width. The prescription, its power
+effects and stock-shower checks are documented in
+[the local matching audit](audits/pythia8318_singletop_local.md).
+
+The initial supported Born structure is five-flavour t-channel single-top
+production: two incoming massless quarks, a massive outgoing top, a massless
+outgoing quark, and one colour flow containing two initial-final connections.
+Native Born metadata selects the partner, including for crossed real channels
+with an incoming gluon, either beam ordering, and antiquarks. Unsupported
+Born structures, non-hadron beams and QED corrections fail explicitly.
+
+For real incoming momentum `pa`, its outgoing colour partner `pf` and a
+massless emission `k`, both emitter orientations use the invariant projection
+
+```
+z = 1 - (pf.k)/(pa.(pf+k))
+pBorn_a = z*pa
+pBorn_f = pf+k-(1-z)*pa
+```
+
+All other physical momenta stay fixed. The partner mass is preserved, including
+the top mass. This is the IF kinematics of
+[PYTHIA 8.318 SimpleSpaceShower](https://gitlab.com/Pythia8/releases/-/blob/pythia8318/src/SimpleSpaceShower.cc),
+with `Q2=2*pa.k` and `pT_evol^2=(1-z)*Q2`. No shower cutoff, SCALUP veto or
+splitting probability is imposed on the fixed-order phase space.
+
+Final-state emitters reuse `initial_recoil.f`, including its massive solutions,
+incoming-reservoir measure and finite frame conversion. Initial-state emitters
+use `generate_momenta_pythia_initial` in `fks_radiation_maps`. Their FKS `xi` and
+`y` remain the emission energy fraction and beam angle in the full real
+partonic CM. Internally they sample `w=1-xBorn/xReal`, with
+`0 <= w <= 1-xBorn`. Sampling the incoming rescaling instead of solving for it
+at fixed `xi` covers both kinematic solutions continuously without a singular
+Jacobian at their turning point. In general `xi != w`; at the emitter-collinear
+endpoint they coincide, so the existing ISR splitting fraction and PDF
+remnants retain `z=1-xi_counterevent`.
+
+### Local ISR measure and soft endpoint
+
+In the Born CM let `e=sqrt(sBorn)/2`, `f=pBorn_f`,
+`fMinus=f.E-idir*f.z`, `fPlus=f.E+idir*f.z`, `lambda=1/(1-w)`,
+`n=(1,sqrt(1-y*y)*cos(phi),sqrt(1-y*y)*sin(phi),idir*y)`. Define
+
+```
+A = fMinus*(1+y) + 2*e*(1-y)
+B = 2*(f.x*cos(phi)+f.y*sin(phi))*sqrt(1-y*y)
+T0 = 2*f.n
+T = T0 + (lambda-1)*(A-B/(sqrt(lambda)+1))
+xi = 2*fMinus*lambda*w/T
+```
+
+`T0` is evaluated with a rationalized mass term and a squared difference of
+unit directions. With PDFs and the full-process flux supplied by the caller,
+the exact four-dimensional hadronic radiation measure is
+
+```
+dmuRad = sReal/(4*pi)^3 * xi * (2*fMinus*lambda^2/T) dw dy dphi.
+```
+
+It follows independently from `dPhi(k)*(Pa.fBorn)/(Pa.fReal)`, where `Pa` is
+the physical hadron-beam momentum. The generator omits the explicit `xi`,
+as do the other FKS maps. The real prefactor uses the physical `xi`; the
+soft counterevent represents the coefficient of `dw/w` and uses `w`.
+The collinear counterevent has `xi=w`, unchanged final-state Born momenta,
+and the ordinary ISR measure including its Bjorken and flux factors.
+
+At the soft endpoint `xi=a*w+O(w^2)`, with `a=2*fMinus/T0`. In
+`4-2*epsilon` dimensions the soft measure times its reduced matrix element
+therefore contains `a^(-2*epsilon)`. Integrating its energy pole gives
+
+```
+-(a*h)^(-2*epsilon)/(2*epsilon)
+  = -1/(2*epsilon) + log(h) + log(a) + O(epsilon).
+```
+
+The existing integrated operator uses the common global cutoff `xicut`.
+`compute_prefactors_n1body` consequently uses `soft_cut=xicut/a` in the
+finite endpoint term, adding the required `log(a)` contribution. The numerical
+soft subtraction cutoff acts on `w`. Since `a -> 1` at the incoming-collinear
+endpoint, this correction is collinearly integrable and does not change the
+integrated pole operator, the collinear PDF kernels, or their factorization
+scheme. The production soft-limit diagnostic also converts its phase-space
+weight to the common `dw/w` coefficient.
+
+The selected pair, sampled ISR coordinate and soft conversion are captured
+and restored with the complete phase-space point. Born reuse additionally
+checks the selected pair. The inverse reconstructs the Born covariantly from
+unchanged spectators and replays the forward map for its radiation measure.
+
+`test_pythia_local_recoil.py` compiles the production maps and checks them
+against the PYTHIA IF relations in the old dipole CM, independent Cartesian
+phase-space determinants and the analytic reservoir phase-space volume.
+It also covers native replay, counterevents, emitted-leg permutations,
+colour-partner selection, unsupported configurations and state restoration.
+The tests trap invalid arithmetic, division by zero and overflow. They also
+check the finite soft conversion against the dimensionally regulated energy
+integral and compare collinear/PDF prefactors with the original ISR map.
+
+An independent-seed production comparison on 23 October 2026 used a fresh
+`pp > t j $$ w+ w- [QCD]` export, 13 TeV proton collisions, `nn23nlo`,
+`m_t=173 GeV`, the exported cuts and `analysis_HwU_pp_tj`. Grid setup used
+5,000 points and four iterations; refinement used 50,000 points and six
+iterations, with scale/PDF reweighting disabled.
+
+| Map | Seed | Numerical subtraction cutoffs | NLO cross section [pb] |
+| --- | --- | --- | --- |
+| Default | 7251 | `xiScut=0.5`, `deltaS=1` | `130.7 +/- 0.46` |
+| Local | 8313 | `xiScut=0.5`, `deltaS=1` | `129.0 +/- 0.55` |
+| Local, varied cutoffs | 9301 | `xiScut=0.25`, `deltaS=0.5` | `129.9 +/- 0.70` |
+
+The inclusive differences are about 2.37 combined standard errors for default
+versus local, and 1.01 for the cutoff variation. The comparisons of top and
+leading-jet transverse momentum and rapidity, and system transverse momentum,
+contain 203 nonzero-error bins per pair. Their largest marginal pulls are
+2.92 and 3.11 respectively, below the 3.84 Bonferroni threshold for a 5%
+family-wise test over all 406 bin comparisons. This test does not assume
+independent bins; its Gaussian error interpretation requires adequate Monte
+Carlo sampling. Production soft/collinear checks and pole cancellation also
+passed. These checks establish the scoped fixed-order implementation, not
+local MC@NLO with stock Pythia or general-process support. The current matching
+status is recorded in the local matching audit linked above.
+
 ## Global initial-state recoil
 
 `FKSISRMapping` in `Cards/FKS_params.dat` selects the ISR map:

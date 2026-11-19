@@ -1,0 +1,134 @@
+{
+  "generated_utc": "2026-10-25T10:28:30.320322+00:00",
+  "status": "fixed and validated: exact previously failing 9779-event generation worker completes without numerical diagnostics",
+  "scope": "Only resonance_subtraction_scales in resonance_recoil.f changes; global legacy dot and Pythia sources unchanged. All replay files live in independent /tmp full-export copy. Production runs not started by this diagnostic.",
+  "failure": {
+    "process": "central_runs_fixed/C_LOC",
+    "subprocess": "P0_ub_td",
+    "worker": "GF1.0_13",
+    "randinit": 760201,
+    "moffset": 13,
+    "events_requested": 9779,
+    "events_written_before_stop": 1323,
+    "returncode": 1,
+    "message": "Invalid resonance subtraction scales",
+    "baseline_log": "/tmp/C_LOC_resonance_scale_failure_20261025/export/SubProcesses/P0_ub_td/resonance_scale_replay/replay.log",
+    "point": {
+      "total": [
+        173.01498736478135,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "q": [
+        0.11225686582671314,
+        0.00018238986729647572,
+        -0.0002887637693412168,
+        0.11225297352198853
+      ],
+      "pj": [
+        0.014986715643670656,
+        0.00018238986729647572,
+        -0.0002887637693412168,
+        0.01498282333894604
+      ],
+      "phat": [
+        0.09727014975051693,
+        -2.6429281950793353e-12,
+        4.160764081543087e-12,
+        0.09727014975051693
+      ],
+      "unclipped_invariants": {
+        "s": 29934.18585283545,
+        "mass2": 7.572101302436018e-07,
+        "kq": 3.786050651218009e-07,
+        "kt": 16.829193730056076,
+        "jq": 3.786050651215841e-07,
+        "jt": 2.5929264177292497
+      },
+      "unclipped_scales": {
+        "soft": 889.3529402830075,
+        "coll": 5772.2783122849105,
+        "angular": 1186.4693131468994,
+        "mismatch_log": 1.8703279714635428
+      },
+      "cause": "Legacy Source/kin_functions.f external dot clips abs(dot)<1e-6 to zero, turning valid positive K\u00b2,K.phat,K.pj to zero.",
+      "replay_input_sha256": {
+        "input_app.txt": "18329a0b4f3deaeb2dccaa468a9025bf4477e80e666088b52e083d729de3c428",
+        "randinit": "9ba48fc194a3e7b24db770e1d50260aa85199c4ba3d8e3e01ec08bcbbe3d1671",
+        "moffset.dat": "1a252402972f6057fa53cc172b52b9ffca698e18311facd0f3b06ecaaef79e17"
+      }
+    }
+  },
+  "implementation": {
+    "old": "cfb85cf75959fee528c89c13a349bbd1ad97e47bbda7e188b0800951f4df05b8",
+    "new": "ab6cdf35cbecbb8c876675ece29a933eee7e4c1a7865226ca0456930934dc566",
+    "scope": "resonance_subtraction_scales uses unrounded module dot; all other routines unchanged",
+    "verified_scope": "Reverse reconstruction of pre-fix source matches the recorded old hash exactly. Only this routine imports the unrounded module dot and removes its former external-dot declaration."
+  },
+  "regressions": {
+    "dedicated_test": "tests.unit_tests.fks.test_resonance_subtraction_scales",
+    "tests": 3,
+    "result": "passed",
+    "baseline_old_routine": "The exact-point fixture fails with error stop and status1 when linked with the original routine and real clipped external dot.",
+    "existing_tests": "tests.unit_tests.fks.test_resonance_recoil + tests.unit_tests.fks.test_initial_recoil",
+    "existing_test_count": 17,
+    "existing_result": "passed",
+    "test_hashes": {
+      "tests/unit_tests/fks/test_resonance_subtraction_scales.py": "a3f718d603b089a775567a128168d75e41f51999322073f9553a1927166b8272",
+      "tests/input_files/check_resonance_subtraction_scales.f90": "990448606358d06f4d7092e89177cf5ba3a47cf490ea7d630a880b0713f21def"
+    },
+    "event_prefix_comparison": {
+      "baseline_events": 1323,
+      "fixed_events": 9779,
+      "shared_complete_events": 1323,
+      "identical_event_blocks": 1323,
+      "first_differing_event": null,
+      "comparison": "All accepted event blocks before the old failure are byte-for-byte identical, including momenta and weights."
+    }
+  },
+  "global_inactive_branch_proof": {
+    "cards": {
+      "FKSFinalRecoil": 0,
+      "FKSPythiaLocalRecoil": 0
+    },
+    "real_dimensions": {
+      "nexternal": 5,
+      "nincoming": 2
+    },
+    "automatic_resonance": "get_granny initializes granny_is_res false. At these dimensions its only possible igranny=-1 is excluded as the overall s-hat propagator; thus no automatic resonance members.",
+    "selection": "No explicit recoiler request. select_fks_recoil starts resonance_recoil false, sees zero local flags and empty defaults, and returns. compute_prefactors_n1body calls modified routine only when resonance_recoil true.",
+    "consequence": "Completed global sample is physically unaffected by this one-routine change."
+  },
+  "fixed_worker": {
+    "status": "complete",
+    "returncode": 0,
+    "events_requested": 9779,
+    "complete_LHE_event_blocks": 9779,
+    "particles_checked_finite": 41928,
+    "event_headers_and_particle_rows": "all finite",
+    "integrand_evaluations": 1675757,
+    "cpu_seconds": 818.1160540000001,
+    "numerical_diagnostic_lines": {
+      "Invalid resonance subtraction scales": 0,
+      "Rejecting phase-space point": 0,
+      "Native MC reconstruction mismatch": 0,
+      "Mass shell violation": 0,
+      "Kinematics of counterevents": 0,
+      "NaN": 0,
+      "Infinity": 0
+    },
+    "startup_maxjetflavor_warnings": 2,
+    "ordinary_unweighting_upper_bound_failures": {
+      "nonvirtual": 33,
+      "virtual": 4
+    },
+    "logs": "/tmp/C_LOC_resonance_scale_failure_20261025/export/SubProcesses/P0_ub_td/resonance_scale_fixed/replay.log",
+    "events": "/tmp/C_LOC_resonance_scale_failure_20261025/export/SubProcesses/P0_ub_td/resonance_scale_fixed/events.lhe",
+    "source_sha256": "ab6cdf35cbecbb8c876675ece29a933eee7e4c1a7865226ca0456930934dc566",
+    "binary_sha256": "932f410a5f1887515cc6cb54956b0738b0fd01d582aa78c6f64bb05a1874bc04",
+    "events_sha256": "b85bec4227c4d58e7e0e66b499888f621e52852262a990f70b7f9a1ee2340898",
+    "log_sha256": "86731e5664d7f2b3dcf184f134a689843b61d77ed730efba962a0e0bfa9f3923",
+    "inputs_unchanged": true
+  }
+}

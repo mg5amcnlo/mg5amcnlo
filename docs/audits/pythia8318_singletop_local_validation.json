@@ -1,0 +1,711 @@
+{
+  "status": "implemented_stock_shower_G_prescription",
+  "date_utc": "2026-10-24",
+  "stock_Pythia_MC_at_NLO_implemented": true,
+  "scope": "Five-flavour stable-top t-channel QCD production; ordinary MC@NLO; no merging or Delta",
+  "accuracy": "G restores exact FKS singular limits and integrable weights; residual first-order IR-safe observable effects are power suppressed in the transition width, not automatically higher perturbative order.",
+  "model": "loop_sm-no_b_mass",
+  "process": "p p > t j $$ w+ w- [QCD]",
+  "proton_and_jet_definition": "g u c d s b u~ c~ d~ s~ b~",
+  "setup": {
+    "beam_energies_GeV": [
+      6500,
+      6500
+    ],
+    "top_mass_GeV": 173,
+    "ptj_GeV": 10,
+    "pdlabel": "nn23nlo",
+    "scale": "H_T/2",
+    "ickkw": 0,
+    "mcatnlo_delta": false,
+    "FKSPythiaLocalRecoil": 1,
+    "FKSExplicitSum": true,
+    "MCExplicitKLSum": true,
+    "default_PythiaLocalGWidth": 0.01
+  },
+  "kernel": {
+    "raw_quark": "CF*(1+zI^2)/(1-zI)",
+    "gluon_conversion": "TR*(zI^2+(1-zI)^2)",
+    "G_profile": "g(v)=u^2/(u^2+(1-u)^2) for 0<v<h, u=v/h; 0 at v<=0 and 1 at v>=h",
+    "variables": [
+      "w=1-zI",
+      "1-y_FKS"
+    ],
+    "effective_counterterm": "damping*(g(w)*D_stock+(1-g(w))*(S+(1-g(1-y_FKS))*(C-SC)))",
+    "same_effective_counterterm_in_S_and_H": true,
+    "incoming_heavy_masses": "Neglected only in the analytic five-flavour subtraction; no shower mass override"
+  },
+  "current_checks": {
+    "broad_unit_tests_passed": 155,
+    "unit_test_log": "/tmp/singletop_local_gfun_validation/unit_tests_final.log",
+    "stock_sources_unchanged": true,
+    "stock_source_sha256": {
+      "src/SimpleSpaceShower.cc": "79b9f2334af443005b7c4722dc629ca4facdce6663b73815c1fa0278aacfa789",
+      "src/SimpleTimeShower.cc": "f20a26c9d6a52ea2330288b9558140cc70abb88cd5158c249c9221417120e49b",
+      "share/Pythia8/xmldoc/SpacelikeShowers.xml": "0d4d3c6b54e7dc8f1dfb89088a96c9354a07ec447cb1b5a96b81baba00d09d2e"
+    },
+    "first_emission_cases": [
+      {
+        "swap": 0,
+        "antiquark": 0,
+        "first": 300,
+        "gluon": 163,
+        "conversion": 137
+      },
+      {
+        "swap": 0,
+        "antiquark": 1,
+        "first": 300,
+        "gluon": 157,
+        "conversion": 143
+      },
+      {
+        "swap": 1,
+        "antiquark": 0,
+        "first": 300,
+        "gluon": 209,
+        "conversion": 91
+      },
+      {
+        "swap": 1,
+        "antiquark": 1,
+        "first": 300,
+        "gluon": 194,
+        "conversion": 106
+      }
+    ],
+    "total_first_emissions": 1200,
+    "raw_Fortran_density_points": 100,
+    "first_emission_audit_log": "/tmp/singletop_local_gfun_validation/stock_shower_audit.log",
+    "first_emission_scope": "Accepted q->qg maps, routing and analytic massless-incoming raw density; no first-branch reweighting or source changes; not a full acceptance-weight audit.",
+    "production_diagnostics": {
+      "P0_bdx_tux": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/process/SubProcesses/P0_bdx_tux/test_ME.log"
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_bdx_tux_MC_standard.log"
+        },
+        "MC_overlap": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_bdx_tux_MC_overlap.log"
+        },
+        "pole_points_passed": 20
+      },
+      "P0_bu_td": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.04,
+          "log": "/tmp/singletop_local_gfun_validation/process/SubProcesses/P0_bu_td/test_ME.log"
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_bu_td_MC_standard.log"
+        },
+        "MC_overlap": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_bu_td_MC_overlap.log"
+        },
+        "pole_points_passed": 20
+      },
+      "P0_dxb_tux": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.01,
+          "log": "/tmp/singletop_local_gfun_validation/process/SubProcesses/P0_dxb_tux/test_ME.log"
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_dxb_tux_MC_standard.log"
+        },
+        "MC_overlap": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_dxb_tux_MC_overlap.log"
+        },
+        "pole_points_passed": 20
+      },
+      "P0_ub_td": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.02,
+          "log": "/tmp/singletop_local_gfun_validation/process/SubProcesses/P0_ub_td/test_ME.log"
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_ub_td_MC_standard.log"
+        },
+        "MC_overlap": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0,
+          "log": "/tmp/singletop_local_gfun_validation/P0_ub_td_MC_overlap.log"
+        },
+        "pole_points_passed": 20
+      }
+    },
+    "overlap_input": {
+      "normalized_energy_sample": 0.0001,
+      "y_FKS": 0.9999,
+      "energy_input_interpretation": "Fix x_E^2; the map supplies its kinematic upper bound (xi for FSR, w for incoming local recoil).",
+      "points_per_endpoint_history": 100,
+      "log_pattern": "/tmp/singletop_local_gfun_validation/P0*_MC_overlap.log"
+    },
+    "diagnostic_precision_fix": {
+      "cause": "Limit flags were cleared for native inversions and not restored for amplitude evaluation, giving a 1e-6 collinear shortcut on the MC side versus the 1e-12 diagnostic threshold on the reference side.",
+      "change": "Keep flags cleared for native coordinate recovery; restore the outer diagnostic flags for native kernel and G amplitudes, then clear them again before the next inverse.",
+      "probe": "P0_ub_td first FKS history, soft test point 83 at integration seed 35",
+      "previous_last_point_relative_soft_offset": 0.0005335666191353,
+      "corrected_last_point_relative_soft_offset": 6.674739e-10,
+      "probe_log": "/tmp/singletop_local_gfun_validation/point83_MC_probe.log"
+    },
+    "final_diagnostic_and_profile_tests_passed": 25,
+    "final_diagnostic_and_profile_test_log": "/tmp/singletop_local_gfun_validation/diagnostic_tests_final.log"
+  },
+  "profile_variations": [
+    {
+      "width": 0.01,
+      "run": "gfun_001",
+      "integration_seed": 33,
+      "cross_section_pb": 134.7,
+      "integration_error_pb": 1.6,
+      "events": 1000,
+      "negative_weight_events": 267,
+      "LHE_multiplicities": {
+        "4": 635,
+        "5": 365
+      },
+      "LHE_weights_and_scales_finite": true,
+      "minimum_scalup_GeV": 3.15041,
+      "maximum_scalup_GeV": 459.45607,
+      "integration_log": "/tmp/singletop_local_gfun_validation/run.log",
+      "event_file": "/tmp/singletop_local_gfun_validation/process/Events/gfun_001/events.lhe.gz"
+    },
+    {
+      "width": 0.005,
+      "run": "gfun_0005",
+      "integration_seed": 34,
+      "cross_section_pb": 132.1,
+      "integration_error_pb": 2.5,
+      "events": 1000,
+      "negative_weight_events": 247,
+      "LHE_multiplicities": {
+        "4": 656,
+        "5": 344
+      },
+      "LHE_weights_and_scales_finite": true,
+      "minimum_scalup_GeV": 3.0373058,
+      "maximum_scalup_GeV": 335.61431,
+      "integration_log": "/tmp/singletop_local_gfun_validation/run_half_width.log",
+      "event_file": "/tmp/singletop_local_gfun_validation/process/Events/gfun_0005/events.lhe.gz"
+    },
+    {
+      "width": 0.02,
+      "run": "gfun_002",
+      "integration_seed": 35,
+      "cross_section_pb": 134.9,
+      "integration_error_pb": 1.7,
+      "events": 1000,
+      "negative_weight_events": 238,
+      "LHE_multiplicities": {
+        "4": 679,
+        "5": 321
+      },
+      "LHE_weights_and_scales_finite": true,
+      "minimum_scalup_GeV": 3.2703917,
+      "maximum_scalup_GeV": 524.94696,
+      "integration_log": "/tmp/singletop_local_gfun_validation/run_double_width.log",
+      "event_file": "/tmp/singletop_local_gfun_validation/process/Events/gfun_002/events.lhe.gz"
+    }
+  ],
+  "matched_stock_showers": {
+    "events_total": 3000,
+    "MPI": false,
+    "hadronization": false,
+    "steering": "/tmp/singletop_local_gfun_validation/shower/MCatNLO/Pythia8.cmd",
+    "log": "/tmp/singletop_local_gfun_validation/full_shower_variations.log",
+    "samples": [
+      {
+        "run": "gfun_001",
+        "completed_events": 1000,
+        "negative_weight_events": 267,
+        "stable_top": true,
+        "lost_LHE_events": 0,
+        "messages": {
+          "Error in Pythia::check: energy-momentum not conserved": 22,
+          "Error in Pythia::next: check of event revealed problems": 22,
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 3,
+          "Warning in SimpleTimeShower::pTnext: negative dipole mass": 13
+        },
+        "top_distributions": {
+          "pt": {
+            "sumw": [
+              24849.447350000002,
+              40141.414949999904,
+              31403.147750000004,
+              18295.74695,
+              12288.188250000001,
+              273.07085,
+              0.0,
+              0.0
+            ],
+            "sumw2": [
+              18119948.456092607,
+              24980175.855107095,
+              18269083.834332053,
+              8724419.627007548,
+              4101222.901584742,
+              372838.44559861254,
+              0.0,
+              0.0
+            ]
+          },
+          "y": {
+            "sumw": [
+              1092.2834,
+              6826.771250000001,
+              24576.376500000002,
+              27034.014150000003,
+              30583.935200000004,
+              24303.305650000002,
+              11468.9757,
+              1365.35425
+            ],
+            "sumw2": [
+              298270.75647889,
+              4548629.036303078,
+              14615267.06746564,
+              17970813.07785316,
+              18641922.279930666,
+              12452804.082993682,
+              5518008.994859473,
+              521973.8238380576
+            ]
+          }
+        }
+      },
+      {
+        "run": "gfun_0005",
+        "completed_events": 1000,
+        "negative_weight_events": 247,
+        "stable_top": true,
+        "lost_LHE_events": 0,
+        "messages": {
+          "Error in Pythia::check: energy-momentum not conserved": 20,
+          "Error in Pythia::next: check of event revealed problems": 20,
+          "Error in SimpleSpaceShower::pT2nearThreshold: stuck in loop": 2,
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 6,
+          "Warning in SimpleTimeShower::pTnext: negative dipole mass": 21
+        },
+        "top_distributions": {
+          "pt": {
+            "sumw": [
+              30428.045179999997,
+              51096.15134000022,
+              33872.72954000001,
+              19519.87804,
+              9185.82496,
+              861.1710899999998,
+              287.05703,
+              0.0
+            ],
+            "sumw2": [
+              20270827.664215505,
+              27851787.60367821,
+              20270827.664215505,
+              8734584.278076602,
+              4284890.400565883,
+              906419.12319663,
+              82401.7384724209,
+              0.0
+            ]
+          },
+          "y": {
+            "sumw": [
+              287.0570299999999,
+              10046.99605,
+              28131.588939999998,
+              37317.41390000005,
+              35882.12875000003,
+              26696.303789999998,
+              7463.482779999999,
+              -574.11406
+            ],
+            "sumw2": [
+              576812.1693069462,
+              6015326.908486718,
+              13678688.586421845,
+              21094845.048939712,
+              22001264.17213634,
+              13596286.847949425,
+              5108907.78529009,
+              329606.9538896836
+            ]
+          }
+        }
+      },
+      {
+        "run": "gfun_002",
+        "completed_events": 1000,
+        "negative_weight_events": 238,
+        "stable_top": true,
+        "lost_LHE_events": 0,
+        "messages": {
+          "Error in Pythia::check: energy-momentum not conserved": 20,
+          "Error in Pythia::next: check of event revealed problems": 20,
+          "Warning in Pythia::check: energy-momentum not quite conserved": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring DECAY tables": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring MASS entries": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring QNUMBERS": 1,
+          "Warning in SLHAinterface::initSLHA: ignoring empty DECAY tables": 1,
+          "Warning in SimpleSpaceShower::pT2nextQCD: weight above unity": 1,
+          "Warning in SimpleTimeShower::pTnext: negative dipole mass": 21
+        },
+        "top_distributions": {
+          "pt": {
+            "sumw": [
+              26983.753679999933,
+              43329.68138999997,
+              36064.824629999915,
+              16864.84605,
+              8562.152610000001,
+              3113.5100400000006,
+              1037.83668,
+              0.0
+            ],
+            "sumw2": [
+              15752660.24991886,
+              22551885.400524903,
+              16897084.28516938,
+              7472415.759576858,
+              3433272.105751536,
+              942466.8525592441,
+              269276.24358835554,
+              0.0
+            ]
+          },
+          "y": {
+            "sumw": [
+              1037.83668,
+              8562.152610000001,
+              19459.437749999983,
+              33210.773759999895,
+              31913.4779099999,
+              28281.049529999924,
+              12194.580990000002,
+              1297.29585
+            ],
+            "sumw2": [
+              403914.36538253335,
+              4510377.080104959,
+              11915473.778784756,
+              16695127.102478113,
+              16897084.28516938,
+              11646197.535196397,
+              4779653.323693314,
+              471233.42627962225
+            ]
+          }
+        }
+      }
+    ],
+    "profile_distribution_comparisons": [
+      {
+        "reference": "gfun_001",
+        "comparison": "gfun_0005",
+        "populated_bins": 15,
+        "maximum_marginal_pull": 2.1016953479637426,
+        "observable": "y",
+        "bin": 7,
+        "interpretation": "Coarse statistical smoke test; no precision bound on G power effects."
+      },
+      {
+        "reference": "gfun_001",
+        "comparison": "gfun_002",
+        "populated_bins": 15,
+        "maximum_marginal_pull": 2.4766931974319655,
+        "observable": "pt",
+        "bin": 5,
+        "interpretation": "Coarse statistical smoke test; no precision bound on G power effects."
+      }
+    ],
+    "pt_bin_edges_GeV": [
+      0,
+      30,
+      60,
+      100,
+      150,
+      250,
+      400,
+      600,
+      "infinity"
+    ],
+    "y_bin_edges": [
+      "-infinity",
+      -3,
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3,
+      "infinity"
+    ],
+    "distribution_weight_convention": "Raw Pythia info.weight sums and squared sums; each sample contains 1000 LHE events.",
+    "message_note": "All LHE events complete. Stock internal retries, threshold errors, negative dipole masses and weight-above-unity warnings are retained; G does not alter shower evolution or trial envelopes."
+  },
+  "fixed_order_reference": {
+    "cross_section_pb": 130.7,
+    "integration_error_pb": 0.46,
+    "scope": "Earlier independent map validation; statistical smoke reference"
+  },
+  "artifacts_directory": "/tmp/singletop_local_gfun_validation",
+  "historical_modified_shower_result": {
+    "date_utc": "2026-10-23",
+    "scope": "Five-flavour stable-top t-channel QCD production; ordinary MC@NLO; no merging or Delta",
+    "model": "loop_sm-no_b_mass",
+    "process": "p p > t j $$ w+ w- [QCD]",
+    "proton_and_jet_definition": "g u c d s b u~ c~ d~ s~ b~",
+    "setup": {
+      "beam_energies_GeV": [
+        6500,
+        6500
+      ],
+      "top_mass_GeV": 173,
+      "ptj_GeV": 10,
+      "etaj": -1,
+      "pdlabel": "nn23nlo",
+      "alpha_s_MZ_hard": 0.119,
+      "dynamical_scale_choice": -1,
+      "scale": "H_T/2",
+      "ickkw": 0,
+      "mcatnlo_delta": false,
+      "FKSPythiaLocalRecoil": 1,
+      "FKSExplicitSum": true,
+      "MCExplicitKLSum": true,
+      "integration_seed": 876291,
+      "event_generation_seed": 876293
+    },
+    "kernel": "CF*(zI^2+zeta^2)/(1-zI) times kT2/((1-zI)*Q2*zeta); backward gluon conversion TR*(zI^2+(1-zI)^2)",
+    "pythia": {
+      "version": "8.318",
+      "patched_SimpleSpaceShower_sha256": "79107eec0491856c991b5bc63b308f8028c1d163ceb1e83e3abd7e0dd602a559",
+      "headroom": 64,
+      "patch_reproduces_sources": true,
+      "trial_cases": [
+        {
+          "swap": 0,
+          "antiquark": 0,
+          "trials": 68416
+        },
+        {
+          "swap": 0,
+          "antiquark": 1,
+          "trials": 68924
+        },
+        {
+          "swap": 1,
+          "antiquark": 0,
+          "trials": 92395
+        },
+        {
+          "swap": 1,
+          "antiquark": 1,
+          "trials": 100429
+        }
+      ],
+      "total_trials": 330164,
+      "emission_cases": [
+        {
+          "swap": 0,
+          "antiquark": 0,
+          "first": 300,
+          "gluon": 167,
+          "conversion": 133
+        },
+        {
+          "swap": 0,
+          "antiquark": 1,
+          "first": 300,
+          "gluon": 140,
+          "conversion": 160
+        },
+        {
+          "swap": 1,
+          "antiquark": 0,
+          "first": 300,
+          "gluon": 207,
+          "conversion": 93
+        },
+        {
+          "swap": 1,
+          "antiquark": 1,
+          "first": 300,
+          "gluon": 184,
+          "conversion": 116
+        }
+      ],
+      "total_first_emissions": 1200,
+      "Fortran_density_comparisons": 100,
+      "Born_PDF_envelope_violations": 0,
+      "unexpected_first_TimeShower_emissions": 0,
+      "reference_settings": [
+        "Beams:frameType=5",
+        "PartonLevel:ISR=on",
+        "PartonLevel:FSR=on",
+        "PartonLevel:MPI=off",
+        "HadronLevel:all=off",
+        "Check:event=on",
+        "SpaceShower:singleTopLocalRecoil=on",
+        "SpaceShower:dipoleRecoil=on",
+        "SpaceShower:pTmaxMatch=1",
+        "SpaceShower:pTdampMatch=0",
+        "SpaceShower:samePTasMPI=off",
+        "SpaceShower:pT0parametrization=0",
+        "SpaceShower:pT0Ref force=0.",
+        "SpaceShower:rapidityOrder=off",
+        "SpaceShower:alphaSuseCMW=off",
+        "SpaceShower:alphaSvalue=0.118",
+        "SpaceShower:alphaSorder=1",
+        "TimeShower:alphaSvalue=0.118",
+        "TimeShower:alphaSorder=1",
+        "TimeShower:alphaSuseCMW=off",
+        "SpaceShower:MEcorrections=off",
+        "TimeShower:MEcorrections=off",
+        "TimeShower:MEextended=off",
+        "TimeShower:globalRecoil=off",
+        "TimeShower:dampenBeamRecoil=off",
+        "TimeShower:allowBeamRecoil=on",
+        "SpaceShower:QEDshowerByQ=off",
+        "SpaceShower:QEDshowerByL=off",
+        "TimeShower:QEDshowerByQ=off",
+        "TimeShower:QEDshowerByL=off",
+        "TimeShower:QEDshowerByOther=off",
+        "TimeShower:QEDshowerByGamma=off",
+        "SpaceShower:weakShower=off",
+        "TimeShower:weakShower=off",
+        "6:mayDecay=off",
+        "6:m0=173.",
+        "1:m0=0.",
+        "2:m0=0.",
+        "3:m0=0.",
+        "4:m0=0.",
+        "5:m0=0.",
+        "PDF:pSet=15",
+        "Random:setSeed=on",
+        "Random:seed=172925",
+        "Next:numberShowLHA=0",
+        "Next:numberShowEvent=0",
+        "Next:numberShowProcess=0",
+        "Next:numberShowInfo=0",
+        "Init:showChangedSettings=off",
+        "Init:showChangedParticleData=off",
+        "Init:showProcesses=off"
+      ],
+      "kernel_comparison_factors_out_common_coupling_and_PDF_factors": true
+    },
+    "unit_checks": {
+      "focused_suite": {
+        "passed": 147,
+        "log": "unit_tests_final.log"
+      },
+      "local_map_and_kernel_rerun": {
+        "passed": 17,
+        "log": "local_tests_final.log"
+      },
+      "steering_rerun": {
+        "passed": 7,
+        "log": "steering_tests_final.log"
+      },
+      "diagnostic_rerun": {
+        "passed": 5,
+        "log": "diagnostic_unit_final.log"
+      }
+    },
+    "production_diagnostics": {
+      "P0_bdx_tux": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.01
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0
+        },
+        "pole_points_passed": 20
+      },
+      "P0_bu_td": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.02
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0
+        },
+        "pole_points_passed": 20
+      },
+      "P0_dxb_tux": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.01
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0
+        },
+        "pole_points_passed": 20
+      },
+      "P0_ub_td": {
+        "ME": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0
+        },
+        "MC": {
+          "passed_reports": 22,
+          "maximum_sample_failure_fraction": 0.0
+        },
+        "pole_points_passed": 20
+      }
+    },
+    "inclusive_cross_section": {
+      "local_MC_at_NLO_pb": 133.8,
+      "local_integration_error_pb": 2.1,
+      "fixed_order_reference_pb": 130.7,
+      "fixed_order_error_pb": 0.46,
+      "difference_combined_standard_errors": 1.4420008506157058,
+      "note": "Statistical smoke comparison, not a differential precision validation"
+    },
+    "matched_shower": {
+      "events": 1000,
+      "negative_weight_events": 184,
+      "stable_top": true,
+      "hadronization": false,
+      "MPI": false,
+      "Born_PDF_envelope_violations": 0,
+      "ordinary_later_or_H_event_weight_above_unity_warnings": 3
+    },
+    "artifacts_directory": "/tmp/singletop_local_matching_validation",
+    "event_file": "/tmp/singletop_local_matching_validation/process/Events/local_verified/events.lhe.gz",
+    "integration_log": "local_common_energy.log",
+    "generation_log": "local_verified.log",
+    "shower_log": "lhe_shower_verified.log",
+    "audit_log": "shower_audit_final.log"
+  }
+}

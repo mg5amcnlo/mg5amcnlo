@@ -1,0 +1,231 @@
+{
+  "date_utc": "2026-10-25T07:23:00.470099+00:00",
+  "command": "python3 paper/run_all.py --cores 64",
+  "affected_runs": {
+    "C": 4,
+    "G": 4,
+    "P": 2,
+    "S": 12
+  },
+  "unaffected_reused": [
+    "12 fixed-order integrations",
+    "1 POWHEG million-event sample"
+  ],
+  "production_runs_started": false,
+  "actual_fresh_exports": [
+    {
+      "run_id": "C_GLB",
+      "directory": "central_runs_fixed/C_GLB",
+      "nevents": 1000000,
+      "generation_seed": 760101,
+      "shower_seed": 860101,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "C_LOC",
+      "directory": "central_runs_fixed/C_LOC",
+      "nevents": 1000000,
+      "generation_seed": 760201,
+      "shower_seed": 860201,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "C_Q",
+      "directory": "central_runs_fixed/C_Q",
+      "nevents": 1000000,
+      "generation_seed": 760301,
+      "shower_seed": 860301,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "C_QT",
+      "directory": "central_runs_fixed/C_QT",
+      "nevents": 1000000,
+      "generation_seed": 760401,
+      "shower_seed": 860401,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "G_LOC_H005",
+      "directory": "g_runs_fixed/G_LOC_H005",
+      "nevents": 1000000,
+      "generation_seed": 720101,
+      "shower_seed": 820101,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "G_LOC_H020",
+      "directory": "g_runs_fixed/G_LOC_H020",
+      "nevents": 1000000,
+      "generation_seed": 720102,
+      "shower_seed": 820102,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "G_Q_H005",
+      "directory": "g_runs_fixed/G_Q_H005",
+      "nevents": 1000000,
+      "generation_seed": 720201,
+      "shower_seed": 820201,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "G_Q_H020",
+      "directory": "g_runs_fixed/G_Q_H020",
+      "nevents": 1000000,
+      "generation_seed": 720202,
+      "shower_seed": 820202,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "P_Q_COMMON_W",
+      "directory": "g_runs_fixed/P_Q_COMMON_W",
+      "nevents": 1000000,
+      "generation_seed": 730101,
+      "shower_seed": 830101,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "P_QT_COMMON_W",
+      "directory": "g_runs_fixed/P_QT_COMMON_W",
+      "nevents": 1000000,
+      "generation_seed": 730201,
+      "shower_seed": 830201,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_GLB_Q0P5",
+      "directory": "scale_runs_fixed/S_GLB_Q0P5",
+      "nevents": 1000000,
+      "generation_seed": 740101,
+      "shower_seed": 840101,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_GLB_Q1",
+      "directory": "scale_runs_fixed/S_GLB_Q1",
+      "nevents": 1000000,
+      "generation_seed": 740102,
+      "shower_seed": 840102,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_GLB_Q2",
+      "directory": "scale_runs_fixed/S_GLB_Q2",
+      "nevents": 1000000,
+      "generation_seed": 740103,
+      "shower_seed": 840103,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_LOC_Q0P5",
+      "directory": "scale_runs_fixed/S_LOC_Q0P5",
+      "nevents": 1000000,
+      "generation_seed": 740201,
+      "shower_seed": 840201,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_LOC_Q1",
+      "directory": "scale_runs_fixed/S_LOC_Q1",
+      "nevents": 1000000,
+      "generation_seed": 740202,
+      "shower_seed": 840202,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_LOC_Q2",
+      "directory": "scale_runs_fixed/S_LOC_Q2",
+      "nevents": 1000000,
+      "generation_seed": 740203,
+      "shower_seed": 840203,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_Q_Q0P5",
+      "directory": "scale_runs_fixed/S_Q_Q0P5",
+      "nevents": 1000000,
+      "generation_seed": 740301,
+      "shower_seed": 840301,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_Q_Q1",
+      "directory": "scale_runs_fixed/S_Q_Q1",
+      "nevents": 1000000,
+      "generation_seed": 740302,
+      "shower_seed": 840302,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_Q_Q2",
+      "directory": "scale_runs_fixed/S_Q_Q2",
+      "nevents": 1000000,
+      "generation_seed": 740303,
+      "shower_seed": 840303,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_QT_Q0P5",
+      "directory": "scale_runs_fixed/S_QT_Q0P5",
+      "nevents": 1000000,
+      "generation_seed": 740401,
+      "shower_seed": 840401,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_QT_Q1",
+      "directory": "scale_runs_fixed/S_QT_Q1",
+      "nevents": 1000000,
+      "generation_seed": 740402,
+      "shower_seed": 840402,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    },
+    {
+      "run_id": "S_QT_Q2",
+      "directory": "scale_runs_fixed/S_QT_Q2",
+      "nevents": 1000000,
+      "generation_seed": 740403,
+      "shower_seed": 840403,
+      "cluster_sha256": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+      "manifest_verified": true
+    }
+  ],
+  "prepare_only_restart_verified": true,
+  "tests": {
+    "campaign_runners": 14,
+    "plotting": "Temporary software fixtures validated all22 matched plus POWHEG discovery, 4 generated tables, 9 validation figures, scale envelopes, central comparison pages and PGF output; no new physics results claimed.",
+    "campaign_runners_and_recoil_analysis": 17
+  },
+  "source_sha256": {
+    "paper/run_all.py": "c3807a74f9ad942d52678fb2dfba44cbb3a5c2189741a00ecf2bdbd055e3324a",
+    "paper/run_central.py": "26e1b9ccaacc0f5ed035dc207ddf63f6e14c52f00cc2f08c246401c9f67eeccc",
+    "paper/run_g_variations.py": "f05350e5fce18d653c481701cc91b15fddb2813b88a6ad80804812e2a976940f",
+    "paper/run_shower_scales.py": "623ac76dff0c6a501e51b55a151b3179764c827ecee50ed014f0d15867ba36ee",
+    "paper/analyse_matched_runs.py": "44113d50c3cb74e0335ec0ab470b7491e8b7e437cf886122878613d02b4d7401",
+    "paper/figures/make_plots.py": "c0cf59af4dac52c6404468948ffa78a7b2cca203bd3570db17fac295bc43b0d2",
+    "Analyses/compare_pp_tj_recoil.py": "bf9d07f2fe1f2e988b7f9222c39b3081836b4403e9bc21411ad5529305e45eb1",
+    "Analyses/matched_run_inputs.py": "19abef2a9a044747a417d0131709d9ac26c9674cfbba86fe69d59b68d2570eb5"
+  }
+}

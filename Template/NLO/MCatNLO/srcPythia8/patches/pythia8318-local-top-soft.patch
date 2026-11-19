@@ -1,0 +1,40 @@
+--- a/src/SimpleSpaceShower.cc
++++ b/src/SimpleSpaceShower.cc
+@@ -1465,6 +1465,16 @@
+       && flag("SpaceShower:IFquarkCollinearCorrection")) {
+       double z1 = 1. - z * Q2 / (m2ColPair - m2ColPartner);
+       wt *= (pow2(z) + pow2(z1)) / (1. + pow2(z));
++    }
++
++    // Optional massive-top soft correction, only on the CURRENT quark IF
++    // colour connection. Do not modify gluon IF or final-final dipoles.
++    // The accepted kinematic support guarantees 0 <= this ratio <= 1.
++    if (!isGluon && iColPartner != 0 && abs(idColPartner) == 6
++      && idMother == idDaughter && idSister == 21
++      && flag("SpaceShower:IFtopSoftCorrection")) {
++      double z1 = 1. - z * Q2 / (m2ColPair - m2ColPartner);
++      wt *= pT2corr / (pT2 * z1);
+     }
+ 
+     // Optionally veto emissions not ordered in rapidity (= angle).
+--- a/share/Pythia8/xmldoc/SpacelikeShowers.xml
++++ b/share/Pythia8/xmldoc/SpacelikeShowers.xml
+@@ -394,6 +394,18 @@
+ The default off reproduces the stock shower.
+ </flag>
+  
++<flag name="SpaceShower:IFtopSoftCorrection" default="off">
++Experimental massive-top soft correction for q to qg on a current
++initial-final colour connection to an outgoing top. Multiply the branching
++veto weight by pT2corr/(pT2*z1), with z1=1-z*Q2/(m2ColPair-m2ColPartner).
++This is the massive/massless eikonal ratio and is bounded between zero
++and one on the accepted phase space. It approaches one for incoming
++collinear radiation. Evaluate from the current dipole after every update;
++never apply to gluon IF splittings or to the final-final top-gluon shower,
++whose existing recoil dead-cone correction is retained. Use MECs off and
++matching counterterms for the modified rate. Default off preserves stock.
++</flag>
++
+ <h3>Weak showers</h3> 
+  
+ The emission of weak gauge bosons is an integrated part of the initial- 

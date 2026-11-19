@@ -23,6 +23,11 @@ module FKSParams
   logical, private :: FxFxPythia8Matching=.false.
   integer :: FKSFinalRecoil=0
   integer :: FKSISRMapping=0
+  integer :: FKSPythiaLocalRecoil=0
+  logical :: PythiaLocalCollinearPatch=.false.
+  logical :: PythiaLocalSoftPatch=.false.
+  real*8 :: PythiaLocalGWidth=0.01d0
+  integer :: PythiaLocalGProfile=0
   real*8 :: Pythia8MMaxGamma=10d0
 
 contains
@@ -85,6 +90,28 @@ contains
              endif
           else if (buff .eq. '#SeparateFlavourConfigurations') then
              read(68,*,end=999) separate_flavour_configs
+          else if (buff .eq. '#FKSPythiaLocalRecoil') then
+             read(68,*,end=999) FKSPythiaLocalRecoil
+             if (FKSPythiaLocalRecoil.lt.0.or.FKSPythiaLocalRecoil.gt.1) then
+                write(*,*) 'FKSPythiaLocalRecoil must be 0 or 1.'
+                stop 1
+             endif
+          else if (buff .eq. '#PythiaLocalCollinearPatch') then
+             read(68,*,end=999) PythiaLocalCollinearPatch
+          else if (buff .eq. '#PythiaLocalSoftPatch') then
+             read(68,*,end=999) PythiaLocalSoftPatch
+          else if (buff .eq. '#PythiaLocalGWidth') then
+             read(68,*,end=999) PythiaLocalGWidth
+             if (.not.(PythiaLocalGWidth.gt.0d0.and.PythiaLocalGWidth.le.1d0)) then
+                write(*,*) 'PythiaLocalGWidth must be greater than 0 and at most 1.'
+                stop 1
+             endif
+          else if (buff .eq. '#PythiaLocalGProfile') then
+             read(68,*,end=999) PythiaLocalGProfile
+             if (PythiaLocalGProfile.lt.0.or.PythiaLocalGProfile.gt.1) then
+                write(*,*) 'PythiaLocalGProfile must be 0 (automatic) or 1 (common w).'
+                stop 1
+             endif
           else if (buff .eq. '#FKSISRMapping') then
              read(68,*,end=999) FKSISRMapping
              if (FKSISRMapping.lt.0.or.FKSISRMapping.gt.2) then
@@ -242,6 +269,11 @@ contains
        write(*,*) ' > UsePolyVirtual            = ',use_poly_virtual
        write(*,*) ' > FKSFinalRecoil            = ',FKSFinalRecoil
        write(*,*) ' > FKSISRMapping             = ',FKSISRMapping
+       write(*,*) ' > FKSPythiaLocalRecoil      = ',FKSPythiaLocalRecoil
+       write(*,*) ' > PythiaLocalCollinearPatch = ',PythiaLocalCollinearPatch
+       write(*,*) ' > PythiaLocalSoftPatch      = ',PythiaLocalSoftPatch
+       write(*,*) ' > PythiaLocalGWidth          = ',PythiaLocalGWidth
+       write(*,*) ' > PythiaLocalGProfile        = ',PythiaLocalGProfile
        write(*,*) ' > Pythia8MMaxGamma           = ',Pythia8MMaxGamma
        write(*,*) ' > MCExplicitKLSum           = ',MCExplicitKLSum
        write(*,*) ' > MCSubtractionAtFixedFlow  = ',MCSubtractionAtFixedFlow
@@ -272,6 +304,11 @@ contains
     use_poly_virtual=.true.
     FKSFinalRecoil=0
     FKSISRMapping=0
+    FKSPythiaLocalRecoil=0
+    PythiaLocalCollinearPatch=.false.
+    PythiaLocalSoftPatch=.false.
+    PythiaLocalGWidth=0.01d0
+    PythiaLocalGProfile=0
     Pythia8MMaxGamma=10d0
     MCExplicitKLSum=.true.
     MCSubtractionAtFixedFlow=.true.
@@ -303,6 +340,10 @@ contains
     logical, intent(in) :: nlo_ps
     character(*), intent(in) :: shower
     logical, intent(in), optional :: printParam
+    if (FKSPythiaLocalRecoil.eq.1.and.nlo_ps.and.ickkw.ne.0) then
+       write(*,*) 'Local matching requires ickkw=0 (no merging)'
+       stop 1
+    endif
     FxFxPythia8Matching=ickkw.eq.3.and.nlo_ps.and.trim(shower).eq.'PYTHIA8'
     if (present(printParam)) then
        if (printParam.and.FxFxPythia8Matching) then
@@ -316,12 +357,48 @@ contains
     use_fxfx_finite_terms=FxFxPythia8FiniteTerms.or.FxFxPythia8Matching
   end function use_fxfx_finite_terms
 
+  logical function pythia_local_matching()
+    implicit none
+    logical fixed_order,nlo_ps
+    common /c_fnlo_nlops/fixed_order,nlo_ps
+    pythia_local_matching=FKSPythiaLocalRecoil.eq.1.and.nlo_ps
+  end function pythia_local_matching
+
+
   integer function get_fks_isr_mapping(nlo_ps,shower) result(mapping)
     ! Resolve run settings on every entry so forward/inverse maps agree,
     ! including diagnostics which read the FKS card after setrun.
     implicit none
     logical, intent(in) :: nlo_ps
     character(*), intent(in) :: shower
+    if (PythiaLocalGProfile.ne.0.and.FKSPythiaLocalRecoil.ne.1) then
+       write(*,*) 'PythiaLocalGProfile requires FKSPythiaLocalRecoil=1.'
+       stop 1
+    endif
+    if (PythiaLocalSoftPatch.and..not.PythiaLocalCollinearPatch) then
+       write(*,*) 'PythiaLocalSoftPatch requires PythiaLocalCollinearPatch.'
+       stop 1
+    endif
+    if (PythiaLocalCollinearPatch.and.FKSPythiaLocalRecoil.ne.1) then
+       write(*,*) 'PythiaLocalCollinearPatch requires FKSPythiaLocalRecoil=1.'
+       stop 1
+    endif
+    if (FKSPythiaLocalRecoil.eq.1) then
+       if (nlo_ps) then
+          if (trim(shower).ne.'PYTHIA8') then
+             write(*,*) 'Local matching requires PYTHIA8'
+             stop 1
+          endif
+          if (.not.MCExplicitKLSum.or..not.FKSExplicitSum) then
+             write(*,*) 'Local matching requires MCExplicitKLSum and FKSExplicitSum.'
+             stop 1
+          endif
+       endif
+       if (FKSISRMapping.ne.0.or.FKSFinalRecoil.ne.0) then
+          write(*,*) 'FKSPythiaLocalRecoil requires FKSISRMapping=0 and FKSFinalRecoil=0.'
+          stop 1
+       endif
+    endif
     select case (FKSISRMapping)
     case (0)
        ! Preserve the current default: controlled fixed-order comparisons
@@ -346,7 +423,9 @@ contains
     character(*), intent(in) :: shower
     integer mapping
     mapping=get_fks_isr_mapping(nlo_ps,shower)
-    if (mapping.eq.1) then
+    if (FKSPythiaLocalRecoil.eq.1) then
+       write(*,*) 'FKS recoil mapping: PYTHIA local initial-final pairs'
+    elseif (mapping.eq.1) then
        write(*,*) 'FKS ISR mapping: symmetric'
     else
        write(*,*) 'FKS ISR mapping: asymmetric'

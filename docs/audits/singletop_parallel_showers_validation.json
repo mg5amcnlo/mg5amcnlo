@@ -1,0 +1,2195 @@
+{
+  "date_utc": "2026-10-25",
+  "command": "python3 paper/run_all.py --cores 64",
+  "prepared_exports": [
+    {
+      "run_id": "C_GLB",
+      "directory": "central_runs_fixed/C_GLB",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "459a58cb460ae09137c621fa3d75d22875061df4e6b6e9ef77b81ea918217b00",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": true
+    },
+    {
+      "run_id": "C_LOC",
+      "directory": "central_runs_fixed/C_LOC",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "0d2fbe91b8007a62525e075a6823b52e3e8fe2ca000833e5cd7025e9f46a2a8c",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "C_Q",
+      "directory": "central_runs_fixed/C_Q",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "5e008674c2aa7334668d53b8a787f75d04d2aeb9c71573b13c6e7e1deb2f5e93",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "C_QT",
+      "directory": "central_runs_fixed/C_QT",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "53e728862e4bfaa7e8011857ea5888ab9f8058eeb0d709b65eaf4c2513e02a7f",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "G_LOC_H005",
+      "directory": "g_runs_fixed/G_LOC_H005",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "b312522708fd8986a52d5fd199aa064f1135289077e7e72384c79a1d00d991e3",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "G_LOC_H020",
+      "directory": "g_runs_fixed/G_LOC_H020",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "26deefee9a94fc19f3dff096cd7eb770d0c303a0c008aaf1ea24019b14349d2d",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "G_Q_H005",
+      "directory": "g_runs_fixed/G_Q_H005",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "675c262db5450a974ecf234f24ee57cafbfd158df1c8012aaadd473aa20ae6ca",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "G_Q_H020",
+      "directory": "g_runs_fixed/G_Q_H020",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "14f0f7d99e71d110e38ed597cca62412485f6d198f941aed80b5b9858310a2da",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "P_Q_COMMON_W",
+      "directory": "g_runs_fixed/P_Q_COMMON_W",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "6cbf4e65c42af1a639be4c9056e8b2645f6a576399e2db8c1a7eb252c7a1397d",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "P_QT_COMMON_W",
+      "directory": "g_runs_fixed/P_QT_COMMON_W",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "a08504dbc44c57e7157d0b9c49481408732323e2441d03967524ed1a3f278bc3",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_GLB_Q0P5",
+      "directory": "scale_runs_fixed/S_GLB_Q0P5",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "82d4b140cb05783a949a784d76776182534833e12008ee88d845440b51f52da3",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_GLB_Q1",
+      "directory": "scale_runs_fixed/S_GLB_Q1",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "62861302ea5a92a951e3ea2d802fa29380bec38dfd1e056c72c35be665bb9033",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_GLB_Q2",
+      "directory": "scale_runs_fixed/S_GLB_Q2",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "d7ac5c7fdba6eaad35fbaa561725bbe75b670d670da24dcd1dc505bb37fb1472",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_LOC_Q0P5",
+      "directory": "scale_runs_fixed/S_LOC_Q0P5",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "eb43b583adbb0d1ff8002f841eeebabe38c4e6b260b472b0824f47504043175e",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_LOC_Q1",
+      "directory": "scale_runs_fixed/S_LOC_Q1",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "999305c73e60af89a3df1187de6bfaf41e4eebfa8f33fa90603de7079aedb76c",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_LOC_Q2",
+      "directory": "scale_runs_fixed/S_LOC_Q2",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "1082644f08bf327fc95c2f51d4c023123be01dd74398acef4fd9e17807966de8",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_Q_Q0P5",
+      "directory": "scale_runs_fixed/S_Q_Q0P5",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "fdf592ae9a9b925248f659fbabe2d6547303d22e0f3edaa5fd23ddf6f89ff2db",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_Q_Q1",
+      "directory": "scale_runs_fixed/S_Q_Q1",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "9ad4c15750344729d6ef690482a85ff5dddc47c76d092fbca0e00c63150aac50",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_Q_Q2",
+      "directory": "scale_runs_fixed/S_Q_Q2",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "1f51077960c2f6e75abd79841b88e7a7344d33fa77fc6647be08aa9f6255fd57",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_QT_Q0P5",
+      "directory": "scale_runs_fixed/S_QT_Q0P5",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "be79a9f1f7b2b6d358ec06dc2c086a525d381beacb1773d20dd92e0b1ec49885",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_QT_Q1",
+      "directory": "scale_runs_fixed/S_QT_Q1",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "c530dc8212ec41a0339c6c4b774e6abfe963ade069199d68f1c937d7790c8ebe",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    },
+    {
+      "run_id": "S_QT_Q2",
+      "directory": "scale_runs_fixed/S_QT_Q2",
+      "jobs": 64,
+      "events_per_worker": 15625,
+      "manifest_sha256": "d3ad98e6098d9f8c8e4c3ba1facef88079615691c359400ec842b2f4cf2efe7a",
+      "source_and_cards_verified": true,
+      "existing_generation_preserved": false
+    }
+  ],
+  "before_migration": [
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_GLB",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "C_GLB",
+            "group": "C",
+            "required": "True",
+            "variant": "GLB",
+            "source_process": "pp_tj_default",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "0",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "global_default",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "760101",
+            "rnd_seed": "860101",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "fresh export with initialized coloured core mother",
+            "command": "./bin/generate_events aMC@NLO -f --name=C_GLB"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_default/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_default/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_default/Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+            "pp_tj_default/Cards/shower_card.dat": "3f25325664f16a16c70c9338e8c3d6254a49a925c05b58ac66c7986abc8b309a",
+            "pp_tj_default/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_default/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_default/Cards/proc_card_mg5.dat": "c8e3ea40554747979cfc9b259d8d347f95b54aba2f845e70b8c2f49d9d101ac0"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "111a6118347a0a61c7fb0fd598cbb9dad8630364ddb2ef3531fc2ddffb014372",
+          "Cards/FKS_params.dat": "2ad0325b7a6e4be788cf0ffd9ed560ae3e2bd65327415b376261e92df9b550a9",
+          "Cards/shower_card.dat": "d3ed01a562f0d95793ed5fac4350ef87e246f23bdbdf4f22f2d3016d1b6b9ce2",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15",
+      "generation_verified": {
+        "banner_cards_match_prepared_hashes": true,
+        "parsed_card_changes": {
+          "iseed": [
+            760101,
+            0
+          ]
+        },
+        "events": 1000000,
+        "lhe_sha256": "1d837e57bb62758dba11eb2966fe9dba88cd59748f7310178ac8ac374002e56f",
+        "summary_sha256": "6f223d148863067320548742a7fe99f027f8cb2757a3363767c5c9cddcacf22b"
+      }
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_LOC",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "C_LOC",
+            "group": "C",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "760201",
+            "rnd_seed": "860201",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "fresh export with initialized coloured core mother",
+            "command": "./bin/generate_events aMC@NLO -f --name=C_LOC"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "9d2d2a8040f31ce8d1aa82998bc678ff8bfee8b995fa1684424f1b65a5615341",
+          "Cards/FKS_params.dat": "cb6902d5ec6bdc2365b6dacb26d7eba1eda46a19f2128cdd139499523687bdaa",
+          "Cards/shower_card.dat": "018a04985edcae1c0e6a9695765906b4939099e63ff5347119cc62d72f6e0b44",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_Q",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "C_Q",
+            "group": "C",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "760301",
+            "rnd_seed": "860301",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "fresh export with initialized coloured core mother",
+            "command": "./bin/generate_events aMC@NLO -f --name=C_Q"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "c1d81d3d651565b601bc6f0a99a247c0f0041794f2a4812405453821cf31ef62",
+          "Cards/FKS_params.dat": "e579f40c08a35ebfa85c334550344b349d6d3e480d2c959529bc1019f33fbbad",
+          "Cards/shower_card.dat": "296bdca40472b891453e331b7c1a4db38074fda182bfc49e74ad8441461aee0a",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_QT",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "C_QT",
+            "group": "C",
+            "required": "True",
+            "variant": "QT",
+            "source_process": "pp_tj_local_2patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "True",
+            "profile": "off",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "760401",
+            "rnd_seed": "860401",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "fresh export with initialized coloured core mother",
+            "command": "./bin/generate_events aMC@NLO -f --name=C_QT"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_2patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_2patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_2patch/Cards/FKS_params.dat": "3d3ccfd794c3c139e12910bb9c0007c53cd77620fcf81054c15f7d81173c79e5",
+            "pp_tj_local_2patch/Cards/shower_card.dat": "e33e24097b5fa11cec1a1f50a4b68f28b8034320f3f04252edae55703d10ee25",
+            "pp_tj_local_2patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_2patch/Cards/amcatnlo_configuration.txt": "55589c3a9b3f54369e2eb05c4730b3b7915f15cf62f9ecb8cf14fb5d36816192",
+            "pp_tj_local_2patch/Cards/proc_card_mg5.dat": "345318ac9b24cfac16f0f2f0a0b9d9da112daba6dcbadcc3e8b579e5df65547b"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "9898b7330d715ca1089907d4802a1d60994236c8173bb2a55939743554e41a82",
+          "Cards/FKS_params.dat": "d4dfca439a90241afc6f67867deee8c7ec200cbe3ba422d13e9cff100c29c26e",
+          "Cards/shower_card.dat": "423bf607b0959bd2a9ee14ec1bf4cd8b70cdfd233d3511886de6be266542368c",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "676be2a2c8309c908ce5140bf031f76899088d0f30ad70bf3d8e582caf2427d0"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/G_LOC_H005",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "G_LOC_H005",
+            "group": "G",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.005",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "720101",
+            "rnd_seed": "820101",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=G_LOC_H005"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "f847e4b92b68c182f7d3fa79f807d44943a4966a109a781231a98a3b44540410",
+          "Cards/FKS_params.dat": "ddc5eb2fc4885791c1aaf3ac77df164526c3fccd9a31ac7d1948c9ed9542c9ca",
+          "Cards/shower_card.dat": "3ecd154c8f2e2b39066eef316ac814c3961682a5e7329dafec623ca125f1cf71",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/G_LOC_H020",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "G_LOC_H020",
+            "group": "G",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.02",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "720102",
+            "rnd_seed": "820102",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=G_LOC_H020"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "58b003a380a0ade2b7bae82d78526db73827c705ba98de8f670bb590a23a9568",
+          "Cards/FKS_params.dat": "cc1cad05433b9f99b389d763ca46f0896c5b68768c520c3d2b821e3c2e104c40",
+          "Cards/shower_card.dat": "f79ec57b0c9aba3ef5560bbdda6463b1b5335b5f176f080363839275b0f0fbd9",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/G_Q_H005",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "G_Q_H005",
+            "group": "G",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.005",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "720201",
+            "rnd_seed": "820201",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=G_Q_H005"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "f117ed2ad888125b2c51cf78c0f5d2f84f944dc9772e67a334aa4358ba5e76e2",
+          "Cards/FKS_params.dat": "7a37281dddbfd7a440c345b0adfce396b2ef586f30c65f9091848023abfeeafb",
+          "Cards/shower_card.dat": "30e2516e7f3d5d2bb8c980c99926f4320daa85c57e952f684392b81ca74f65ec",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/G_Q_H020",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "G_Q_H020",
+            "group": "G",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.02",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "720202",
+            "rnd_seed": "820202",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=G_Q_H020"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "de5e4bac4ea100a99a2ffc301a96561ac9a672d31b3c1eb9d900f8924a762faf",
+          "Cards/FKS_params.dat": "f5305090b69e9aa42c2d61db5131a06f77660c76ddab91949fdc5f936a95afbe",
+          "Cards/shower_card.dat": "f84b679e93d4356515b917e792ab4f95ab744e49900ca767df20b80b4fc495ee",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/P_Q_COMMON_W",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "P_Q_COMMON_W",
+            "group": "P",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w_forced",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "730101",
+            "rnd_seed": "830101",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "PythiaLocalGProfile=1; implemented in current export template",
+            "command": "./bin/generate_events -f --name=P_Q_COMMON_W"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "3e5ec7e1a0b2094e3ae3c6a940dc2cb656b7a5ec5bb3afa4f3a99e4993709f3a",
+          "Cards/FKS_params.dat": "03a7f0c22b16cb7d32126e1e0c6f4a4860b57b7c60fb6e08b38937d8a086fd37",
+          "Cards/shower_card.dat": "1d4a519554d76b266e37351a067850d0d2cf8bf4b1b9e4ea44a587fad326ff62",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/g_runs_fixed/P_QT_COMMON_W",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "P_QT_COMMON_W",
+            "group": "P",
+            "required": "True",
+            "variant": "QT",
+            "source_process": "pp_tj_local_2patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "True",
+            "profile": "w_forced",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "730201",
+            "rnd_seed": "830201",
+            "reweight_scale": "False",
+            "rw_rscale": "",
+            "rw_fscale": "",
+            "store_rwgt_info": "False",
+            "prerequisite": "PythiaLocalGProfile=1; implemented in current export template",
+            "command": "./bin/generate_events -f --name=P_QT_COMMON_W"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_2patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_2patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_2patch/Cards/FKS_params.dat": "3d3ccfd794c3c139e12910bb9c0007c53cd77620fcf81054c15f7d81173c79e5",
+            "pp_tj_local_2patch/Cards/shower_card.dat": "e33e24097b5fa11cec1a1f50a4b68f28b8034320f3f04252edae55703d10ee25",
+            "pp_tj_local_2patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_2patch/Cards/amcatnlo_configuration.txt": "55589c3a9b3f54369e2eb05c4730b3b7915f15cf62f9ecb8cf14fb5d36816192",
+            "pp_tj_local_2patch/Cards/proc_card_mg5.dat": "345318ac9b24cfac16f0f2f0a0b9d9da112daba6dcbadcc3e8b579e5df65547b"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "b8a75906202c8c0fa032b19ae178b4696fc4d8b02683b2e5dbec6836d0d32277",
+          "Cards/FKS_params.dat": "8d23a49c1614888b8a7892126532a514f4fbbd0c1e58f57322206e09621263f8",
+          "Cards/shower_card.dat": "e04f273baba61b94911b21a5859723b1475733c249eb0d60f8990d473479c45f",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "676be2a2c8309c908ce5140bf031f76899088d0f30ad70bf3d8e582caf2427d0"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_GLB_Q0P5",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_GLB_Q0P5",
+            "group": "S",
+            "required": "True",
+            "variant": "GLB",
+            "source_process": "pp_tj_default",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "0",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "global_default",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "0.5",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740101",
+            "rnd_seed": "840101",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_GLB_Q0P5"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_default/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_default/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_default/Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+            "pp_tj_default/Cards/shower_card.dat": "3f25325664f16a16c70c9338e8c3d6254a49a925c05b58ac66c7986abc8b309a",
+            "pp_tj_default/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_default/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_default/Cards/proc_card_mg5.dat": "c8e3ea40554747979cfc9b259d8d347f95b54aba2f845e70b8c2f49d9d101ac0"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "5b638f95fbae289486076f5ca9960dfec5c7f1afa3ee2e8a4313d2a8a5ee5e5d",
+          "Cards/FKS_params.dat": "2ad0325b7a6e4be788cf0ffd9ed560ae3e2bd65327415b376261e92df9b550a9",
+          "Cards/shower_card.dat": "69f7c54b94ed9ea8ff0ad926b8ac11b4edbf2d3526c9e5a2bfca5fde41702009",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_GLB_Q1",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_GLB_Q1",
+            "group": "S",
+            "required": "True",
+            "variant": "GLB",
+            "source_process": "pp_tj_default",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "0",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "global_default",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740102",
+            "rnd_seed": "840102",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_GLB_Q1"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_default/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_default/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_default/Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+            "pp_tj_default/Cards/shower_card.dat": "3f25325664f16a16c70c9338e8c3d6254a49a925c05b58ac66c7986abc8b309a",
+            "pp_tj_default/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_default/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_default/Cards/proc_card_mg5.dat": "c8e3ea40554747979cfc9b259d8d347f95b54aba2f845e70b8c2f49d9d101ac0"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "5f3892a30b3be407f4e24c49badf2fe80d59bb6f637232282991c22b191b2a0a",
+          "Cards/FKS_params.dat": "2ad0325b7a6e4be788cf0ffd9ed560ae3e2bd65327415b376261e92df9b550a9",
+          "Cards/shower_card.dat": "47a94d47773365e02a3434b892a43fa985055fc6bd838d49a6952426f1154222",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_GLB_Q2",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_GLB_Q2",
+            "group": "S",
+            "required": "True",
+            "variant": "GLB",
+            "source_process": "pp_tj_default",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "0",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "global_default",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "2.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740103",
+            "rnd_seed": "840103",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_GLB_Q2"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_default/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_default/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_default/Cards/FKS_params.dat": "3a42a5704b3824b355946f44d26131cd52ba3e108de62c5004641a0639fe3233",
+            "pp_tj_default/Cards/shower_card.dat": "3f25325664f16a16c70c9338e8c3d6254a49a925c05b58ac66c7986abc8b309a",
+            "pp_tj_default/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_default/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_default/Cards/proc_card_mg5.dat": "c8e3ea40554747979cfc9b259d8d347f95b54aba2f845e70b8c2f49d9d101ac0"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "c1d2558006794b99f2b564a4b2b00eb06dcae13487c12a0f60e72a865b8998c7",
+          "Cards/FKS_params.dat": "2ad0325b7a6e4be788cf0ffd9ed560ae3e2bd65327415b376261e92df9b550a9",
+          "Cards/shower_card.dat": "622d0f05feb4f660b4dda53a1e0821176678d0064f1112d6f57fe3daec226f9c",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_LOC_Q0P5",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_LOC_Q0P5",
+            "group": "S",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "0.5",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740201",
+            "rnd_seed": "840201",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_LOC_Q0P5"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "195e6deb3a9b0067dc2054b34b9423d45454dd6369ebfd14c76bdc9c17a54cb9",
+          "Cards/FKS_params.dat": "cb6902d5ec6bdc2365b6dacb26d7eba1eda46a19f2128cdd139499523687bdaa",
+          "Cards/shower_card.dat": "91e5b7ceb6d2ab1ee8f65983fc3f22d8090933647b7fd8b97f13ae13db3d783a",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_LOC_Q1",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_LOC_Q1",
+            "group": "S",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740202",
+            "rnd_seed": "840202",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_LOC_Q1"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "6289e2d6f678c5ef421f2f5448274b5059bab4dcf13451f013ea4beee1413509",
+          "Cards/FKS_params.dat": "cb6902d5ec6bdc2365b6dacb26d7eba1eda46a19f2128cdd139499523687bdaa",
+          "Cards/shower_card.dat": "2da5dbdade897a6a15229762aecf23a677c13b92e4d637b543b1de8daa45ee97",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_LOC_Q2",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_LOC_Q2",
+            "group": "S",
+            "required": "True",
+            "variant": "LOC",
+            "source_process": "pp_tj_local",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "False",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "w",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "2.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740203",
+            "rnd_seed": "840203",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_LOC_Q2"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local/Cards/FKS_params.dat": "c00dc652626cfbe0d3df28f4591424bd1a6d749b335666d37a902935a6058a87",
+            "pp_tj_local/Cards/shower_card.dat": "708c0653ac90e18bd0ce526b0fd19f06f569c58e5e1dcdd383f4b1e44baf09bb",
+            "pp_tj_local/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local/Cards/amcatnlo_configuration.txt": "ed9bba773dc41503a19fc15c84007974dba9b93d40a49fcae7b12df4469d1d9d",
+            "pp_tj_local/Cards/proc_card_mg5.dat": "c24f7d9e508ea13a26d68a4969540d07831aba9c15d91efa598b0c1d130f0138"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "181c02d65ad5c03a14666dae4b55671e61f48698ac5c56ec84cafbfafd35ca40",
+          "Cards/FKS_params.dat": "cb6902d5ec6bdc2365b6dacb26d7eba1eda46a19f2128cdd139499523687bdaa",
+          "Cards/shower_card.dat": "aac5c3a58948162636268346d545fa7b1259bf98a7f8fd4fe112b70f2f57c12c",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "9e92912af2a8edea7d61e0c4836e1bf7c370dd24e66f6b6891ef39881e4c0f47"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_Q_Q0P5",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_Q_Q0P5",
+            "group": "S",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "0.5",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740301",
+            "rnd_seed": "840301",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_Q_Q0P5"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "2c91225b6aaab48f578003e4024e0c0e7655a5e71bbc255f6bfc14a29d8783f7",
+          "Cards/FKS_params.dat": "e579f40c08a35ebfa85c334550344b349d6d3e480d2c959529bc1019f33fbbad",
+          "Cards/shower_card.dat": "c816ec245020782c489fde05a1dc2e35359b1c719b6a8d1a750013267f087b36",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_Q_Q1",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_Q_Q1",
+            "group": "S",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740302",
+            "rnd_seed": "840302",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_Q_Q1"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "1fc502ca959367740d5a7470bc554c62394b82ea70fb13353a4f337acd3a1464",
+          "Cards/FKS_params.dat": "e579f40c08a35ebfa85c334550344b349d6d3e480d2c959529bc1019f33fbbad",
+          "Cards/shower_card.dat": "6f08c464f9d7b2d9e8de1004b5b2d5343a07558e85324d45cdf7d920eac6d80c",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_Q_Q2",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_Q_Q2",
+            "group": "S",
+            "required": "True",
+            "variant": "Q",
+            "source_process": "pp_tj_local_patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "False",
+            "profile": "xi",
+            "PythiaLocalGWidth": "0.01",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "2.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740303",
+            "rnd_seed": "840303",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_Q_Q2"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_patch/Cards/FKS_params.dat": "a605c2ec94d397d6f7430c6584aeb9f574c513ffa7c8cae21d97cb6d0e88fa5b",
+            "pp_tj_local_patch/Cards/shower_card.dat": "3377e97183191f5b6cb9d3530db959e8b389f050c21e91dc3769bf2c6964a54e",
+            "pp_tj_local_patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_patch/Cards/amcatnlo_configuration.txt": "f12f51a565e6102b9b05f8159b6d60d572adb2f2ecfe438972dc2bc78f8056ac",
+            "pp_tj_local_patch/Cards/proc_card_mg5.dat": "a8d5ec181e88055ca2872586300f2dcc6d70a27dedb7956b16cc8238fe4644fc"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "5670115c4df8e2be9d4f0bfe71bfe5f2080486577d7246f6a4926ed6fd422bca",
+          "Cards/FKS_params.dat": "e579f40c08a35ebfa85c334550344b349d6d3e480d2c959529bc1019f33fbbad",
+          "Cards/shower_card.dat": "6744ae6839bfc8c5b3658d97ba2a9ce2bb38ed6aec6719ed1d4143883784e26b",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "badff16c43fceb0c45348aca34a2324b38beb9c5a9482d2930f3eec393c9bffb"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_QT_Q0P5",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_QT_Q0P5",
+            "group": "S",
+            "required": "True",
+            "variant": "QT",
+            "source_process": "pp_tj_local_2patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "True",
+            "profile": "off",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "0.5",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740401",
+            "rnd_seed": "840401",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_QT_Q0P5"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_2patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_2patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_2patch/Cards/FKS_params.dat": "3d3ccfd794c3c139e12910bb9c0007c53cd77620fcf81054c15f7d81173c79e5",
+            "pp_tj_local_2patch/Cards/shower_card.dat": "e33e24097b5fa11cec1a1f50a4b68f28b8034320f3f04252edae55703d10ee25",
+            "pp_tj_local_2patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_2patch/Cards/amcatnlo_configuration.txt": "55589c3a9b3f54369e2eb05c4730b3b7915f15cf62f9ecb8cf14fb5d36816192",
+            "pp_tj_local_2patch/Cards/proc_card_mg5.dat": "345318ac9b24cfac16f0f2f0a0b9d9da112daba6dcbadcc3e8b579e5df65547b"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "b22ea43f63090e52d923fec33ee701406408402ec8df63c58654d92acf7bb904",
+          "Cards/FKS_params.dat": "d4dfca439a90241afc6f67867deee8c7ec200cbe3ba422d13e9cff100c29c26e",
+          "Cards/shower_card.dat": "66f4480e136aca03c4518a712dfdff1cfdee90f31319e69272b575f3aea69121",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "676be2a2c8309c908ce5140bf031f76899088d0f30ad70bf3d8e582caf2427d0"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_QT_Q1",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_QT_Q1",
+            "group": "S",
+            "required": "True",
+            "variant": "QT",
+            "source_process": "pp_tj_local_2patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "True",
+            "profile": "off",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "1.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740402",
+            "rnd_seed": "840402",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_QT_Q1"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_2patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_2patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_2patch/Cards/FKS_params.dat": "3d3ccfd794c3c139e12910bb9c0007c53cd77620fcf81054c15f7d81173c79e5",
+            "pp_tj_local_2patch/Cards/shower_card.dat": "e33e24097b5fa11cec1a1f50a4b68f28b8034320f3f04252edae55703d10ee25",
+            "pp_tj_local_2patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_2patch/Cards/amcatnlo_configuration.txt": "55589c3a9b3f54369e2eb05c4730b3b7915f15cf62f9ecb8cf14fb5d36816192",
+            "pp_tj_local_2patch/Cards/proc_card_mg5.dat": "345318ac9b24cfac16f0f2f0a0b9d9da112daba6dcbadcc3e8b579e5df65547b"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "41c3b734acd804cf80024426f637e2cb6d6a15974b407d1058d8f901e6559a18",
+          "Cards/FKS_params.dat": "d4dfca439a90241afc6f67867deee8c7ec200cbe3ba422d13e9cff100c29c26e",
+          "Cards/shower_card.dat": "ebe019b867f7da885d4fdffaa233b02dfc384cc781e5b463cb4c6f42d63b8d15",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "676be2a2c8309c908ce5140bf031f76899088d0f30ad70bf3d8e582caf2427d0"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    },
+    {
+      "directory": "/export/slow1/rikkert/SingleTopLocal/scale_runs_fixed/S_QT_Q2",
+      "manifest": {
+        "inputs": {
+          "schema": 2,
+          "normalization_fix": "coloured-core-momentum-2026-10-25",
+          "run_spec": {
+            "run_id": "S_QT_Q2",
+            "group": "S",
+            "required": "True",
+            "variant": "QT",
+            "source_process": "pp_tj_local_2patch",
+            "mode": "aMC@NLO",
+            "FKSPythiaLocalRecoil": "1",
+            "PythiaLocalCollinearPatch": "True",
+            "PythiaLocalSoftPatch": "True",
+            "profile": "off",
+            "PythiaLocalGWidth": "",
+            "xicut": "0.5",
+            "deltaI": "1.0",
+            "deltaO": "1.0",
+            "xiScut": "0.5",
+            "deltaS": "1.0",
+            "xiBSVcut": "1.0",
+            "shower_scale_factor": "2.0",
+            "req_acc_FO": "",
+            "req_acc": "-1",
+            "nevents": "1000000",
+            "iseed": "740403",
+            "rnd_seed": "840403",
+            "reweight_scale": "True",
+            "rw_rscale": "1.0;2.0;0.5",
+            "rw_fscale": "1.0;2.0;0.5",
+            "store_rwgt_info": "True",
+            "prerequisite": "",
+            "command": "./bin/generate_events -f --name=S_QT_Q2"
+          },
+          "source_sha256": {
+            "Template/NLO/SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+            "Template/NLO/SubProcesses/driver_mintMC.f": "688005105037f177636ca176f1d47cf512541d8206c12d01170f6bdffbce65c3",
+            "Template/NLO/SubProcesses/fks_singular.f": "faab09c7efc21d40962ccd00159226672fa366e0c692da61cb8afc4c272ed177",
+            "Template/NLO/SubProcesses/montecarlocounter.f": "3d46b3a166006f7e2ff251c62b2bbec844db88857e2b5f81525b7e60e840d718",
+            "Template/NLO/SubProcesses/genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+            "Template/NLO/SubProcesses/FKSParams.f90": "8331cbad8aafae91817be46299c58187affda5d90941f2539978bf007ffe30f8",
+            "Template/NLO/SubProcesses/scale_module.f90": "023613a56b3f855ec30e6ba09fc25cab6473fe34b97097ed77ea10181e6927c8",
+            "Template/NLO/SubProcesses/mc_native_runtime.f": "498d5efb7e4bf135e7b3ac7ae174132a1aef5879f16c8d29c50f478ecabd4291",
+            "Template/NLO/SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+            "Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f": "51f72adf34de1f2f1d9545868485c89c889e90951e656d66ac14b60235d06a57",
+            "Template/NLO/MCatNLO/include/HEPMC_ST_RECOIL.INC": "af0cfe51592744d7aef7680bcd439cfa55a72f64a9af51c8abf514f0f7534430",
+            "Template/NLO/MCatNLO/include/HEPEVTSize.h": "a7acb5a68acbc4f16ac6447639cca3610482916871ae13833e6de09eb4584ac6",
+            "Template/NLO/MCatNLO/include/LHEFRead.h": "a0bbf6c3a8ad1c6a3041fe9a868b5495003c7a85eb91d4c71de7ecddc5b0a0d0",
+            "Template/NLO/MCatNLO/Scripts/MCatNLO_MadFKS_PYTHIA8.Script": "f156014c1c71d005da81b4f529e09ec012c605003415c6a26e5f5965755902cc",
+            "pp_tj_local_2patch/Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+            "pp_tj_local_2patch/Cards/run_card.dat": "4a99dde5381a2313afbcc588b0df4d289a3287cd4c6dc573cb88ebe2614a07cc",
+            "pp_tj_local_2patch/Cards/FKS_params.dat": "3d3ccfd794c3c139e12910bb9c0007c53cd77620fcf81054c15f7d81173c79e5",
+            "pp_tj_local_2patch/Cards/shower_card.dat": "e33e24097b5fa11cec1a1f50a4b68f28b8034320f3f04252edae55703d10ee25",
+            "pp_tj_local_2patch/Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+            "pp_tj_local_2patch/Cards/amcatnlo_configuration.txt": "55589c3a9b3f54369e2eb05c4730b3b7915f15cf62f9ecb8cf14fb5d36816192",
+            "pp_tj_local_2patch/Cards/proc_card_mg5.dat": "345318ac9b24cfac16f0f2f0a0b9d9da112daba6dcbadcc3e8b579e5df65547b"
+          }
+        },
+        "prepared_sha256": {
+          "Cards/param_card.dat": "bcc9d7f3d1e249ec6cc2e6de24e7511c62da576a7812ae17cf492ce7d3f0f41f",
+          "Cards/run_card.dat": "a4430410efa39df35060600c268fb799af084ef230f3cf23be45dc76c17e25a9",
+          "Cards/FKS_params.dat": "d4dfca439a90241afc6f67867deee8c7ec200cbe3ba422d13e9cff100c29c26e",
+          "Cards/shower_card.dat": "47045c9a7bd94d65dedf0e0ed99f4cf1efe28bea28b0846dfd9d29a81897f325",
+          "Cards/FO_analyse_card.dat": "71de9194eacfad396ce50ef7cb6e0b8dbd76d8d604ef7759fb5d6f0965c4275d",
+          "SubProcesses/cluster.f": "5f42bad66eabc6c6a9b136184042c755d40176df5162c9ec069a57be4700c9dd",
+          "SubProcesses/fks_powers.inc": "02e7124b6602bc968113df81a9953f189d48892a22d0633e19c57bf380feb8eb",
+          "Cards/amcatnlo_configuration.txt (without execution settings)": "676be2a2c8309c908ce5140bf031f76899088d0f30ad70bf3d8e582caf2427d0"
+        }
+      },
+      "wrapper_sha256": "61f7ad8f6a0827e74660e9eb1d3e9fcd29a426af29d627c3ad0607c6558f7c15"
+    }
+  ],
+  "production_showers_started": false,
+  "small_shower_validation": {
+    "date_utc": "2026-10-25T07:43:19.938710+00:00",
+    "directory": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2",
+    "source_fixture": "/tmp/singletop_matched_runners_5amp22yz/S_GLB_Q2",
+    "purpose": "software-only shower check using existing 20-event fixture; no integration or production changes",
+    "analysis_convention": "existing driver analyses N-1 accepted events per worker; expected inclusive sums exclude each chunk final event and divide by 20",
+    "template_sha256": "86e35c074d39a1fa279ede4de61a61e8daa0b41fe6d6a716be92d94a1f9d38ea",
+    "cases": {
+      "serial": {
+        "command": "./bin/shower S_GLB_Q2 -f",
+        "nsplit_jobs": 1,
+        "workers": [
+          {
+            "worker": 1,
+            "seed": 840103,
+            "tried": 20,
+            "selected": 20,
+            "accepted": 20,
+            "analysed": 19,
+            "log": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2/MCatNLO/RUN_PYTHIA8_1/mcatnlo_run.log"
+          }
+        ],
+        "physical_histograms": 75,
+        "inclusive_scale_weights": 9,
+        "retained_weight_columns": 29,
+        "central": 126.6103,
+        "expected_central": 126.610302,
+        "scale_and_tag_weight_checks": [
+          {
+            "column": "('scale_adv', -1, 1.0, 1.0)",
+            "observed": 126.6085,
+            "expected_lhe_sum": 126.6085
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 1.0)",
+            "observed": 123.5475,
+            "expected_lhe_sum": 123.54750000000001
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 1.0)",
+            "observed": 130.322,
+            "expected_lhe_sum": 130.322
+          },
+          {
+            "column": "('scale_adv', -1, 1.0, 2.0)",
+            "observed": 129.88,
+            "expected_lhe_sum": 129.88
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 2.0)",
+            "observed": 127.3765,
+            "expected_lhe_sum": 127.3765
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 2.0)",
+            "observed": 132.899,
+            "expected_lhe_sum": 132.899
+          },
+          {
+            "column": "('scale_adv', -1, 1.0, 0.5)",
+            "observed": 125.3505,
+            "expected_lhe_sum": 125.35049999999998
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 0.5)",
+            "observed": 121.3435,
+            "expected_lhe_sum": 121.34349999999999
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 0.5)",
+            "observed": 130.229,
+            "expected_lhe_sum": 130.22899999999998
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.20000E+01",
+            "observed": 99.95377,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.20000E+01",
+            "observed": 99.95377,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.20000E+01",
+            "observed": 99.95377,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.50000E+00",
+            "observed": 79.54317,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.50000E+00",
+            "observed": 79.54317,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.50000E+00",
+            "observed": 79.54317,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.10000E+01",
+            "observed": 35.72285,
+            "expected_lhe_sum": 35.72285
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.10000E+01",
+            "observed": 32.6605,
+            "expected_lhe_sum": 32.6605
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.10000E+01",
+            "observed": 39.4348,
+            "expected_lhe_sum": 39.434799999999996
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.20000E+01",
+            "observed": 29.9279,
+            "expected_lhe_sum": 29.927899999999987
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.20000E+01",
+            "observed": 27.4227,
+            "expected_lhe_sum": 27.4227
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.20000E+01",
+            "observed": 32.9446,
+            "expected_lhe_sum": 32.9446
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.50000E+00",
+            "observed": 45.8064,
+            "expected_lhe_sum": 45.806400000000004
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.50000E+00",
+            "observed": 41.8003,
+            "expected_lhe_sum": 41.80030000000001
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.50000E+00",
+            "observed": 50.68665,
+            "expected_lhe_sum": 50.68665
+          }
+        ],
+        "merged_histograms": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2/Events/S_GLB_Q2/plot_PYTHIA8_1_0.HwU",
+        "pdf_exists": true,
+        "html_exists": true
+      },
+      "parallel_2": {
+        "command": "./bin/shower S_GLB_Q2 -f",
+        "nsplit_jobs": 2,
+        "workers": [
+          {
+            "worker": 1,
+            "seed": 840103,
+            "tried": 10,
+            "selected": 10,
+            "accepted": 10,
+            "analysed": 9,
+            "log": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2/MCatNLO/RUN_PYTHIA8_2/mcatnlo_run_1.log"
+          },
+          {
+            "worker": 2,
+            "seed": 840104,
+            "tried": 10,
+            "selected": 10,
+            "accepted": 10,
+            "analysed": 9,
+            "log": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2/MCatNLO/RUN_PYTHIA8_2/mcatnlo_run_2.log"
+          }
+        ],
+        "physical_histograms": 75,
+        "inclusive_scale_weights": 9,
+        "retained_weight_columns": 29,
+        "central": 144.69746,
+        "expected_central": 144.697488,
+        "scale_and_tag_weight_checks": [
+          {
+            "column": "('scale_adv', -1, 1.0, 1.0)",
+            "observed": 144.6955,
+            "expected_lhe_sum": 144.69549999999998
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 1.0)",
+            "observed": 140.0315,
+            "expected_lhe_sum": 140.0315
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 1.0)",
+            "observed": 150.367,
+            "expected_lhe_sum": 150.36700000000002
+          },
+          {
+            "column": "('scale_adv', -1, 1.0, 2.0)",
+            "observed": 149.6505,
+            "expected_lhe_sum": 149.65050000000002
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 2.0)",
+            "observed": 145.3945,
+            "expected_lhe_sum": 145.3945
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 2.0)",
+            "observed": 154.8095,
+            "expected_lhe_sum": 154.8095
+          },
+          {
+            "column": "('scale_adv', -1, 1.0, 0.5)",
+            "observed": 141.32,
+            "expected_lhe_sum": 141.32
+          },
+          {
+            "column": "('scale_adv', -1, 2.0, 0.5)",
+            "observed": 135.8975,
+            "expected_lhe_sum": 135.89749999999998
+          },
+          {
+            "column": "('scale_adv', -1, 0.5, 0.5)",
+            "observed": 147.927,
+            "expected_lhe_sum": 147.927
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.10000E+01",
+            "observed": 90.8876,
+            "expected_lhe_sum": 90.887605
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.20000E+01",
+            "observed": 99.9538,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.20000E+01",
+            "observed": 99.9538,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.20000E+01",
+            "observed": 99.9538,
+            "expected_lhe_sum": 99.95377500000001
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.10000E+01 muF=0.50000E+00",
+            "observed": 79.54315,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.20000E+01 muF=0.50000E+00",
+            "observed": 79.54315,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            400 dyn=  -1 muR=0.50000E+00 muF=0.50000E+00",
+            "observed": 79.54315,
+            "expected_lhe_sum": 79.54317499999999
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.10000E+01",
+            "observed": 53.80985,
+            "expected_lhe_sum": 53.80985
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.10000E+01",
+            "observed": 49.1445,
+            "expected_lhe_sum": 49.1445
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.10000E+01",
+            "observed": 59.4798,
+            "expected_lhe_sum": 59.4798
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.20000E+01",
+            "observed": 49.6984,
+            "expected_lhe_sum": 49.69839999999999
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.20000E+01",
+            "observed": 45.4407,
+            "expected_lhe_sum": 45.4407
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.20000E+01",
+            "observed": 54.8551,
+            "expected_lhe_sum": 54.85510000000001
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.10000E+01 muF=0.50000E+00",
+            "observed": 61.7759,
+            "expected_lhe_sum": 61.7759
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.20000E+01 muF=0.50000E+00",
+            "observed": 56.3543,
+            "expected_lhe_sum": 56.3543
+          },
+          {
+            "column": "tag=            402 dyn=  -1 muR=0.50000E+00 muF=0.50000E+00",
+            "observed": 68.38465,
+            "expected_lhe_sum": 68.38465
+          }
+        ],
+        "merged_histograms": "/tmp/singletop_parallel_shower_b0prfz6s/S_GLB_Q2/Events/S_GLB_Q2/plot_PYTHIA8_2_0.HwU",
+        "pdf_exists": true,
+        "html_exists": true
+      }
+    }
+  },
+  "analysis_convention": "Existing MG5 driver analyses Nchunk-1 events per worker; 999936 analyses for 1000000 events/64 workers. Physical normalization convention unchanged.",
+  "validation": {
+    "unit_tests": 33,
+    "unit_test_command": "python3 -m unittest tests.unit_tests.various.test_single_top_campaign_runners tests.unit_tests.various.test_parallel_pythia_seeds tests.unit_tests.various.test_single_top_recoil_analysis",
+    "unit_tests_passed": true,
+    "all_22_prepared_cards_and_manifests_rechecked": true,
+    "master_prepare_only_passed": true,
+    "interrupted_C_GLB_not_started_or_moved": true
+  }
+}

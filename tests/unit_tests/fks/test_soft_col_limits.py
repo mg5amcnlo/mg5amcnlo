@@ -32,6 +32,8 @@ class TestSoftColLimits(unittest.TestCase):
             "      parameter (amp_split_size=3)\n"
             "      double precision amp_split(amp_split_size)\n"
             "      common /test_amp_split/amp_split\n")
+        (cls.work / "nFKSconfigs.inc").write_text(
+            "      integer fks_integrated\n      parameter(fks_integrated=6)\n")
         (cls.work / "mint_module.f90").write_text(
             "module mint_module\n"
             "  integer :: ndim=5, iconfig=1\n"
@@ -40,7 +42,7 @@ class TestSoftColLimits(unittest.TestCase):
                     for name in ("checkres", "xprintout")]
         routines += [fortran_routine(TEMPLATE / "test_soft_col_limits.f", name)
                      for name in ("compute_towards_limit", "compute_in_the_limit",
-                                  "check_limits")]
+                                  "check_limits", "read_input_file")]
         (cls.work / "limits.f").write_text("\n".join(routines))
         cls.executable = cls.work / "check_limits"
         command = [shutil.which("gfortran"), "-O2", "-std=legacy",
@@ -76,3 +78,22 @@ class TestSoftColLimits(unittest.TestCase):
 
     def test_fixed_order_normalization(self):
         self.check_limits("fixed_order")
+
+    def diagnostic_input(self, xi, y):
+        return subprocess.run([str(self.executable), "read_input"], cwd=self.work,
+                              input=f"1\n1 -0.1\n-1 -0.1\n{xi} {y}\n20 20\n0\n",
+                              text=True, capture_output=True)
+
+    def test_fixed_soft_collinear_overlap_input(self):
+        result = self.diagnostic_input("0.0001", "0.9999")
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn("PASS read_input", result.stdout)
+
+    def test_invalid_fixed_input(self):
+        for xi, y, message in (("0", "0.5", "Fixed xi"),
+                               ("0.5", "1", "Fixed y"),
+                               ("NaN", "0.5", "Fixed xi")):
+            with self.subTest(xi=xi, y=y):
+                result = self.diagnostic_input(xi, y)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(message, result.stdout)

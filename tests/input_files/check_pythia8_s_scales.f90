@@ -11,6 +11,8 @@ program check_pythia8_s_scales
   use process_module
   use scale_module
   use weight_lines
+  use FKSParams, only: FKSPythiaLocalRecoil
+  use mc_counterterms, only: local_w,local_q2
   implicit none
   character(len=32) :: mode
   double precision :: p(0:3,4),saved(4,4),saved_hard,q,expected,observed,ff_cap,fi_cap
@@ -47,6 +49,28 @@ program check_pythia8_s_scales
   p(:,2)=[500d0,0d0,0d0,-500d0]
   p(:,3)=[500d0,400d0,0d0,300d0]
   p(:,4)=[500d0,-400d0,0d0,-300d0]
+  if(trim(mode).eq.'local')then
+    FKSPythiaLocalRecoil=1
+    call compute_shower_scale_nbody(p,2,0d0)
+    call close(shower_scale_nbody(1,3),550d0,'local incoming end starts at SCALUP')
+    call close(shower_scale_nbody(3,1),550d0,'local final end starts at SCALUP')
+    call close(shower_scale_nbody(2,4),550d0,'second local line starts at SCALUP')
+    call require(shower_scale_nbody(3,4).eq.-1d0,'absent local connection')
+    fksfather=1
+    local_w=.2d0
+    local_q2=800000d0
+    expected=compute_damping_weight(3,0.3d0,0.2d0)
+    nabove=0
+    do i=1,1000
+      random_value=(dble(i)-.5d0)/1000d0
+      call compute_shower_scale_nbody(p,2,0d0)
+      if(shower_scale_nbody(3,1).gt.400d0)nabove=nabove+1
+    enddo
+    observed=dble(nabove)/1000d0
+    call require(abs(observed-expected).le.5d-4,'local scale distribution matches subtraction')
+    write(*,*)'PASS local'
+    stop
+  endif
   call compute_shower_scale_nbody(p,1,mc_shower_scale_mass())
   call close(shower_scale_hard,550d0,'damped hard scale')
   call close(shower_scale_nbody(1,2),550d0,'ISR uses SCALUP')

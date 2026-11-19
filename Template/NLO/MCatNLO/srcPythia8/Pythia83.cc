@@ -8,6 +8,7 @@
 #include "HepMC/IO_BaseClass.h"
 #include "HepMC/IO_HEPEVT.h"
 #include "HepMC/HEPEVT_Wrapper.h"
+#include "HEPEVTSize.h"
 #include "fstream"
 #include "LHEFRead.h"
 
@@ -35,7 +36,10 @@ int main() {
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
-  pythia.readFile(inputname.c_str());
+  if (!pythia.readFile(inputname.c_str())) {
+    std::cerr << "Error: invalid or unsupported Pythia settings" << std::endl;
+    return 1;
+  }
 
   //Create UserHooks pointer for the FxFX matching. Stop if it failed. Pass pointer to Pythia.
   CombineMatchingInput combined;

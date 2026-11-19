@@ -1,0 +1,121 @@
+{
+  "inputs": [
+    "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_GLB/Events/C_GLB/plot_PYTHIA8_1_0.HwU",
+    "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_LOC/Events/C_LOC/plot_PYTHIA8_1_0.HwU",
+    "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_Q/Events/C_Q/plot_PYTHIA8_1_0.HwU",
+    "/export/slow1/rikkert/SingleTopLocal/central_runs_fixed/C_QT/Events/C_QT/plot_PYTHIA8_1_0.HwU",
+    "/export/slow1/rikkert/SingleTopLocal/pp_tj_powheg/Events/run_01/plot_PYTHIA8_1_0.HwU"
+  ],
+  "rates_pb": {
+    "ALL / total rate [pb]": {
+      "default": {
+        "value": 131.82475,
+        "stat_error": 0.35638725
+      },
+      "local": {
+        "value": 132.60314,
+        "stat_error": 0.28213725
+      },
+      "local_patch": {
+        "value": 132.41921,
+        "stat_error": 0.24141375
+      },
+      "local_2patch": {
+        "value": 132.46573,
+        "stat_error": 0.219033
+      },
+      "powheg": {
+        "value": 131.98934,
+        "stat_error": 0.132651
+      }
+    },
+    "TAG / fiducial rate [pb]": {
+      "default": {
+        "value": 101.69802,
+        "stat_error": 0.30133653
+      },
+      "local": {
+        "value": 99.913945,
+        "stat_error": 0.22831045
+      },
+      "local_patch": {
+        "value": 100.15902,
+        "stat_error": 0.19643999
+      },
+      "local_2patch": {
+        "value": 100.18712,
+        "stat_error": 0.17669778
+      },
+      "powheg": {
+        "value": 101.26127,
+        "stat_error": 0.11604681
+      }
+    },
+    "GAP / fiducial rate [pb]": {
+      "default": {
+        "value": 18.793617,
+        "stat_error": 0.13433443
+      },
+      "local": {
+        "value": 17.949022,
+        "stat_error": 0.10109032
+      },
+      "local_patch": {
+        "value": 18.077159,
+        "stat_error": 0.087817713
+      },
+      "local_2patch": {
+        "value": 18.042979,
+        "stat_error": 0.079720014
+      },
+      "powheg": {
+        "value": 17.596553,
+        "stat_error": 0.048389987
+      }
+    },
+    "TAG / at least two jets rate [pb]": {
+      "default": {
+        "value": 52.604449,
+        "stat_error": 0.2221242
+      },
+      "local": {
+        "value": 48.03739,
+        "stat_error": 0.1462
+      },
+      "local_patch": {
+        "value": 47.666744,
+        "stat_error": 0.12403756
+      },
+      "local_2patch": {
+        "value": 45.886681,
+        "stat_error": 0.11304584
+      },
+      "powheg": {
+        "value": 50.569878,
+        "stat_error": 0.081999029
+      }
+    },
+    "GAP / at least two jets rate [pb]": {
+      "default": {
+        "value": 9.0674962,
+        "stat_error": 0.09931701
+      },
+      "local": {
+        "value": 7.0003329,
+        "stat_error": 0.056794172
+      },
+      "local_patch": {
+        "value": 6.8496108,
+        "stat_error": 0.048387999
+      },
+      "local_2patch": {
+        "value": 6.5444759,
+        "stat_error": 0.0443933
+      },
+      "powheg": {
+        "value": 7.5656171,
+        "stat_error": 0.031720513
+      }
+    }
+  }
+}

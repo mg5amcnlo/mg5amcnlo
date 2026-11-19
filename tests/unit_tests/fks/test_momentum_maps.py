@@ -48,7 +48,7 @@ def fortran_routine(path, name):
 
 
 FKS_MAIN_ROUTINES = (
-    "generate_native_momenta", "invert_fks_radiation",
+    "generate_native_momenta", "invert_fks_radiation", "boost_born_to_cms",
     "generate_fks_radiation", "generate_fks_radiation_momenta",
     "reject_fks_phase_space", "restore_fks_phase_space",
     "record_fks_phase_space", "capture_fks_phase_space",
@@ -73,7 +73,8 @@ def fks_test_module(names=FKS_MAIN_ROUTINES, template=TEMPLATE):
 
 
 MC_KINEMATICS_ROUTINES = (
-    "prepare_mc_kinematics", "fill_father_and_ileg", "fill_ileg",
+    "prepare_mc_kinematics", "prepare_pythia_local_kinematics",
+    "fill_father_and_ileg", "fill_ileg",
     "get_momenta_emitter_recoiler", "fill_invariants_ileg1",
     "fill_invariants_ileg2", "fill_invariants_ileg3", "fill_invariants_ileg4",
     "check_invariants_ileg12", "check_invariants_ileg3", "check_invariants_ileg4",

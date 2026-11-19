@@ -71,9 +71,18 @@ contains
   end function scalar_S_scales
 
   subroutine native_S_scales(p,connected)
+    use FKSParams, only: FKSPythiaLocalRecoil
     double precision, intent(in) :: p(0:3,next_n)
     logical, intent(in) :: connected(next_n,next_n)
     integer :: status
+    if (FKSPythiaLocalRecoil.eq.1) then
+       ! Both ends of an IF quark line evolve in SpaceShower from SCALUP.
+       ! Its physical support is imposed by the local kinematics, without
+       ! the global TimeShower dipole ceiling used for ordinary FSR.
+       shower_scale_nbody=-1d0
+       where (connected) shower_scale_nbody=shower_scale_hard
+       return
+    endif
     if (pythia8_S_scales()) then
        call pythia8_starting_scales(next_n,p,mass_n,connected, &
             shower_scale_hard,shower_scale_nbody,status)

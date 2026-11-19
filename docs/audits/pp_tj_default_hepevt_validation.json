@@ -1,0 +1,36 @@
+{
+  "failure_event": 2866,
+  "before": {
+    "stable_tops": {
+      "pythia": 1,
+      "hepmc": 1,
+      "hepevt": 0
+    },
+    "record_entries": {
+      "pythia": 5174,
+      "hepmc": 5173,
+      "hepevt": 4000
+    }
+  },
+  "new_analysis_capacity": 100000,
+  "after": {
+    "replayed_events": 10000,
+    "top_count_mismatches": 0,
+    "event_2866_hepevt_entries": 5173,
+    "largest_hepmc_record": 5177,
+    "MG5_shower_accepted": 10000,
+    "analysis_calls": 9999,
+    "histograms": 75,
+    "pdf_pages": 37,
+    "all_histogram_values_finite": true
+  },
+  "tests": {
+    "passed": 15,
+    "new_regression": "final top beyond history entry 4000"
+  },
+  "all_four_processes_updated": true,
+  "stock_and_private_pythia_hashes_unchanged": true,
+  "production_nevents": 1000000,
+  "full_million_event_shower_rerun": false,
+  "validation_run": "pp_tj_default/Events/recoil_record_check"
+}

@@ -7,6 +7,7 @@
 #include "HepMC/IO_BaseClass.h"
 #include "HepMC/IO_HEPEVT.h"
 #include "HepMC/HEPEVT_Wrapper.h"
+#include "HEPEVTSize.h"
 #include "fstream"
 #include "LHEFRead.h"
 #include "../examples/CombineMatchingInput.h"

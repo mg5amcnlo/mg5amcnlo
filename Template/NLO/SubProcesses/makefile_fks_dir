@@ -212,7 +212,8 @@ add_write_info.o analysis_lhe.o BinothLHA.o BinothLHA_user.o \
     symmetry_fks_v3.o test_soft_col_limits.o veto_xsec.o write_event.o: fks_phase_space_data.o
 
 process_module.o : qed_shower_support.o
-scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o
+scale_module.o : process_module.o genps_fks_helpers.o mcatnlo_delta_scales.o herwig7_scales.o FKSParams.o
+resonance_histories.o : FKSParams.o fks_phase_space_data.o
 montecarlocounter.o : scale_module.o genps_fks_helpers.o process_module.o mcatnlo_delta_scales.o FKSParams.o
 montecarlocounter.o : nexternal.inc born_nhel.inc orders.inc
 montecarlocounter.o : fks_powers.inc

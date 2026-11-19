@@ -15,9 +15,99 @@ c depending on the higher-level phase-space orchestration.
      $     generate_momenta_massive_final_inverse,
      $     generate_momenta_initial,generate_momenta_initial_inverse,
      $     generate_momenta_initial_noevpr,native_fsr_angle,
-     $     use_symmetric_isr_mapping
+     $     use_symmetric_isr_mapping,
+     $     generate_momenta_pythia_initial,
+     $     invert_momenta_pythia_initial,
+     $     pythia_local_radiation_coordinates
 
       contains
+
+      subroutine pythia_local_radiation_coordinates(pborn,xborn,mborn,
+     $     i_fks,j_fks,pair,rad,mapped,jac,pass)
+c Coordinate change only: all outer FKS charts use the same soft gluon
+c direction and soft energy in the Born CM. Together with FKSExplicitSum this cancels
+c the combined dipole soft poles before unweighting S events. Native H
+c projections retain their inverse-map coordinates and unit Born measure.
+      use fks_phase_space_helpers,only: getangles,rho
+      implicit none
+      double precision pborn(0:3,nexternal-1),xborn(2),mborn(nexternal-1),rad(3),
+     $     mapped(3),jac,n(0:3),nl(0:3),rot(0:3),q(0:3),
+     $     qr(0:3),mother(0:3),mass,th,cth,sth,ph,cph,sph,
+     $     r,st,pi,norm,rootborn,coefficient,denom,fminus,
+     $     fn,xim,xibm,ximax,cffa2,cffb2,cffc2,cffdel2,ximax_used,xnorm
+      integer i_fks,j_fks,pair(2),jf
+      logical pass
+      parameter(pi=3.1415926535897932d0)
+      mapped=rad
+      jac=1d0
+      pass=.true.
+      if(rad(1).le.0d0.or.rad(1).ge.1d0.or.
+     $     rad(2).le.0d0.or.rad(2).ge.1d0)goto 900
+      r=rad(2)
+      st=2d0*r*sqrt(max(0d0,(1d0-r)*(1d0+r)))
+      n=(/1d0,st*cos(2d0*pi*rad(3)),
+     $     st*sin(2d0*pi*rad(3)),1d0-2d0*r*r/)
+      rootborn=2d0*sqrt(pborn(0,1)*pborn(0,2))
+      if(j_fks.le.2)then
+         if(j_fks.eq.2)then
+            mapped(2)=sqrt(max(0d0,(1d0-r)*(1d0+r)))
+            if(mapped(2).le.0d0)goto 900
+            jac=r/mapped(2)
+         endif
+         jf=pair(2)
+         if(jf.gt.i_fks)jf=jf-1
+         norm=rho(pborn(:,jf))
+         if(norm.le.0d0)goto 900
+         fn=mborn(jf)**2/(pborn(0,jf)+norm)+
+     $        norm*sum((pborn(1:3,jf)/norm-n(1:3))**2)/2d0
+         fminus=pborn(0,jf)-(3-2*j_fks)*pborn(3,jf)
+         if(fn.le.0d0)goto 900
+         coefficient=(1d0-xborn(j_fks))*fminus/fn
+      else
+         jf=j_fks
+         if(jf.gt.i_fks)jf=jf-1
+         q=pborn(:,jf)+(1d0/xborn(pair(1))-1d0)*
+     $        pborn(:,pair(1))
+         mass=sqrt(max(0d0,q(0)**2-sum(q(1:3)**2)))
+         if(mass.le.0d0)goto 900
+         qr(0)=q(0)
+         qr(1:3)=-q(1:3)
+         call boostm(n,qr,mass,nl)
+         call boostm(pborn(:,jf),qr,mass,mother)
+         call getangles(mother,th,cth,sth,ph,cph,sph)
+         call trp_rotate_invar(nl,rot,cth,sth,cph,sph)
+         norm=rho(rot)
+         if(rot(3).ge.0d0)then
+            mapped(2)=sqrt(sum(rot(1:2)**2)/
+     $           (2d0*norm*(norm+rot(3))))
+         else
+            mapped(2)=sqrt((norm-rot(3))/(2d0*norm))
+         endif
+         mapped(3)=modulo(atan2(rot(2),rot(1)),2d0*pi)/(2d0*pi)
+c Aberration of a massless direction: dOmega_local/dOmega_CM=1/E_local^2.
+         jac=1d0/nl(0)**2
+         if(mapped(2).le.0d0)goto 900
+         jac=jac*r/mapped(2)
+         coefficient=mass/(rootborn*nl(0))
+         if(mborn(jf).gt.0d0)then
+            call get_massive_fsr_bounds(mass**2,mass,mborn(jf),0d0,
+     $           1d0-2d0*mapped(2)**2,xim,xibm,ximax,cffa2,
+     $           cffb2,cffc2,cffdel2,ximax_used,xnorm)
+            coefficient=coefficient*xnorm**2/ximax_used
+         endif
+      endif
+c Equalise xi_global/u at u=rad(1)^2, as well as the direction. Different
+c soft energy slopes with nonidentical dipole/FKS soft partitions leave
+c a finite sum (I_dipole-I_FKS)*log(slope). A bijective coordinate change
+c v=u/[c*(1-u)+u] removes this mismatch without changing the real domain.
+      if(coefficient.le.0d0)goto 900
+      denom=coefficient*(1d0-rad(1)**2)+rad(1)**2
+      mapped(1)=rad(1)/sqrt(denom)
+      jac=jac*coefficient/(denom*sqrt(denom))
+      return
+ 900  continue
+      pass=.false.
+      end subroutine pythia_local_radiation_coordinates
 
       logical function use_symmetric_isr_mapping()
 c Run settings are not part of a saved phase-space point. Resolve them
@@ -39,6 +129,7 @@ c identically for generation, inverse projection and the lepton chart.
      &     ,pass)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks,xij_aor
       use mc_native_context, only: native_mapping
+      use FKSParams,only: pythia_local_matching
       implicit none
 c arguments
       integer icountevts,i_fks,j_fks
@@ -78,7 +169,8 @@ c parameters
       parameter (ximag=(0d0,1d0))
 c
       pass=.true.
-      if(softtest.or.colltest.or.native_mapping)then
+      if(softtest.or.colltest.or.native_mapping.or.
+     $     pythia_local_matching())then
         sstiny=0.d0
         cctiny=0.d0
       else
@@ -357,6 +449,7 @@ c Collinear limit of <ij>/[ij]. See innerpin.m.
      &     ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
       use fks_phase_space_data, only: veckn_ev,veckbarn_ev,xp0jfks
       use mc_native_context, only: active_native_mapping=>native_mapping
+      use FKSParams,only: pythia_local_matching
       implicit none
       logical native_mapping
 c arguments
@@ -405,7 +498,8 @@ c
       endif
 c
       pass=.true.
-      if(softtest.or.colltest.or.native_mapping)then
+      if(softtest.or.colltest.or.native_mapping.or.
+     $     pythia_local_matching())then
          sstiny=0.d0
          cctiny=0.d0
       else
@@ -1865,5 +1959,288 @@ c Retain separately computed 1-x for dressed leptons close to x=1.
       if(tau_born.lt.tau_lower_bound)
      &     xiimin=1d0-tau_born/tau_lower_bound
       end subroutine get_isr_radiation_bounds
+
+      subroutine generate_momenta_pythia_initial(icountevts,
+     $     i_fks,j_fks,partner,xborn,tau_born,ycm_born,shat_born,
+     $     phi,xp,x,shat,sqrtshat,tau,ycm,xbj,phat,xiimax,
+     $     xinorm,xi,y,xihat,xpswgt,xjac,pass)
+c PYTHIA IF recoil, with the physical FKS xi,y in the REAL partonic CM.
+c Sample w=1-xBorn/xReal instead of solving a quadratic at fixed xi.
+c This continuously covers both roots, including their turning point.
+c The soft counterevent is normalized in dw/w; its finite log(xi/w)
+c conversion is installed by compute_prefactors_n1body.
+      use fks_phase_space_data, only: xij_aor,
+     $     pythia_isr_coordinate,pythia_isr_soft_scale
+      use fks_phase_space_helpers, only: dot,rho
+      use mc_native_context, only: native_mapping
+      use FKSParams,only: pythia_local_matching
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer icountevts,i_fks,j_fks,partner,idir
+      double precision xborn(2),tau_born,ycm_born,shat_born,phi,
+     $     xp(0:3,nexternal),x(2),shat,sqrtshat,tau,ycm,xbj(2),
+     $     phat(0:3),xiimax,xinorm,xi,y,xihat,xpswgt,xjac,
+     $     e,w,z,lam,root,delta,f(0:3),pa(0:3),fm,fp,ft,msq,
+     $     normf,axis(3),a,b,t0,t,ratio,sintheta,stiny,ctiny,
+     $     xi_i_fks_fix,y_ij_fks_fix,pi,omy,opy,qplus,qminus,
+     $     denom,denom0,denomf,trans(2),jsmall,jlarge
+      parameter(pi=3.1415926535897932d0)
+      logical pass,softtest,colltest
+      common/sctests/softtest,colltest
+      common/cxiyfix/xi_i_fks_fix,y_ij_fks_fix
+      double precision pmass(nexternal)
+      common/to_mass/pmass
+      pass=.false.
+      if(nincoming.ne.2.or.j_fks.lt.1.or.j_fks.gt.2.or.
+     $     i_fks.le.2.or.i_fks.gt.nexternal.or.
+     $     partner.le.2.or.partner.gt.nexternal.or.
+     $     partner.eq.i_fks)goto 900
+      if(.not.all(ieee_is_finite(xp)).or.
+     $     .not.all(ieee_is_finite(xborn)).or.
+     $     .not.all(ieee_is_finite(x)).or.
+     $     .not.ieee_is_finite(shat_born).or.
+     $     .not.ieee_is_finite(phi))goto 900
+      if(any(xborn.le.0d0).or.any(xborn.ge.1d0))goto 900
+      e=sqrt(shat_born)/2d0
+      if(e.le.0d0)goto 900
+      idir=3-2*j_fks
+      f=xp(:,partner)
+      pa=xp(:,j_fks)
+c Use the model mass. E^2-|p|^2 can give a spurious mass to a nearly
+c beam-collinear light Born partner and spoil a native soft-jet inverse.
+      msq=pmass(partner)**2
+      fp=f(0)+idir*f(3)
+      fm=f(0)-idir*f(3)
+      if(fp.gt.f(0))fm=(msq+sum(f(1:2)**2))/fp
+      if(fm.le.0d0)goto 900
+      if(msq.eq.0d0)then
+         call null_recoil_components(f,idir,fp,fm,pass)
+         if(.not.pass.or.fm.le.0d0)goto 900
+         f(0)=(fp+fm)/2d0
+         f(3)=idir*(fp-fm)/2d0
+      endif
+      stiny=1d-6
+      ctiny=5d-7
+      if(softtest.or.colltest.or.native_mapping.or.
+     $     pythia_local_matching())then
+         stiny=0d0
+         ctiny=0d0
+      endif
+      if(abs(icountevts).eq.1.or.abs(icountevts).eq.2)then
+         y=dble(sign(1,icountevts))
+      elseif(colltest)then
+         y=y_ij_fks_fix
+      else
+         y=1d0-2d0*(ctiny+(1d0-ctiny)*x(2)**2)
+      endif
+      if(abs(y).gt.1d0)goto 900
+      omy=1d0-y
+      opy=1d0+y
+      if(abs(icountevts).ne.1.and.abs(icountevts).ne.2.and.
+     $     .not.colltest)then
+         omy=2d0*(ctiny+(1d0-ctiny)*x(2)**2)
+         opy=2d0*(1d0-ctiny)*(1d0-x(2))*(1d0+x(2))
+      endif
+      if(.not.colltest)xjac=xjac*4d0*x(2)*(1d0-ctiny)
+      xiimax=1d0-xborn(j_fks)
+      xinorm=xiimax
+      if(icountevts.eq.0.or.abs(icountevts).eq.2)then
+         w=0d0
+      elseif(softtest)then
+         w=xi_i_fks_fix
+      else
+         xihat=stiny+(1d0-stiny)*x(1)**2
+         w=xinorm*xihat
+      endif
+      if(.not.softtest)xjac=xjac*2d0*x(1)*(1d0-stiny)
+      if(w.lt.0d0.or.w.gt.xiimax.or.w.ge.1d0)goto 900
+      z=1d0-w
+      lam=1d0/z
+      root=sqrt(lam)
+      delta=w*lam
+      sintheta=sqrt(max(0d0,omy*opy))
+      axis=(/sintheta*cos(phi),sintheta*sin(phi),idir*y/)
+      normf=rho(f)
+      if(normf.le.0d0)goto 900
+c T0=2 f.n, evaluated without a cancellation in a final-collinear corner.
+      t0=2d0*(msq/(f(0)+normf)+
+     $     normf*sum((f(1:3)/normf-axis)**2)/2d0)
+      a=fm*(1d0+y)+2d0*e*(1d0-y)
+      ft=f(1)*cos(phi)+f(2)*sin(phi)
+      b=2d0*ft*sintheta
+      t=t0+delta*(a-b/(root+1d0))
+      phat(0)=e*(lam*opy+omy)/2d0
+      phat(1:2)=e*root*axis(1:2)
+      phat(3)=idir*e*(lam*opy-omy)/2d0
+      if(msq.eq.0d0)then
+c Complete the square in transverse light-cone components. This is
+c 2 phat.(f+delta*pa), without cancellation for a final-collinear jet.
+         qplus=e*lam*opy
+         qminus=e*omy
+         if(qminus.gt.0d0)then
+            trans=sqrt(qminus/fm)*f(1:2)-
+     $           sqrt(fm/qminus)*phat(1:2)
+            denomf=sum(trans**2)
+            denom=denomf+2d0*e*delta*qminus
+            trans=sqrt(qminus/fm)*f(1:2)-
+     $           sqrt(fm/qminus)*e*axis(1:2)
+            denom0=sum(trans**2)
+         else
+            denomf=qplus*fm
+            denom=denomf
+            denom0=2d0*e*fm
+         endif
+         t=denom/e
+         t0=denom0/e
+      endif
+      if(t.le.0d0.or.t0.le.0d0)goto 900
+      ratio=2d0*fm*lam/t
+      xi=w*ratio
+      if(xi.lt.0d0.or.xi.ge.1d0)goto 900
+      shat=shat_born*lam
+      sqrtshat=sqrt(shat)
+      tau=tau_born*lam
+      ycm=ycm_born-idir*log(z)/2d0
+      xbj=xborn
+      xbj(j_fks)=xborn(j_fks)*lam
+      xp(:,i_fks)=xi*phat
+      xp(:,partner)=f+delta*pa-xp(:,i_fks)
+      if(msq.eq.0d0)then
+c Use the positive complement of the emitted fraction. Subtracting
+c xi*qminus from fm loses the final jet's small null component and can
+c amplify an ulp into a visible laboratory energy mismatch.
+         jsmall=fm*denomf/denom
+         if(jsmall.le.0d0)goto 900
+         xp(1:2,partner)=f(1:2)-xp(1:2,i_fks)
+         jlarge=sum(xp(1:2,partner)**2)/jsmall
+         xp(0,partner)=(jlarge+jsmall)/2d0
+         xp(3,partner)=idir*(jlarge-jsmall)/2d0
+      endif
+c At the beam-collinear endpoint the final partner is exactly fixed.
+c Do not form it by subtracting the hard emitted and borrowed beams.
+      if(omy.eq.0d0.or.w.eq.0d0)xp(:,partner)=f
+      xp(:,j_fks)=lam*pa
+      if(icountevts.eq.-100)then
+         pythia_isr_coordinate=w
+         pythia_isr_soft_scale=t0/(2d0*fm)
+         xij_aor=-exp(dcmplx(0d0,2d0*idir*phi))
+      endif
+c Hadronic IF factorization gives dPhi(k)/(1-pa.k/(pa.fBorn)).
+c Transforming k to (w,y,phi) cancels the apparent turning-point pole:
+c dmuRad = sReal/(4pi)^3 * xi * (2 fm lambda^2/T) dw dy dphi.
+c A soft endpoint instead represents the coefficient of dw/w.
+      if(icountevts.eq.0.or.abs(icountevts).eq.2)then
+         xpswgt=xpswgt*shat_born/(4d0*pi)**3
+      else
+         xpswgt=xpswgt*shat/(4d0*pi)**3*lam*ratio
+      endif
+      pass=all(ieee_is_finite(xp)).and.
+     $     ieee_is_finite(xpswgt).and.xpswgt.gt.0d0
+      if(pass)return
+ 900  continue
+      pass=.false.
+      xjac=-151d0
+      end subroutine generate_momenta_pythia_initial
+
+
+      subroutine invert_momenta_pythia_initial(p,i_fks,j_fks,
+     $     partner,mass,xreal,pborn,xbar,w,pass)
+c Invariant IF projection. Use unchanged spectators for a small xBorn:
+c subtracting the emitted momentum from a large incoming vector is unstable.
+      use fks_phase_space_helpers, only: dot,rho
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
+      implicit none
+      integer i_fks,j_fks,partner,i,ib
+      double precision p(0:3,nexternal),mass,xreal,
+     $     pborn(0:3,nexternal-1),xbar,w,unchanged(0:3),
+     $     mother(0:3),denom,z,nf,ni,pfk,paf,pak,kp,km,jp,jm,
+     $     pp,pm,alpha,trans(2)
+      integer idir
+      logical pass
+      pass=.false.
+      pborn=0d0
+      xbar=0d0
+      w=0d0
+      if(nincoming.ne.2.or.j_fks.lt.1.or.j_fks.gt.2.or.
+     $     i_fks.le.2.or.i_fks.gt.nexternal.or.
+     $     partner.le.2.or.partner.gt.nexternal.or.
+     $     partner.eq.i_fks.or.mass.lt.0d0) return
+      if(.not.all(ieee_is_finite(p)).or.
+     $     xreal.le.0d0.or.xreal.gt.1d0)return
+      unchanged=p(:,3-j_fks)
+      do i=3,nexternal
+         if(i.ne.i_fks.and.i.ne.partner)
+     $        unchanged=unchanged-p(:,i)
+      enddo
+      if(mass.eq.0d0)then
+         idir=3-2*j_fks
+         call null_recoil_components(p(:,i_fks),idir,kp,km,pass)
+         if(.not.pass)return
+         call null_recoil_components(p(:,partner),idir,jp,jm,pass)
+         if(.not.pass)return
+         pass=.false.
+         pm=km+jm
+         if(km.le.0d0.or.jm.le.0d0.or.pm.le.0d0)return
+         mother(1:2)=unchanged(1:2)
+         pp=sum(mother(1:2)**2)/pm
+         mother(0)=(pp+pm)/2d0
+         mother(3)=idir*(pp-pm)/2d0
+         z=(pp-unchanged(0)-idir*unchanged(3))/
+     $        (2d0*p(0,j_fks))
+         if(z.le.0d0.or.z.gt.1d0+1d-10)return
+         z=min(1d0,z)
+         alpha=km/pm
+         trans=p(1:2,i_fks)-alpha*mother(1:2)
+         w=sum(trans**2)*pm/(2d0*p(0,j_fks)*km*jm)
+         if(w.lt.0d0.or.w.ge.1d0)return
+         xbar=xreal*z
+         ib=0
+         do i=1,nexternal
+            if(i.eq.i_fks)cycle
+            ib=ib+1
+            pborn(:,ib)=p(:,i)
+            if(i.eq.partner)pborn(:,ib)=mother
+            if(i.eq.j_fks)pborn(:,ib)=z*p(:,i)
+         enddo
+         pass=all(ieee_is_finite(pborn)).and.xbar.gt.0d0
+         return
+      endif
+c The null projection above must not pass through the massive formula:
+c its subtraction can spuriously put z above one for a soft final jet.
+      denom=2d0*dot(p(:,j_fks),unchanged)
+      if(denom.le.0d0)return
+      z=(mass**2-dot(unchanged,unchanged))/denom
+      if(z.le.0d0.or.z.gt.1d0+1d-10)return
+      z=min(1d0,z)
+c Preserve the small pair invariant also when the emitted parton is
+c hard and its massless final partner is soft and collinear to it.
+      nf=rho(p(:,partner))
+      ni=rho(p(:,i_fks))
+      if(nf.le.0d0.or.ni.le.0d0)return
+      pfk=p(0,i_fks)*(mass**2/(p(0,partner)+nf)+
+     $     nf*sum((p(1:3,partner)/nf-p(1:3,i_fks)/ni)**2)/2d0)
+      paf=p(0,j_fks)*(mass**2/(p(0,partner)+nf)+
+     $     nf*sum((p(1:3,partner)/nf-
+     $     p(1:3,j_fks)/p(0,j_fks))**2)/2d0)
+      pak=p(0,j_fks)*p(0,i_fks)*
+     $     sum((p(1:3,j_fks)/p(0,j_fks)-p(1:3,i_fks)/ni)**2)/2d0
+      w=pfk/(paf+pak)
+      if(w.lt.-1d-10.or.w.ge.1d0)return
+      w=max(0d0,w)
+      if(w.lt.1d-5)z=1d0-w
+      xbar=xreal*z
+      mother=unchanged+z*p(:,j_fks)
+      if(w.lt.1d-5)mother=p(:,partner)+p(:,i_fks)-w*p(:,j_fks)
+      ib=0
+      do i=1,nexternal
+         if(i.eq.i_fks)cycle
+         ib=ib+1
+         pborn(:,ib)=p(:,i)
+         if(i.eq.partner)pborn(:,ib)=mother
+         if(i.eq.j_fks)pborn(:,ib)=z*p(:,i)
+      enddo
+      pass=all(ieee_is_finite(pborn)).and.xbar.gt.0d0
+      end subroutine invert_momenta_pythia_initial
+
 
       end module fks_radiation_maps

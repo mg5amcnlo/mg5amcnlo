@@ -32,6 +32,8 @@ class TestMCBornCuts(unittest.TestCase):
             routines += [fortran_routine(TEMPLATE / 'cuts.f', name)
                          for name in ('identify_QCD_partons', 'passcuts_fxfx')]
             (work / 'cuts.f').write_text('\n'.join(routines))
+            (work / 'orders.inc').write_text(
+                '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
             executable = work / 'check_mc_born_cuts'
             # Use the real jet finder and cut routines. The fixture supplies
             # native clustering metadata and the particle IDs, as an exported
@@ -50,6 +52,7 @@ class TestMCBornCuts(unittest.TestCase):
                  str(TEMPLATE / 'genps_fks_helpers.f'),
                  str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
                  str(TEMPLATE / 'herwig7_scales.f90'),
+                 str(TEMPLATE / 'FKSParams.f90'),
                  str(TEMPLATE / 'scale_module.f90'),
                  str(work / 'cuts.f'),
                  str(ROOT / 'tests/input_files/check_mc_born_cuts.f90'),

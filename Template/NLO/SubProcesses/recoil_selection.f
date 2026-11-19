@@ -54,11 +54,12 @@ c Resume the card's recoil policy at the next phase-space selection.
 
       subroutine select_fks_recoil(default_members,enable)
       use fks_phase_space_data,only: resonance_momentum,resonance_mass2,resonance_recoil,
-     $     resonance_members,initial_recoil_leg
+     $     resonance_members,initial_recoil_leg,pythia_recoil_pair
 c Install the active radiation frame policy. default_members is the
 c automatic resonance subsystem, INCLUDING emitter and emission. Explicit
 c requests instead contain recoilers only and survive point generation.
-      use FKSParams, only: FKSFinalRecoil
+      use FKSParams, only: FKSFinalRecoil,FKSPythiaLocalRecoil,
+     $     get_fks_isr_mapping
       implicit none
       include 'nexternal.inc'
       include 'recoil_selection.inc'
@@ -66,7 +67,7 @@ c requests instead contain recoilers only and survive point generation.
      $     recoilers(nexternal),pass,defaults(nexternal)
       logical fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
-      integer i_fks,j_fks,beam
+      integer i_fks,j_fks,beam,mapping
       common /fks_indices/i_fks,j_fks
 
       defaults=default_members
@@ -75,6 +76,20 @@ c requests instead contain recoilers only and survive point generation.
       resonance_momentum=0d0
       resonance_mass2=0d0
       initial_recoil_leg=0
+      pythia_recoil_pair=0
+      if(FKSPythiaLocalRecoil.eq.1)then
+         mapping=get_fks_isr_mapping(nlo_ps,'PYTHIA8')
+         if(nincoming.ne.2)then
+            write(*,*) 'FKSPythiaLocalRecoil requires hadron collisions.'
+            stop 1
+         endif
+         if(fks_recoil_requested.or.any(defaults))then
+            write(*,*) 'FKSPythiaLocalRecoil conflicts with explicit or resonance recoil.'
+            stop 1
+         endif
+c Native Born metadata selects the pair in initialize_fks_recoil.
+         return
+      endif
       if(.not.enable.or.j_fks.le.nincoming)return
 
       recoilers=.false.

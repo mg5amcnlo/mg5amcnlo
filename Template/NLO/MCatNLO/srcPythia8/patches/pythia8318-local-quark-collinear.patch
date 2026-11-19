@@ -1,0 +1,40 @@
+--- a/src/SimpleSpaceShower.cc
++++ b/src/SimpleSpaceShower.cc
+@@ -1455,6 +1455,17 @@
+               - m2ColPartner * pow2(tmpRat);
+     }
+     if (pT2corr < TINYPT2) { wt = 0.; continue; }
++
++    // Optional quark IF numerator correction: x^2 + z1^2 instead of
++    // 1 + x^2, with x=z and z1=1-z*Q2/(m2ColPair-m2ColPartner).
++    // Apply inside the branching veto so the Sudakov uses this rate too.
++    // Only q -> qg with a final quark colour partner is affected.
++    if (!isGluon && iColPartner != 0 && abs(idColPartner) >= 1
++      && abs(idColPartner) <= 6 && idMother == idDaughter && idSister == 21
++      && flag("SpaceShower:IFquarkCollinearCorrection")) {
++      double z1 = 1. - z * Q2 / (m2ColPair - m2ColPartner);
++      wt *= (pow2(z) + pow2(z1)) / (1. + pow2(z));
++    }
+ 
+     // Optionally veto emissions not ordered in rapidity (= angle).
+     if (dipEndNow->nBranch > 0
+--- a/share/Pythia8/xmldoc/SpacelikeShowers.xml
++++ b/share/Pythia8/xmldoc/SpacelikeShowers.xml
+@@ -382,6 +382,17 @@
+ <flag name="SpaceShower:dipoleRecoil" default="off"> 
+ Option to switch on the dipole-recoil scheme as described above. 
+ </flag> 
++
++<flag name="SpaceShower:IFquarkCollinearCorrection" default="off">
++Experimental quark initial-final numerator correction. For q to qg with
++an outgoing quark colour partner, multiply the branching veto weight by
++(x^2+z1^2)/(1+x^2), where x=z and z1=1-z*Q2/(m2ColPair-m2ColPartner).
++This restores the massless outgoing quark collinear numerator without
++changing the incoming collinear or soft-gluon limit. Use with local recoil,
++ME corrections off, and matching counterterms for this modified rate.
++The recoil map, quark masses and other splitting channels are unchanged.
++The default off reproduces the stock shower.
++</flag>
+  
+ <h3>Weak showers</h3> 
+  

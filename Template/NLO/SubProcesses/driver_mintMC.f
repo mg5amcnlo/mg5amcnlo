@@ -122,6 +122,10 @@ c
       call setrun                !Sets up run parameters
       call configure_fxfx_sudakov(ickkw,nlo_ps,shower_mc,.true.)
       call print_fks_isr_mapping(nlo_ps,shower_mc)
+      if(FKSPythiaLocalRecoil.eq.1.and.mcatnlo_delta)then
+         write(*,*) 'Local recoil matching does not support MC@NLO-Delta'
+         stop 1
+      endif
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
       call printout              !Prints out a summary of paramaters
@@ -1819,7 +1823,7 @@ c Sum the contributions that can be summed before taking the ABS value
       subroutine setup_proc_map(sum,proc_map,ini_fin_fks)
 c Determines the proc_map that sets which FKS configuration can be
 c summed explicitly and which by MC-ing.
-      use FKSParams, only: FKSExplicitSum
+      use FKSParams, only: FKSExplicitSum,FKSPythiaLocalRecoil
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1844,6 +1848,10 @@ c summed explicitly and which by MC-ing.
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       logical need_color_links, need_charge_links
       common /c_need_links/need_color_links, need_charge_links
+      if(FKSPythiaLocalRecoil.eq.1.and.ini_fin_fks.ne.0)then
+         write(*,*) 'Local matching requires unsplit initial/final FKS channels'
+         stop 1
+      endif
       sum=3
       if (ickkw.eq.4) then
          if (FKSExplicitSum) then

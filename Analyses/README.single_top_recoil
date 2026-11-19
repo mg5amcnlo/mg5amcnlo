@@ -1,0 +1,194 @@
+The old MC@NLO samples under pp_tj_*, g_runs/ and scale_runs/ are superseded
+by the 25 October 2026 normalization fix. Regenerate events and showers;
+reshowering their existing LHE files does not repair their weights. From
+the repository root, the complete rerun command is:
+
+    python3 paper/run_all.py --cores 64
+
+It prepares fresh central_runs_fixed/C_GLB, C_LOC, C_Q and C_QT exports,
+plus g_runs_fixed/ and scale_runs_fixed/, then makes the comparison plots.
+The completed fixed-order and POWHEG samples are reused. --dry-run lists
+all 22 affected samples; --prepare-only exports without integration.
+--cores controls integration and parallel shower workers (default 64).
+Each million-event shower splits into 64 jobs with distinct seeds and
+combines their histograms and scale weights into the usual output files.
+
+Within a fresh central process, the usual MG5_aMC shower command still works.
+For example, from central_runs_fixed/C_LOC/ after generating C_LOC:
+
+    ./bin/shower C_LOC -f
+
+Cards/shower_card.dat requests all one million events, in 64 shower jobs.
+Campaign completion records also protect the phase-space geometry and FKS
+sector-function sources; exports predating the numerical repairs must be
+regenerated before their results can be treated as validated predictions.
+The common analysis is installed in each process's MCatNLO/PY8Analyzer/.
+Its master copy is Template/NLO/MCatNLO/PY8Analyzer/py8an_HwU_pp_tj_recoil.f.
+After editing that copy, copy it into the four processes before showering again.
+This analysis uses include/HEPMC_ST_RECOIL.INC with 100000 history entries;
+PYABEG configures the same capacity in HepMC through include/HEPEVTSize.h
+in the Pythia analysis driver. The stock 4000-entry record can silently
+truncate long global-recoil histories and lose final particles, including
+the stable top. This interface fix is installed in all four processes and
+the export template. It does not change shower physics or event selection.
+
+Outputs appear in Events/<run_id>/plot_PYTHIA8_1_0.{HwU,pdf,html,py,gnuplot}.
+Subsequent showers increment the first index. The standard MG5 plotting
+machinery produces PDF and HTML automatically; Matplotlib is available here.
+There are 75 histograms, grouped into 37 pages in the standard PDF because
+distributions with the same name overlay the ALL, TAG and GAP selections.
+The HwU files retain bin-integrated cross sections and statistical errors.
+
+To compare the two samples after showering, run from the repository root:
+
+    python3 Analyses/compare_pp_tj_recoil.py
+    python3 Analyses/compare_pp_tj_recoil.py --shape
+
+By default this reads the fresh C_GLB and C_LOC exports. C_Q and C_QT
+are selected by --patched and --two-patches; --central-dir PATH changes
+their common parent. No old pp_tj_* fallback is used. The run names are
+inferred per process, so C_* samples can be compared with POWHEG run_01.
+Superseded process/HwU paths and symlinks to them are rejected. It creates
+Analyses/pp_tj_recoil.pdf, the corresponding cross-section table in JSON,
+and, with --shape, pp_tj_recoil_shapes.pdf and its JSON table. Each PDF
+separates the selections and overlays local and default recoil with a
+local/default ratio. The shape option normalizes over the displayed range;
+it does not normalize the one-bin cross sections or gap efficiencies.
+Explicit HwU paths, --run and --out are also accepted. For example:
+
+    python3 Analyses/compare_pp_tj_recoil.py --run recoil_check --out /tmp/tj_check
+
+There is also pp_tj_local_patch, a fresh process with the same production
+and analysis settings and a private, opt-in Pythia quark IF numerator patch.
+Its ./bin/generate_events -f generates events and showers them automatically.
+The special outgoing-collinear G correction is replaced by the patched
+kernel in both shower and matching; the ordinary soft G and its C-SC overlap
+remain. See pp_tj_local_patch/README.local_patch and
+docs/audits/pythia8318_local_collinear_patch.txt. After generating all three:
+
+    python3 Analyses/compare_pp_tj_recoil.py --patched
+    python3 Analyses/compare_pp_tj_recoil.py --patched --shape
+
+The patch curve is green. --patched also accepts an explicit HwU file.
+
+pp_tj_local_2patch adds the corresponding quark-IF massive-top soft patch
+in a second private build. Its ./bin/generate_events -f uses the same cards
+and analysis with both kernel patches in the shower and counterterms;
+the local G replacements are then disabled. The extra factor follows the
+current incoming-quark/top connection and leaves Pythia's final-final
+mass treatment unchanged. See pp_tj_local_2patch/README.local_2patch.
+After generating all four samples, overlay them with:
+
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches --shape
+
+The two-patch curve is purple. --two-patches also accepts an explicit
+HwU file, and implies inclusion of the one-patch sample.
+
+pp_tj_powheg supplies the independent five-flavour stable-top POWHEG
+comparison with stock Pythia local recoil and the same analysis. From
+the repository root, ./pp_tj_powheg/bin/generate_events runs the complete
+generation and shower chain with 64 workers. See its README.powheg for
+inputs and the standard POWHEG veto prescription. To overlay its output:
+
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches --powheg
+    python3 Analyses/compare_pp_tj_recoil.py --two-patches --powheg --shape
+
+The POWHEG curve is ochre. --powheg also accepts an explicit HwU file;
+it can be used without --two-patches to compare just the two original
+MC@NLO samples and POWHEG. All ratios use the default-recoil MC@NLO
+sample as denominator.
+
+The analysis clusters final-state quarks (including b) and gluons with
+anti-kt, R=0.4, using FastJet or the bundled fjcore fallback. It excludes
+the stable top. Jets must have pT>20 GeV and |y|<4.5. j1 and j2 mean the
+leading and second accepted jets ordered by pT. No flavour or ancestry
+assignment is made: j1 is a kinematic proxy for the spectator jet and can
+instead be a hard radiated jet. No massless-parton flavour tag is required.
+
+ALL has no jet requirement. It contains the total cross section, inclusive
+top pT and y, |y_t|, a wider top-pT distribution, jet multiplicity, jet HT,
+pT_top+HT, and leading-jet pT when a jet exists. TAG requires pT_j1>30 GeV.
+GAP additionally requires |y_t-y_j1|>3 and m(t,j1)>500 GeV. These cuts are
+analysis selections, not generation cuts. Both TAG and GAP contain the
+standard single-top distributions: top and leading-jet pT and rapidity,
+leading-jet eta and |eta|, top-jet invariant mass and pair rapidity,
+rapidity separation, azimuthal separation and jet multiplicity. The last
+multiplicity bins include Njets>=8 or Ngap>=5, respectively.
+
+Recoil probes include pT(t+j1), also with fine bins below 50 GeV, pT(t+j1+j2),
+j2 pT/y/eta and its position relative to the top and leading jet. Define
+
+    dy = |y_j1-y_t|, y_mid = (y_t+y_j1)/2, s = sign(y_j1-y_t),
+    zstar = s*(y_j2-y_mid)/dy.
+
+zstar is filled only for dy>1; the top is at -1/2 and j1 at +1/2.
+A second zstar distribution requires pT_j2>30 GeV. The unnormalized
+y_j2-y_mid and oriented separations s*(y_j2-y_j1), s*(y_j2-y_t) are also
+included. The signed distance to the nearer edge of the top-j1 gap is
+positive inside the gap and negative outside it. Jet rapidity is true
+rapidity; eta is pseudorapidity computed from the three-momentum.
+
+Extra jets mean j2, j3, ... . The analysis measures their multiplicity and
+scalar pT sum inside the top-j1 rapidity interval, their hardest pT there,
+and their scalar pT sum in |y-y_mid|<0.5. Zero activity contributes at zero.
+The two gap-veto scans are cumulative cross sections: one is the selected
+reference rate at every Q0, and the other requires no extra gap jet above
+Q0. Their ratio is the gap-veto efficiency, scanned at Q0=21,23,...,99 GeV.
+The comparison script forms this ratio with the subset covariance, rather
+than treating the numerator and denominator as independent. It preserves
+signed weights and their sum of squares. Ratios between recoil samples
+assume independent samples and mask nonpositive default denominators.
+
+The VBF analogy concerns the first additional jet (j2 here, j3 in VBF).
+Its centrality and gap activity are useful coherence/recoil probes, but
+the coloured massive top makes this a different system; a large VBF-like
+effect is not assumed. Useful references are Jaeger et al., arXiv:2003.12435
+(https://arxiv.org/abs/2003.12435) and Hoeche et al., arXiv:2106.10987
+(https://arxiv.org/abs/2106.10987). Top-plus-one-jet observables have the
+usual NLO+PS accuracy. Additional-jet distributions have lower fixed-order
+accuracy, and the recoil after adding t+j1+j2 probes further shower radiation
+(also radiation outside the accepted jets). There is no jet merging.
+
+The two shower cards share the same perturbative settings. Hadronisation,
+the hadron-level stage, MPI, beam remnants, primordial kT, colour
+reconnection, QED/weak showers, top decays and MECs are disabled. QCD ISR
+and FSR remain on. Without beam remnants the final state is an open partonic
+subsystem; Check:event=off suppresses the inapplicable full-proton charge
+and momentum check. The analysis requires one stable top and rejects final
+hadrons, photons and leptons. Light/charm/bottom shower masses are unchanged.
+
+Default: SpaceShower:dipoleRecoil=off, TimeShower:globalRecoil=on (the usual
+MG5 MC@NLO first-emission settings are retained). Local: dipoleRecoil=on,
+globalRecoil=off, as required for the locally matched event file. Both
+disable extra smooth ISR screening and hard-emission damping, while retaining
+the ordinary shower cutoff. Shower alpha_s and its running are the standard
+MG5 values, 0.118 and one loop, with CMW rescaling off. Both use Pythia's
+internal NNPDF2.3 NLO QCD+QED PDF (pSet=15), corresponding to the hard-event
+nn23nlo set; this does not require LHAPDF. The LHE maps/counterterms differ,
+so this compares the two matched predictions, rather than toggling the
+shower recoil on a single event sample.
+
+Cards/amcatnlo_configuration.txt points to the existing unmodified stock
+Pythia 8.318 build at /tmp/singletop_local_matching_pythia. Both cards link
+HepMC2 from /export/slow1/rikkert/HepMC. If those installations move, update
+pythia8_path, the card's DM_2 absolute XML/PDF-data path, and the HepMC include
+and library paths. DM_1 preserves Pythia's case-sensitive lower-case "force"
+keyword, which would be upper-cased inside MG5's pythia8_options dictionary.
+No Pythia source has been patched.
+
+Validation uses separate Events/recoil_check/ samples with 1000 input events
+each, leaving Events/run_01/events.lhe.gz untouched. Both showers accept all
+1000 events and produce PDF/HTML/HwU files. The existing MG5 driver invokes
+the analysis on 999 of them because its event-limit check precedes analysis
+of the last event; the effect is one event in a million for the full runs.
+These short checks validate the setup, not the physical size of recoil
+effects. Stock Pythia reports nonfatal local-shower threshold/dipole warnings.
+
+Physics checks with the real HwU library and fjcore run with:
+
+    python3 -m unittest tests.unit_tests.various.test_single_top_recoil_analysis -v
+
+They check signed and variation weights, normalization including events
+failing the jet cuts, collinear recombination, beam-reversal invariance of
+the oriented rapidity coordinate, and the gap-veto threshold selections.

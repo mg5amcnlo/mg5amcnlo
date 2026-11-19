@@ -46,9 +46,18 @@ program check_soft_col_limits
   real(8) :: amp(namp,nstep), weights(nstep), xp(0:3,nexternal+1,nstep), &
        limit(namp), wlimit, plimit(0:3,nexternal+1), x(99), values(nstep), &
        target, scales(4)
-  integer :: i, j, iflag, iret
+  integer :: i, j, iflag, iret, ilim, nsoft, ncoll, first_fks, last_fks
+  real(8) :: xi_input, y_input
 
   call get_command_argument(1,name)
+  if (trim(name).eq.'read_input') then
+    call read_input_file(ilim,nsoft,ncoll,first_fks,last_fks,xi_input,y_input)
+    if (ilim.ne.1.or.nsoft.ne.20.or.ncoll.ne.20.or.first_fks.ne.1.or.last_fks.ne.6) &
+         error stop 'invalid diagnostic test range'
+    if (xi_input.ne.1d-4.or.y_input.ne.0.9999d0) error stop 'fixed overlap inputs changed'
+    write(*,*)'PASS read_input'
+    stop
+  endif
   x=0.5d0
   xp=0d0
   plimit=0d0

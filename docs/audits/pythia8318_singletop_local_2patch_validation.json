@@ -1,0 +1,182 @@
+{
+  "stock_unchanged": true,
+  "time_shower_unchanged": true,
+  "patch_flags_default": "off",
+  "bounded_scope_checks": 30,
+  "results": [
+    {
+      "beam_swap": 0,
+      "antiquark": 0,
+      "stock_default_points_bitwise_equal": 25,
+      "single_patch_points_bitwise_equal": 25,
+      "two_patch_density_points": 25,
+      "full_history": {
+        "stock": {
+          "accepted": 298,
+          "failed": 2,
+          "first_top_IF": 38,
+          "later_top_IF": 80,
+          "gluon_top_IF": 328,
+          "FF_gluon_top": 260,
+          "violations": 0
+        },
+        "collinear": {
+          "accepted": 295,
+          "failed": 5,
+          "first_top_IF": 34,
+          "later_top_IF": 76,
+          "gluon_top_IF": 397,
+          "FF_gluon_top": 236,
+          "violations": 0
+        },
+        "two_patches": {
+          "accepted": 295,
+          "failed": 5,
+          "first_top_IF": 38,
+          "later_top_IF": 66,
+          "gluon_top_IF": 407,
+          "FF_gluon_top": 229,
+          "violations": 0
+        }
+      }
+    },
+    {
+      "beam_swap": 0,
+      "antiquark": 1,
+      "stock_default_points_bitwise_equal": 25,
+      "single_patch_points_bitwise_equal": 25,
+      "two_patch_density_points": 25,
+      "full_history": {
+        "stock": {
+          "accepted": 293,
+          "failed": 7,
+          "first_top_IF": 57,
+          "later_top_IF": 71,
+          "gluon_top_IF": 364,
+          "FF_gluon_top": 228,
+          "violations": 0
+        },
+        "collinear": {
+          "accepted": 290,
+          "failed": 10,
+          "first_top_IF": 70,
+          "later_top_IF": 68,
+          "gluon_top_IF": 312,
+          "FF_gluon_top": 247,
+          "violations": 0
+        },
+        "two_patches": {
+          "accepted": 297,
+          "failed": 3,
+          "first_top_IF": 47,
+          "later_top_IF": 55,
+          "gluon_top_IF": 393,
+          "FF_gluon_top": 257,
+          "violations": 0
+        }
+      }
+    },
+    {
+      "beam_swap": 1,
+      "antiquark": 0,
+      "stock_default_points_bitwise_equal": 25,
+      "single_patch_points_bitwise_equal": 25,
+      "two_patch_density_points": 25,
+      "full_history": {
+        "stock": {
+          "accepted": 297,
+          "failed": 3,
+          "first_top_IF": 74,
+          "later_top_IF": 99,
+          "gluon_top_IF": 254,
+          "FF_gluon_top": 357,
+          "violations": 0
+        },
+        "collinear": {
+          "accepted": 294,
+          "failed": 6,
+          "first_top_IF": 67,
+          "later_top_IF": 80,
+          "gluon_top_IF": 295,
+          "FF_gluon_top": 360,
+          "violations": 0
+        },
+        "two_patches": {
+          "accepted": 297,
+          "failed": 3,
+          "first_top_IF": 60,
+          "later_top_IF": 81,
+          "gluon_top_IF": 319,
+          "FF_gluon_top": 375,
+          "violations": 0
+        }
+      }
+    },
+    {
+      "beam_swap": 1,
+      "antiquark": 1,
+      "stock_default_points_bitwise_equal": 25,
+      "single_patch_points_bitwise_equal": 25,
+      "two_patch_density_points": 25,
+      "full_history": {
+        "stock": {
+          "accepted": 291,
+          "failed": 9,
+          "first_top_IF": 97,
+          "later_top_IF": 89,
+          "gluon_top_IF": 234,
+          "FF_gluon_top": 354,
+          "violations": 0
+        },
+        "collinear": {
+          "accepted": 288,
+          "failed": 12,
+          "first_top_IF": 71,
+          "later_top_IF": 81,
+          "gluon_top_IF": 283,
+          "FF_gluon_top": 346,
+          "violations": 0
+        },
+        "two_patches": {
+          "accepted": 289,
+          "failed": 11,
+          "first_top_IF": 75,
+          "later_top_IF": 64,
+          "gluon_top_IF": 338,
+          "FF_gluon_top": 377,
+          "violations": 0
+        }
+      }
+    }
+  ],
+  "production_validation": {
+    "run": "pp_tj_local_2patch/Events/recoil_2patch_check",
+    "generated_events": 1000,
+    "shower_accepted": 1000,
+    "analysis_events": 999,
+    "histograms": 75,
+    "ME_MC_limit_checks": "passed in all four subprocesses",
+    "pole_checks": "20/20 in each of four subprocesses",
+    "production_card_restored": 1000000,
+    "production_momentum_check": false
+  },
+  "unit_tests": {
+    "focused_kernel_launcher": 31,
+    "map_matching_regressions": 46,
+    "result": "passed"
+  },
+  "full_history_event_check_note": "Event-check rejections occur in stock and patched showers and are recorded as failures; zero invariant-bound/top-mass violations does not imply all full-event checks pass.",
+  "longer_single_fixture": {
+    "attempted_per_mode": 1000,
+    "stock_failed": 10,
+    "collinear_failed": 19,
+    "two_patches_failed": 20,
+    "soft_factor_or_top_mass_violations": 0
+  },
+  "four_sample_overlay": {
+    "samples": 4,
+    "histograms": 75,
+    "pdf_pages": 73,
+    "result": "passed"
+  }
+}

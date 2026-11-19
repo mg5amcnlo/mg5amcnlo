@@ -1,0 +1,335 @@
+Review of the manuscript TODOs and proposed numerical runs
+=========================================================
+25 October 2026 correction: all existing MC@NLO central, G/P and S samples
+require regeneration after the coloured core mother initialization fix
+in cluster.f. Their stored events/plots have not been rescaled or replaced.
+The remaining S campaign was stopped. Reuse the definitions below with
+fresh output directories (central_runs_fixed, g_runs_fixed and scale_runs_fixed).
+Run `python3 paper/run_all.py --cores 64` from the repository root to redo
+all 22 affected MC@NLO samples and regenerate the comparison plots/tables.
+Use --dry-run to list them, or --prepare-only to configure fresh exports
+without starting integrations. Central rows C_GLB/C_LOC/C_Q/C_QT are now
+explicit in proposed_runs.csv, with fixed generation/shower seeds.
+The twelve F integrations and
+the POWHEG sample do not require repetition for this fix. See
+docs/audits/singletop_normalization_mcexplicit.json for closure evidence.
+
+2026-10-24. proposed_runs.csv records all campaign definitions, including
+seeds and the requested POWHEG comparison. The twelve fixed-order runs
+(F) are complete and their results have been incorporated in the paper.
+The remaining sections retain the definitions of the matched campaigns.
+
+The quark-mass TODO has been removed at the author's request. All runs
+below keep the production quark masses and threshold treatment unchanged.
+
+Disposition of the original TODOs
+--------------------------------
+1. Heavy-quark masses/thresholds: TODO removed at the author's request.
+   Retain the stated approximation of neglecting these power corrections.
+2. Soft reference beyond the physical w range: resolved in the manuscript,
+   eq. (softreference). The reference xicut/a is not clipped. With
+   h_w=min(1-xBorn,xiScut), retain F0*log(a*h_w/xicut), also when negative.
+3. Sector/dipole-resolved S/H formulae: resolved in section 'Sector and
+   dipole sums', including native Born maps, luminosities, Jacobians,
+   G replacements and the sum before H-event unweighting.
+4. Inclusive fixed-order closure: resolved with all twelve F integrations.
+   Table fixedorder now gives all seeds, combined totals and seed pulls;
+   the text gives seed-consistency tests and map/cutoff comparison pulls.
+   Full-precision results and input checks: fixed_order_results.json.
+   No TAG/GAP analysis was used.
+5. Differential G-width dependence: campaign G below.
+6. Starting-scale and hard-scale dependence: campaigns S and W below.
+7. Separating kernel corrections from G prescriptions: campaign P below.
+8. Commented software-availability note: described the actual development
+   version (MG5_aMC 3.8.0, Pythia 8.318), supplied source patches and private
+   shower builds. An author must still supply a public archive/DOI and
+   immutable source identifiers before publication. This is not a run.
+
+Evidence for the direct manuscript changes
+-----------------------------------------
+* Template/NLO/SubProcesses/fks_singular.f:
+  compute_prefactors_n1body, compute_soft_counter_term: the finite soft
+  reference logarithm, its sign and numerical subtraction range.
+  compute_native_NLOPS_weights, compute_MC_subt_term, get_mc_lum:
+  one G replacement per history; both MC signs use fks_Hij, not fks_Sij;
+  both orientations use real PDFs, with no second backward 1/z.
+* Template/NLO/SubProcesses/montecarlocounter.f:
+  compute_pythia_local_counterterm: chi partition, damping, kernel flags,
+  automatic G-profile selection and disabling G for the two-patch mode.
+* Template/NLO/SubProcesses/driver_mintMC.f:
+  repartition_MC_H: at a fixed real point, sum native histories first,
+  with F_outer*J_outer/J_native multiplying each native weight.
+  The local ordinary-MC@NLO probability is one; the Born colour flow is
+  unique for the supported process.
+* Template/NLO/SubProcesses/fks_Sij.f: fks_Hij=1 for these histories.
+* Template/NLO/SubProcesses/fks_powers.inc: distinguish analytic reference
+  parameters xicut,deltaI,deltaO from numerical xiScut,deltaS. The old
+  validation table's cutoff labels have been corrected accordingly.
+* VERSION; the two patches under Template/NLO/MCatNLO/srcPythia8/patches/;
+  the process shower cards and private-build helper establish the software
+  description. No public archive location is recorded in the workspace.
+
+Common production definition
+----------------------------
+Use the process and model in pp_tj_default/Cards/proc_card_mg5.dat:
+  loop_sm-no_b_mass; five-flavour p=j, including b and bbar;
+  generate p p > t j $$ w+ w- [QCD]
+Top only, not antitop. sqrt(s)=13 TeV, mt=173 GeV. Copy the current
+production param_card.dat and run_card.dat: nn23nlo, muR=muF=HT/2,
+ptj=etaj=-1 (no generation jet cuts), ickkw=0, MCatNLO_DELTA=False.
+Keep the other production settings unchanged. In particular, do not
+replace these cuts by the old ptj=10 GeV validation setup.
+
+Variants and automatic profile choices:
+  GLB  pp_tj_default       ordinary map, stock Pythia, global recoil
+  LOC  pp_tj_local         local map, stock kernel, g_h(w)
+  Q    pp_tj_local_patch   local map, r_q kernel patch, g_h(xi)
+  QT   pp_tj_local_2patch  local map, r_q*r_t patches, no local G
+All local variants retain MCExplicitKLSum=True, FKSExplicitSum=True,
+FKSISRMapping=0, FKSFinalRecoil=0, FKSPythiaLocalRecoil=1. Set only
+the corresponding PythiaLocalCollinearPatch/PythiaLocalSoftPatch flags.
+Use the paired shower build and flags chosen by the existing launcher.
+Leave the common stock Pythia installation unchanged.
+
+For every shower use the current production shower card: perturbative
+QCD ISR+FSR; stable top; no hadronisation, MPI, remnants, primordial kT,
+colour reconnection, QED/weak showers or MECs. Keep the current PDFs,
+alpha_s, light-quark masses, thresholds and shower cutoffs unchanged.
+Use py8an_HwU_pp_tj_recoil.o with the 100000-entry HEPEVT interface.
+For each MG5 sample, use all 1000000 input LHE events in one shower job;
+record generated, accepted and analysed event counts separately. The
+current MG5 driver's final-event convention can give 999999 analysis
+calls. POWHEG instead uses 64 shower workers and checks exactly 1000000
+analysis calls in total; see W below.
+
+Use isolated fresh exports, with the current implementation and copied
+cards. Preserve existing Events/run_01/ samples. Changing a map, kernel,
+G prescription or shower_scale_factor requires new grids and new LHE
+events. A new run name alone must not cause an old grid to be reused.
+After applying each row's settings, commands are:
+  ./bin/calculate_xsect NLO -f --name=<run_id>     [F only; no shower]
+  ./bin/generate_events -f --name=<run_id>        [G/P/S; shower included]
+CSV seeds are run_card.dat:iseed and shower_card.dat:rnd_seed. The G, P and
+S controls are implemented; P uses PythiaLocalGProfile=1, described below.
+Blank CSV fields are not applicable and should retain the copied defaults.
+Archive the cards, source changes and shower build/library hashes for each
+run; the parent Git revision alone does not identify the modified sources.
+
+Common analysis and reported errors
+----------------------------------
+For the matched G/P/S/W campaigns, keep all 75 production histograms.
+Cluster final quarks/gluons, excluding
+the top and incoming partons, with anti-kt R=0.4; accept jets with pT>20
+GeV and |y|<4.5. TAG: pT(j1)>30 GeV. GAP: TAG plus |y(t)-y(j1)|>3 and
+m(t,j1)>500 GeV. Use the existing oriented zstar and rapidity differences;
+zstar requires |dy(t,j1)|>1. No b tagging or ancestry assignment.
+
+For each comparison report signed absolute rates, TAG/ALL and GAP/ALL
+acceptances, shape ratios as well as absolute differential ratios, and
+negative-weight fractions. Prioritise:
+  - pT(t), y(t), pT(j1), y(j1), m(t,j1) and |dy(t,j1)|;
+  - pT(t+j1), especially the existing 1-GeV bins from 0 to 10 GeV;
+  - zstar(j2) and oriented y(j2)-y(j1), y(j2)-y(t), in TAG and GAP;
+  - gap fractions at Q0=21,23,25,27,29 GeV, plus the full existing scan.
+The current jet definition cannot resolve veto scales below 20 GeV.
+For gap fractions and acceptances retain numerator/denominator covariance.
+Scale weights in the same event are correlated. Ratios of different
+independently generated samples use independent-sample errors.
+
+F: high-precision fixed-order closure (12 NLO integrations, no shower)
+--------------------------------------------------------------------
+Completed on 2026-10-24. Both maps were run at both numerical-cutoff
+settings, with three independent seeds for each cell; see the twelve
+F rows in the CSV:
+  GLB, (xiScut,deltaS)=(0.50,1.00): 710101,710102,710103
+  GLB, (xiScut,deltaS)=(0.25,0.50): 710201,710202,710203
+  LOC, (xiScut,deltaS)=(0.50,1.00): 710301,710302,710303
+  LOC, (xiScut,deltaS)=(0.25,0.50): 710401,710402,710403
+Set req_acc_FO=0.001 (0.1% relative total-cross-section integration error
+per seed). In this mode the npoints_FO/niters_FO settings are ignored.
+nevents does not set the fixed-order sample size. No MC subtraction or
+shower is involved; the LOC patch flags are off and h is irrelevant.
+
+Change xiScut and deltaS in EACH isolated export's
+SubProcesses/fks_powers.inc, and recompile the dependent objects. These
+are compile-time constants, not FKS_params.dat or run_card.dat entries.
+Keep xicut=0.5, deltaI=deltaO=1 and xiBSVcut=1 fixed, so the analytic
+reference integrals stay the same. Varying xiScut tests numerical soft
+subtraction, including clipping at W, rather than redefining that
+reference integral.
+
+Use the existing inclusive analysis_HwU_template.o in FO_analyse_card.dat.
+At the author's request, this campaign compares total cross sections only:
+no TAG/GAP selections or new analysis adapter are needed.
+
+Results (inverse-variance combination of the three seeds; errors in pb):
+  GLB nominal: 132.076 +/- 0.050; chi2/2 = 0.265/2, p = 0.876
+  GLB varied:  132.047 +/- 0.049; chi2/2 = 0.280/2, p = 0.870
+  LOC nominal: 132.096 +/- 0.060; chi2/2 = 3.271/2, p = 0.195
+  LOC varied:  132.018 +/- 0.064; chi2/2 = 3.829/2, p = 0.147
+The LOC-minus-GLB pulls are +0.26 (nominal) and -0.36 (varied).
+The varied-minus-nominal pulls are -0.41 (GLB) and -0.89 (LOC).
+The statistical precision on the map difference is about 0.06%.
+All seeds, full-precision totals, fitted-mean residual pulls and input
+checks are in fixed_order_results.json; table fixedorder in paper.tex
+reports the seed results. This resolves the inclusive closure TODO.
+
+The basic sequential runner is paper/run_fixed_order.py. From the
+repository root:
+  python3 paper/run_fixed_order.py --dry-run
+  python3 paper/run_fixed_order.py --cores 4
+It makes a fresh export for each of the twelve F rows under fo_runs/,
+copies the production cards, sets the seed/accuracy/cutoffs and runs
+calculate_xsect. Each run has its own log and Events/<run_id>/summary.txt.
+Completed runs are skipped on restart. An incomplete export stops the
+script so its log can be inspected before retrying. Existing production
+directories are only read. Use --output-dir to choose another location.
+
+G: G-width dependence (4 new matched samples plus existing central samples)
+-------------------------------------------------------------------------
+The CSV G rows are LOC and Q, each at h=0.005 and h=0.020.
+Use PythiaLocalGWidth in Cards/FKS_params.dat; all other generator and
+shower parameters stay central. In LOC this varies g_h(w) and g_h(1-y);
+in Q it varies g_h(xi) and g_h(1-y), as in the actual implementation.
+Each row generates and showers 1000000 fresh LHE events, req_acc=-1.
+Reference h=0.010 samples already exist in Events/run_01/ for each variant;
+the fresh S central samples below supply an independent central check.
+The old low-statistics, ptj=10 GeV h scan is not a replacement for these
+production-setup differential comparisons. QT has no local G, so a
+PythiaLocalGWidth scan there would not be a meaningful additional run.
+
+Run G and P together from the repository root with:
+  python3 paper/run_g_variations.py --cores 4
+The script reads the six G/P CSV rows, creates fresh exports under
+g_runs/, then generates and showers each sample in sequence. Use
+--dry-run to list the settings without creating files or starting runs.
+
+Report h=0.005/0.010 and h=0.020/0.010 ratios for the observables above,
+including their first recoil bins and acceptances. The inclusive total
+cross section is an integration/normalisation check, not a test of the
+G mismatch. Quote statistical limits if a shape change is unresolved.
+
+P: isolate kernel effects at a common G prescription (2 new matched samples)
+---------------------------------------------------------------------------
+Use the two P rows: Q with g_h(w), and QT with g_h(w), h=0.010 in both.
+Each row generates and showers 1000000 fresh events. Reference LOC
+already uses g_h(w), h=0.010. Thus the sequence
+  LOC[g(w)] -> Q[g(w)] -> QT[g(w)]
+changes only the successive kernel factors and their paired shower
+implementations, at fixed map, G prescription and starting-scale
+prescription. Compare Q[g(w)] to the existing Q[g(xi)] and QT[g(w)] to
+the existing QT[no G] separately to measure the profile changes.
+Use the G campaign to assess the width sensitivity in the production
+prescriptions. In particular revisit the quoted 17% and 7% rapidity-bin
+changes before attributing them to the kernel corrections.
+
+The opt-in Cards/FKS_params.dat control PythiaLocalGProfile=1 forces
+the SAME g_h(w), angular C-SC replacement, damping and native endpoint
+measures for both P rows, including enabling the replacement with the
+top-soft kernel patch. The runner sets this flag only for the two P rows.
+PythiaLocalGProfile=0 (default) keeps the automatic production choices:
+stock LOC uses w, Q uses xi and QT disables local G. The kernel factors
+and paired shower flags/builds are unchanged. Profile selection, angular
+factors, damping, endpoint suppression and the defaults are covered by
+the local matching tests. A common soft-only g_h(xi) for the stock LOC
+kernel is invalid: it leaves the outgoing-quark hard-collinear mismatch.
+The common w profile avoids that problem.
+
+S: matching-scale and hard-scale dependence (12 new matched samples)
+------------------------------------------------------------------
+For EACH of GLB,LOC,Q,QT generate three independent 1000000-event samples,
+at shower_scale_factor=0.5,1.0,2.0. Use the native profile and h=0.010
+where applicable. This is the full twelve-row S block in the CSV.
+Regenerate all grids and LHE weights for every starting-scale factor:
+it enters the MC damping bounds as well as the generated shower scales.
+Reshowering a central LHE file with a changed SCALUP/fudge factor would
+not perform this matched variation. The factor acts on scales in GeV,
+with the existing scale floors and ceilings retained by the code.
+
+For every S sample set in Cards/run_card.dat:
+  reweight_scale = True
+  rw_rscale = 1.0,2.0,0.5
+  rw_fscale = 1.0,2.0,0.5
+  store_rwgt_info = True
+  reweight_PDF = False
+These are value descriptions; the card's actual syntax is 'value = name'.
+Keep dynamical_scale_choice=-1, muR_over_ref=muF_over_ref=1 and the central
+HT/2 prescription. Retain the Cartesian scale-weight grid and construct
+the seven-point hard-scale envelope from
+  (muR,muF)/(HT/2) = (1,1), (0.5,0.5), (0.5,1), (1,0.5),
+                     (1,2), (2,1), (2,2).
+Exclude (0.5,2) and (2,0.5) from that envelope. Use weight labels, rather
+than assuming a particular ordering or duplicating a central weight.
+Shower all weights together with the same shower alpha_s/PDF parameters;
+these are hard renormalisation/factorisation variations, not a shower
+alpha_s variation. The existing analysis supports weight vectors; verify
+that every requested weight reaches its HwU output and retains its sign.
+The MG5 shower-interface reader now accepts jwgtinfo=-9, used when
+store_rwgt_info=True, as well as 0 and 9. Its inclusive tag=0 labels are
+converted to the usual dyn/muR/muF labels for HwU; the separate coupling-
+order weights are also retained. A 20-event test checked all nine signed
+scale-weight sums through generation, showering and histogram output.
+
+All four existing production banners have reweight_scale=False and
+store_rwgt_info=False. The four new central S runs are therefore included
+explicitly; existing histograms cannot yield the missing scale weights.
+
+Run the twelve S rows from the repository root with:
+  python3 paper/run_shower_scales.py --cores 4
+It makes fresh exports under scale_runs/ and generates and showers them
+sequentially. The hard-scale weight grid is enabled at all three starting
+scales; every histogram is checked for all eight noncentral grid weights
+and the central weight. --dry-run lists all twelve runs without starting.
+Both matched runners also accept --output-dir. A completion marker is
+written only after generation, shower, all 75 histograms and PDF output
+are verified. Completed runs with unchanged CSV settings are skipped;
+an incomplete export stops the script for inspection, as in the FO
+runner. Each run has its own log. Existing production directories and
+the stock/private Pythia installations are only read.
+
+At starting factor 1 form the seven-point hard-scale envelope; with
+central hard scales form the starting-scale envelope from all three S
+runs. Also retain the full 3-by-7 grid so a combined envelope can be
+shown without further generation. Separate these bands from statistical
+errors and the G-width comparisons. Show bands for the standard top/jet
+observables as well as centrality, gap fractions and low recoil pT.
+
+W: independent matching comparison (1 external matched sample)
+----------------------------------------------------------------------
+One 1000000-event, five-flavour, stable-top, t-channel POWHEG sample,
+with the same hard parameters, PDF, HT/2 scales, no generation jet cuts
+and the same analysis, showered with stock Pythia 8.318 dipole recoil
+(SpaceShower:dipoleRecoil=on, TimeShower:globalRecoil=off). Keep all
+non-perturbative effects, decays and QED/weak showers off, as above.
+Use POWHEG's documented hardest-emission veto/SCALUP prescription.
+
+The requested setup is pp_tj_powheg: pinned official POWHEG-BOX V2 ST_tch,
+an archived HT/2 scale hook, and stock Pythia with PowhegHooks. From the
+repository root, ./pp_tj_powheg/bin/generate_events generates 1000000
+events with 64 independent workers and showers them with local recoil.
+See pp_tj_powheg/README.powheg for stages, input checks, source revisions,
+normalisation and output files. The row's seed fields identify the first
+worker; POWHEG seeds span 750101--750164, shower seeds 850101--850164.
+The production run still needs to be made. Compare to the
+unmodified-shower LOC prediction first, and state the different matching
+prescription. Do not interpret this cross-generator difference as a
+measurement of the isolated r_q or r_t corrections.
+
+Run count and suggested order
+----------------------------
+Full campaign definition: F=12 fixed-order integrations, G=4 matched samples,
+P=2 matched samples, S=12 matched samples. Thus 30 new MG5 integration
+runs, of which 18 generate 1000000 LHE events and each has one shower:
+18000000 new LHE events and 18 production shower passes. Hard-scale
+weights do not require seven separate showers. Add one required POWHEG
+sample with 1000000 events, giving 31 required CSV rows and 19000000
+events across 19 matched samples. There are no mass-variation rows.
+
+F is complete and replaces the earlier, less precise closure test in the
+paper. Next run G and P
+to test the finite-G issue and kernel interpretation. Then run S for
+uncertainty bands. W is the requested independent matching comparison;
+its setup is ready and can be run independently of G/P/S.
+The F results have been inserted in the paper. No numerical results have
+been inserted for the outstanding G/P/S campaigns; their three TODOs
+remain visible.

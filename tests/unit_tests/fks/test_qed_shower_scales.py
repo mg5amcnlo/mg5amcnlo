@@ -20,6 +20,8 @@ class TestQEDShowerScales(unittest.TestCase):
                 '      integer nexternal,nincoming\n'
                 '      parameter(nexternal=5,nincoming=2)\n')
             shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
+            (work / 'orders.inc').write_text(
+                '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
             executable = work / 'check'
             result = subprocess.run([
                 shutil.which('gfortran'), '-O2', '-std=legacy',
@@ -33,6 +35,7 @@ class TestQEDShowerScales(unittest.TestCase):
                 str(TEMPLATE / 'genps_fks_helpers.f'),
                 str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
                 str(TEMPLATE / 'herwig7_scales.f90'),
+                str(TEMPLATE / 'FKSParams.f90'),
                 str(TEMPLATE / 'scale_module.f90'),
                 str(ROOT / 'tests/input_files/check_qed_shower_scales.f90'),
                 '-o', str(executable)], cwd=work, capture_output=True, text=True)

@@ -372,8 +372,80 @@ END { if (want) exit 1; print value }
 ' "$fks_card_path"
 }
 
+# Read the integration recoil choice, including for previously generated LHEs.
+function pythia8_local_recoil {
+if [ ! -f "$1" ]; then echo 0; return; fi
+awk '
+BEGIN { value=0; want=0 }
+$1 == "#FKSPythiaLocalRecoil" { want=1; next }
+want { if ($1 !~ /^[01]$/) exit 1; value=$1; want=0 }
+END { if (want) exit 1; print value }
+' "$1"
+}
+
+# The matching and shower numerator must be selected together.
+function pythia8_local_collinear_patch {
+local patch_key="${2:-#PythiaLocalCollinearPatch}"
+if [ ! -f "$1" ]; then echo 0; return; fi
+awk -v patch_key="$patch_key" '
+BEGIN { value=0; want=0 }
+$1 == patch_key { want=1; next }
+want {
+  item=tolower($1)
+  if (item == ".true." || item == "true" || item == "t") value=1
+  else if (item == ".false." || item == "false" || item == "f") value=0
+  else exit 1
+  want=0
+}
+END { if (want) exit 1; print value }
+' "$1"
+}
+
 # compiles and runs the MC
 function runMCMadFKS {
+PY8_LOCAL_RECOIL=$(pythia8_local_recoil "../Cards/FKS_params.dat")
+if [ $? -ne 0 ]; then
+  echo "Invalid FKSPythiaLocalRecoil in Cards/FKS_params.dat" >&2
+  return 1
+fi
+if [ "$PY8_LOCAL_RECOIL" = 1 ] && [ "$ICKKW" != 0 ]; then
+  echo "Single-top local recoil requires ICKKW=0" >&2
+  return 1
+fi
+if [ "$PY8_LOCAL_RECOIL" = 1 ] && [ "$DELTA" = ON ]; then
+  echo "Single-top local recoil requires DELTA=OFF" >&2
+  return 1
+fi
+PY8_LOCAL_COLLINEAR_PATCH=$(pythia8_local_collinear_patch "../Cards/FKS_params.dat")
+if [ $? -ne 0 ]; then
+  echo "Invalid PythiaLocalCollinearPatch in Cards/FKS_params.dat" >&2
+  return 1
+fi
+if [ "$PY8_LOCAL_COLLINEAR_PATCH" = 1 ]; then
+  if [ "$PY8_LOCAL_RECOIL" != 1 ]; then
+    echo "PythiaLocalCollinearPatch requires FKSPythiaLocalRecoil=1" >&2
+    return 1
+  fi
+  if ! grep -q 'name="SpaceShower:IFquarkCollinearCorrection"' "$thisdir/xmldoc/SpacelikeShowers.xml"; then
+    echo "The selected Pythia build lacks the IF quark collinear patch" >&2
+    return 1
+  fi
+fi
+PY8_LOCAL_SOFT_PATCH=$(pythia8_local_collinear_patch "../Cards/FKS_params.dat" "#PythiaLocalSoftPatch")
+if [ $? -ne 0 ]; then
+  echo "Invalid PythiaLocalSoftPatch in Cards/FKS_params.dat" >&2
+  return 1
+fi
+if [ "$PY8_LOCAL_SOFT_PATCH" = 1 ]; then
+  if [ "$PY8_LOCAL_COLLINEAR_PATCH" != 1 ]; then
+    echo "PythiaLocalSoftPatch requires PythiaLocalCollinearPatch" >&2
+    return 1
+  fi
+  if ! grep -q 'name="SpaceShower:IFtopSoftCorrection"' "$thisdir/xmldoc/SpacelikeShowers.xml"; then
+    echo "The selected Pythia build lacks the IF top soft patch" >&2
+    return 1
+  fi
+fi
 PY8_MMAXGAMMA=$(pythia8_mmaxgamma "../Cards/FKS_params.dat")
 if [ $? -ne 0 ]; then
   echo "Invalid Pythia8MMaxGamma in Cards/FKS_params.dat" >&2
@@ -588,7 +660,7 @@ TimeShower:alphaSvalue = 0.118     ! Alpha_s(MZ) in final-state shower
 TimeShower:alphaSorder = 1         ! Alpha_s running order in final-state shower
 TimeShower:alphaEMorder = 0        ! Alpha_EM running order in final-state shower
 TimeShower:dampenBeamRecoil = off  ! Dampens the effect of beam recoil
-TimeShower:globalRecoil = on       ! All final-state particles recoil against the branching
+TimeShower:globalRecoil = on       ! Overridden below for the local single-top prescription
 TimeShower:nMaxGlobalRecoil = 1    ! Number of splittings with TimeShower:globalRecoil = on
 TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first emission is FSR
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
@@ -722,6 +794,54 @@ TimeShower:MEafterFirst = off     ! no MECS MECs after first FSR
 EOF
 fi
 
+if [ "$PY8_LOCAL_RECOIL" = 1 ]; then
+cat <<EOF >> $ifile
+! Stable-top production: local IF shower with the selected matching kernel.
+SpaceShower:dipoleRecoil = on
+SpaceShower:pTdampMatch = 0
+SpaceShower:samePTasMPI = off
+SpaceShower:pT0parametrization = 0
+SpaceShower:pT0Ref force = 0.
+TimeShower:globalRecoil = off
+TimeShower:allowBeamRecoil = on
+PartonLevel:ISR = on
+PartonLevel:FSR = on
+SpaceShower:MEcorrections = off
+TimeShower:MEcorrections = off
+TimeShower:MEextended = off
+TimeShower:MEafterFirst = off
+SpaceShower:QEDshowerByQ = off
+SpaceShower:QEDshowerByL = off
+TimeShower:QEDshowerByQ = off
+TimeShower:QEDshowerByL = off
+TimeShower:QEDshowerByGamma = off
+TimeShower:QEDshowerByOther = off
+SpaceShower:weakShower = off
+TimeShower:weakShower = off
+6:mayDecay = off
+EOF
+fi
+
+# The new shower flag defaults to off, including in the private build.
+# Do not send this setting to a stock Pythia build that cannot recognize it.
+if [ "$PY8_LOCAL_COLLINEAR_PATCH" = 1 ]; then
+cat <<EOF >> $ifile
+SpaceShower:IFquarkCollinearCorrection = on
+EOF
+elif grep -q 'name="SpaceShower:IFquarkCollinearCorrection"' "$thisdir/xmldoc/SpacelikeShowers.xml" 2>/dev/null; then
+cat <<EOF >> $ifile
+SpaceShower:IFquarkCollinearCorrection = off
+EOF
+fi
+if [ "$PY8_LOCAL_SOFT_PATCH" = 1 ]; then
+cat <<EOF >> $ifile
+SpaceShower:IFtopSoftCorrection = on
+EOF
+elif grep -q 'name="SpaceShower:IFtopSoftCorrection"' "$thisdir/xmldoc/SpacelikeShowers.xml" 2>/dev/null; then
+cat <<EOF >> $ifile
+SpaceShower:IFtopSoftCorrection = off
+EOF
+fi
 
 cat <<EOF >> $ifile
 ! 11) Decays.

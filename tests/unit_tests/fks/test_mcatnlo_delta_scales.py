@@ -77,7 +77,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             'born_nhel.inc': 'integer max_bcol\nparameter(max_bcol=1)',
             'nFKSconfigs.inc': 'integer fks_configs\nparameter(fks_configs=1)',
             'run.inc': 'integer lpp(2)\ncommon/test_lpp/lpp',
-            'orders.inc': '',
+            'orders.inc': 'integer nsplitorders\nparameter(nsplitorders=1)',
             'genps.inc': 'integer maxproc\nparameter(maxproc=1)',
             'born_leshouche.inc': 'integer iproc_born\nparameter(iproc_born=1)\n'
                                   'common/test_born/idup,mothup,icolup',
@@ -107,6 +107,7 @@ class TestMCatNLODeltaMatching(unittest.TestCase):
             str(TEMPLATE / 'genps_fks_helpers.f'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
             str(TEMPLATE / 'herwig7_scales.f90'),
+            str(TEMPLATE / 'FKSParams.f90'),
             str(TEMPLATE / 'scale_module.f90'),
             str(work / 'delta_matching.f'),
             str(ROOT / 'tests/input_files/check_mcatnlo_delta_matching.f90'),
@@ -142,6 +143,8 @@ class TestStartingScaleIntegration(unittest.TestCase):
         (work / 'born_nhel.inc').write_text(
             '      integer max_bcol\n      parameter(max_bcol=1)\n')
         (work / 'run.inc').write_text('')
+        (work / 'orders.inc').write_text(
+            '      integer nsplitorders\n      parameter(nsplitorders=1)\n')
         shutil.copyfile(TEMPLATE / 'fks_powers.inc', work / 'fks_powers.inc')
         (work / 'routines.f').write_text('\n'.join([
             mc_counterterm_test_module(('compute_damping_weight', 'emscafun')),
@@ -157,6 +160,7 @@ class TestStartingScaleIntegration(unittest.TestCase):
             str(TEMPLATE / 'genps_fks_helpers.f'),
             str(TEMPLATE / 'mcatnlo_delta_scales.f90'),
             str(TEMPLATE / 'herwig7_scales.f90'),
+            str(TEMPLATE / 'FKSParams.f90'),
             str(TEMPLATE / 'scale_module.f90'), str(TEMPLATE / 'weight_lines.f'),
             str(work / 'routines.f'),
             str(ROOT / 'tests/input_files/check_pythia8_s_scales.f90'),
@@ -171,6 +175,9 @@ class TestStartingScaleIntegration(unittest.TestCase):
 
     def test_ordinary_scalar_matches_effective_dipoles_and_subtractions(self):
         self.check_case('ordinary')
+
+    def test_local_dipole_ends_share_space_shower_starting_scales(self):
+        self.check_case('local')
 
     def test_delta_scales_and_fold_selection_use_same_hard_scale(self):
         self.check_case('delta')

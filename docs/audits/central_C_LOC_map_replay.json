@@ -1,0 +1,56 @@
+{
+  "scope": "Logged reconstruction mismatches only, no integration",
+  "occurrences": 19922,
+  "unique_points": 18429,
+  "point_counts": {
+    "light_FSR": 3375,
+    "ISR": 5,
+    "top_FSR": 15049
+  },
+  "source_sha256": {
+    "genps_fks_helpers.f": "7f97b8bc51839f2fc0f886cf82664e4c3d565f884f6202ec09f218335064f701",
+    "genps_fks.f": "c38740da0d4ba90a9abe0ca58e9e788ab0e80f559ce8cd74b90c169c1ba0eded",
+    "initial_recoil.f": "9d51636c21b95f4d2130dc51b99e5587fd9f61cf5f59e540bdcc1ce195de3cd5",
+    "genps_fks_radiation.f": "d1666480072b24f2de749ced74ce9f8eec5f1099b184ff6e2f00803953072b32"
+  },
+  "current": {
+    "ISR": {
+      "points": 5,
+      "passed": 0,
+      "failed": 5,
+      "max_relative_error_passed": null
+    },
+    "top_FSR": {
+      "points": 15049,
+      "passed": 0,
+      "failed": 15049,
+      "max_relative_error_passed": null
+    },
+    "light_FSR": {
+      "points": 3375,
+      "passed": 0,
+      "failed": 3375,
+      "max_relative_error_passed": null
+    }
+  },
+  "candidate_getangles": {
+    "ISR": {
+      "points": 5,
+      "passed": 0,
+      "failed": 5,
+      "max_relative_error_passed": null
+    },
+    "top_FSR": {
+      "points": 15049,
+      "passed": 15049,
+      "failed": 0,
+      "max_relative_error_passed": 9.270576957188422e-10
+    },
+    "light_FSR": {
+      "points": 3375,
+      "passed": 0,
+      "failed": 3375,
+      "max_relative_error_passed": null
+    }
+  }
+}

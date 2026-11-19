@@ -1,0 +1,49 @@
+pp_tj_default shower failure: truncated HEPEVT history
+
+The failed ./bin/shower run_01 -f stopped at event 2866 with
+"Expected exactly one stable final top". Replaying the original events
+with the original seed and shower settings gives:
+
+                         Pythia          HepMC          HEPEVT
+    stable final tops         1               1               0
+    record entries         5174            5173            4000
+
+Pythia's entry zero accounts for the one-entry difference. Global recoil
+retains many intermediate spectator copies, so a perfectly ordinary final
+state can have a long history. HepMC's IO_HEPEVT silently caps that history
+at its configured 4000 entries, dropping the final top in this event.
+The shower did not decay or remove the top. Increasing only a Fortran
+array or only HepMC's setting would give inconsistent array strides.
+
+The stable-top analysis now uses HEPMC_ST_RECOIL.INC with 100000 entries.
+At PYABEG it calls the C++ hepmc_set_max_number_entries helper, configuring
+HepMC to the identical layout before any event is transferred. A capacity
+guard refuses records at the limit. The generic HEPMC.INC and other
+analyses keep their original layout unless they explicitly opt in.
+The Pythia analysis drivers include the helper; the HepMC-output drivers
+are unaffected. The same analysis and helper are installed in all four
+pp_tj_* processes and in the export template. Shower settings, matching,
+event selections and Pythia sources/libraries are unchanged.
+
+Validation replays the first 10000 original events, including event 2866.
+The diagnostic now finds one stable final top in all three representations
+for every event. Event 2866 retains all 5173 HepMC entries; the largest
+HepMC record in the replay contains 5177 entries. The usual MG5 command
+
+    cd pp_tj_default
+    ./bin/shower recoil_record_check -f
+
+also completes, accepting all 10000 events and producing 75 histograms,
+a 37-page PDF and HTML output in Events/recoil_record_check/. The existing
+driver event-limit handling calls the analysis for 9999 events. Fifteen
+focused tests pass, including a new analysis regression with the final
+top beyond entry 4000 and unchanged signed-weight histogram results.
+
+The original million-event Events/run_01/events.lhe.gz and production
+cards were not modified. To rerun that full sample with the fixed bridge:
+
+    cd pp_tj_default
+    ./bin/shower run_01 -f
+
+The original failed log is retained in MCatNLO/RUN_PYTHIA8_1/.
+The successful validation used MCatNLO/RUN_PYTHIA8_2/.

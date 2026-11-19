@@ -1,3 +1,78 @@
+      subroutine mc_select_pythia_pair(pair)
+c Select the unique quark IF pair from immutable native Born metadata.
+c Labels returned here are REAL labels, including the empty emitted slot.
+      use mc_native_context,only: ensure_native_context,native_metadata
+      implicit none
+      include 'nexternal.inc'
+      include 'run.inc'
+      include 'orders.inc'
+      integer pair(2),i,j,k,bj,partner(2),nb,nmatch
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common/to_mass/pmass
+      logical split_type(nsplitorders)
+      common/c_split_type/split_type
+      call ensure_native_context()
+      pair=0
+      if(nincoming.ne.2.or.nexternal.ne.5)goto 900
+      if(any(abs(lpp).ne.1))goto 900
+      if(qed_pos.gt.0)then
+         if(split_type(qed_pos))goto 900
+      endif
+      if(any(pmass(1:2).ne.0d0))goto 900
+      nb=nexternal-1
+      if(size(native_metadata%born_colours,3).ne.1)goto 900
+      if(size(native_metadata%born_ids,1).ne.nb)goto 900
+      do k=1,size(native_metadata%born_ids,2)
+         if(any(abs(native_metadata%born_ids(1:2,k)).lt.1).or.
+     $      any(abs(native_metadata%born_ids(1:2,k)).gt.5))goto 900
+         if(count(abs(native_metadata%born_ids(3:4,k)).eq.6).ne.1)
+     $      goto 900
+         if(any(abs(native_metadata%born_ids(3:4,k)).lt.1).or.
+     $      any(abs(native_metadata%born_ids(3:4,k)).gt.6))goto 900
+      enddo
+      do i=1,2
+         nmatch=0
+         do j=3,nb
+            if((native_metadata%born_colours(1,i,1).ne.0.and.
+     $          native_metadata%born_colours(1,i,1).eq.
+     $          native_metadata%born_colours(1,j,1)).or.
+     $         (native_metadata%born_colours(2,i,1).ne.0.and.
+     $          native_metadata%born_colours(2,i,1).eq.
+     $          native_metadata%born_colours(2,j,1)))then
+               nmatch=nmatch+1
+               partner(i)=j
+            endif
+         enddo
+         if(nmatch.ne.1)goto 900
+      enddo
+      if(partner(1).eq.partner(2))goto 900
+      bj=j_fks
+      if(bj.gt.i_fks)bj=bj-1
+      do i=1,2
+         if(bj.ne.i.and.bj.ne.partner(i))cycle
+         pair=(/i,partner(i)/)
+         if(pair(2).ge.i_fks)pair(2)=pair(2)+1
+      enddo
+      if(any(pair.eq.0))goto 900
+      do i=3,nb
+         j=i
+         if(j.ge.i_fks)j=j+1
+         if(abs(native_metadata%born_ids(i,1)).eq.6)then
+            if(pmass(j).le.0d0)goto 900
+         elseif(pmass(j).ne.0d0)then
+            goto 900
+         endif
+      enddo
+      return
+ 900  continue
+      write(*,*) 'FKSPythiaLocalRecoil supports five-flavour single-top',
+     $     ' QCD production with a unique quark IF Born colour flow only.'
+      stop 1
+      end
+
+
       subroutine mc_sync_native_tables()
 ! Activate immutable native metadata. Numerical Born COMMONs remain local.
       use mc_native_context, only: native_metadata

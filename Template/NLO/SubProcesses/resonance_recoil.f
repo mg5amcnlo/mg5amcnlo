@@ -238,13 +238,16 @@ c Integrating the soft-energy exponential difference (sec. 3 of
 c arXiv:1509.09071) with the collinear reference a_j gives log(a_j/a).
 c This routine supplies only kinematic factors, not a matrix-element or
 c FKS-sector weight. The caller must include the finite mismatch once.
+c Invariants here may be arbitrarily small near a massless FI emitter.
+c The legacy external dot rounds products below 1d-6 GeV^2 to zero;
+c use the unrounded product for these dimensionless scale ratios.
+      use fks_phase_space_helpers, only: dot
       use, intrinsic :: ieee_arithmetic, only: ieee_is_finite
       implicit none
       double precision total(0:3),q(0:3),pj(0:3),phat(0:3),
      $     soft_scale,coll_scale,angular_scale,mismatch_log,
-     $     s,mass2,kq,kt,jq,jt,diff(0:3),delta,dot
+     $     s,mass2,kq,kt,jq,jt,diff(0:3),delta
       logical pass
-      external dot
       pass=.false.
       soft_scale=1d0
       coll_scale=1d0

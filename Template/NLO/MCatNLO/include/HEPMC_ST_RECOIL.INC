@@ -1,0 +1,11 @@
+      implicit double precision(a-h, o-z)
+      implicit integer(i-n)
+      DOUBLE PRECISION PHEP,VHEP
+      INTEGER NMXHEP,NEVHEP,NHEP,ISTHEP,IDHEP,JMOHEP,JDAHEP
+c Global recoil stores many spectator copies: retain the full history.
+      PARAMETER (NMXHEP=100000)
+      COMMON /HEPEVT/ NEVHEP,NHEP,ISTHEP(NMXHEP),IDHEP(NMXHEP),
+     &JMOHEP(2,NMXHEP),JDAHEP(2,NMXHEP),PHEP(5,NMXHEP),VHEP(4,NMXHEP)
+
+      DOUBLE PRECISION EVWGT
+      COMMON /cEVWGT/ EVWGT
