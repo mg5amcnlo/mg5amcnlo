@@ -37,6 +37,10 @@ ANNOUNCEMENT:
         g g > t t~, t > b w+ with boost_choice [5, -6].
     VD: Quantum Information library: new observable Get_Steering (two-qubit steering for 2 or 3
         measurements per site, 1510.08030).
+    DP: Reweighting: with 'change process' but no 'change model' in the reweight_card, the new matrix
+        element of a model supporting only the Feynman gauge (loop_qcd_qed_sm*) was silently computed
+        with loop_qcd_qed_sm (the 'set gauge unitary' line of the proc_card unloaded the model).
+        The model of the events is now reloaded. Workaround for older versions: 'change model <model>'.
 
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum
