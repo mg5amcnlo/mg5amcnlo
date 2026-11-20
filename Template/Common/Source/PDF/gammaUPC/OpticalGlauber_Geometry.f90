@@ -1277,6 +1277,7 @@ CONTAINS
           DO i=1,NB
              READ(30307,*)XB(i),YB(i)
           ENDDO
+          CLOSE(UNIT=30307)
        ENDIF
        init2=1
     ENDIF
@@ -1302,7 +1303,8 @@ CONTAINS
        IF(ss.GT.10d0*RR)THEN
           TAhat_WoodsSaxon=0d0
        ELSE
-          CALL SPLINE_INTERPOLATE(XA,YA,NA,ss,TAhat_WoodsSaxon)
+          ! the B grid: beam B can be another nucleus than beam A
+          CALL SPLINE_INTERPOLATE(XB,YB,NB,ss,TAhat_WoodsSaxon)
           !CALL POLYNOMINAL_INTERPOLATE(XB,YB,NB,ss,TAhat_WoodsSaxon,error)
        ENDIF
     ENDIF

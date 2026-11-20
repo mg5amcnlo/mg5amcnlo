@@ -5,6 +5,14 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.1 (XX/XX/XX):
+    HS: Bug fix (gamma-UPC): in collisions of two different nuclei (A /= B), the Woods-Saxon
+        thickness of beam B (TAhat_WoodsSaxon with IMETH=2) was interpolated on the grid of beam
+        A, which made the probability of no hadronic interaction, and so the photon-photon
+        luminosity, wrong (EDFF and ChFF alike). Identical beams (PbPb, OO, ...) are not affected.
+    HS+OM: Bug fix (gamma-UPC): in pA collisions with the ChFF flux and the nucleus as beam 1
+        (e.g. Pb+p), the photon number densities of the proton and of the nucleus were evaluated
+        with the kinematics of each other, so the photon-photon luminosity of A+p differed from
+        the one of p+A. p+A and the EDFF flux are not affected.
     OM: LO: the final unweighting no longer truncates the events above the maximum
         weight; they keep the weight w/w_max in units of the common weight
         (part of the under-population of the tails).
