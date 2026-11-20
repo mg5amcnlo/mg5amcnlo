@@ -4020,17 +4020,14 @@ CONTAINS
        ! converting from fm to GeV-1
        RR=RA_common/GeVm12fm
        aaa=aaVal_common/GeVm12fm
-       IF(nuclearA_beam1.NE.0)THEN
-          Ngamma1=PhotonNumberDensity_ChargeFormFactor_WS(b1,E1_common,gamma1_common,&
-               RR,wVal_common,aaa,3d0,0.7d0,1)
-          Ngamma2=PhotonNumberDensity_ChargeFormFactor_proton(b2,E2_common,gamma2_common,&
-               proton_FF_correction)
-       ELSE
-          Ngamma1=PhotonNumberDensity_ChargeFormFactor_proton(b1,E1_common,gamma1_common,&
-               proton_FF_correction)
-          Ngamma2=PhotonNumberDensity_ChargeFormFactor_WS(b2,E2_common,gamma2_common,&
-               RR,wVal_common,aaa,3d0,0.7d0,2)
-       ENDIF
+       ! the proton is always 1 and the nucleus 2 here, whatever the beam
+       ! order: the callers (_eval) already swapped x, E and gamma when the
+       ! nucleus is beam 1. The nucleus uses the grid 2, as
+       ! PhotonFlux_nucleus_ChFF_nob(2,...) in _eval.
+       Ngamma1=PhotonNumberDensity_ChargeFormFactor_proton(b1,E1_common,gamma1_common,&
+            proton_FF_correction)
+       Ngamma2=PhotonNumberDensity_ChargeFormFactor_WS(b2,E2_common,gamma2_common,&
+            RR,wVal_common,aaa,3d0,0.7d0,2)
     ENDIF
     PhotonPhotonFlux_pA_WoodsSaxon_fxn=b1**2*b2**2*pnohad*Ngamma1*Ngamma2
     RETURN
