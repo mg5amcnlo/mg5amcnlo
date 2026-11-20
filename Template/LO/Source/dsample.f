@@ -1632,6 +1632,30 @@ c       that they shouldn't be added here.
       end subroutine add_entry_to_discrete_dimensions
 
 C
+C     Register the 'ee_mc' discrete dimension used by gen_mom to choose
+C     between the resonant (1) and non-resonant (2) s-hat sampling for
+C     dressed-lepton (ISR/beamstrahlung) collisions. Bins start 50-50.
+C     Does nothing if the dimension already exists (e.g. loaded from
+C     a grid file). Must be called before the first DS_get_point on it,
+C     for both grouped and ungrouped subprocess output.
+C
+      subroutine register_ee_mc_dimension()
+      use DiscreteSampler
+      implicit none
+      include './PDF/pdf.inc'
+
+      if(pdlabel.ne.'dressed') return
+      if(DS_get_dim_status('ee_mc').ne.-1) return
+      call DS_register_dimension('ee_mc', 0)
+      call DS_add_bin('ee_mc', 1)
+      call DS_add_bin('ee_mc', 2)
+      call DS_add_entry('ee_mc', 1, 0.5d0, .true.)
+      call DS_add_entry('ee_mc', 2, 0.5d0, .true.)
+      call DS_update_grid('ee_mc')
+
+      end subroutine register_ee_mc_dimension
+
+C
 C     Subroutine to take care of the update of the discrete grids
 C     (used for helicity and the matrix<i> choice in the grouped case
 C     as implented in the DiscreteSampler module.
