@@ -102,6 +102,21 @@ def decay_density_tensor(slot_identity, helicities, slot_densities):
     return density_dec
 
 
+def alphas_from_pdf(run_card):
+    """True when update_dependent takes alpha_s(MZ) from the PDF set: a
+    hadron beam, and LHAPDF or one of its built-in sets."""
+    builtin = ('cteq6_m', 'cteq6_d', 'cteq6_l', 'cteq6l1', 'nn23lo', 'nn23lo1',
+               'nn23nlo', 'ct14q00', 'ct14q07', 'ct14q14', 'ct14q21')
+    try:
+        if run_card['lpp1'] == 0 and run_card['lpp2'] == 0:
+            return False
+        pdlabel = run_card['pdlabel']
+        if pdlabel == 'mixed':
+            pdlabel = run_card['pdlabel1']
+    except (KeyError, TypeError):
+        return False
+    return pdlabel == 'lhapdf' or pdlabel in builtin
+
 
 class MadSpinDegenerateWeight(madspin.MadSpinError):
     """The accept/reject cannot ever accept: every trial weight is structurally
@@ -2734,6 +2749,22 @@ class MadSpinInterface(extended_cmd.Cmd):
                 logger.debug('%s carries no parameters; not checking the '
                              'reused ones', stamp)
                 return
+            # alpha_s(MZ) (SMINPUTS 3) is not compared when the run takes it
+            # from its PDF set: update_dependent writes it into the param_card
+            # after the first run.
+            if 'mgruncard' in self.banner:
+                try:
+                    from_pdf = alphas_from_pdf(self.banner.run_card)
+                except Exception as error:
+                    from_pdf = False
+                    logger.debug('could not read the run_card of the banner '
+                                 '(%s); alpha_s is compared', error)
+                if from_pdf:
+                    try:
+                        previous['sminputs'].get((3,)).value = \
+                            current['sminputs'].get((3,)).value
+                    except (KeyError, AttributeError):
+                        pass
             # Only blocks both cards have: a block that exists on one side only
             # is a change of *model*, which the proc_card of the banner and
             # 'import model' already police, and flagging it here would stop
@@ -3545,7 +3576,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         base_out = orig_lhe.name.replace('.lhe', '_decayed.lhe')
         # nb_event for the decay-pool refill sizing is the banner-declared count
         # (historical behaviour), not the physical number of events on disk.
-        nb_event = orig_lhe.get_banner().run_card['nevents']
+        nb_event = max(int(orig_lhe.get_banner().run_card['nevents']), nb_event)
+
 
         nb_core = self._resolve_nb_core()
         nb_core = max(1, min(nb_core, int(nb_event) if nb_event else 1))
@@ -3631,24 +3663,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                 return n
         return 1
 
-    def _gridpack_env(self):
+    def _gridpack_env(self, shim):
         """Environment for run.sh / gridrun subprocesses. The gridpack scripts
         start with ``#!/usr/bin/env python3``, which otherwise resolves via PATH
         to whatever ``python3`` comes first -- often NOT the interpreter running
         MadSpin, and thus one missing modules that gridrun needs (e.g. ``six``,
         whose absence gridrun treats as fatal). Guarantee the same interpreter by
-        putting a ``python3`` -> sys.executable shim first on PATH. Also expose
+        putting a ``python3`` -> sys.executable shim first on PATH, in the
+        directory ``shim`` (made and removed by the caller). Also expose
         ``six`` explicitly if this interpreter has it, in case it lives outside
         the default site-packages."""
         env = os.environ.copy()
         # 1. python3 shim so `env python3` == the MadSpin interpreter, regardless
         #    of whether dirname(sys.executable) even contains a bare `python3`.
-        if not getattr(self, '_py3_shim_dir', None):
-            import tempfile
-            import atexit
-            shim = tempfile.mkdtemp(prefix='ms_py3shim_')
-            atexit.register(shutil.rmtree, shim, ignore_errors=True)
-            link = pjoin(shim, 'python3')
+        link = pjoin(shim, 'python3')
+        if not os.path.exists(link):
             target = os.path.abspath(sys.executable)
             try:
                 os.symlink(target, link)
@@ -3656,8 +3685,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 with open(link, 'w') as f:
                     f.write('#!/bin/sh\nexec "%s" "$@"\n' % target)
                 os.chmod(link, 0o755)
-            self._py3_shim_dir = shim
-        env['PATH'] = self._py3_shim_dir + os.pathsep + env.get('PATH', '')
+        env['PATH'] = shim + os.pathsep + env.get('PATH', '')
         # 2. belt-and-suspenders: if we can import six here, make sure the
         #    subprocess can find it too.
         try:
@@ -3674,16 +3702,22 @@ class MadSpinInterface(extended_cmd.Cmd):
         opaque missing-file error. The output is only echoed at DEBUG level, so
         the (very verbose) per-job gridrun progress does not spam the log."""
         import subprocess
+        import tempfile
         import collections as _collections
-        proc = subprocess.Popen(cmd, cwd=cwd, env=self._gridpack_env(),
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                bufsize=1, universal_newlines=True)
-        tail = _collections.deque(maxlen=80)
-        for line in proc.stdout:
-            line = line.rstrip('\n')
-            tail.append(line)
-            logger.debug("[gridpack] %s", line)
-        proc.wait()
+        shim = tempfile.mkdtemp(prefix='ms_py3shim_')
+        try:
+            proc = subprocess.Popen(cmd, cwd=cwd, env=self._gridpack_env(shim),
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT,
+                                    bufsize=1, universal_newlines=True)
+            tail = _collections.deque(maxlen=80)
+            for line in proc.stdout:
+                line = line.rstrip('\n')
+                tail.append(line)
+                logger.debug("[gridpack] %s", line)
+            proc.wait()
+        finally:
+            shutil.rmtree(shim, ignore_errors=True)
         return proc.returncode, '\n'.join(tail)
 
     def _decay_pool_split(self):
@@ -5842,14 +5876,14 @@ class MadSpinInterface(extended_cmd.Cmd):
             note = [
                 '#  Pure-interference sample: it keeps ONLY the interference between',
                 '#  the polarisations listed below, so its total cross-section is zero',
-                '#  by construction and <init> is written with XSECUP = 0. That also',
+                '#  by construction and its init block has XSECUP = 0. That also',
                 '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is.',
                 '#',
                 '#  The event weights are SIGNED and unweighted UP TO A SIGN -- the',
                 '#  file holds exactly two weight magnitudes:',
                 '#      w = +- sigma_ref * BR * <|W|> / c',
                 '#  with W the signed production/decay convolution, <|W|> its',
-                '#  decay-phase-space mean absolute value and c = <W> the',
+                '#  decay-phase-space mean absolute value and c = mean(W) the',
                 '#  unrestricted decay-side constant, both below. One decay draw was',
                 '#  made per production event and kept with probability |W|/max|W|,',
                 '#  so the file holds FEWER events than were read and the local size',
@@ -5868,13 +5902,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             note = [
                 '#  Pure-interference sample: it keeps ONLY the interference between',
                 '#  the polarisations listed below, so its total cross-section is zero',
-                '#  by construction and <init> is written with XSECUP = 0. That also',
+                '#  by construction and its init block has XSECUP = 0. That also',
                 '#  zeroes XERRUP/XMAXUP, so the file cannot be showered as-is.',
                 '#',
                 '#  The event weights are SIGNED and fully weighted:',
                 '#      w = sigma_ref * BR * W / c',
                 '#  with W the signed production/decay convolution of this event and',
-                '#  c = <W> the decay-side constant below. MG5 writes LHE with',
+                '#  c = mean(W) the decay-side constant below. MG5 writes LHE with',
                 '#  IDWTUP = -4, i.e. the cross-section is the MEAN of the weights,',
                 '#  so this sample is self-normalising: mean(w) = 0 (its rate) and',
                 '#  sum_bin(w) / N_read is the interference contribution to that',
@@ -5886,10 +5920,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         note += [
             '#  Reference normalisation (pb) : %+.8e' % reference,
             '#     (the parent sample cross-section times the branching ratio,',
-            '#      i.e. what <init> would have carried without this mode)',
+            '#      i.e. what the init block would have carried without this mode)',
             '#  Normalisation constant     c : %+.8e  +- %.4f%%' % (
                 c_value, (100 * c_err / abs(c_value)) if c_value else 0.0),
-            '#     (c = <W>, the decay-side mean of the UNRESTRICTED convolution,',
+            '#     (c = mean(W), the decay-side mean of the UNRESTRICTED convolution,',
             '#      measured by the maximum-weight scan over %d trials)' % n_c,
             '#  Analytic candidate for c     : %+.8e  (ratio %.6f)' % (
                 analytic_c, (c_value / analytic_c) if analytic_c else 0.0),
@@ -6062,9 +6096,9 @@ class MadSpinInterface(extended_cmd.Cmd):
             '#  production event and kept, carrying',
             '#      w = w_prod * BR * W / c',
             '#  with W that trial\'s production/decay density convolution and',
-            '#  c = <W> its decay-phase-space mean (a constant, below). MG5',
+            '#  c = mean(W) its decay-phase-space mean (a constant, below). MG5',
             '#  writes LHE with IDWTUP = -4, i.e. the cross-section is the MEAN',
-            '#  of the event weights, so <init> is the ordinary sigma*BR and',
+            '#  of the event weights, so the init block keeps the ordinary sigma*BR and',
             '#  sum_bin(w) / N_file is that bin in pb -- but the per-event',
             '#  weights are NOT constant. Any consumer that assumes unit-weight',
             '#  MadSpin output (counting events, unweighted histograms) is',
@@ -6545,6 +6579,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         dst.write(line)
                         continue
                 if note and lstripped.startswith('</header'):
+                    # no block tag in the notes: the banner reader finds one
+                    # anywhere on a line and starts that block there
                     dst.write('<%s>\n' % note_tag)
                     for entry in note:
                         dst.write('%s\n' % entry)
@@ -10900,7 +10936,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.pdg2prefix[i] = {}
         for j, pdg in enumerate(all_pdg[i]):
             pdg = tuple([x for x in pdg if x != 0])
-            self.pdg2prefix[i][pdg] = (str(all_prefix[i][j].decode()).strip(), j)
+            prefix = str(bytes(all_prefix[i][j]).decode(errors='ignore').strip())
+            self.pdg2prefix[i][pdg] = (prefix, j)
         
 
         if self.model_init_prod and prod_or_decay == 'prod':
@@ -11690,7 +11727,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                 self.pdg2prefix = {}
                 for i, pdg in enumerate(all_pdg):
                     pdg = tuple([x for x in pdg if x != 0])
-                    self.pdg2prefix[tuple(pdg)] = (str(all_prefix[i].decode()).strip(), i)
+                    prefix = str(bytes(all_prefix[i]).decode(errors='ignore').strip())
+                    self.pdg2prefix[tuple(pdg)] = (prefix, i)
 
                 if self.model_init:
                     self.model_init = False

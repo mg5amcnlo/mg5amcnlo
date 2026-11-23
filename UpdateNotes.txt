@@ -4,6 +4,13 @@ ANNOUNCEMENT:
    The 2.9.X LONG TERM STABLE version is now at end of life for bug fixing/support since December 2025.
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
+3.8.2 (XX/XX/XX):
+    SJ: MadSpin2 bug fixes
+        - Fix a crash at the first matrix element with numpy < 1.24
+        - Reused ms_dir is no longer refused because of alpha_s(MZ)
+        - Fix the decay-pool refills of the serial path when a gridpack job decays more
+        - Cleanup of ms_py3shim_* directories in the temporary path
+
 3.8.1 (XX/XX/XX):
     OM: LO: the final unweighting no longer truncates the events above the maximum
         weight; they keep the weight w/w_max in units of the common weight
