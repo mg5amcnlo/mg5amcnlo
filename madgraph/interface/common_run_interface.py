@@ -4933,7 +4933,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not pdfset_dir or not os.path.isdir(pdfset_dir):
             return
         try:
-            info_names = [n for n in os.listdir(pdfset_dir) if n.endswith('.info')]
+            # skip hidden files from binary AppleDouble
+            info_names = [n for n in os.listdir(pdfset_dir)
+                          if n.endswith('.info') and not n.startswith('.')]
         except OSError:
             return
         for name in info_names:
@@ -4941,7 +4943,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             try:
                 with open(path, 'r') as f:
                     content = f.read()
-            except (OSError, IOError):
+            except (OSError, IOError, ValueError):
                 continue
             present = set()
             mirror = {}
