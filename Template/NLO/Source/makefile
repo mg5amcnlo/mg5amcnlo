@@ -100,13 +100,13 @@ clean4pdf:
 	rm -f ../lib/libgammaUPC.a
 
 cleanCT:
-	cd $(CUTTOOLSDIR); make clean; cd ..
+	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
 
 cleanIR:
-	cd $(IREGIDIR); make clean; cd ..
+	if [ -d $(IREGIDIR) ]; then $(MAKE) -C $(IREGIDIR) clean; fi
 
 cleanStdHEP:
-	cd $(STDHEPDIR); make clean; cd ..
+	if [ -d $(STDHEPDIR) ]; then $(MAKE) -C $(STDHEPDIR) clean; fi
 
 libmodel: $(LIBDIR)libmodel.a
 
@@ -115,11 +115,11 @@ libdhelas: $(LIBDIR)libdhelas.a
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
-	cd MODEL; make clean; cd ..
-	cd CERNLIB; make clean; cd ..
-	cd PDF; make clean; cd ..
-	cd PDF/gammaUPC; make clean; cd ../..
-	cd DHELAS; make clean; cd ..
-	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
-	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
-	if [ -d $(STDHEPDIR) ]; then cd $(STDHEPDIR); make clean; cd ..; fi
+	if [ -d MODEL ]; then $(MAKE) -C MODEL clean; fi
+	if [ -d CERNLIB ]; then $(MAKE) -C CERNLIB clean; fi
+	if [ -d PDF ]; then $(MAKE) -C PDF clean; fi
+	if [ -d PDF/gammaUPC ]; then $(MAKE) -C PDF/gammaUPC clean; fi
+	if [ -d DHELAS ]; then $(MAKE) -C DHELAS clean; fi
+	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
+	if [ -d $(IREGIDIR) ]; then $(MAKE) -C $(IREGIDIR) clean; fi
+	if [ -d $(STDHEPDIR) ]; then $(MAKE) -C $(STDHEPDIR) clean; fi

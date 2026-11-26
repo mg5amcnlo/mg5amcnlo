@@ -5,6 +5,10 @@ ANNOUNCEMENT:
    A new LTS (based on the current 3.5.X) is starting now and will act as the stable release for the coming years.
 
 3.8.2 (XX/XX/XX):
+    OM: "make clean" in the Source directory of a standalone output never terminated: it entered
+        missing directories (PDF, CERNLIB, BIAS, ...) with "cd X; make clean; cd ..", so make clean
+        re-ran in Source itself, recursively, until the per-user process limit was reached.
+        All the clean targets (LO, NLO, loop, MadWeight) now skip directories that do not exist.
     OM: Pythia8 8.318: the LO shower (main164) ran CKKW-L/UMEPS/UNLOPS merging without its merging
         hook, since main164 loads it with a readString that Pythia8 ignores for a card with
         Main:subrun lines (all those of MG5aMC). 'Merging:Process = guess' crashed every shower job,

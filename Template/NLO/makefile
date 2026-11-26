@@ -30,10 +30,11 @@ clean:
 	rm -f MCatNLO/objects/*
 	rm -rf MCatNLO/RUN*
 	rm -f *.log
-	cd Source; make clean
+	if [ -d Source ]; then $(MAKE) -C Source clean; fi
 	rm -f SubProcesses/collect_events
 	rm -f SubProcesses/combine_jobs
 	rm -f SubProcesses/*.o
-	for dir in `ls -d SubProcesses/P*`; do cd $$dir; make clean; cd ../../;\
-	    done
+	for dir in SubProcesses/P*; do \
+	  if [ -d "$$dir" ]; then $(MAKE) -C "$$dir" clean || true; fi; \
+	done
 

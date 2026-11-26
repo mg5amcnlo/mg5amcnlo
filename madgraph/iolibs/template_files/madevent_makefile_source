@@ -90,10 +90,10 @@ clean4pdf:
 	rm -f ../lib/libgammaUPC.$(libext)
 
 cleanCT:
-	cd $(CUTTOOLSDIR); make clean; cd ..
+	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
 
 cleanIR:
-	cd $(IREGIDIR); make clean; cd ..
+	if [ -d $(IREGIDIR) ]; then $(MAKE) -C $(IREGIDIR) clean; fi
 
 libiregi: $(LIBDIR)libiregi.a
 
@@ -120,18 +120,20 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 
 cleanSource: # Clean builds: fortran in this Source
 	$(RM) *.o $(LIBRARIES) $(BINARIES)
-	cd PDF; make clean; cd ..
-	cd PDF/gammaUPC; make clean; cd ../../
-	cd DHELAS; make clean; cd ..
-	cd CERNLIB; make clean; cd ..
-	cd MODEL; make clean; cd ..
-	if [ -d RUNNING ]; then cd RUNNING; make clean; cd ..; fi
-	cd BIAS/dummy; make clean; cd ../..
-	cd BIAS/ptj_bias; make clean; cd ../..
-	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
-	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
+	if [ -d PDF ]; then $(MAKE) -C PDF clean; fi
+	if [ -d PDF/gammaUPC ]; then $(MAKE) -C PDF/gammaUPC clean; fi
+	if [ -d DHELAS ]; then $(MAKE) -C DHELAS clean; fi
+	if [ -d CERNLIB ]; then $(MAKE) -C CERNLIB clean; fi
+	if [ -d MODEL ]; then $(MAKE) -C MODEL clean; fi
+	if [ -d RUNNING ]; then $(MAKE) -C RUNNING clean; fi
+	if [ -d BIAS/dummy ]; then $(MAKE) -C BIAS/dummy clean; fi
+	if [ -d BIAS/ptj_bias ]; then $(MAKE) -C BIAS/ptj_bias clean; fi
+	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
+	if [ -d $(IREGIDIR) ]; then $(MAKE) -C $(IREGIDIR) clean; fi
 
 clean: cleanSource # Clean builds: fortran in this Source and in all P*
-	for i in `ls -d ../SubProcesses/P*`; do cd $$i; make clean; cd -; done;
+	for i in ../SubProcesses/P*; do \
+	  if [ -d "$$i" ]; then $(MAKE) -C "$$i" clean || true; fi; \
+	done
 
 %(additional_clean)s
