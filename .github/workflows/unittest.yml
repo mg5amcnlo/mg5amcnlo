@@ -637,10 +637,10 @@ jobs:
       - uses: ./.github/actions/restore-pip-cache
 
       # Runs a set of commands using the runners shell
-      - name: test one of the test TestDensityOrderHelicities and TestDensityAverageFile test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore
+      - name: test one of the test TestDensityOrderHelicities and TestDensityAverageFile test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore, test_rho_average_format_inputs, test_rho_average_format_wrong_inputs, test_rho_average_format_files, test_rho_average_format_default, test_rho_average_format_multicore, test_rho_average_format_density_card
         run: |
             cd $GITHUB_WORKSPACE
-            ./tests/test_manager.py test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore -t0
+            ./tests/test_manager.py test_order_helicities_default test_order_helicities_inputs test_order_helicities_read_before_particles test_order_helicities_wrong_inputs test_average_density_file_name test_average_density_multicore, test_rho_average_format_inputs, test_rho_average_format_wrong_inputs, test_rho_average_format_files, test_rho_average_format_default, test_rho_average_format_multicore, test_rho_average_format_density_card -t0
 
 
 

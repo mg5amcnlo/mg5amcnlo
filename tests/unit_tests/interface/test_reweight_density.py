@@ -195,3 +195,117 @@ class TestDensityAverageFile(unittest.TestCase):
         self.assertEqual(os.listdir(self.tmpdir), ['Average_density_matrix_unweighted_events.txt']) #the intermediate files are removed
         _, rho = self.read_average('Average_density_matrix_unweighted_events.txt')
         self.assertEqual(rho, [[0.75, 0.25j], [-0.25j, 0.25]])
+
+
+class TestDensityRhoAverageFormat(unittest.TestCase):
+    """Test the option rho_average_format: the formats in which the average density matrix is written"""
+
+    class DensityStub(object):
+        """do_change_rho_average_format without a full interface (whose __del__ would run do_quit)"""
+        do_change_rho_average_format = rwgt_interface.DensityInterface.do_change_rho_average_format
+
+    def setUp(self):
+        import tempfile
+        self.tmpdir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir)
+
+    def change(self, line):
+        """the value of rho_average_format after 'change rho_average_format <line>' in the reweight_card"""
+        cmd = self.DensityStub()
+        cmd.rho_average_format = ["txt"]
+        cmd.do_change_rho_average_format(line.split())
+        return cmd.rho_average_format
+
+    def test_rho_average_format_inputs(self):
+        """the option is always a list of formats, whatever the syntax used"""
+        self.assertEqual(self.change("txt"), ["txt"])
+        self.assertEqual(self.change("json"), ["json"])
+        self.assertEqual(self.change("['pkl']"), ["pkl"])
+        self.assertEqual(self.change("txt json yaml pkl"), ["txt", "json", "yaml", "pkl"])
+        self.assertEqual(self.change("['txt', 'json']"), ["txt", "json"])
+        self.assertEqual(self.change("[txt, yaml]"), ["txt", "yaml"])
+        self.assertEqual(self.change("txt, pkl"), ["txt", "pkl"])
+
+    def test_rho_average_format_wrong_inputs(self):
+        """unknown formats are ignored, and txt is used if no format is known"""
+        with self.assertLogs(rwgt_interface.logger, level='WARNING'):
+            self.assertEqual(self.change("json root"), ["json"])
+        with self.assertLogs(rwgt_interface.logger, level='WARNING'):
+            self.assertEqual(self.change("root"), ["txt"])
+
+    def check_files(self, formats, rho, helicities):
+        """checks the content of the average density matrix written in each format"""
+        import os, json, pickle, yaml
+        name = os.path.join(self.tmpdir, 'Average_density_matrix_unweighted_events')
+        if "json" in formats:
+            data = json.load(open(name + '.json'))
+            self.assertEqual(data["Helicity basis"], helicities)
+            self.assertEqual([[complex(re, im) for re, im in line] for line in data["Averaged density matrix"]], rho)
+        if "yaml" in formats:
+            data = yaml.safe_load(open(name + '.yaml'))
+            self.assertEqual(data["Helicity basis"], helicities)
+            self.assertEqual([[complex(re, im) for re, im in line] for line in data["Averaged density matrix"]], rho)
+        if "pkl" in formats:
+            data = pickle.load(open(name + '.pkl', 'rb'))
+            self.assertEqual(data["Helicity basis"], helicities)
+            self.assertEqual(data["Averaged density matrix"], rho)
+
+    def test_rho_average_format_files(self):
+        """the average density matrix is written in each of the requested formats, with the same content"""
+        import os
+        density = rwgt_interface.DensityInterface
+        event_file = os.path.join(self.tmpdir, 'unweighted_events.lhe.gz')
+        rho = [[0.75, 0.25j], [-0.25j, 0.25]]
+        for formats in [["txt"], ["json"], ["yaml"], ["pkl"], ["txt", "json", "yaml", "pkl"]]:
+            for f in os.listdir(self.tmpdir):
+                os.remove(os.path.join(self.tmpdir, f))
+            density.write_average_density(event_file, [3, 1j, 1], 4., [1, -1], output_type_rho_avg=formats)
+            # only the requested formats are written
+            expected = sorted(['Average_density_matrix_unweighted_events.%s' % f for f in formats])
+            self.assertEqual(sorted(os.listdir(self.tmpdir)), expected)
+            self.check_files(formats, rho, [1, -1])
+            if "txt" in formats:
+                header, rho_txt = TestDensityAverageFile.read_average(self, 'Average_density_matrix_unweighted_events.txt')
+                self.assertIn('helicity basis [1, -1]', header)
+                self.assertEqual(rho_txt, rho)
+
+    def test_rho_average_format_default(self):
+        """without formats (or with None), only the txt file is written; a single format can be given as a string"""
+        import os
+        density = rwgt_interface.DensityInterface
+        event_file = os.path.join(self.tmpdir, 'unweighted_events.lhe')
+        for formats in [None, []]:
+            density.write_average_density(event_file, [2, 0, 2], 4., [1, -1], output_type_rho_avg=formats)
+            self.assertEqual(os.listdir(self.tmpdir), ['Average_density_matrix_unweighted_events.txt'])
+        os.remove(os.path.join(self.tmpdir, 'Average_density_matrix_unweighted_events.txt'))
+        density.write_average_density(event_file, [2, 0, 2], 4., [1, -1], output_type_rho_avg="json")
+        self.assertEqual(os.listdir(self.tmpdir), ['Average_density_matrix_unweighted_events.json'])
+
+    def test_rho_average_format_multicore(self):
+        """the formats are kept when the chunks of a multicore run are combined"""
+        import os
+        density = rwgt_interface.DensityInterface
+        event_file = os.path.join(self.tmpdir, 'unweighted_events.lhe.gz')
+        chunks = ['%s_%s.lhe' % (event_file, i) for i in range(2)]
+        density.write_density_sum(chunks[0], [3, 1j, 0], 3., [1, -1], output_type_rho_avg=["json", "pkl"])
+        density.write_density_sum(chunks[1], [0, 0, 1], 1., [1, -1], output_type_rho_avg=["json", "pkl"])
+        density.combine_average_density(chunks, event_file)
+        self.assertEqual(sorted(os.listdir(self.tmpdir)),
+                         ['Average_density_matrix_unweighted_events.%s' % f for f in ['json', 'pkl']])
+        self.check_files(["json", "pkl"], [[0.75, 0.25j], [-0.25j, 0.25]], [1, -1])
+
+    def test_rho_average_format_density_card(self):
+        """the option is read from and written to the density card"""
+        import os
+        import madgraph.various.banner as banner_mod
+        card = banner_mod.DensityCard()
+        self.assertEqual(card['rho_average_format'], ["txt"])
+        card.read("change particle_in_density_matrix [6, -6]\nchange rho_average_format ['txt', 'json']\n")
+        self.assertEqual(card['rho_average_format'], ["txt", "json"])
+        path = os.path.join(self.tmpdir, 'density_card.dat')
+        card.write(path)
+        new_card = banner_mod.DensityCard(path)
+        self.assertEqual(new_card['rho_average_format'], ["txt", "json"])

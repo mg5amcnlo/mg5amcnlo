@@ -2651,6 +2651,7 @@ class DensityInterface(ReweightInterface):
         self.axis_referential = [0]
         self.symmetrise_initial_state = False
         self.matrix_normalisation = True
+        self.rho_average_format = ["txt"]
         self.spins = None 
         self.number_changing_helicities = None
         self.number_combinations = None
@@ -2890,6 +2891,33 @@ class DensityInterface(ReweightInterface):
             logger.warning('Option matrix_normalisation not understood, set it to True. Please use the syntax: change matrix_normalisation True if you want to enable it.')
             self.matrix_normalisation = False
 
+    def do_change_rho_average_format(self,line):
+        """
+        Choses the format averaged density output: txt, json, yaml or pkl.
+        Supports lists of different format to have the average density matrix written in different formats.
+        Default = ['txt']
+        """
+        accepted_formats = ["txt", "json", "yaml", "pkl"]
+        for i in range(len(line)): 
+            line[i] = line[i].strip("[],()'")
+         
+        found_format = False
+        if len(line) == 1 and line[0] in accepted_formats:
+            self.rho_average_format = [line[0]]
+            found_format = True
+        else:
+            self.rho_average_format = []
+            for form in line:
+                if form in accepted_formats:
+                    self.rho_average_format.append(form)
+                    found_format = True
+                else:
+                    logger.warning(f'Option {form} of change rho_average_format is not available, ignoring it. The format available are {accepted_formats}.')
+
+        if not found_format:
+            logger.warning("The format(s) given in 'change rho_average_format' are not available. Using the default txt output.")
+            self.rho_average_format = ["txt"]
+
 
     def do_change_particle_in_density_matrix(self, line):
         """change the particle in the density matrix, calculates the number of particles changes,
@@ -2971,6 +2999,7 @@ class DensityInterface(ReweightInterface):
         logger.info("axis_referential = \t" + str(self.axis_referential))
         logger.info("symmetrise_initial_state = \t" + str(self.symmetrise_initial_state))
         logger.info("matrix_normalisation = \t" + str(self.matrix_normalisation))
+        logger.info("rho_average_format = \t" + str(self.rho_average_format))
 
         if self.flag_particle_in_density_matrix == False:
             logger.error("Error: the reweight_card contains no option for the density mode")
@@ -3006,7 +3035,8 @@ class DensityInterface(ReweightInterface):
                                     'number_combinations = ' + str(self.number_combinations) + '\n' + \
                                     'axis_referential = ' + str(self.axis_referential) + '\n' + \
                                     'symmetrise_initial_state = ' + str(self.symmetrise_initial_state) + '\n' + \
-                                    'matrix_normalisation = ' + str(self.matrix_normalisation)
+                                    'matrix_normalisation = ' + str(self.matrix_normalisation) + '\n' + \
+                                    'rho_average_format = ' + str(self.rho_average_format)
         self.banner.pop('initrwgt') #we remove the reweight header because it does not correspond to the operations done
         output = open( self.lhe_input.path +'rw', 'w')
         #write the banner to the output file
@@ -3047,9 +3077,9 @@ class DensityInterface(ReweightInterface):
         if self.multicore in ['create', 'wait']:
             # this job only has one chunk of the events: the sums are combined with the ones of the other chunks
             # once they are all done (combine_average_density), to get the average on the full event file
-            self.write_density_sum(self.lhe_input.name, self.average_rho, norm, self.allowed_helicities)
+            self.write_density_sum(self.lhe_input.name, self.average_rho, norm, self.allowed_helicities, output_type_rho_avg=self.rho_average_format)
         else:
-            self.write_average_density(self.event_path, self.average_rho, norm, self.allowed_helicities)
+            self.write_average_density(self.event_path, self.average_rho, norm, self.allowed_helicities, output_type_rho_avg=self.rho_average_format)
 
         if self.output_type == "default":
             output.write('</LesHouchesEvents>\n')
@@ -3249,16 +3279,25 @@ class DensityInterface(ReweightInterface):
 
 
     @staticmethod
-    def write_average_density(event_file, rho_sum, norm, allowed_helicities):
-        """Writes the average density matrix rho_sum/norm in Average_density_matrix_<name>.txt, next to the event file
+    def write_average_density(event_file, rho_sum, norm, allowed_helicities, output_type_rho_avg=None):
+        """Writes the average density matrix rho_sum/norm in Average_density_matrix_<name>.<format>, next to the event file
            <name>.lhe(.gz). rho_sum is the (weighted) sum of the density matrices in line form, norm the sum of the
-           weights (matrix_normalisation True) or the number of events."""
+           weights (matrix_normalisation True) or the number of events.
+           The matrix is written in each format of output_type_rho_avg (txt, json, yaml, pkl; default txt).
+           In json and yaml, each complex element is stored as [real, imag]; in pkl as a python complex.
+        """
         import madgraph.various.Density_functions as dens
+        if not output_type_rho_avg:
+            output_type_rho_avg = ["txt"]
+        elif isinstance(output_type_rho_avg, str):
+            output_type_rho_avg = [output_type_rho_avg]
 
         rho_avg = [elem / norm for elem in rho_sum]
         # python complex numbers: with numpy >= 2, str() of numpy scalars gives np.complex128(...)
         rho_avg_square = [[complex(elem) for elem in row]
                           for row in dens.DensityMatrixObservables(rho_avg).square_matrix()]
+        helicities = [int(h) for h in allowed_helicities]
+        rho_real_imag = [[[elem.real, elem.imag] for elem in row] for row in rho_avg_square]
 
         logger.info("Average density matrix:")
         for i in range(len(rho_avg_square)):
@@ -3268,22 +3307,43 @@ class DensityInterface(ReweightInterface):
         for extension in ['.gz', '.lhe']:
             if name.endswith(extension):
                 name = name[:-len(extension)]
-        file_density = open(pjoin(os.path.dirname(event_file), f"Average_density_matrix_{name}.txt"), 'w')
-        file_density.write(f'Average density matrix of LHE file {name} (helicity basis {allowed_helicities}):\n')
-        for i in range(len(rho_avg_square)):
-                file_density.write('\t' + str(rho_avg_square[i]) + '\n')
-        file_density.close()
+        path = pjoin(os.path.dirname(event_file), f"Average_density_matrix_{name}")
+
+        if "txt" in output_type_rho_avg:
+            with open(path + ".txt", 'w') as file_density:
+                file_density.write(f'Average density matrix of LHE file {name} (helicity basis {helicities}):\n')
+                for row in rho_avg_square:
+                    file_density.write('\t' + str(row) + '\n')
+
+        if "json" in output_type_rho_avg:
+            import json
+            with open(path + ".json", 'w') as file_json:
+                json.dump({"Helicity basis": helicities, "Averaged density matrix": rho_real_imag}, file_json)
+
+        if "yaml" in output_type_rho_avg:
+            import yaml
+            with open(path + ".yaml", 'w') as file_yaml:
+                yaml.safe_dump({"Helicity basis": helicities, "Averaged density matrix": rho_real_imag}, file_yaml)
+
+        if "pkl" in output_type_rho_avg:
+            import pickle
+            with open(path + ".pkl", 'wb') as file_pkl:
+                pickle.dump({"Helicity basis": helicities, "Averaged density matrix": rho_avg_square}, file_pkl)
+
+
 
     @staticmethod
-    def write_density_sum(chunk_file, rho_sum, norm, allowed_helicities):
+    def write_density_sum(chunk_file, rho_sum, norm, allowed_helicities, output_type_rho_avg=("txt",)):
         """Saves, next to one chunk of the events of a multicore run, what is needed to combine the average density matrices"""
         import json
         with open(chunk_file + '.density_sum.json', 'w') as fsock:
             json.dump({'rho_sum': [[complex(elem).real, complex(elem).imag] for elem in rho_sum],
-                       'norm': float(norm), 'allowed_helicities': list(allowed_helicities)}, fsock)
+                       'norm': float(norm),
+                       'allowed_helicities': list(allowed_helicities),
+                       'output_type': list(output_type_rho_avg)}, fsock)
 
     @staticmethod
-    def combine_average_density(chunk_files, event_file):
+    def combine_average_density(chunk_files, event_file, output_type_rho_avg=None):
         """Adds the sums saved by write_density_sum for each chunk of a multicore run, and writes the average density
            matrix of the full event file. The intermediate files are removed."""
         import json
@@ -3298,11 +3358,14 @@ class DensityInterface(ReweightInterface):
             rho_sum = rho_sum + np.array([complex(re, im) for re, im in data['rho_sum']])
             norm += data['norm']
             allowed_helicities = data['allowed_helicities']
+            file_output_type = data.get('output_type', ['txt'])
             os.remove(path)
         if allowed_helicities is None:
             logger.warning('No average density matrix computed: the density matrices of the chunks of events were not found')
             return
-        DensityInterface.write_average_density(event_file, rho_sum, norm, allowed_helicities)
+        if output_type_rho_avg is None:
+            output_type_rho_avg = file_output_type
+        DensityInterface.write_average_density(event_file, rho_sum, norm, allowed_helicities, output_type_rho_avg=output_type_rho_avg)
 
     def calculate_weight(self, event, sud_mod=None):
         """ This method overwrites the method of the same name in the class ReweightInterface.

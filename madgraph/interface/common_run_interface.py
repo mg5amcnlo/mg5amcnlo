@@ -6313,6 +6313,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 opts += [str(i) for i in  allowed_for_run]
             if args[-1] in ['symmetrise_initial_state', 'matrix_normalisation']:
                 opts = ["True", "False"]
+            if args[-1] in ['rho_average_format']:
+                opts = ["txt", "json", "yaml", "pkl"]
             # the other options are too complicated because they depend on the pdgs in the model. We do not make autocompletion for these
 
             possibilities['Special Value'] = self.list_completion(text, opts)

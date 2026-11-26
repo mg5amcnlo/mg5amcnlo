@@ -31,3 +31,4 @@ change order_helicities [0]
 change axis_referential [0]
 change symmetrise_initial_state False
 change matrix_normalisation True
+change rho_average_format ['txt']
