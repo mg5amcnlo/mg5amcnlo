@@ -30,7 +30,7 @@ clean:
 	rm -f MCatNLO/objects/*
 	rm -rf MCatNLO/RUN*
 	rm -f *.log
-	if [ -d Source ]; then $(MAKE) -C Source clean; fi
+	if [ -d "Source" ]; then $(MAKE) -C "Source" clean; fi
 	rm -f SubProcesses/collect_events
 	rm -f SubProcesses/combine_jobs
 	rm -f SubProcesses/*.o

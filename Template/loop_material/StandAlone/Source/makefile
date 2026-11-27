@@ -65,10 +65,10 @@ $(LIBDIR)libiregi.a: $(IREGIDIR)
 	ln -sf ../Source/$(IREGIDIR)libiregi.a $(LIBDIR)libiregi.a
 
 cleanCT:
-	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
+	if [ -d "$(CUTTOOLSDIR)" ]; then $(MAKE) -C "$(CUTTOOLSDIR)" clean; fi
 
 cleanIR:
-	if [ -d $(IREGIDIR) ]; then $(MAKE) -C $(IREGIDIR) clean; fi
+	if [ -d "$(IREGIDIR)" ]; then $(MAKE) -C "$(IREGIDIR)" clean; fi
 
 libdhelas: $(LIBDIR)libdhelas.$(libext)
 
@@ -104,8 +104,8 @@ setrun.o: setrun.f nexternal.inc leshouche.inc
 clean:
 	rm -f *.o
 	rm -f param_card.inc run_card.inc
-	if [ -d MODEL ]; then $(MAKE) -C MODEL clean; fi
-	if [ -d DHELAS ]; then $(MAKE) -C DHELAS clean; fi
-	if [ -d $(CUTTOOLSDIR) ]; then $(MAKE) -C $(CUTTOOLSDIR) clean; fi
-	if [ -d $(STDHEPDIR) ]; then $(MAKE) -C $(STDHEPDIR) clean; fi
+	if [ -d "MODEL" ]; then $(MAKE) -C "MODEL" clean; fi
+	if [ -d "DHELAS" ]; then $(MAKE) -C "DHELAS" clean; fi
+	if [ -d "$(CUTTOOLSDIR)" ]; then $(MAKE) -C "$(CUTTOOLSDIR)" clean; fi
+	if [ -d "$(STDHEPDIR)" ]; then $(MAKE) -C "$(STDHEPDIR)" clean; fi
 	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove
