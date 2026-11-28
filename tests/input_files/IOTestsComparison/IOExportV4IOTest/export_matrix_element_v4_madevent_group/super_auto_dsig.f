@@ -700,16 +700,6 @@ C     Make sure cuts are evaluated for first subprocess
 C     CUTSDONE=.FALSE.
 C     CUTSPASSED=.FALSE.
 
-      IF(PDLABEL.EQ.'dressed'.AND.DS_GET_DIM_STATUS('ee_mc').EQ.-1)THEN
-        CALL DS_REGISTER_DIMENSION('ee_mc', 0)
-C       ! set both mode 1: resonances, 2: no resonances to 50-50
-        CALL DS_ADD_BIN('ee_mc', 1)
-        CALL DS_ADD_BIN('ee_mc', 2)
-        CALL DS_ADD_ENTRY('ee_mc', 1, 0.5D0, .TRUE.)
-        CALL DS_ADD_ENTRY('ee_mc', 2, 0.5D0, .TRUE.)
-        CALL DS_UPDATE_GRID('ee_mc')
-      ENDIF
-
 
 
       IF(IMODE.EQ.1)THEN

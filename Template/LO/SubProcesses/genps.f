@@ -245,6 +245,8 @@ c         if (pdlabel.eq.'dressed') ndim = ndim+1
          enddo
          write(*,'(a,12e10.3)') ' Masses:',(m(i),i=1,nparticles)
          call configure_integral(iconfig,mincfig,maxcfig,invar,maxwgt)
+c        dressed-lepton collisions: discrete choice of the s-hat sampling
+         call register_ee_mc_dimension()
       endif                          !First_time
 
       this_config = iconfig             !Pass iconfig to amplitude routine
