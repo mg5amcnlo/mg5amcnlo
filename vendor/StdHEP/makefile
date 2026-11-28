@@ -29,35 +29,35 @@ binlib:
 	-test -d $(STDHEP_DIR)/lib || mkdir -p $(STDHEP_DIR)/lib
 
 mcfio:
-	(cd mcfio/src; $(MAKE) $(DMAKE) all) > log.mcfio.$$$$ 2>&1
+	($(MAKE) -C mcfio/src $(DMAKE) all) > log.mcfio.$$$$ 2>&1
 
 stdhep:
-	(cd src/stdhep; $(MAKE) $(DMAKE) all) > log.stdhep.$$$$ 2>&1
+	($(MAKE) -C src/stdhep $(DMAKE) all) > log.stdhep.$$$$ 2>&1
 
 spin:
-	(cd src/display/spin; $(MAKE) $(DMAKE) all) > log.spin.$$$$ 2>&1
+	($(MAKE) -C src/display/spin $(DMAKE) all) > log.spin.$$$$ 2>&1
 
 util:
-	(cd src/display/util; $(MAKE) $(DMAKE) all) > log.util.$$$$ 2>&1
+	($(MAKE) -C src/display/util $(DMAKE) all) > log.util.$$$$ 2>&1
 
 display:
-	(cd src/display; $(MAKE) $(DMAKE) all) > log.display.$$$$ 2>&1
+	($(MAKE) -C src/display $(DMAKE) all) > log.display.$$$$ 2>&1
 
 clean:
 	rm -f log.*
-	cd mcfio/src; $(MAKE) clean
-	cd src/stdhep; $(MAKE) $(DMAKE) clean
-	cd src/display; $(MAKE) $(DMAKE) clean
-	cd src/display/spin; $(MAKE) $(DMAKE) clean
-	cd src/display/util; $(MAKE) $(DMAKE) clean
+	$(MAKE) -C mcfio/src clean
+	$(MAKE) -C src/stdhep $(DMAKE) clean
+	$(MAKE) -C src/display $(DMAKE) clean
+	$(MAKE) -C src/display/spin $(DMAKE) clean
+	$(MAKE) -C src/display/util $(DMAKE) clean
 
 realclean:
 	rm -f log.*
-	cd mcfio/src; $(MAKE) realclean
-	cd src/stdhep; $(MAKE) realclean
-	cd src/display; $(MAKE) realclean
-	cd src/display/spin; $(MAKE) realclean
-	cd src/display/util; $(MAKE) realclean
+	$(MAKE) -C mcfio/src realclean
+	$(MAKE) -C src/stdhep realclean
+	$(MAKE) -C src/display realclean
+	$(MAKE) -C src/display/spin realclean
+	$(MAKE) -C src/display/util realclean
 
 
 #------------------------------------------

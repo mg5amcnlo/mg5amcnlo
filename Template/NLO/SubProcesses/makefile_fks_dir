@@ -197,5 +197,7 @@ check_poles.o: mint_module.o
 clean:
 	@rm -f *.o write_ajob_basic reweight_xsec_events madevent_* check_poles\
 	    test_M* gensym
-	for dir in `ls -d V*`; do cd $$dir; make clean; cd ../; done
+	for dir in V*; do \
+	  if [ -d "$$dir" ]; then $(MAKE) -C "$$dir" clean || true; fi; \
+	done
 

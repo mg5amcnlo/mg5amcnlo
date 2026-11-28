@@ -76,4 +76,4 @@ makefile_gammaUPC_dummy:
 
 clean:
 	@($(RM) *.o $(LIBDIR)$(LIBRARY))
-	@(cd ./gammaUPC ; make clean ; cd ../)
+	@if [ -d gammaUPC ]; then $(MAKE) -C gammaUPC clean; fi
