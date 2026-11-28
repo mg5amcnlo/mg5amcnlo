@@ -9,6 +9,8 @@ ANNOUNCEMENT:
         missing directories (PDF, CERNLIB, BIAS, ...) with "cd X; make clean; cd ..", so make clean
         re-ran in Source itself, recursively, until the per-user process limit was reached.
         All the clean targets (LO, NLO, loop, MadWeight) now skip directories that do not exist.
+    OM: gammaUPC makefile: parallel compilation (make -j) could fail with "Cannot rename module file
+        ... .mod0": each module file was compiled twice at the same time (separate .o and .mod targets).
     OM: Pythia8 8.318: the LO shower (main164) ran CKKW-L/UMEPS/UNLOPS merging without its merging
         hook, since main164 loads it with a readString that Pythia8 ignores for a card with
         Main:subrun lines (all those of MG5aMC). 'Merging:Process = guess' crashed every shower job,
